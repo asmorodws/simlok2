@@ -688,7 +688,7 @@ for (let idx = 0; idx < lines.length; idx++) {
     await k.wrap(" ", rightX, rightW, { bold: false });
     
     await k.pageBreak();
-    await k.wrap(`  Diterima oleh ${s.signer_position || '[Jabatan]'} ${s.signer_name || '[Nama]'}:`, rightX, rightW, { bold: false });
+    await k.wrap(`  Diterima oleh ${s.signer_position || '[Jabatan]'}:`, rightX, rightW, { bold: false });
     
     await k.pageBreak();
     // Use placeholder if simlok_date is not set
