@@ -189,7 +189,8 @@ async function generatePDF(submission: any) {
       const year = now.getFullYear();
       // const month = String(now.getMonth() + 1).padStart(2, '0');
       pdfData.simlok_number = `[DRAFT]/S00330/${year}-S0`;
-      pdfData.simlok_date = now;
+      // TIDAK set simlok_date agar tetap null/undefined di PDF preview
+      // pdfData.simlok_date = now;  // DIHAPUS: ini menyebabkan tanggal auto-fill
     }
 
     // Generate PDF using the template with potentially modified data

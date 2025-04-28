@@ -748,7 +748,8 @@ for (let idx = 0; idx < lines.length; idx++) {
     // Original behavior: Show signature on main page
     // Right side - Location and Date (above Head title)
     k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
-    k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
+    const dateText = displayDate ? fmtDateID(displayDate) : "[Tanggal Disetujui]";
+    k.text("Pada tanggal : " + dateText, A4.w - 230, signatureY - 15, { size: 11 });
 
     // Right side - Head title and name (below location/date)
     const jabatanSigner = s.signer_position || "[Jabatan]";
@@ -849,7 +850,8 @@ async function addSignaturePage(
   
   // Right side - Location and Date (same position as original)
   k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
-  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
+  const dateText = displayDate ? fmtDateID(displayDate) : "[Tanggal Disetujui]";
+  k.text("Pada tanggal : " + dateText, A4.w - 230, signatureY - 15, { size: 11 });
   
   // Right side - Jabatan and nama
   const jabatanSigner = s.signer_position || "[Jabatan]";
