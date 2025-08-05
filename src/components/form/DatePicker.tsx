@@ -26,7 +26,7 @@ export default function DatePicker({
   className = '',
   autoFocus = false
 }: DatePickerProps) {
-  const { getCurrentServerTime, isLoaded } = useServerTime();
+  const { getCurrentServerTime, getCurrentDate, isLoaded } = useServerTime();
   const [todayDate, setTodayDate] = useState<Date | null>(null);
 
   // Update today date when server time is loaded
@@ -61,6 +61,15 @@ export default function DatePicker({
     }
   };
 
+  // Custom handler for "Today" button - uses server time instead of browser time
+  const handleTodayClick = () => {
+    if (onChange) {
+      // Use server date (YYYY-MM-DD format from Jakarta timezone)
+      const serverDate = getCurrentDate();
+      onChange(serverDate);
+    }
+  };
+
   return (
     <div className="relative">
       <ReactDatePicker
@@ -77,7 +86,6 @@ export default function DatePicker({
         showPopperArrow={false}
         isClearable={true}
         {...(todayDate ? { openToDate: todayDate } : {})}
-        todayButton="Hari ini"
         showMonthDropdown
         showYearDropdown
         dropdownMode="select"
@@ -102,7 +110,12 @@ export default function DatePicker({
           e.target.blur();
           e.target.focus();
         }}
-      />
+      >
+        {/* Custom Today Button - uses server time instead of browser time */}
+        <div className="react-datepicker__today-button-custom" onClick={handleTodayClick}>
+          Hari ini
+        </div>
+      </ReactDatePicker>
       <style jsx global>{`
         /* Styling untuk tombol clear di DatePicker */
         .react-datepicker__close-icon {
@@ -268,6 +281,23 @@ export default function DatePicker({
         }
 
         .react-datepicker__today-button:hover {
+          background-color: #f9fafb;
+        }
+
+        /* Custom Today button - uses server time */
+        .react-datepicker__today-button-custom {
+          background-color: white;
+          border-top: 1px solid #e5e7eb;
+          padding: 10px;
+          text-align: center;
+          cursor: pointer;
+          font-weight: 500;
+          font-size: 13px;
+          color: #3b82f6;
+          transition: all 0.15s;
+        }
+
+        .react-datepicker__today-button-custom:hover {
           background-color: #f9fafb;
         }
 
