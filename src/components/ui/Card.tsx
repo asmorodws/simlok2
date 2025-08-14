@@ -1,0 +1,18 @@
+"use client";
+import type { ReactNode } from "react";
+
+export default function Card({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-800 ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
