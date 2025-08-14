@@ -5,19 +5,22 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: Role; // atau "VENDOR" | "VERIFIER" | "ADMIN"
+      role: Role;
+      nama_petugas: string;
     } & DefaultSession["user"];
-    accessToken?: string; // <-- tambahkan ini
+    accessToken?: string;
   }
 
   interface User extends DefaultUser {
     role: Role;
+    nama_petugas: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     role?: Role;
-    accessToken?: string; // <-- tambahkan juga di JWT kalau mau disimpan di token
+    nama_petugas?: string;
+    accessToken?: string;
   }
 }

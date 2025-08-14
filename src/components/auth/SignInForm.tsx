@@ -1,9 +1,9 @@
 "use client";
 
-import Checkbox from "@/components/form/input/Checkbox";
-import Input from "@/components/form/input/InputField";
+import Checkbox from "@/components/form/Checkbox";
+import Input from "@/components/form/Input";
 import Label from "@/components/form/Label";
-import Button from "@/components/ui/button/Button";
+import Button from "@/components/ui/Button";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import type { FC } from "react";
@@ -33,11 +33,11 @@ const SignInForm: FC<Props> = ({
   setKeep,
   handleSubmit,
 }) => (
-  <div className="flex flex-col w-full items-center justify-center my-auto min-h-screen bg-brand-950">
-    <div className="flex flex-col justify-center w-full max-w-md mx-auto bg-white p-10 border border-gray-200 rounded-lg shadow-theme-xs">
+  <div className="flex flex-col w-full items-center justify-center my-auto min-h-screen bg-blue-900">
+    <div className="flex flex-col justify-center w-full max-w-md mx-auto bg-white p-10 border border-gray-200 rounded-lg shadow-lg">
       <div>
         <div className="mb-5 sm:mb-8">
-          <h1 className="mb-2 font-semibold text-gray-800 text-title-sm sm:text-title-md">
+          <h1 className="mb-2 font-semibold text-gray-800 text-2xl">
             Sign In
           </h1>
           <p className="text-sm text-gray-500">
@@ -51,7 +51,7 @@ const SignInForm: FC<Props> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label>Email <span className="text-error-500">*</span></Label>
+            <Label>Email <span className="text-red-500">*</span></Label>
             <Input
               type="email"
               placeholder="info@gmail.com"
@@ -62,7 +62,7 @@ const SignInForm: FC<Props> = ({
           </div>
 
           <div>
-            <Label>Password <span className="text-error-500">*</span></Label>
+            <Label>Password <span className="text-red-500">*</span></Label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
@@ -85,16 +85,14 @@ const SignInForm: FC<Props> = ({
           </div>
 
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                checked={keepLoggedIn}
-                onChange={setKeep}
-              />
-              <span className="text-sm text-gray-700">Keep me logged in</span>
-            </div>
+            <Checkbox
+              checked={keepLoggedIn}
+              onChange={setKeep}
+              label="Keep me logged in"
+            />
             <Link
               href="/reset-password"
-              className="text-sm text-brand-500 hover:text-brand-600"
+              className="text-sm text-blue-500 hover:text-blue-600"
             >
               Forgot password?
             </Link>
@@ -108,7 +106,7 @@ const SignInForm: FC<Props> = ({
         <div className="mt-5">
           <p className="text-sm text-center text-gray-700">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-brand-500 hover:text-brand-600">
+            <Link href="/signup" className="text-blue-500 hover:text-blue-600">
               Sign Up
             </Link>
           </p>

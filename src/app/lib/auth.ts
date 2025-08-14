@@ -23,8 +23,9 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
+          name: user.nama_petugas,
           role: user.role,
+          nama_petugas: user.nama_petugas,
         };
       },
     }),
@@ -33,13 +34,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       // user only exists on first sign-in
-      if (user) token.role = user.role;
+      if (user) {
+        token.role = user.role;
+        token.nama_petugas = user.nama_petugas;
+      }
       return token;
     },
     async session({ session, token }) {
       if (token) {
         session.user.id   = token.sub!;
         session.user.role = token.role as import("@prisma/client").Role;
+        session.user.nama_petugas = token.nama_petugas as string;
       }
       return session;
     },

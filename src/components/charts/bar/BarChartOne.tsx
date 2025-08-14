@@ -1,109 +1,46 @@
 "use client";
 import React from "react";
 
-import { ApexOptions } from "apexcharts";
-
-import dynamic from "next/dynamic";
-// Dynamically import the ReactApexChart component
-const ReactApexChart = dynamic(() => import("react-apexcharts"), {
-  ssr: false,
-});
-
 export default function BarChartOne() {
-  const options: ApexOptions = {
-    colors: ["#465fff"],
-    chart: {
-      fontFamily: "Outfit, sans-serif",
-      type: "bar",
-      height: 180,
-      toolbar: {
-        show: false,
-      },
-    },
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: "39%",
-        borderRadius: 5,
-        borderRadiusApplication: "end",
-      },
-    },
-    dataLabels: {
-      enabled: false,
-    },
-    stroke: {
-      show: true,
-      width: 4,
-      colors: ["transparent"],
-    },
-    xaxis: {
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
-      axisBorder: {
-        show: false,
-      },
-      axisTicks: {
-        show: false,
-      },
-    },
-    legend: {
-      show: true,
-      position: "top",
-      horizontalAlign: "left",
-      fontFamily: "Outfit",
-    },
-    yaxis: {
-      title: {
-        text: undefined,
-      },
-    },
-    grid: {
-      yaxis: {
-        lines: {
-          show: true,
-        },
-      },
-    },
-    fill: {
-      opacity: 1,
-    },
-
-    tooltip: {
-      x: {
-        show: false,
-      },
-      y: {
-        formatter: (val: number) => `${val}`,
-      },
-    },
-  };
-  const series = [
-    {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
-    },
+  // Sample data untuk bar chart
+  const data = [
+    { month: "Jan", value: 168 },
+    { month: "Feb", value: 385 },
+    { month: "Mar", value: 201 },
+    { month: "Apr", value: 298 },
+    { month: "May", value: 187 },
+    { month: "Jun", value: 195 },
+    { month: "Jul", value: 291 },
+    { month: "Aug", value: 110 },
+    { month: "Sep", value: 215 },
+    { month: "Oct", value: 390 },
+    { month: "Nov", value: 280 },
+    { month: "Dec", value: 112 },
   ];
+
+  const maxValue = Math.max(...data.map(d => d.value));
+
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartOne" className="min-w-[1000px]">
-        <ReactApexChart
-          options={options}
-          series={series}
-          type="bar"
-          height={180}
-        />
+    <div className="w-full p-4">
+      <div className="flex items-end space-x-2 h-48">
+        {data.map((item, index) => (
+          <div key={index} className="flex flex-col items-center flex-1">
+            <div
+              className="w-full bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-600"
+              style={{
+                height: `${(item.value / maxValue) * 100}%`,
+                minHeight: '4px'
+              }}
+              title={`${item.month}: ${item.value}`}
+            />
+            <span className="text-xs text-gray-600 mt-2 transform -rotate-45 origin-center">
+              {item.month}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 text-center">
+        <span className="text-sm text-gray-500">Monthly Sales Data</span>
       </div>
     </div>
   );

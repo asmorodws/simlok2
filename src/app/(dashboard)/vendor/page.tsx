@@ -5,7 +5,7 @@ import DashboardMainContent from "@/components/DashboardMainContent";
 export default function VendorPage() {
   return (
     <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Vendor Panel">
+      <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
         <DashboardMainContent />
       </SidebarLayout>
     </RoleGate>

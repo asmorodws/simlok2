@@ -1,12 +1,12 @@
 import RoleGate from "@/components/RoleGate";
 import SidebarLayout from "@/components/SidebarLayout";
-import DashboardMainContent from "@/components/DashboardMainContent";
+import AdminDashboard from "@/components/AdminDashboard";
 
 export default function AdminPage() {
   return (
     <RoleGate allowedRoles={["ADMIN"]}>
-      <SidebarLayout title="Admin Panel">
-        <DashboardMainContent />
+      <SidebarLayout title="Admin Panel" titlePage="Dashboard">
+        <AdminDashboard />
       </SidebarLayout>
     </RoleGate>
   );

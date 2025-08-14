@@ -5,7 +5,7 @@ import DashboardMainContent from "@/components/DashboardMainContent";
 export default function VerifierPage() {
   return (
     <RoleGate allowedRoles={["VERIFIER"]}>
-      <SidebarLayout title="Verifier Panel">
+      <SidebarLayout title="Verifier Panel" titlePage="Dashboard">
         <DashboardMainContent />
       </SidebarLayout>
     </RoleGate>

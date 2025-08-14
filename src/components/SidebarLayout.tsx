@@ -20,9 +20,10 @@ import {
 interface Props {
   children: React.ReactNode;
   title: string;
+  titlePage?: string;
 }
 
-export default function SidebarLayout({ children, title }: Props) {
+export default function SidebarLayout({ children, title, titlePage}: Props) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -122,7 +123,7 @@ export default function SidebarLayout({ children, title }: Props) {
       {/* Main wrapper */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-800 md:px-6">
+        <header className="flex items-center bg-white  justify-between border-b border-slate-200 px-4 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-800 md:px-6">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="rounded-md p-1 text-slate-600 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-500 md:hidden dark:text-slate-300 dark:hover:bg-slate-700"
@@ -130,7 +131,7 @@ export default function SidebarLayout({ children, title }: Props) {
           >
             <Bars3Icon className="h-6 w-6" />
           </button>
-          <div className="text-xl font-semibold">Dashboard</div>
+          <div className="text-xl font-semibold">{titlePage}</div>
         </header>
 
         {/* Content area */}

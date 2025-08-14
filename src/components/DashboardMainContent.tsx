@@ -5,7 +5,6 @@ import { PlusIcon, ChartPieIcon, ClockIcon, ArrowTrendingUpIcon } from "@heroico
 import Card from "./ui/Card";
 import { SectionTitle } from "./ui/SectionTitle";
 import { Stat } from "./ui/Stat";
-import ChartPlaceholder from "./ui/ChartPlaceholder";
 import { ActivityList } from "./ui/ActivityList";
 import PageHeader from "./PageHeader";
 
@@ -31,7 +30,7 @@ export default function DashboardMainContent() {
       <div className="space-y-6 lg:col-span-2">
         {/* Header */}
         <PageHeader
-          title={`Welcome back, ${session?.user.name ?? "User"}!`}
+          title={`Welcome back, ${session?.user.nama_petugas ?? session?.user.name ?? "User"}!`}
           subtitle={`You are logged in as ${role.toLowerCase()}.`}
           cta={
             <div className="flex gap-2">
@@ -54,32 +53,37 @@ export default function DashboardMainContent() {
           ))}
         </div>
 
-        {/* Sales trend */}
-        <Card className="p-6 bg-white  border border-slate-200 ">
-          <SectionTitle right={<ChartPieIcon className="h-5 w-5 text-slate-500 " />}>
+        {/* Simple placeholder for chart */}
+        <Card className="p-6 bg-white border border-slate-200">
+          <SectionTitle right={<ChartPieIcon className="h-5 w-5 text-slate-500" />}>
             Sales Trend
           </SectionTitle>
-          <ChartPlaceholder />
+          <div className="mt-4 h-48 bg-gray-50 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <ChartPieIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">Chart will be displayed here</p>
+            </div>
+          </div>
         </Card>
       </div>
 
       {/* Sidebar column */}
       <div className="space-y-6">
-        <Card className="p-6 bg-white  border border-slate-200 ">
+        <Card className="p-6 bg-white border border-slate-200">
           <SectionTitle>Recent Activity</SectionTitle>
           <ActivityList items={activities} />
         </Card>
 
-        <Card className="p-6 bg-white  border border-slate-200 ">
+        <Card className="p-6 bg-white border border-slate-200">
           <SectionTitle>Quick Stats</SectionTitle>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-slate-700 ">Conversion</span>
-              <span className="font-bold text-slate-900 ">12%</span>
+              <span className="text-slate-700">Conversion</span>
+              <span className="font-bold text-slate-900">12%</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-slate-700 ">Avg. Order</span>
-              <span className="font-bold text-slate-900 ">$89</span>
+              <span className="text-slate-700">Avg. Order</span>
+              <span className="font-bold text-slate-900">$89</span>
             </div>
           </div>
         </Card>

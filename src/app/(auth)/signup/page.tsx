@@ -49,17 +49,15 @@ export default function RegisterPage() {
         lastName={lastName}
         email={email}
         password={password}
-        role={role}
         showPassword={showPassword}
-        agreed={agreed}
+        agreeToTerms={agreed}
         error={error}
         setFirstName={setFirstName}
         setLastName={setLastName}
         setEmail={setEmail}
         setPassword={setPassword}
-        setRole={setRole}
         setShow={setShow}
-        setAgreed={setAgreed}
+        setAgree={setAgreed}
         handleSubmit={handleSubmit}
       />
     </AuthRedirect>
