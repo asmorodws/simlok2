@@ -32,11 +32,13 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     ADMIN: [
       { label: "Dashboard", href: "/admin", icon: HomeIcon },
       { label: "Users", href: "/admin/users", icon: UsersIcon },
+      { label: "Submissions", href: "/admin/submissions", icon: ClipboardDocumentListIcon },
       { label: "Settings", href: "/admin/settings", icon: CogIcon },
     ],
     VENDOR: [
       { label: "Dashboard", href: "/vendor", icon: HomeIcon },
       { label: "Products", href: "/vendor/products", icon: CubeIcon },
+      { label: "Submissions", href: "/vendor/submissions", icon: ClipboardDocumentListIcon },
       { label: "Orders", href: "/vendor/orders", icon: ClipboardDocumentListIcon },
     ],
     VERIFIER: [

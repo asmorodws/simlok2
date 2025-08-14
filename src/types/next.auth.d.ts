@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string;
       role: Role;
       nama_petugas: string;
+      nama_vendor?: string | null;
     } & DefaultSession["user"];
     accessToken?: string;
   }
@@ -14,13 +15,16 @@ declare module "next-auth" {
   interface User extends DefaultUser {
     role: Role;
     nama_petugas: string;
+    nama_vendor?: string | null;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id?: string;
     role?: Role;
     nama_petugas?: string;
+    nama_vendor?: string | null;
     accessToken?: string;
   }
 }

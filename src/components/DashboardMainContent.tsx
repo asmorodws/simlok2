@@ -26,12 +26,32 @@ export default function DashboardMainContent() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="lg:col-span-3 mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h3 className="font-semibold text-yellow-800">Debug Session Info:</h3>
+          <pre className="text-sm text-yellow-700 mt-2">
+            {JSON.stringify({
+              userId: session?.user?.id,
+              nama_petugas: session?.user?.nama_petugas,
+              nama_vendor: session?.user?.nama_vendor,
+              role: session?.user?.role,
+              email: session?.user?.email
+            }, null, 2)}
+          </pre>
+        </div>
+      )}
+      
       {/* Main column */}
       <div className="space-y-6 lg:col-span-2">
         {/* Header */}
         <PageHeader
           title={`Welcome back, ${session?.user.nama_petugas ?? session?.user.name ?? "User"}!`}
-          subtitle={`You are logged in as ${role.toLowerCase()}.`}
+          subtitle={
+            role === "VENDOR" && session?.user.nama_vendor 
+              ? `${session.user.nama_vendor} - You are logged in as ${role.toLowerCase()}.`
+              : `You are logged in as ${role.toLowerCase()}.`
+          }
           cta={
             <div className="flex gap-2">
               {["Add Product", "View Orders", "Analytics", "Support"].map((a) => (
@@ -69,6 +89,33 @@ export default function DashboardMainContent() {
 
       {/* Sidebar column */}
       <div className="space-y-6">
+        {/* Vendor Info - only show for VENDOR role */}
+        {role === "VENDOR" && (
+          <Card className="p-6 bg-white border border-slate-200">
+            <SectionTitle>Informasi Vendor</SectionTitle>
+            <div className="space-y-3 mt-4">
+              <div>
+                <span className="text-sm font-medium text-gray-500">Nama Vendor</span>
+                <p className="text-sm text-gray-900 font-semibold">
+                  {session?.user.nama_vendor || "Belum diisi"}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">Nama Petugas</span>
+                <p className="text-sm text-gray-900">
+                  {session?.user.nama_petugas || session?.user.name || "Belum diisi"}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-500">Email</span>
+                <p className="text-sm text-gray-900">
+                  {session?.user.email || "Belum diisi"}
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         <Card className="p-6 bg-white border border-slate-200">
           <SectionTitle>Recent Activity</SectionTitle>
           <ActivityList items={activities} />

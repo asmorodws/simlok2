@@ -1,5 +1,4 @@
 "use client";
-import { Badge } from "./ui/Badge";
 
 export default function PageHeader({
   title,
@@ -11,17 +10,13 @@ export default function PageHeader({
   cta?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl bg-gray-900 to-emerald-400 p-8 text-white">
+    <div className="rounded-3xl bg-gradient-to-r from-blue-600 to-blue-800 p-8 text-white shadow-lg">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
-          {subtitle && <p className="mt-1/2 opacity-90">{subtitle}</p>}
+          {subtitle && <p className="mt-2 text-blue-100 opacity-90">{subtitle}</p>}
         </div>
-        {cta}
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Badge>Performance</Badge>
-        <Badge>This week</Badge>
+        {cta && <div className="flex-shrink-0">{cta}</div>}
       </div>
     </div>
   );

@@ -28,6 +28,10 @@ model User {
   /* NextAuth legacy (optional) */
   sessions Session[]
   accounts Account[]
+  
+  /* Submissions */
+  submissions   Submission[]
+  approvedSubmissions Submission[] @relation("ApprovedSubmissions")
 }
 
 /* ----------  REFRESH TOKEN  ---------- */
@@ -73,6 +77,43 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+/* ----------  SUBMISSION  ---------- */
+model Submission {
+  id                    String   @id @default(cuid())
+  status_approval_admin String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approved_by_admin     String?
+  nama_vendor           String
+  berdasarkan           String
+  nama_petugas          String
+  pekerjaan             String
+  lokasi_kerja          String
+  pelaksanaan           String
+  jam_kerja             String
+  lain_lain             String?
+  sarana_kerja          String
+  tembusan              String?
+  nomor_simja           String?
+  tanggal_simja         DateTime?
+  nomor_sika            String?
+  tanggal_sika          DateTime?
+  nomor_simlok          String?
+  tanggal_simlok        DateTime?
+  nama_pekerja          String
+  content               String?
+  keterangan            String?
+  upload_doc_sika       String?
+  upload_doc_simja      String?
+  upload_doc_id_card    String?
+  qrcode                String?
+  created_at            DateTime @default(now())
+  
+  // Relations
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  approvedByUser        User?    @relation("ApprovedSubmissions", fields: [approved_by_admin], references: [id])
 }
 
 /* ----------  ENUM  ---------- */
