@@ -42,6 +42,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
   };
 
+  // Prevent hydration mismatch by not rendering until client-side
+  if (!isInitialized) {
+    return (
+      <ThemeContext.Provider value={{ theme: "light", toggleTheme }}>
+        {children}
+      </ThemeContext.Provider>
+    );
+  }
+
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}

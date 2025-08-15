@@ -130,53 +130,107 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Debug logging
+    console.log('POST /api/submissions - Session user:', {
+      id: session.user.id,
+      email: session.user.email,
+      role: session.user.role
+    });
+
     // Only VENDOR can create submissions
     if (session.user.role !== 'VENDOR') {
       return NextResponse.json({ error: 'Only vendors can create submissions' }, { status: 403 });
     }
 
     const body: SubmissionData = await request.json();
+    
+    // Debug logging for received data
+    console.log('POST /api/submissions - Received data:', {
+      ...body,
+      // Don't log sensitive data, just check if required fields exist
+      hasRequiredFields: {
+        nama_vendor: !!body.nama_vendor,
+        berdasarkan: !!body.berdasarkan,
+        nama_petugas: !!body.nama_petugas,
+        pekerjaan: !!body.pekerjaan,
+        lokasi_kerja: !!body.lokasi_kerja,
+        jam_kerja: !!body.jam_kerja,
+        sarana_kerja: !!body.sarana_kerja,
+        nama_pekerja: !!body.nama_pekerja
+      }
+    });
 
     // Validate required fields
     const requiredFields = [
       'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
-      'lokasi_kerja', 'pelaksanaan', 'jam_kerja', 'sarana_kerja', 'nama_pekerja'
+      'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nama_pekerja'
     ];
 
     for (const field of requiredFields) {
       if (!body[field as keyof SubmissionData]) {
+        console.log(`POST /api/submissions - Missing required field: ${field}`);
         return NextResponse.json({ 
           error: `Field ${field} is required` 
         }, { status: 400 });
       }
     }
 
+    // Validate session user ID
+    if (!session.user.id) {
+      console.log('POST /api/submissions - Session user ID is missing');
+      return NextResponse.json({ 
+        error: 'User ID not found in session' 
+      }, { status: 400 });
+    }
+
+    // Verify user exists in database
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    });
+
+    if (!userExists) {
+      console.log('POST /api/submissions - User not found in database:', session.user.id);
+      return NextResponse.json({ 
+        error: 'User not found in database' 
+      }, { status: 400 });
+    }
+
+    console.log('POST /api/submissions - User verified:', userExists.email);
+
     // Generate QR Code (simple implementation)
     const qrData = `${session.user.id}-${Date.now()}`;
     
-    const submission = await prisma.submission.create({
-      data: {
-        ...body,
-        userId: session.user.id,
-        tanggal_simja: body.tanggal_simja ? new Date(body.tanggal_simja) : null,
-        tanggal_sika: body.tanggal_sika ? new Date(body.tanggal_sika) : null,
-        qrcode: qrData,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            nama_petugas: true,
-            email: true,
-            nama_vendor: true,
+    try {
+      const submission = await prisma.submission.create({
+        data: {
+          ...body,
+          userId: session.user.id,
+          tanggal_simja: body.tanggal_simja ? new Date(body.tanggal_simja) : null,
+          tanggal_sika: body.tanggal_sika ? new Date(body.tanggal_sika) : null,
+          qrcode: qrData,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nama_petugas: true,
+              email: true,
+              nama_vendor: true,
+            }
           }
         }
-      }
-    });
+      });
 
-    return NextResponse.json(submission, { status: 201 });
+      console.log('POST /api/submissions - Submission created successfully:', submission.id);
+      return NextResponse.json(submission, { status: 201 });
+    } catch (dbError) {
+      console.error('POST /api/submissions - Database error:', dbError);
+      return NextResponse.json({ 
+        error: 'Failed to create submission in database' 
+      }, { status: 500 });
+    }
   } catch (error) {
-    console.error('Error creating submission:', error);
+    console.error('POST /api/submissions - General error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

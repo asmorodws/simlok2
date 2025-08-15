@@ -3,14 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/lib/auth';
 import { prisma } from '@/app/lib/prisma';
 import { SubmissionApprovalData } from '@/types/submission';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-// GET /api/submissions/[id] - Get submission by ID
+// GET /api/submissions/[id] - Get submission by ID or generate PDF
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,9 +22,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Await params for Next.js 15 compatibility
     const { id } = await params;
+    
+    // Extract actual submission ID (remove SIMLOK_ prefix if present)
+    let submissionId = id;
+    if (submissionId.startsWith('SIMLOK_')) {
+      submissionId = submissionId.replace('SIMLOK_', '');
+    }
+
+    // Check if this is a PDF request based on the Accept header or query parameter
+    const url = new URL(request.url);
+    const isPdfRequest = url.pathname.includes('/pdf') || 
+                        request.headers.get('accept')?.includes('application/pdf') ||
+                        url.searchParams.get('format') === 'pdf';
 
     const submission = await prisma.submission.findUnique({
-      where: { id },
+      where: { id: submissionId },
       include: {
         user: {
           select: {
@@ -52,10 +65,234 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
+    // If PDF is requested, generate and return PDF
+    if (isPdfRequest) {
+      return generatePDF(submission);
+    }
+
+    // Return regular JSON response
     return NextResponse.json(submission);
   } catch (error) {
     console.error('Error fetching submission:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// Helper function to generate PDF
+async function generatePDF(submission: any) {
+  try {
+    // Only allow PDF generation for APPROVED submissions
+    if (submission.status_approval_admin !== 'APPROVED') {
+      return NextResponse.json({ error: 'PDF only available for approved submissions' }, { status: 400 });
+    }
+
+    // Create PDF document
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const { width, height } = page.getSize();
+    const margin = 50;
+    let currentY = height - margin;
+
+    // Helper function to add text
+    const addText = (text: string, x: number, y: number, options: any = {}) => {
+      page.drawText(text, {
+        x,
+        y,
+        size: options.size || 12,
+        font: options.bold ? boldFont : font,
+        color: rgb(0, 0, 0),
+        ...options,
+      });
+    };
+
+    // Header
+    addText('SURAT IZIN MASUK LOKASI (SIMLOK)', width / 2 - 120, currentY, { 
+      bold: true, 
+      size: 16 
+    });
+    currentY -= 30;
+
+    // SIMLOK Number and Date
+    addText(`Nomor: ${submission.nomor_simlok}`, margin, currentY, { bold: true });
+    currentY -= 20;
+    
+    const formatDate = (dateString: string | Date | null) => {
+      if (!dateString) return '-';
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    };
+
+    addText(`Tanggal: ${formatDate(submission.tanggal_simlok)}`, margin, currentY);
+    currentY -= 40;
+
+    // Vendor Information
+    addText('INFORMASI VENDOR', margin, currentY, { bold: true });
+    currentY -= 20;
+    addText(`Nama Vendor: ${submission.nama_vendor}`, margin, currentY);
+    currentY -= 15;
+    addText(`Nama Petugas: ${submission.nama_petugas}`, margin, currentY);
+    currentY -= 15;
+    addText(`Email: ${submission.user.email}`, margin, currentY);
+    currentY -= 30;
+
+    // Work Details
+    addText('DETAIL PEKERJAAN', margin, currentY, { bold: true });
+    currentY -= 20;
+    addText(`Pekerjaan: ${submission.pekerjaan}`, margin, currentY);
+    currentY -= 15;
+    addText(`Lokasi Kerja: ${submission.lokasi_kerja}`, margin, currentY);
+    currentY -= 15;
+    addText(`Jam Kerja: ${submission.jam_kerja}`, margin, currentY);
+    currentY -= 15;
+    
+    // Nama Pekerja - tampilkan dalam format list
+    addText('Nama Pekerja:', margin, currentY, { bold: true });
+    currentY -= 15;
+    
+    // Split nama pekerja berdasarkan line breaks atau koma dan tampilkan sebagai list
+    if (submission.nama_pekerja) {
+      const namaPekerjaList = submission.nama_pekerja
+        .split(/[\n,]+/) // Split by newlines or commas
+        .map((nama: string) => nama.trim())
+        .filter((nama: string) => nama.length > 0);
+      
+      namaPekerjaList.forEach((nama: string, index: number) => {
+        addText(`${index + 1}. ${nama}`, margin + 20, currentY);
+        currentY -= 15;
+      });
+    }
+    currentY -= 5; // Extra spacing after list
+    
+    addText(`Sarana Kerja: ${submission.sarana_kerja}`, margin, currentY);
+    currentY -= 30;
+
+    // Pelaksanaan
+    if (submission.pelaksanaan) {
+      addText('PELAKSANAAN', margin, currentY, { bold: true });
+      currentY -= 20;
+      
+      const pelaksanaanLines = submission.pelaksanaan.split('\n');
+      pelaksanaanLines.forEach((line: string) => {
+        addText(line, margin, currentY);
+        currentY -= 15;
+      });
+      currentY -= 15;
+    }
+
+    // Content
+    if (submission.content) {
+      addText('ISI SURAT', margin, currentY, { bold: true });
+      currentY -= 20;
+      
+      // Split content into lines that fit the page width
+      const maxWidth = width - 2 * margin;
+      const words = submission.content.split(' ');
+      let line = '';
+      
+      words.forEach((word: string) => {
+        const testLine = line + (line ? ' ' : '') + word;
+        const textWidth = font.widthOfTextAtSize(testLine, 12);
+        
+        if (textWidth > maxWidth && line) {
+          addText(line, margin, currentY);
+          currentY -= 15;
+          line = word;
+        } else {
+          line = testLine;
+        }
+      });
+      
+      if (line) {
+        addText(line, margin, currentY);
+        currentY -= 30;
+      }
+    }
+
+    // Lain-lain
+    if (submission.lain_lain) {
+      addText('LAIN-LAIN', margin, currentY, { bold: true });
+      currentY -= 20;
+      
+      const lainLainLines = submission.lain_lain.split('\n');
+      lainLainLines.forEach((line: string) => {
+        addText(line, margin, currentY);
+        currentY -= 15;
+      });
+      currentY -= 15;
+    }
+
+    // Document Information
+    addText('INFORMASI DOKUMEN', margin, currentY, { bold: true });
+    currentY -= 20;
+    
+    if (submission.nomor_simja) {
+      addText(`SIMJA: ${submission.nomor_simja} - ${formatDate(submission.tanggal_simja)}`, margin, currentY);
+      currentY -= 15;
+    }
+    
+    if (submission.nomor_sika) {
+      addText(`SIKA: ${submission.nomor_sika} - ${formatDate(submission.tanggal_sika)}`, margin, currentY);
+      currentY -= 15;
+    }
+
+    // Approval Information
+    currentY -= 15;
+    addText('INFORMASI PERSETUJUAN', margin, currentY, { bold: true });
+    currentY -= 20;
+    addText(`Status: ${submission.status_approval_admin}`, margin, currentY);
+    currentY -= 15;
+    
+    if (submission.approvedByUser) {
+      addText(`Disetujui oleh: ${submission.approvedByUser.nama_petugas}`, margin, currentY);
+      currentY -= 15;
+    }
+    
+    if (submission.keterangan) {
+      addText(`Keterangan: ${submission.keterangan}`, margin, currentY);
+      currentY -= 15;
+    }
+    
+    if (submission.tembusan) {
+      addText('Tembusan:', margin, currentY, { bold: true });
+      currentY -= 15;
+      
+      // Process tembusan as multi-line list like nama pekerja
+      const tembusanList = submission.tembusan
+        .split(/[\n,]+/)
+        .map((item: string) => item.trim())
+        .filter((item: string) => item.length > 0);
+      
+      tembusanList.forEach((item: string, index: number) => {
+        addText(`${index + 1}. ${item}`, margin + 20, currentY);
+        currentY -= 15;
+      });
+    }
+
+    // Generate PDF bytes
+    const pdfBytes = await pdfDoc.save();
+
+    // Return PDF response
+    return new NextResponse(Buffer.from(pdfBytes), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="SIMLOK_${submission.nomor_simlok?.replace(/\//g, '_')}.pdf"`,
+      },
+    });
+
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate PDF' },
+      { status: 500 }
+    );
   }
 }
 
@@ -310,4 +547,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     console.error('Error deleting submission:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
+}
+
+// PATCH /api/submissions/[id] - Update submission (alias for PUT for compatibility)
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  // Delegate to PUT handler for compatibility
+  return PUT(request, { params });
 }

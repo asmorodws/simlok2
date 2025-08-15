@@ -740,3 +740,40 @@ span.flatpickr-weekday,
   opacity: 0.8;
   cursor: grabbing; /* Changes the cursor to indicate dragging */
 }
+
+/* React PDF Styles - Force Light Theme for PDF Viewer */
+.react-pdf__Document {
+  @apply bg-white;
+}
+
+.react-pdf__Page {
+  @apply bg-white border border-gray-200 shadow-sm;
+}
+
+.react-pdf__Page__canvas {
+  @apply bg-white;
+  /* Force white background to override any dark theme interference */
+  background-color: white !important;
+  color: black !important;
+}
+
+.react-pdf__Page__textContent {
+  @apply bg-white;
+  color: black !important;
+}
+
+.react-pdf__Page__annotations {
+  @apply bg-white;
+}
+
+/* Ensure PDF viewer container always has white background */
+.pdf-viewer-container {
+  @apply bg-white;
+  background-color: white !important;
+  color: black !important;
+}
+
+/* Fallback for any PDF rendering issues */
+.pdf-viewer-container * {
+  color: black !important;
+}

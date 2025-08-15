@@ -19,7 +19,7 @@ interface Submission {
   nama_petugas: string;
   pekerjaan: string;
   lokasi_kerja: string;
-  pelaksanaan: string;
+  pelaksanaan: string | null;
   jam_kerja: string;
   lain_lain?: string;
   sarana_kerja: string;

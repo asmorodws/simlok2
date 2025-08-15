@@ -3,7 +3,32 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+async function cleanDatabase() {
+  console.log("🧹 Membersihkan database sebelum seeding...");
+  
+  try {
+    // Hapus data dengan urutan yang benar (child tables dulu, lalu parent tables)
+    // Karena submission menggunakan foreign key ke user, hapus submission dulu
+    await prisma.submission.deleteMany({});
+    console.log("   ✓ Semua data submission dihapus");
+    
+    // Lalu hapus users
+    await prisma.user.deleteMany({});
+    console.log("   ✓ Semua data user dihapus");
+    
+    console.log("🧹 Database berhasil dibersihkan");
+  } catch (error) {
+    console.error("❌ Error saat membersihkan database:", error);
+    throw error;
+  }
+}
+
 async function main() {
+  // Bersihkan database terlebih dahulu
+  await cleanDatabase();
+
+  console.log("🌱 Memulai proses seeding...");
+  
   const users = [
     {
       nama_petugas: "Admin Utama",
@@ -284,6 +309,7 @@ async function main() {
     },
   ];
 
+  console.log("👥 Membuat users...");
   const createdUsers: { [key: string]: any } = {};
 
   for (const user of users) {
@@ -309,7 +335,10 @@ async function main() {
     createdUsers[user.email] = createdUser;
   }
 
+  console.log(`   ✓ ${Object.keys(createdUsers).length} users berhasil dibuat`);
+
   // Create sample submissions
+  console.log("📋 Membuat sample submissions...");
   const admin = createdUsers["admin@example.com"];
   const vendorUsers = Object.values(createdUsers).filter((user: any) => user.role === 'VENDOR');
 
@@ -318,89 +347,65 @@ async function main() {
       berdasarkan: "Kontrak Kerja No. KK/2024/001",
       pekerjaan: "Maintenance Mesin Produksi",
       lokasi_kerja: "Pabrik Jakarta Plant 1",
-      pelaksanaan: "2024-01-15 s/d 2024-01-20",
       jam_kerja: "08:00 - 17:00 WIB",
       sarana_kerja: "Toolkit lengkap, APD standar, crane mobile",
       nama_pekerja: "Tim Maintenance (5 orang)",
-      lain_lain: "Koordinasi dengan supervisor produksi",
-      content: "Pemeliharaan rutin mesin produksi untuk memastikan kinerja optimal",
     },
     {
       berdasarkan: "SPK No. SPK/2024/002",
       pekerjaan: "Instalasi Sistem Keamanan",
       lokasi_kerja: "Gedung Kantor Pusat",
-      pelaksanaan: "2024-01-22 s/d 2024-01-25",
       jam_kerja: "09:00 - 16:00 WIB",
       sarana_kerja: "Kamera CCTV, kabel, tools instalasi",
       nama_pekerja: "Teknisi CCTV (3 orang)",
-      lain_lain: "Bekerja di luar jam operasional kantor",
-      content: "Pemasangan sistem CCTV dan alarm keamanan di seluruh area kantor",
     },
     {
       berdasarkan: "Kontrak Pembangunan No. KB/2024/003",
       pekerjaan: "Renovasi Gudang",
       lokasi_kerja: "Gudang Distribusi Bandung",
-      pelaksanaan: "2024-02-01 s/d 2024-02-15",
       jam_kerja: "07:00 - 16:00 WIB",
       sarana_kerja: "Alat berat, material bangunan, scaffolding",
       nama_pekerja: "Tim Konstruksi (10 orang)",
-      lain_lain: "Memerlukan izin kerja tinggi",
-      content: "Perbaikan struktur gudang dan peningkatan kapasitas penyimpanan",
     },
     {
       berdasarkan: "Work Order No. WO/2024/004",
       pekerjaan: "Pemeliharaan Jaringan IT",
       lokasi_kerja: "Data Center Jakarta",
-      pelaksanaan: "2024-02-10 s/d 2024-02-12",
       jam_kerja: "20:00 - 05:00 WIB",
       sarana_kerja: "Server equipment, testing tools, laptop",
       nama_pekerja: "IT Specialist (2 orang)",
-      lain_lain: "Pekerjaan malam hari untuk minimal downtime",
-      content: "Update sistem dan maintenance server untuk performa optimal",
     },
     {
       berdasarkan: "Kontrak Layanan No. KL/2024/005",
       pekerjaan: "Cleaning Service",
       lokasi_kerja: "Komplek Perkantoran",
-      pelaksanaan: "2024-02-01 s/d 2024-02-29",
       jam_kerja: "18:00 - 06:00 WIB",
       sarana_kerja: "Peralatan cleaning, chemical, vacuum cleaner",
       nama_pekerja: "Cleaning Staff (8 orang)",
-      lain_lain: "Pekerjaan shift malam",
-      content: "Layanan kebersihan harian untuk seluruh area perkantoran",
     },
     {
       berdasarkan: "SPK No. SPK/2024/006",
       pekerjaan: "Pengecatan Gedung",
       lokasi_kerja: "Gedung Perkantoran Tower A",
-      pelaksanaan: "2024-02-20 s/d 2024-03-05",
       jam_kerja: "08:00 - 15:00 WIB",
       sarana_kerja: "Cat, kuas, roller, scaffolding, drop cloth",
       nama_pekerja: "Tim Pengecatan (6 orang)",
-      lain_lain: "Memerlukan koordinasi dengan penghuni gedung",
-      content: "Pengecatan ulang eksterior dan interior gedung perkantoran",
     },
     {
       berdasarkan: "Kontrak Kerja No. KK/2024/007",
       pekerjaan: "Instalasi AC Central",
       lokasi_kerja: "Mall Jakarta Timur",
-      pelaksanaan: "2024-03-01 s/d 2024-03-20",
       jam_kerja: "06:00 - 14:00 WIB",
       sarana_kerja: "Unit AC, ducting, tools HVAC, crane",
       nama_pekerja: "Teknisi HVAC (8 orang)",
-      lain_lain: "Pekerjaan sebelum jam operasional mall",
-      content: "Pemasangan sistem AC central untuk seluruh area mall",
     },
     {
       berdasarkan: "Work Order No. WO/2024/008",
       pekerjaan: "Perbaikan Jalan Akses",
       lokasi_kerja: "Area Industri Cikarang",
-      pelaksanaan: "2024-03-10 s/d 2024-03-25",
       jam_kerja: "07:00 - 17:00 WIB",
       sarana_kerja: "Aspal, alat berat, roller, marka jalan",
       nama_pekerja: "Tim Konstruksi Jalan (12 orang)",
-      lain_lain: "Koordinasi dengan traffic management",
-      content: "Perbaikan dan penambalan jalan akses menuju area industri",
     },
   ];
 
@@ -430,12 +435,12 @@ async function main() {
         nama_petugas: vendorData.nama_petugas,
         pekerjaan: template.pekerjaan,
         lokasi_kerja: template.lokasi_kerja,
-        pelaksanaan: template.pelaksanaan,
+        pelaksanaan: null, // akan diisi admin saat approve
         jam_kerja: template.jam_kerja,
-        lain_lain: template.lain_lain,
+        lain_lain: null, // akan diisi admin saat approve
         sarana_kerja: template.sarana_kerja,
         nama_pekerja: template.nama_pekerja,
-        content: template.content,
+        content: null, // akan diisi admin saat approve
         userId: vendorData.id,
         status_approval_admin: status,
         qrcode: `QR-${vendorData.id}-${Date.now()}-${submissionCount}`,
@@ -453,6 +458,32 @@ async function main() {
         submissionData.tanggal_simlok = new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000);
         submissionData.tembusan = `Tembusan kepada: Manager Operasional, HSE Coordinator, Security - ${vendorData.nama_vendor}`;
         submissionData.keterangan = 'Pengajuan disetujui dengan catatan mengikuti prosedur K3 dan laporan harian';
+        // Admin mengisi pelaksanaan, lain_lain, dan content saat approve
+        submissionData.pelaksanaan = `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} s/d 2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
+        const lainLainOptions = [
+          'Koordinasi dengan supervisor produksi',
+          'Bekerja di luar jam operasional kantor',
+          'Memerlukan izin kerja tinggi',
+          'Pekerjaan malam hari untuk minimal downtime',
+          'Pekerjaan shift malam',
+          'Memerlukan koordinasi dengan penghuni gedung',
+          'Pekerjaan sebelum jam operasional mall',
+          'Koordinasi dengan traffic management'
+        ];
+        submissionData.lain_lain = lainLainOptions[submissionCount % lainLainOptions.length];
+        
+        // Admin mengisi content saat approve
+        const contentOptions = [
+          'Pemeliharaan rutin mesin produksi untuk memastikan kinerja optimal',
+          'Pemasangan sistem CCTV dan alarm keamanan di seluruh area kantor',
+          'Perbaikan struktur gudang dan peningkatan kapasitas penyimpanan',
+          'Update sistem dan maintenance server untuk performa optimal',
+          'Layanan kebersihan harian untuk seluruh area perkantoran',
+          'Pengecatan ulang eksterior dan interior gedung perkantoran',
+          'Pemasangan sistem AC central untuk seluruh area mall',
+          'Perbaikan dan penambalan jalan akses menuju area industri'
+        ];
+        submissionData.content = contentOptions[submissionCount % contentOptions.length];
       } else if (status === 'REJECTED') {
         submissionData.approved_by_admin = admin.id;
         const rejectionReasons = [
@@ -473,7 +504,8 @@ async function main() {
     }
   }
 
-  console.log("✅ Seeding selesai");
+  console.log(`   ✓ ${submissionCount} submissions berhasil dibuat`);
+  console.log("✅ Seeding selesai dengan sukses!");
 }
 
 main()

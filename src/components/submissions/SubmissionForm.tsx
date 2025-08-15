@@ -36,16 +36,13 @@ export default function SubmissionForm() {
     nama_petugas: '',
     pekerjaan: '',
     lokasi_kerja: '',
-    pelaksanaan: '',
     jam_kerja: '',
-    lain_lain: '',
     sarana_kerja: '',
     nomor_simja: '',
     tanggal_simja: '',
     nomor_sika: '',
     tanggal_sika: '',
     nama_pekerja: '',
-    content: '',
     upload_doc_sika: '',
     upload_doc_simja: '',
     upload_doc_id_card: '',
@@ -92,17 +89,42 @@ export default function SubmissionForm() {
     }));
   };
 
+  // Function to format multiple names with line breaks for display
+  const formatNamaPekerjaDisplay = (names: string): string[] => {
+    // Split by newlines or commas, clean up each name, and return as array
+    return names
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(name => name.trim()) // Remove whitespace
+      .filter(name => name.length > 0); // Remove empty strings
+  };
+
+  // Function to format multiple names for database (with line breaks)
+  const formatNamaPekerja = (names: string): string => {
+    // Split by newlines or commas, clean up each name, and rejoin with line breaks
+    return names
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(name => name.trim()) // Remove whitespace
+      .filter(name => name.length > 0) // Remove empty strings
+      .join('\n'); // Join with line breaks for database
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Format nama pekerja before sending
+      const formattedData = {
+        ...formData,
+        nama_pekerja: formatNamaPekerja(formData.nama_pekerja)
+      };
+
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formattedData),
       });
 
       if (!response.ok) {
@@ -203,17 +225,6 @@ export default function SubmissionForm() {
               </div>
 
               <div>
-                <Label htmlFor="pelaksanaan">Pelaksanaan *</Label>
-                <Input
-                  id="pelaksanaan"
-                  name="pelaksanaan"
-                  value={formData.pelaksanaan}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="jam_kerja">Jam Kerja *</Label>
                 <TimePicker
                   id="jam_kerja"
@@ -225,87 +236,114 @@ export default function SubmissionForm() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
-                <Input
-                  id="nama_pekerja"
-                  name="nama_pekerja"
-                  value={formData.nama_pekerja}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+              {/* Nama Pekerja dan Sarana Kerja - sejajar */}
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
+                    <textarea
+                      id="nama_pekerja"
+                      name="nama_pekerja"
+                      value={formData.nama_pekerja}
+                      onChange={handleChange}
+                      required
+                      rows={3}
+                      placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Tip: Pisahkan nama dengan enter atau koma. Akan ditampilkan satu nama per baris.
+                    </p>
+                    {formData.nama_pekerja && (
+                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <p className="text-sm text-blue-700 font-medium mb-2">Preview tampilan:</p>
+                        <div className="text-sm text-blue-800 space-y-1">
+                          {formatNamaPekerjaDisplay(formData.nama_pekerja).map((name, index) => (
+                            <div key={index} className="flex items-center">
+                              <span className="w-4 text-blue-600">{index + 1}.</span>
+                              <span className="ml-2">{name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
-                <Input
-                  id="nomor_simja"
-                  name="nomor_simja"
-                  value={formData.nomor_simja}
-                  onChange={handleChange}
-                />
+                  <div>
+                    <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
+                    <textarea
+                      id="sarana_kerja"
+                      name="sarana_kerja"
+                      value={formData.sarana_kerja}
+                      onChange={handleChange}
+                      required
+                      rows={3}
+                      placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
-                <DatePicker
-                  id="tanggal_simja"
-                  name="tanggal_simja"
-                  value={formData.tanggal_simja}
-                  onChange={handleDateChange('tanggal_simja')}
-                  placeholder="Pilih tanggal SIMJA"
-                />
+            {/* SIMJA Section */}
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIMJA</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                  <Input
+                    id="nomor_simja"
+                    name="nomor_simja"
+                    value={formData.nomor_simja}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIMJA/2024/001"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                  <DatePicker
+                    id="tanggal_simja"
+                    name="tanggal_simja"
+                    value={formData.tanggal_simja}
+                    onChange={handleDateChange('tanggal_simja')}
+                    placeholder="Pilih tanggal SIMJA"
+                  />
+                </div>
               </div>
+            </div>
 
-              <div>
-                <Label htmlFor="nomor_sika">Nomor SIKA</Label>
-                <Input
-                  id="nomor_sika"
-                  name="nomor_sika"
-                  value={formData.nomor_sika}
-                  onChange={handleChange}
-                />
-              </div>
+            {/* SIKA Section */}
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIKA</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                  <Input
+                    id="nomor_sika"
+                    name="nomor_sika"
+                    value={formData.nomor_sika}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIKA/2024/001"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
-                <DatePicker
-                  id="tanggal_sika"
-                  name="tanggal_sika"
-                  value={formData.tanggal_sika}
-                  onChange={handleDateChange('tanggal_sika')}
-                  placeholder="Pilih tanggal SIKA"
-                />
+                <div>
+                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                  <DatePicker
+                    id="tanggal_sika"
+                    name="tanggal_sika"
+                    value={formData.tanggal_sika}
+                    onChange={handleDateChange('tanggal_sika')}
+                    placeholder="Pilih tanggal SIKA"
+                  />
+                </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
-                <textarea
-                  id="sarana_kerja"
-                  name="sarana_kerja"
-                  value={formData.sarana_kerja}
-                  onChange={handleChange}
-                  required
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="lain_lain">Lain-lain</Label>
-                <textarea
-                  id="lain_lain"
-                  name="lain_lain"
-                  value={formData.lain_lain}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
+              {/* <div>
                 <Label htmlFor="content">Content</Label>
                 <textarea
                   id="content"
@@ -315,7 +353,7 @@ export default function SubmissionForm() {
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              </div>
+              </div> */}
             </div>
 
             <div className="space-y-4">

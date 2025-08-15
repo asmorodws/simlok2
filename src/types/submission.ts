@@ -4,16 +4,16 @@ export interface SubmissionData {
   nama_petugas: string;
   pekerjaan: string;
   lokasi_kerja: string;
-  pelaksanaan: string;
+  pelaksanaan?: string; // akan diisi oleh admin saat approve
   jam_kerja: string;
-  lain_lain?: string;
+  lain_lain?: string; // akan diisi oleh admin saat approve
   sarana_kerja: string;
   nomor_simja?: string;
   tanggal_simja?: string;
   nomor_sika?: string;
   tanggal_sika?: string;
   nama_pekerja: string;
-  content?: string;
+  content?: string; // akan diisi oleh admin saat approve
   upload_doc_sika?: string;
   upload_doc_simja?: string;
   upload_doc_id_card?: string;

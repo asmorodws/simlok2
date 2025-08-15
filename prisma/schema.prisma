@@ -89,7 +89,7 @@ model Submission {
   nama_petugas          String
   pekerjaan             String
   lokasi_kerja          String
-  pelaksanaan           String
+  pelaksanaan           String?
   jam_kerja             String
   lain_lain             String?
   sarana_kerja          String

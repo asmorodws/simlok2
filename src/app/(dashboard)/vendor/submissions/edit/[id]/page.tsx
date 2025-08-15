@@ -6,9 +6,9 @@ import SidebarLayout from '@/components/SidebarLayout';
 import { prisma } from '@/app/lib/prisma';
 
 interface EditSubmissionPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditSubmissionPage({ params }: EditSubmissionPageProps) {

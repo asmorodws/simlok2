@@ -27,7 +27,7 @@ export default function DashboardMainContent() {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="lg:col-span-3 mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <h3 className="font-semibold text-yellow-800">Debug Session Info:</h3>
           <pre className="text-sm text-yellow-700 mt-2">
@@ -40,7 +40,7 @@ export default function DashboardMainContent() {
             }, null, 2)}
           </pre>
         </div>
-      )}
+      )} */}
       
       {/* Main column */}
       <div className="space-y-6 lg:col-span-2">
