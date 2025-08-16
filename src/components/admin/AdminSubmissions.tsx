@@ -220,6 +220,30 @@ export default function AdminSubmissions() {
     );
   }, []);
 
+  // Function to format nama_pekerja for table display
+  const formatNamaPekerjaPreview = useCallback((names: string, maxDisplay: number = 2): string => {
+    if (!names) return '';
+    const namesList = names
+      .split(/[\n,]+/)
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (namesList.length <= maxDisplay) {
+      return namesList.join(', ');
+    }
+    
+    return `${namesList.slice(0, maxDisplay).join(', ')} +${namesList.length - maxDisplay} lainnya`;
+  }, []);
+
+  // Function to format nama_pekerja for modal display
+  const formatNamaPekerjaDisplay = useCallback((names: string): string[] => {
+    if (!names) return [];
+    return names
+      .split(/[\n,]+/)
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+  }, []);
+
   const openModal = (submission: Submission) => {
     setSelectedSubmission(submission);
     setShowModal(true);
@@ -323,7 +347,9 @@ export default function AdminSubmissions() {
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.pekerjaan}>
                       {submission.pekerjaan}
                     </div>
-                    <div className="text-sm text-gray-500">{submission.nama_pekerja}</div>
+                    <div className="text-sm text-gray-500" title={submission.nama_pekerja}>
+                      {formatNamaPekerjaPreview(submission.nama_pekerja)}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.lokasi_kerja}>
@@ -366,7 +392,7 @@ export default function AdminSubmissions() {
         )}
       </div>
     );
-  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge, openModal, fetchSubmissions]);
+  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge, formatNamaPekerjaPreview, formatNamaPekerjaDisplay, openModal, fetchSubmissions]);
 
   return (
     <div className="space-y-4">
@@ -503,7 +529,14 @@ export default function AdminSubmissions() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Pekerja</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedSubmission.nama_pekerja}</p>
+                    <div className="mt-1 text-sm text-gray-900">
+                      {formatNamaPekerjaDisplay(selectedSubmission.nama_pekerja).map((nama, index) => (
+                        <div key={index} className="flex items-start">
+                          <span className="w-6 text-gray-600 flex-shrink-0">{index + 1}.</span>
+                          <span className="flex-1">{nama}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700">Status Saat Ini</label>

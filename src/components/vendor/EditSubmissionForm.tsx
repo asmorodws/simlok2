@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
+import DatePicker from '@/components/form/DatePicker';
+import TimePicker from '@/components/form/TimePicker';
+import FileUpload from '@/components/form/FileUpload';
 
 interface Submission {
   id: string;
+  status_approval_admin: string;
   nama_vendor: string;
   berdasarkan: string;
   nama_petugas: string;
@@ -35,7 +40,20 @@ interface EditSubmissionFormProps {
 
 export default function EditSubmissionForm({ submission }: EditSubmissionFormProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Auto-fill form data when session is available (for readonly fields)
+  useEffect(() => {
+    if (session?.user) {
+      setFormData(prev => ({
+        ...prev,
+        // Keep vendor name readonly for vendors - use session data if available
+        nama_vendor: session.user.nama_vendor || submission.nama_vendor || prev.nama_vendor || '',
+      }));
+    }
+  }, [session, submission.nama_vendor]);
+
   const [formData, setFormData] = useState({
     nama_vendor: submission.nama_vendor || '',
     berdasarkan: submission.berdasarkan || '',
@@ -47,9 +65,21 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
     lain_lain: submission.lain_lain || '',
     sarana_kerja: submission.sarana_kerja || '',
     nomor_simja: submission.nomor_simja || '',
-    tanggal_simja: submission.tanggal_simja ? new Date(submission.tanggal_simja).toISOString().split('T')[0] : '',
+    tanggal_simja: submission.tanggal_simja ? (() => {
+      const date = new Date(submission.tanggal_simja);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })() : '',
     nomor_sika: submission.nomor_sika || '',
-    tanggal_sika: submission.tanggal_sika ? new Date(submission.tanggal_sika).toISOString().split('T')[0] : '',
+    tanggal_sika: submission.tanggal_sika ? (() => {
+      const date = new Date(submission.tanggal_sika);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })() : '',
     nama_pekerja: submission.nama_pekerja || '',
     content: submission.content || '',
     upload_doc_sika: submission.upload_doc_sika || '',
@@ -68,6 +98,14 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
     }
   };
 
+  // Handle file upload from FileUpload component
+  const handleFileUpload = (fieldName: string) => (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: url
+    }));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -76,28 +114,117 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
     }));
   };
 
+  const handleDateChange = (name: string) => (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleTimeChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      jam_kerja: value
+    }));
+  };
+
+  // Function to format multiple names with line breaks for display
+  const formatNamaPekerjaDisplay = (names: string): string[] => {
+    // Split by newlines or commas, clean up each name, and return as array
+    return names
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(name => name.trim()) // Remove whitespace
+      .filter(name => name.length > 0); // Remove empty strings
+  };
+
+  // Function to format multiple names for database (with line breaks)
+  const formatNamaPekerja = (names: string): string => {
+    // Split by newlines or commas, clean up each name, and rejoin with line breaks
+    return names
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(name => name.trim()) // Remove whitespace
+      .filter(name => name.length > 0) // Remove empty strings
+      .join('\n'); // Join with line breaks for database
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if submission is still editable
+    if (submission.status_approval_admin !== 'PENDING') {
+      alert('Tidak dapat mengubah pengajuan yang sudah diproses oleh admin.');
+      return;
+    }
+    
+    // Client-side validation
+    const requiredFields = [
+      'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
+      'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nama_pekerja'
+    ];
+
+    for (const field of requiredFields) {
+      if (!formData[field as keyof typeof formData] || formData[field as keyof typeof formData].trim() === '') {
+        alert(`Field ${field} harus diisi!`);
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     try {
+      // Format nama pekerja before sending
+      const formattedData = {
+        ...formData,
+        nama_pekerja: formatNamaPekerja(formData.nama_pekerja)
+      };
+
+      console.log('Sending update request:', {
+        url: `/api/submissions/${submission.id}`,
+        method: 'PUT',
+        data: formattedData
+      });
+
       const response = await fetch(`/api/submissions/${submission.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formattedData),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to update submission');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        
+        let errorMessage;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || 'Gagal menyimpan perubahan';
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        alert(`Error: ${errorMessage}\n\nDetail: ${errorText}`);
+        return;
       }
 
+      const result = await response.json();
+      console.log('Update successful:', result);
+      
+      alert('Perubahan berhasil disimpan!');
       router.push('/vendor/submissions');
     } catch (error) {
-      console.error('Error updating submission:', error);
-      alert('Failed to update submission. Please try again.');
+      console.error('Network/unexpected error:', error);
+      
+      let errorMessage = 'Terjadi kesalahan tidak terduga';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      alert(`Gagal menyimpan perubahan: ${errorMessage}\n\nSilakan coba lagi atau hubungi administrator.`);
     } finally {
       setIsLoading(false);
     }
@@ -110,21 +237,41 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Edit Pengajuan SIMLOK</h1>
             <div className="text-sm text-gray-500">
-              Status: <span className="font-medium text-yellow-600">PENDING</span>
+              Status: <span className={`font-medium ${
+                submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
+                submission.status_approval_admin === 'APPROVED' ? 'text-green-600' :
+                'text-red-600'
+              }`}>{submission.status_approval_admin}</span>
             </div>
           </div>
           
+          {submission.status_approval_admin !== 'PENDING' && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800 text-sm">
+                <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
+                Anda hanya dapat melihat detailnya saja.
+              </p>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
+            <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="nama_vendor">Nama Vendor *</Label>
                 <Input
                   id="nama_vendor"
                   name="nama_vendor"
-                  value={formData.nama_vendor}
+                  value={session?.user?.nama_vendor || formData.nama_vendor || ''}
                   onChange={handleChange}
                   required
+                  readOnly={!!session?.user?.nama_vendor}
+                  disabled={!!session?.user?.nama_vendor}
+                  className={session?.user?.nama_vendor ? "bg-gray-50 cursor-not-allowed" : ""}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  {session?.user?.nama_vendor ? "Nama vendor tidak dapat diubah" : ""}
+                </p>
               </div>
 
               <div>
@@ -132,7 +279,6 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
                 <Input
                   id="berdasarkan"
                   name="berdasarkan"
-                  placeholder="Kontrak/SPK/Dokumen referensi"
                   value={formData.berdasarkan}
                   onChange={handleChange}
                   required
@@ -147,11 +293,12 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
                   value={formData.nama_petugas}
                   onChange={handleChange}
                   required
+                  placeholder="Nama petugas yang bertanggung jawab"
                 />
               </div>
 
               <div>
-                <Label htmlFor="pekerjaan">Jenis Pekerjaan *</Label>
+                <Label htmlFor="pekerjaan">Pekerjaan *</Label>
                 <Input
                   id="pekerjaan"
                   name="pekerjaan"
@@ -173,175 +320,164 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
               </div>
 
               <div>
-                <Label htmlFor="pelaksanaan">Waktu Pelaksanaan *</Label>
-                <Input
-                  id="pelaksanaan"
-                  name="pelaksanaan"
-                  placeholder="1-31 Januari 2024"
-                  value={formData.pelaksanaan}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
                 <Label htmlFor="jam_kerja">Jam Kerja *</Label>
-                <Input
+                <TimePicker
                   id="jam_kerja"
                   name="jam_kerja"
-                  placeholder="08:00 - 17:00 WIB"
                   value={formData.jam_kerja}
-                  onChange={handleChange}
+                  onChange={handleTimeChange}
                   required
+                  placeholder="Pilih jam kerja"
                 />
               </div>
 
-              <div>
-                <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
-                <Input
-                  id="nama_pekerja"
-                  name="nama_pekerja"
-                  placeholder="Tim atau nama individual"
-                  value={formData.nama_pekerja}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+              {/* Nama Pekerja dan Sarana Kerja - sejajar */}
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
+                    <textarea
+                      id="nama_pekerja"
+                      name="nama_pekerja"
+                      value={formData.nama_pekerja}
+                      onChange={handleChange}
+                      required
+                      rows={3}
+                      placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      Tip: Pisahkan nama dengan enter atau koma. Akan ditampilkan satu nama per baris.
+                    </p>
+                    {formData.nama_pekerja && (
+                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                        <p className="text-sm text-blue-700 font-medium mb-2">Preview tampilan:</p>
+                        <div className="text-sm text-blue-800 space-y-1">
+                          {formatNamaPekerjaDisplay(formData.nama_pekerja).map((name, index) => (
+                            <div key={index} className="flex items-center">
+                              <span className="w-4 text-blue-600">{index + 1}.</span>
+                              <span className="ml-2">{name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-              <div>
-                <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
-                <Input
-                  id="nomor_simja"
-                  name="nomor_simja"
-                  value={formData.nomor_simja}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
-                <Input
-                  id="tanggal_simja"
-                  name="tanggal_simja"
-                  type="date"
-                  value={formData.tanggal_simja}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="nomor_sika">Nomor SIKA</Label>
-                <Input
-                  id="nomor_sika"
-                  name="nomor_sika"
-                  value={formData.nomor_sika}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
-                <Input
-                  id="tanggal_sika"
-                  name="tanggal_sika"
-                  type="date"
-                  value={formData.tanggal_sika}
-                  onChange={handleChange}
-                />
+                  <div>
+                    <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
+                    <textarea
+                      id="sarana_kerja"
+                      name="sarana_kerja"
+                      value={formData.sarana_kerja}
+                      onChange={handleChange}
+                      required
+                      rows={3}
+                      placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
-              <textarea
-                id="sarana_kerja"
-                name="sarana_kerja"
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Daftar alat dan perlengkapan yang akan digunakan"
-                value={formData.sarana_kerja}
-                onChange={handleChange}
-                required
-              />
+            {/* SIMJA Section */}
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIMJA</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                  <Input
+                    id="nomor_simja"
+                    name="nomor_simja"
+                    value={formData.nomor_simja}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIMJA/2024/001"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                  <DatePicker
+                    id="tanggal_simja"
+                    name="tanggal_simja"
+                    value={formData.tanggal_simja}
+                    onChange={handleDateChange('tanggal_simja')}
+                    placeholder="Pilih tanggal SIMJA"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="content">Deskripsi Pekerjaan *</Label>
-              <textarea
-                id="content"
-                name="content"
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Jelaskan detail pekerjaan yang akan dilakukan"
-                value={formData.content}
-                onChange={handleChange}
-                required
-              />
-            </div>
+            {/* SIKA Section */}
+            <div className="space-y-4">
+              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIKA</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                  <Input
+                    id="nomor_sika"
+                    name="nomor_sika"
+                    value={formData.nomor_sika}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIKA/2024/001"
+                  />
+                </div>
 
-            <div>
-              <Label htmlFor="lain_lain">Keterangan Lain-lain</Label>
-              <textarea
-                id="lain_lain"
-                name="lain_lain"
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Informasi tambahan jika ada"
-                value={formData.lain_lain}
-                onChange={handleChange}
-              />
+                <div>
+                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                  <DatePicker
+                    id="tanggal_sika"
+                    name="tanggal_sika"
+                    value={formData.tanggal_sika}
+                    onChange={handleDateChange('tanggal_sika')}
+                    placeholder="Pilih tanggal SIKA"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Upload Dokumen</h3>
+              <h3 className="text-lg font-semibold">Upload Dokumen</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <Label htmlFor="upload_doc_sika">Dokumen SIKA</Label>
-                  <input
-                    id="upload_doc_sika"
-                    name="upload_doc_sika"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formData.upload_doc_sika && (
-                    <p className="text-sm text-gray-500 mt-1">Current: {formData.upload_doc_sika}</p>
-                  )}
-                </div>
+              <FileUpload
+                id="upload_doc_sika"
+                name="upload_doc_sika"
+                label="Upload Dokumen SIKA"
+                description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                value={formData.upload_doc_sika}
+                onChange={handleFileUpload('upload_doc_sika')}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                maxSize={5}
+                required={false}
+              />
 
-                <div>
-                  <Label htmlFor="upload_doc_simja">Dokumen SIMJA</Label>
-                  <input
-                    id="upload_doc_simja"
-                    name="upload_doc_simja"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formData.upload_doc_simja && (
-                    <p className="text-sm text-gray-500 mt-1">Current: {formData.upload_doc_simja}</p>
-                  )}
-                </div>
+              <FileUpload
+                id="upload_doc_simja"
+                name="upload_doc_simja"
+                label="Upload Dokumen SIMJA"
+                description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                value={formData.upload_doc_simja}
+                onChange={handleFileUpload('upload_doc_simja')}
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                maxSize={5}
+                required={false}
+              />
 
-                <div>
-                  <Label htmlFor="upload_doc_id_card">ID Card/KTP</Label>
-                  <input
-                    id="upload_doc_id_card"
-                    name="upload_doc_id_card"
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formData.upload_doc_id_card && (
-                    <p className="text-sm text-gray-500 mt-1">Current: {formData.upload_doc_id_card}</p>
-                  )}
-                </div>
-              </div>
+              <FileUpload
+                id="upload_doc_id_card"
+                name="upload_doc_id_card"
+                label="Upload ID Card"
+                description="Upload foto ID Card (KTP/SIM/Passport) dalam format gambar (JPG, PNG) atau PDF maksimal 5MB"
+                value={formData.upload_doc_id_card}
+                onChange={handleFileUpload('upload_doc_id_card')}
+                accept=".pdf,.jpg,.jpeg,.png"
+                maxSize={5}
+                required={false}
+              />
             </div>
+
+            </fieldset>
 
             <div className="flex justify-end space-x-4 pt-6 border-t">
               <Button
@@ -352,12 +488,14 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
               >
                 Batal
               </Button>
-              <Button
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </Button>
+              {submission.status_approval_admin === 'PENDING' && (
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </Button>
+              )}
             </div>
           </form>
         </div>

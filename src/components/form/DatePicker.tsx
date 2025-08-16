@@ -57,7 +57,10 @@ export default function DatePicker({
   // Update selectedDate when value prop changes
   useEffect(() => {
     if (value) {
-      setSelectedDate(new Date(value));
+      // Parse the date string properly to avoid timezone issues
+      // Assuming value is in YYYY-MM-DD format
+      const [year, month, day] = value.split('-').map(Number);
+      setSelectedDate(new Date(year, month - 1, day)); // month is 0-indexed in Date constructor
     } else {
       setSelectedDate(null);
     }
@@ -66,7 +69,16 @@ export default function DatePicker({
   const handleDateChange = (date: Date | null) => {
     setSelectedDate(date);
     if (onChange) {
-      onChange(date ? date.toISOString().split('T')[0] : '');
+      if (date) {
+        // Format date in local timezone to avoid timezone offset issues
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const localDateString = `${year}-${month}-${day}`;
+        onChange(localDateString);
+      } else {
+        onChange('');
+      }
     }
   };
 

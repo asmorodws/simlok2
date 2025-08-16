@@ -89,20 +89,20 @@ model Submission {
   nama_petugas          String
   pekerjaan             String
   lokasi_kerja          String
-  pelaksanaan           String?
+  pelaksanaan           String?  @db.Text
   jam_kerja             String
-  lain_lain             String?
+  lain_lain             String?  @db.Text
   sarana_kerja          String
-  tembusan              String?
+  tembusan              String?  @db.Text
   nomor_simja           String?
   tanggal_simja         DateTime?
   nomor_sika            String?
   tanggal_sika          DateTime?
   nomor_simlok          String?
   tanggal_simlok        DateTime?
-  nama_pekerja          String
-  content               String?
-  keterangan            String?
+  nama_pekerja          String   @db.Text
+  content               String?  @db.Text
+  keterangan            String?  @db.Text
   upload_doc_sika       String?
   upload_doc_simja      String?
   upload_doc_id_card    String?

@@ -243,6 +243,21 @@ export default function VendorSubmissionsContent() {
     );
   }, []);
 
+  // Function to format nama_pekerja for table display
+  const formatNamaPekerjaPreview = useCallback((names: string, maxDisplay: number = 2): string => {
+    if (!names) return '';
+    const namesList = names
+      .split(/[\n,]+/)
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (namesList.length <= maxDisplay) {
+      return namesList.join(', ');
+    }
+    
+    return `${namesList.slice(0, maxDisplay).join(', ')} +${namesList.length - maxDisplay} lainnya`;
+  }, []);
+
   const tableContent = useMemo(() => {
     if (error) {
       return (
@@ -338,7 +353,9 @@ export default function VendorSubmissionsContent() {
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.pekerjaan}>
                       {submission.pekerjaan}
                     </div>
-                    <div className="text-sm text-gray-500">{submission.nama_pekerja}</div>
+                    <div className="text-sm text-gray-500" title={submission.nama_pekerja}>
+                      {formatNamaPekerjaPreview(submission.nama_pekerja)}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.lokasi_kerja}>

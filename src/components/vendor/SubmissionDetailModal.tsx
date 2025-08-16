@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { XMarkIcon, EyeIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 
 interface Submission {
   id: string;
@@ -50,6 +51,16 @@ interface SubmissionDetailModalProps {
 }
 
 export default function SubmissionDetailModal({ submission, isOpen, onClose }: SubmissionDetailModalProps) {
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    fileUrl: '',
+    fileName: ''
+  });
+
   // Handle escape key press
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -69,6 +80,16 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
       document.body.style.overflow = 'unset';
     };
   }, [isOpen, onClose]);
+
+  // Function to format names for display (similar to create form)
+  const formatNamaPekerjaDisplay = (names: string): string[] => {
+    if (!names) return [];
+    // Split by newlines or commas, clean up each name, and return as array
+    return names
+      .split(/[\n,]+/) // Split by newlines or commas
+      .map(name => name.trim()) // Remove whitespace
+      .filter(name => name.length > 0); // Remove empty strings
+  };
 
   if (!isOpen || !submission) return null;
 
@@ -97,8 +118,20 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
 
   const handleFileView = (fileUrl: string, fileName: string) => {
     if (fileUrl) {
-      window.open(fileUrl, '_blank');
+      setPreviewModal({
+        isOpen: true,
+        fileUrl,
+        fileName
+      });
     }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      fileUrl: '',
+      fileName: ''
+    });
   };
 
   return (
@@ -184,7 +217,14 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-500">Nama Pekerja</label>
-                      <p className="text-sm text-gray-900">{submission.nama_pekerja}</p>
+                      <div className="text-sm text-gray-900">
+                        {formatNamaPekerjaDisplay(submission.nama_pekerja).map((name, index) => (
+                          <div key={index} className="flex items-start">
+                            <span className="w-6 text-gray-600 flex-shrink-0">{index + 1}.</span>
+                            <span className="flex-1">{name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -371,6 +411,14 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
           </div>
         </div>
       </div>
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={handleClosePreview}
+        fileUrl={previewModal.fileUrl}
+        fileName={previewModal.fileName}
+      />
     </div>
   );
 }

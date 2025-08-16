@@ -10,6 +10,7 @@ import {
   ArrowPathIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
+import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 
@@ -42,11 +43,29 @@ export default function FileManager() {
   const [newName, setNewName] = useState('');
   const [migrating, setMigrating] = useState(false);
 
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    fileUrl: '',
+    fileName: ''
+  });
+
   const categoryNames = {
     sika: 'Dokumen SIKA',
     simja: 'Dokumen SIMJA', 
     id_card: 'ID Card',
     other: 'Lainnya'
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      fileUrl: '',
+      fileName: ''
+    });
   };
 
   const categoryIcons = {
@@ -256,7 +275,11 @@ export default function FileManager() {
 
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => window.open(file.url, '_blank')}
+                      onClick={() => setPreviewModal({
+                        isOpen: true,
+                        fileUrl: file.url,
+                        fileName: file.originalName
+                      })}
                       className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50"
                       title="Preview"
                     >
@@ -288,6 +311,14 @@ export default function FileManager() {
           )}
         </Card>
       ))}
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={handleClosePreview}
+        fileUrl={previewModal.fileUrl}
+        fileName={previewModal.fileName}
+      />
     </div>
   );
 }

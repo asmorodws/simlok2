@@ -6,7 +6,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
   ChevronUpDownIcon
-} from "@heroicons/react/24/outline";
+} from "@heroicons/react/24/outline";;
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -214,6 +214,21 @@ export default function AdminSubmissions() {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("id-ID", { year: "numeric", month: "short", day: "numeric" });
 
+  // Function to format nama_pekerja for table display
+  const formatNamaPekerjaPreview = (names: string, maxDisplay: number = 2): string => {
+    if (!names) return '';
+    const namesList = names
+      .split(/[\n,]+/)
+      .map(name => name.trim())
+      .filter(name => name.length > 0);
+    
+    if (namesList.length <= maxDisplay) {
+      return namesList.join(', ');
+    }
+    
+    return `${namesList.slice(0, maxDisplay).join(', ')} +${namesList.length - maxDisplay} lainnya`;
+  };
+
   const tableContent = useMemo(() => {
     if (error) {
       return (
@@ -265,7 +280,9 @@ export default function AdminSubmissions() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={s.pekerjaan}>{s.pekerjaan}</div>
-                    <div className="text-sm text-gray-500">{s.nama_pekerja}</div>
+                    <div className="text-sm text-gray-500" title={s.nama_pekerja}>
+                      {formatNamaPekerjaPreview(s.nama_pekerja)}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 max-w-xs truncate" title={s.lokasi_kerja}>{s.lokasi_kerja}</div>
@@ -307,7 +324,7 @@ export default function AdminSubmissions() {
         )}
       </div>
     );
-  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge, handleDelete]);
+  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge, formatNamaPekerjaPreview, handleDelete]);
 
   return (
     <div className="space-y-4">

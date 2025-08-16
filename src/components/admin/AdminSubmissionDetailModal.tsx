@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { XMarkIcon, EyeIcon, DocumentIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DatePicker from '@/components/form/DatePicker';
+import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 
 interface Submission {
   id: string;
@@ -86,18 +87,47 @@ export default function AdminSubmissionDetailModal({
     tanggal_diterima_security: ''
   });
 
+  // Preview modal state
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    fileUrl: '',
+    fileName: ''
+  });
+
   // Main useEffect for modal state management
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       // Reset approval form when modal opens
       if (submission) {
+        // Function to format date in local timezone for input fields
+        const formatDateForInput = (dateString: string | null | undefined): string => {
+          if (!dateString) {
+            // Return today's date in local timezone
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+          
+          const date = new Date(dateString);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
         setApprovalForm({
           status: 'APPROVED',
           keterangan: submission.keterangan || '',
           tembusan: submission.tembusan || '',
           nomor_simlok: submission.nomor_simlok || '',
-          tanggal_simlok: submission.tanggal_simlok ? new Date(submission.tanggal_simlok).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          tanggal_simlok: formatDateForInput(submission.tanggal_simlok),
           pelaksanaan: submission.pelaksanaan || '',
           lain_lain: submission.lain_lain || '',
           content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.'
@@ -232,9 +262,20 @@ export default function AdminSubmissionDetailModal({
     if (fileUrl) {
       // Convert legacy URL to new format if needed
       const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
-      // Open in new tab instead of modal
-      window.open(convertedUrl, '_blank');
+      setPreviewModal({
+        isOpen: true,
+        fileUrl: convertedUrl,
+        fileName
+      });
     }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      fileUrl: '',
+      fileName: ''
+    });
   };
 
   const handleDownload = (fileUrl: string, fileName: string) => {
@@ -319,8 +360,8 @@ export default function AdminSubmissionDetailModal({
     if (!submission) return;
     
     try {
-      // Generate PDF URL with SIMLOK_ prefix and pdf query parameter
-      const pdfUrl = `/api/submissions/SIMLOK_${submission.id}?format=pdf`;
+      // Generate PDF URL with correct submission ID
+      const pdfUrl = `/api/submissions/${submission.id}?format=pdf`;
       
       // Test if PDF can be generated first
       const response = await fetch(pdfUrl, { method: 'HEAD' });
@@ -370,14 +411,12 @@ export default function AdminSubmissionDetailModal({
       }
 
       const response = await fetch(`/api/submissions/${submission.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
+      });      if (!response.ok) {
         throw new Error('Failed to update submission');
       }
 
@@ -881,12 +920,15 @@ export default function AdminSubmissionDetailModal({
                             </>
                           )}
 
-                          {/* Pelaksanaan - Admin mengisi */}
-                          <div className="space-y-3">
-                            <label className="block text-sm font-medium text-gray-700">
-                              Pelaksanaan <span className="text-red-500">*</span>
-                              <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
-                            </label>
+                          {/* Fields khusus untuk APPROVED */}
+                          {approvalForm.status === 'APPROVED' && (
+                            <>
+                              {/* Pelaksanaan - Admin mengisi */}
+                              <div className="space-y-3">
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Pelaksanaan <span className="text-red-500">*</span>
+                                  <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
+                                </label>
 
                             {/* Template Helper untuk Pelaksanaan */}
                             <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
@@ -985,33 +1027,6 @@ export default function AdminSubmissionDetailModal({
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Keterangan <span className="text-red-500">*</span>
-                              <span className="text-xs text-gray-500 ml-1">(Wajib diisi)</span>
-                            </label>
-                            <textarea
-                              value={approvalForm.keterangan}
-                              onChange={(e) => {
-                                setApprovalForm(prev => ({ ...prev, keterangan: e.target.value }));
-                                clearFieldError('keterangan');
-                              }}
-                              rows={3}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${validationErrors.keterangan
-                                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500 shake'
-                                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                                }`}
-                              placeholder={
-                                approvalForm.status === 'APPROVED'
-                                  ? "Tambahkan catatan approval..."
-                                  : "Alasan penolakan..."
-                              }
-                            />
-                            {validationErrors.keterangan && (
-                              <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.keterangan}</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
                               Tembusan <span className="text-red-500">*</span>
                               <span className="text-xs text-gray-500 ml-1">(Wajib diisi)</span>
                             </label>
@@ -1046,6 +1061,36 @@ export default function AdminSubmissionDetailModal({
                             )}
                             {validationErrors.tembusan && (
                               <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.tembusan}</p>
+                            )}
+                          </div>
+                            </>
+                          )}
+
+                          {/* Keterangan - selalu tampil untuk APPROVED dan REJECTED */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Keterangan <span className="text-red-500">*</span>
+                              <span className="text-xs text-gray-500 ml-1">(Wajib diisi)</span>
+                            </label>
+                            <textarea
+                              value={approvalForm.keterangan}
+                              onChange={(e) => {
+                                setApprovalForm(prev => ({ ...prev, keterangan: e.target.value }));
+                                clearFieldError('keterangan');
+                              }}
+                              rows={3}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${validationErrors.keterangan
+                                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500 shake'
+                                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                                }`}
+                              placeholder={
+                                approvalForm.status === 'APPROVED'
+                                  ? "Tambahkan catatan approval..."
+                                  : "Alasan penolakan..."
+                              }
+                            />
+                            {validationErrors.keterangan && (
+                              <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.keterangan}</p>
                             )}
                           </div>
 
@@ -1120,6 +1165,14 @@ export default function AdminSubmissionDetailModal({
           </div>
         </div>
       </div>
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={handleClosePreview}
+        fileUrl={previewModal.fileUrl}
+        fileName={previewModal.fileName}
+      />
     </>
   );
 }
