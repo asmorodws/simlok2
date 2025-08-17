@@ -78,121 +78,126 @@ Sistem manajemen dan verifikasi lokasi kerja berbasis web yang dibangun dengan N
 └── package.json
 ```
 
-## 🛠️ Instalasi & Setup untuk Pengembangan
+## 🛠️ Setup & Instalasi
 
 ### Prerequisites
 - Node.js 18+ 
 - MySQL database
 - npm atau yarn
 
-### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd simlok2
-```
+### Quick Start - Setup Lengkap
 
-### 2. Install Dependencies
 ```bash
+# 1. Install dependencies
 npm install
-```
 
-### 3. Konfigurasi Environment
-Salin file `.env.example` menjadi `.env.local`:
+# 2. Copy environment file
+cp .env.example .env
 
-```bash
-cp .env.example .env.local
-```
+# 3. Generate NextAuth secret (pilih salah satu):
+# Opsi A: Menggunakan openssl (Linux/macOS)
+openssl rand -base64 32
 
-Edit file `.env.local` sesuai dengan konfigurasi Anda (lihat bagian Dokumentasi Environment Variables).
+# Opsi B: Menggunakan Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
-### 4. Setup Database
-```bash
-# Generate Prisma client
-npx prisma generate
+# Opsi C: Menggunakan npx (jika tersedia)
+npx auth secret
 
-# Jalankan migrasi database
-npx prisma migrate dev --name init
+# 4. Edit file .env - Update konfigurasi:
+# NEXTAUTH_SECRET="paste-hasil-generate-di-atas"
+# DATABASE_URL="mysql://root:@localhost:3306/simlok2"
+# NEXTAUTH_URL="http://localhost:3000"
 
-# Seed database dengan data dummy (opsional)
+# 5. Deploy database migrations
+npx prisma migrate deploy
+
+# 6. Seed database dengan data dummy
 npm run seed
-```
 
-### 5. Jalankan Development Server
-```bash
-npm run dev
+# 7. Build dan jalankan aplikasi
+npm run build
+npm run start
 ```
 
 Akses aplikasi di `http://localhost:3000`.
 
-## 🚀 Deployment untuk Produksi
+### Cara Generate NextAuth Secret
 
-### 1. Persiapan Server
-Pastikan server produksi memiliki:
-- Node.js 18+
-- MySQL database
-- PM2 atau process manager lainnya (opsional)
+NextAuth membutuhkan secret key untuk enkripsi JWT. Ada beberapa cara untuk generate:
 
-### 2. Setup Environment Variables
-Buat file `.env.local` di server produksi dengan konfigurasi yang sesuai:
+#### Metode 1: OpenSSL (Recommended)
+```bash
+# Generate random base64 string 32 bytes
+openssl rand -base64 32
+```
 
+#### Metode 2: Node.js Built-in
+```bash
+# Menggunakan crypto module Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+#### Metode 3: Online Generator
+Buka: https://generate-secret.vercel.app/32 atau website password generator lainnya dengan minimum 32 karakter.
+
+#### Metode 4: NPX Command (Opsional)
+```bash
+# Jika tersedia di sistem
+npx auth secret
+```
+
+**Copy hasil generate ke file `.env`:**
+```bash
+NEXTAUTH_SECRET="hasil-generate-secret-di-atas"
+```
+
+### Development Mode
+Untuk development dengan hot reload:
+
+```bash
+npm run dev
+```
+
+## 🚀 Deployment Produksi
+
+### Setup Environment Production
 ```bash
 # Database Production
 DATABASE_URL="mysql://username:password@localhost:3306/simlok_production"
 
 # NextAuth.js Production
 NEXTAUTH_URL="https://yourdomain.com"
-NEXTAUTH_SECRET="your-very-long-random-secret-key-for-production-minimum-32-characters"
+NEXTAUTH_SECRET="your-production-secret-32-chars-minimum"
 
-# JWT Settings - Production (6 hours default)
-JWT_EXPIRE_TIME=21600  # 6 hours in seconds
-SESSION_MAX_AGE=21600  # 6 hours in seconds  
-SESSION_UPDATE_AGE=1800  # 30 minutes in seconds
-JWT_WARNING_MINUTES=5  # Warning before expiry in minutes
-JWT_REFRESH_INTERVAL=30  # Auto refresh interval in minutes
+# JWT Settings (Opsional - 6 hours default)
+JWT_EXPIRE_TIME=21600  
+SESSION_MAX_AGE=21600
+SESSION_UPDATE_AGE=1800
 ```
 
-### 3. Clone dan Install di Produksi
+### Deploy ke Production
 ```bash
-# Clone repository
+# Clone dan install
 git clone <repository-url>
 cd simlok2
-
-# Install dependencies (production only)
 npm ci --only=production
-```
 
-### 4. Setup Database Produksi
-```bash
-# Generate Prisma client
+# Setup database
 npx prisma generate
-
-# Deploy migrasi ke database produksi
 npx prisma migrate deploy
+npm run seed  # Opsional
 
-# (Opsional) Seed database dengan data dummy
-npm run seed
-```
-
-### 5. Build Aplikasi
-```bash
-# Build aplikasi untuk produksi
+# Build dan start
 npm run build
-```
-
-### 6. Jalankan Aplikasi Produksi
-```bash
-# Jalankan aplikasi produksi
 npm run start
 ```
 
-### 7. Setup Process Manager (Opsional)
-Untuk produksi yang lebih stabil, gunakan PM2:
-
+### Setup PM2 (Opsional)
 ```bash
-# Install PM2 globally
 npm install -g pm2
 
-# Buat file ecosystem.config.js
+# Buat ecosystem.config.js
 cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
@@ -201,81 +206,47 @@ module.exports = {
     args: 'start',
     instances: 'max',
     exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 3000
-    }
+    env: { NODE_ENV: 'production', PORT: 3000 }
   }]
 }
 EOF
 
-# Jalankan dengan PM2
 pm2 start ecosystem.config.js
-
-# Save PM2 process list
-pm2 save
-
-# Setup PM2 startup
-pm2 startup
+pm2 save && pm2 startup
 ```
 
-## 📋 Dokumentasi Environment Variables
+## 📋 Environment Variables
 
-### Database Configuration
+### Required Variables
 ```bash
-# URL koneksi database MySQL
-# Format: mysql://username:password@host:port/database_name
-DATABASE_URL="mysql://root:password@localhost:3306/simlok_db"
+# Database MySQL
+DATABASE_URL="mysql://username:password@host:port/database"
 
-# Contoh untuk berbagai skenario:
-# Local MySQL tanpa password: "mysql://root:@localhost:3306/simlok_db"
-# Local MySQL dengan password: "mysql://root:mypassword@localhost:3306/simlok_db"
-# Remote MySQL: "mysql://user:pass@remote-host:3306/simlok_db"
-# MySQL dengan SSL: "mysql://user:pass@host:3306/simlok_db?sslaccept=strict"
+# NextAuth Configuration
+NEXTAUTH_URL="http://localhost:3000"  # atau domain production
+NEXTAUTH_SECRET="your-32-character-secret-key"
 ```
 
-### NextAuth Configuration
+### Optional JWT Settings
 ```bash
-# URL aplikasi (penting untuk production)
-# Development: http://localhost:3000
-# Production: https://yourdomain.com
-NEXTAUTH_URL="https://simlok.yourdomain.com"
-
-# Secret key untuk enkripsi JWT (WAJIB diganti di production)
-# Generate dengan: openssl rand -base64 32
-NEXTAUTH_SECRET="your-super-secret-jwt-key-minimum-32-characters-long"
+JWT_EXPIRE_TIME=21600        # Session duration (6 hours)
+SESSION_MAX_AGE=21600        # Max session age  
+SESSION_UPDATE_AGE=1800      # Update interval (30 min)
+JWT_WARNING_MINUTES=5        # Warning before expiry
+JWT_REFRESH_INTERVAL=30      # Auto refresh interval
 ```
 
-### JWT Session Settings
-```bash
-# Durasi session JWT dalam detik (default: 6 jam = 21600 detik)
-JWT_EXPIRE_TIME=21600
-
-# Durasi maksimal session dalam detik (default: 6 jam)
-SESSION_MAX_AGE=21600
-
-# Interval update session dalam detik (default: 30 menit = 1800 detik)
-SESSION_UPDATE_AGE=1800
-
-# Peringatan sebelum session expired dalam menit (default: 5 menit)
-JWT_WARNING_MINUTES=5
-
-# Interval auto-refresh dalam menit (default: 30 menit)
-JWT_REFRESH_INTERVAL=30
-```
-
-### Rekomendasi Konfigurasi
+### Contoh Konfigurasi
 ```bash
 # Development
-JWT_EXPIRE_TIME=3600        # 1 jam
-SESSION_MAX_AGE=3600        # 1 jam
-JWT_WARNING_MINUTES=5       # 5 menit
+DATABASE_URL="mysql://root:@localhost:3306/simlok2"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="development-secret-min-32-chars"
 
-# Production
-JWT_EXPIRE_TIME=28800       # 8 jam
-SESSION_MAX_AGE=28800       # 8 jam  
-SESSION_UPDATE_AGE=1800     # 30 menit
-JWT_WARNING_MINUTES=10      # 10 menit
+# Production  
+DATABASE_URL="mysql://user:pass@production-host:3306/simlok_prod"
+NEXTAUTH_URL="https://simlok.yourdomain.com"
+NEXTAUTH_SECRET="production-very-secure-secret-key"
 ```
 
 ## 🔐 Data Default Setelah Seeding

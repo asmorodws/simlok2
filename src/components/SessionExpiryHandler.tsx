@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { JWT_CONFIG, getTimeUntilExpiry, formatExpiryTime } from "@/lib/jwt-config";
+import { JWT_CONFIG, getTimeUntilExpiry, formatExpiryTime } from "@/utils/jwt-config";
 
 interface SessionExpiryHandlerProps {
   children: React.ReactNode;

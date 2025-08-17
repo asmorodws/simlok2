@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
-import { JWT_CONFIG, isTokenExpired, getTimeUntilExpiry } from "@/lib/jwt-config";
+import { JWT_CONFIG, isTokenExpired, getTimeUntilExpiry } from "@/utils/jwt-config";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
   },
   jwt: {
     // JWT expires after configured time (default: 6 hours)
-    maxAge: JWT_CONFIG.EXPIRE_TIME,
+    maxAge: JWT_CONFIG.JWT_EXPIRE_TIME,
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -66,9 +66,9 @@ export const authOptions: NextAuthOptions = {
         token.date_created_at = user.date_created_at;
         // Set issued at time and expiry using configured values
         token.iat = now;
-        token.exp = now + JWT_CONFIG.EXPIRE_TIME;
+        token.exp = now + JWT_CONFIG.JWT_EXPIRE_TIME;
         console.log('JWT callback - storing user.id:', user.id);
-        console.log('JWT callback - token expires at:', new Date((now + JWT_CONFIG.EXPIRE_TIME) * 1000));
+        console.log('JWT callback - token expires at:', new Date((now + JWT_CONFIG.JWT_EXPIRE_TIME) * 1000));
       } else if (token.id) {
         // Check if token is expired
         if (token.exp && typeof token.exp === 'number') {
