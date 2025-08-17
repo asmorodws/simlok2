@@ -2,38 +2,24 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Role } from "@prisma/client";
+import { UserData } from "@/types/user";
 import { 
-  PencilIcon, 
-  TrashIcon, 
-  PlusIcon,
+
   MagnifyingGlassIcon,
   ChevronUpIcon,
   ChevronDownIcon,
-  ChevronUpDownIcon
+  ChevronUpDownIcon,
 } from "@heroicons/react/24/outline";
 
-interface User {
-  id: string;
-  nama_petugas: string;
-  email: string;
-  role: Role;
-  alamat?: string;
-  no_telp?: string;
-  nama_vendor?: string;
-  date_created_at: string;
-  verified_at?: string;
-  verified_by?: string;
-  foto_profil?: string;
-}
-
 interface UsersTableProps {
-  onEdit: (user: User) => void;
-  onDelete: (user: User) => void;
+  onEdit: (user: UserData) => void;
+  onDelete: (user: UserData) => void;
+  onView: (user: UserData) => void;
   onAdd: () => void;
   refreshTrigger: number;
 }
 
-type SortField = keyof User;
+type SortField = keyof UserData;
 type SortOrder = "asc" | "desc";
 
 // Custom hook untuk debounced value
@@ -53,8 +39,8 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: UsersTableProps) {
-  const [users, setUsers] = useState<User[]>([]);
+export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTrigger }: UsersTableProps) {
+  const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -67,6 +53,7 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
+  const [verificationFilter, setVerificationFilter] = useState<"all" | "pending" | "verified">("all");
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>("date_created_at");
@@ -90,7 +77,8 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
         search: debouncedSearchTerm,
         sortBy: sortField,
         sortOrder: sortOrder,
-        ...(roleFilter && { role: roleFilter })
+        ...(roleFilter && { role: roleFilter }),
+        verificationStatus: verificationFilter
       });
 
       const response = await fetch(`/api/users?${params}`, {
@@ -116,7 +104,7 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
     } finally {
       setLoading(false);
     }
-  }, [currentPage, debouncedSearchTerm, roleFilter, sortField, sortOrder, limit]);
+  }, [currentPage, debouncedSearchTerm, roleFilter, verificationFilter, sortField, sortOrder, limit]);
 
   useEffect(() => {
     fetchUsers();
@@ -170,8 +158,9 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
       : <ChevronDownIcon className="w-4 h-4 text-blue-500" />;
   }, [sortField, sortOrder]);
 
-  const formatDate = useCallback((dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
+  const formatDate = useCallback((dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString("id-ID", {
       year: "numeric",
       month: "short", 
       day: "numeric"
@@ -180,9 +169,9 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
 
   const getRoleBadge = useCallback((role: Role) => {
     const colors = {
-      [Role.VENDOR]: "bg-green-100 text-green-800",
-      [Role.VERIFIER]: "bg-blue-100 text-blue-800",
-      [Role.ADMIN]: "bg-purple-100 text-purple-800"
+      [Role.VENDOR]: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400",
+      [Role.VERIFIER]: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400",
+      [Role.ADMIN]: "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400"
     };
     
     return (
@@ -192,17 +181,17 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
     );
   }, []);
 
-  const getVerificationStatus = useCallback((verified_at?: string) => {
+  const getVerificationStatus = useCallback((verified_at?: string | Date | null) => {
     if (verified_at) {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">
           Terverifikasi
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-        Belum Verifikasi
+      <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">
+        Menunggu Verifikasi
       </span>
     );
   }, []);
@@ -321,20 +310,27 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button
+                        onClick={() => onView(user)}
+                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
+                        title="Lihat Detail & Verifikasi User"
+                      >
+                        Lihat
+                      </button>
                       <button
                         onClick={() => onEdit(user)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
+                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 hover:text-amber-700 hover:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200"
                         title="Edit User"
                       >
-                        <PencilIcon className="w-4 h-4" />
+                        Ubah
                       </button>
                       <button
                         onClick={() => onDelete(user)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-700 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200"
                         title="Hapus User"
                       >
-                        <TrashIcon className="w-4 h-4" />
+                        Hapus
                       </button>
                     </div>
                   </td>
@@ -351,25 +347,12 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
         )}
       </div>
     );
-  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus, onEdit, onDelete, fetchUsers]);
+  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus, onEdit, onDelete, onView, fetchUsers]);
 
   return (
     <div className="space-y-4">
       {/* Header dengan Search dan Filter */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-xl font-semibold text-gray-900">Kelola User</h2>
-          <span className="text-sm text-gray-500">({totalUsers} user)</span>
-        </div>
-        
-        <button
-          onClick={onAdd}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Tambah User
-        </button>
-      </div>
+      
 
       {/* Search dan Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -397,6 +380,16 @@ export default function UsersTable({ onEdit, onDelete, onAdd, refreshTrigger }: 
           <option value="">Semua Role</option>
           <option value={Role.VENDOR}>Vendor</option>
           <option value={Role.VERIFIER}>Verifier</option>
+        </select>
+
+        <select
+          value={verificationFilter}
+          onChange={(e) => setVerificationFilter(e.target.value as "all" | "pending" | "verified")}
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="all">Semua Status</option>
+          <option value="pending">Belum Verifikasi</option>
+          <option value="verified">Sudah Verifikasi</option>
         </select>
       </div>
 

@@ -8,6 +8,8 @@ declare module "next-auth" {
       role: Role;
       nama_petugas: string;
       nama_vendor?: string | null;
+      verified_at?: Date | null;
+      date_created_at?: Date;
     } & DefaultSession["user"];
     accessToken?: string;
   }
@@ -16,6 +18,8 @@ declare module "next-auth" {
     role: Role;
     nama_petugas: string;
     nama_vendor?: string | null;
+    verified_at?: Date | null;
+    date_created_at?: Date;
   }
 }
 
@@ -25,6 +29,8 @@ declare module "next-auth/jwt" {
     role?: Role;
     nama_petugas?: string;
     nama_vendor?: string | null;
+    verified_at?: Date | null;
+    date_created_at?: Date;
     accessToken?: string;
   }
 }

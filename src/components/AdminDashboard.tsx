@@ -1,195 +1,371 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   UserGroupIcon, 
   ClipboardDocumentCheckIcon, 
-  ChartBarIcon,
-  CogIcon,
-  PlusIcon,
-  ArrowTrendingUpIcon
+  ClockIcon,
+  EyeIcon,
+  CheckIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import Card from "./ui/Card";
-import { SectionTitle } from "./ui/SectionTitle";
-import { Stat } from "./ui/Stat";
-import PageHeader from "./PageHeader";
+import { Badge } from "./ui/Badge";
+import Button from "./ui/Button";
+import UserVerificationModal from "./admin/UserVerificationModal";
+import { UserData } from "@/types/user";
+
+interface DashboardStats {
+  totalVendors: number;
+  pendingVerificationVendors: number;
+  pendingVerificationSubmissions: number;
+}
+
+interface LatestSubmission {
+  id: string;
+  nama_vendor: string;
+  pekerjaan: string;
+  status_approval_admin: string;
+  created_at: string;
+}
+
+interface PendingVendor extends UserData {
+  // Extending UserData to ensure compatibility
+}
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalVendors: 0,
+    pendingVerificationVendors: 0,
+    pendingVerificationSubmissions: 0
+  });
+  const [latestSubmissions, setLatestSubmissions] = useState<LatestSubmission[]>([]);
+  const [pendingVendors, setPendingVendors] = useState<PendingVendor[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Modal states
+  const [selectedVendor, setSelectedVendor] = useState<PendingVendor | null>(null);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
 
-  const stats = [
-    { label: "Total Users", value: "156", icon: UserGroupIcon },
-    { label: "Vendors", value: "89", icon: PlusIcon },
-    { label: "Verifiers", value: "12", icon: ClipboardDocumentCheckIcon },
-    { label: "Pending", value: "23", icon: ArrowTrendingUpIcon },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-  const adminMenus = [
-    {
-      title: "Kelola User",
-      description: "Tambah, edit, dan hapus user vendor dan verifier",
-      icon: UserGroupIcon,
-      href: "/admin/users",
-      color: "bg-blue-500"
-    },
-    {
-      title: "Laporan Verifikasi",
-      description: "Lihat laporan dan statistik verifikasi",
-      icon: ClipboardDocumentCheckIcon,
-      href: "/admin/reports",
-      color: "bg-green-500"
-    },
-    {
-      title: "Analytics",
-      description: "Dashboard analitik dan metrik sistem",
-      icon: ChartBarIcon,
-      href: "/admin/analytics",
-      color: "bg-purple-500"
-    },
-    {
-      title: "Pengaturan Sistem",
-      description: "Konfigurasi dan pengaturan aplikasi",
-      icon: CogIcon,
-      href: "/admin/settings",
-      color: "bg-gray-500"
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch statistics
+      const [statsRes, submissionsRes, vendorsRes] = await Promise.all([
+        fetch('/api/admin/dashboard-stats'),
+        fetch('/api/admin/latest-submissions'),
+        fetch('/api/admin/pending-vendors')
+      ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
+
+      if (submissionsRes.ok) {
+        const submissionsData = await submissionsRes.json();
+        setLatestSubmissions(submissionsData.submissions || []);
+      }
+
+      if (vendorsRes.ok) {
+        const vendorsData = await vendorsRes.json();
+        setPendingVendors(vendorsData.vendors || []);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const recentActivities = [
-    { id: 1, txt: "User baru vendor ditambahkan", time: "5 min ago", type: "user" },
-    { id: 2, txt: "Verifikasi produk selesai", time: "15 min ago", type: "verification" },
-    { id: 3, txt: "Laporan bulanan dibuat", time: "1 hour ago", type: "report" },
-    { id: 4, txt: "User verifier login", time: "2 hours ago", type: "login" },
-  ];
+  const handleVerifyVendor = async (vendorId: string, action: 'approve' | 'reject') => {
+    try {
+      const response = await fetch(`/api/users/${vendorId}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (response.ok) {
+        // Refresh data after verification
+        fetchDashboardData();
+        // Close modal
+        setIsVerificationModalOpen(false);
+        setSelectedVendor(null);
+      } else {
+        const error = await response.json();
+        alert(error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert(`Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`);
+    }
+  };
+
+  const handleOpenVerificationModal = (vendor: PendingVendor) => {
+    setSelectedVendor(vendor);
+    setIsVerificationModalOpen(true);
+  };
+
+  const handleCloseVerificationModal = () => {
+    setIsVerificationModalOpen(false);
+    setSelectedVendor(null);
+  };
+
+  const handleUserUpdate = (updatedUser: any) => {
+    // Update pending vendors list
+    setPendingVendors(prev => prev.filter(v => v.id !== updatedUser.id));
+    // Refresh dashboard data
+    fetchDashboardData();
+  };
+
+  const handleUserRemove = (userId: string) => {
+    // Remove vendor from pending list
+    setPendingVendors(prev => prev.filter(v => v.id !== userId));
+    // Refresh dashboard data
+    fetchDashboardData();
+  };
+
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING': return <Badge variant="warning">Pending</Badge>;
+      case 'APPROVED': return <Badge variant="success">Approved</Badge>;
+      case 'REJECTED': return <Badge variant="destructive">Rejected</Badge>;
+      default: return <Badge>{status}</Badge>;
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <PageHeader
-        title={`Selamat datang, ${session?.user.nama_petugas ?? session?.user.name ?? "Admin"}!`}
-        subtitle="Panel administrasi sistem SIMLOK"
+      <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          Selamat datang di dashboard admin, {session?.user.nama_petugas ?? session?.user.name ?? "Admin"}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          Kelola sistem dan monitor aktivitas pengguna
+        </p>
+      </div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Vendor</p>
+              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+                {loading ? '...' : stats.totalVendors}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 rounded-lg flex items-center justify-center">
+              <UserGroupIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Vendor</p>
+              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">
+                {loading ? '...' : stats.pendingVerificationVendors}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center">
+              <ClockIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Pengajuan SIMLOK</p>
+              <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
+                {loading ? '...' : stats.pendingVerificationSubmissions}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center">
+              <ClipboardDocumentCheckIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tables Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Latest Submissions Table */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pengajuan Terbaru</h3>
+            <Link href="/admin/submissions" className="text-sm text-blue-600 hover:text-blue-500">
+              Lihat Semua
+            </Link>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Vendor
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Pekerjaan
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Tanggal
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : latestSubmissions.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                      Belum ada pengajuan
+                    </td>
+                  </tr>
+                ) : (
+                  latestSubmissions.map((submission) => (
+                    <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                        {submission.nama_vendor}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300 truncate max-w-xs">
+                        {submission.pekerjaan}
+                      </td>
+                      <td className="px-3 py-4">
+                        {getStatusBadge(submission.status_approval_admin)}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {formatDate(submission.created_at)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Pending Vendors Table */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Vendor Yang Perlu Di Verifikasi</h3>
+            <Link href="/admin/users?filter=pending" className="text-sm text-blue-600 hover:text-blue-500">
+              Lihat Semua
+            </Link>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Nama
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Tanggal Daftar
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Aksi
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                      Loading...
+                    </td>
+                  </tr>
+                ) : pendingVendors.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
+                      Tidak ada vendor yang perlu diverifikasi
+                    </td>
+                  </tr>
+                ) : (
+                  pendingVendors.map((vendor) => (
+                    <tr key={vendor.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-3 py-4">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {vendor.nama_petugas}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {vendor.nama_vendor}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
+                        {vendor.email}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                        {formatDate(vendor.date_created_at)}
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => handleOpenVerificationModal(vendor)}
+                            variant="outline"
+                            size="sm"
+                            className="!px-3 !py-1"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+
+      {/* User Verification Modal */}
+      <UserVerificationModal
+        user={selectedVendor}
+        isOpen={isVerificationModalOpen}
+        onClose={handleCloseVerificationModal}
+        onUserUpdate={handleUserUpdate}
+        onUserRemove={handleUserRemove}
       />
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat, index) => (
-          <Stat 
-            key={index} 
-            label={stat.label} 
-            value={stat.value} 
-            icon={stat.icon}
-          />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Menu */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6">
-            <SectionTitle>Menu Administrasi</SectionTitle>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              {adminMenus.map((menu, index) => (
-                <Link
-                  key={index}
-                  href={menu.href}
-                  className="block p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-md transition-all duration-200 group"
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className={`p-2 rounded-lg ${menu.color} text-white group-hover:scale-110 transition-transform`}>
-                      <menu.icon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 group-hover:text-blue-600">
-                        {menu.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {menu.description}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card className="p-6">
-            <SectionTitle>Aksi Cepat</SectionTitle>
-            <div className="flex flex-wrap gap-3 mt-4">
-              <Link
-                href="/admin/users"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-              >
-                <UserGroupIcon className="w-4 h-4 mr-2" />
-                Tambah User
-              </Link>
-              <Link
-                href="/admin/reports"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <ClipboardDocumentCheckIcon className="w-4 h-4 mr-2" />
-                Lihat Laporan
-              </Link>
-              <Link
-                href="/admin/analytics"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              >
-                <ChartBarIcon className="w-4 h-4 mr-2" />
-                Analytics
-              </Link>
-            </div>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Recent Activities */}
-          <Card className="p-6">
-            <SectionTitle>Aktivitas Terbaru</SectionTitle>
-            <div className="space-y-3 mt-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                    activity.type === 'user' ? 'bg-blue-500' :
-                    activity.type === 'verification' ? 'bg-green-500' :
-                    activity.type === 'report' ? 'bg-purple-500' : 'bg-gray-500'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.txt}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* System Status */}
-          <Card className="p-6">
-            <SectionTitle>Status Sistem</SectionTitle>
-            <div className="space-y-3 mt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Database</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Online
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">API Server</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Online
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">Storage</span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  85% Full
-                </span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

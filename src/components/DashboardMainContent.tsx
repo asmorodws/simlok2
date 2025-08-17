@@ -7,6 +7,7 @@ import { SectionTitle } from "./ui/SectionTitle";
 import { Stat } from "./ui/Stat";
 import { ActivityList } from "./ui/ActivityList";
 import PageHeader from "./PageHeader";
+import { is } from "zod/locales";
 
 export default function DashboardMainContent() {
   const { data: session } = useSession();
@@ -36,7 +37,8 @@ export default function DashboardMainContent() {
               nama_petugas: session?.user?.nama_petugas,
               nama_vendor: session?.user?.nama_vendor,
               role: session?.user?.role,
-              email: session?.user?.email
+              email: session?.user?.email,
+              isVerified: session?.user?.verified_at ? true : false,
             }, null, 2)}
           </pre>
         </div>

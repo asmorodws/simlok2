@@ -9,20 +9,9 @@ import SidebarLayout from "@/components/SidebarLayout";
 import UsersTable from "@/components/admin/UsersTable";
 import UserModal from "@/components/admin/UserModal";
 import DeleteModal from "@/components/admin/DeleteModal";
-
-interface User {
-  id: string;
-  nama_petugas: string;
-  email: string;
-  role: Role;
-  alamat?: string;
-  no_telp?: string;
-  nama_vendor?: string;
-  date_created_at: string;
-  verified_at?: string;
-  verified_by?: string;
-  foto_profil?: string;
-}
+import UserVerificationModal from "@/components/admin/UserVerificationModal";
+import { UserData } from "@/types/user";
+import { Suspense } from "react";
 
 export default function ManageUsersPage() {
   const { data: session, status } = useSession();
@@ -30,7 +19,8 @@ export default function ManageUsersPage() {
   // State untuk modals
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   
   // State untuk refresh tabel
@@ -40,7 +30,7 @@ export default function ManageUsersPage() {
   if (status === "loading") {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
       </div>
     );
   }
@@ -56,20 +46,26 @@ export default function ManageUsersPage() {
     setIsUserModalOpen(true);
   };
 
-  const handleEditUser = (user: User) => {
+  const handleEditUser = (user: UserData) => {
     setSelectedUser(user);
     setModalMode("edit");
     setIsUserModalOpen(true);
   };
 
-  const handleDeleteUser = (user: User) => {
+  const handleDeleteUser = (user: UserData) => {
     setSelectedUser(user);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleViewUser = (user: UserData) => {
+    setSelectedUser(user);
+    setIsVerificationModalOpen(true);
   };
 
   const handleModalClose = () => {
     setIsUserModalOpen(false);
     setIsDeleteModalOpen(false);
+    setIsVerificationModalOpen(false);
     setSelectedUser(null);
   };
 
@@ -81,15 +77,48 @@ export default function ManageUsersPage() {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleUserUpdate = (updatedUser: UserData) => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleUserRemove = (userId: string) => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
     <RoleGate allowedRoles={["ADMIN"]}>
-      <SidebarLayout title="Admin Panel" titlePage="Kelola User">
+      <SidebarLayout title="Admin Panel" titlePage="Manajemen User">
         <div className="space-y-6">
-          <div className="bg-white shadow rounded-lg">
+          {/* Header Section */}
+          <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200/70 dark:border-gray-700/60">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Manajemen User
+                  </h1>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Kelola dan verifikasi user dalam sistem
+                  </p>
+                </div>
+                <button
+                  onClick={handleAddUser}
+                  className="inline-flex items-center px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah User
+                </button>
+              </div>
+            </div>
+
+            {/* Table Section */}
             <div className="p-6">
               <UsersTable
                 onEdit={handleEditUser}
                 onDelete={handleDeleteUser}
+                onView={handleViewUser}
                 onAdd={handleAddUser}
                 refreshTrigger={refreshTrigger}
               />
@@ -103,6 +132,15 @@ export default function ManageUsersPage() {
             onSave={handleSaveSuccess}
             user={selectedUser}
             mode={modalMode}
+          />
+
+          {/* User Verification Modal */}
+          <UserVerificationModal
+            isOpen={isVerificationModalOpen}
+            onClose={handleModalClose}
+            user={selectedUser}
+            onUserUpdate={handleUserUpdate}
+            onUserRemove={handleUserRemove}
           />
 
           {/* Delete Modal */}

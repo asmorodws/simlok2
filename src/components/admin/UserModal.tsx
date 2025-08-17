@@ -2,27 +2,30 @@
 
 import { useState, useEffect } from "react";
 import { Role } from "@prisma/client";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-
-interface User {
-  id: string;
-  nama_petugas: string;
-  email: string;
-  role: Role;
-  alamat?: string;
-  no_telp?: string;
-  nama_vendor?: string;
-  date_created_at: string;
-  verified_at?: string;
-  verified_by?: string;
-  foto_profil?: string;
-}
+import { UserData } from "@/types/user";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import Input from "@/components/form/Input";
+import Label from "@/components/form/Label";
+import { 
+  XMarkIcon,
+  UserPlusIcon,
+  PencilIcon,
+  UserIcon,
+  EnvelopeIcon,
+  LockClosedIcon,
+  IdentificationIcon,
+  PhoneIcon,
+  BuildingOfficeIcon,
+  MapPinIcon,
+  ShieldCheckIcon
+} from "@heroicons/react/24/outline";
 
 interface UserModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  user?: User | null;
+  user?: UserData | null;
   mode: "add" | "edit";
 }
 
@@ -141,171 +144,290 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">
-            {mode === "add" ? "Tambah User Baru" : "Edit User"}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <XMarkIcon className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Nama Petugas */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Petugas *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.nama_petugas}
-                onChange={(e) => handleInputChange("nama_petugas", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Masukkan nama petugas"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Masukkan email"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password {mode === "add" ? "*" : "(kosongkan jika tidak diubah)"}
-              </label>
-              <input
-                type="password"
-                required={mode === "add"}
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder={mode === "add" ? "Masukkan password" : "Kosongkan jika tidak diubah"}
-                minLength={6}
-              />
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role *
-              </label>
-              <select
-                required
-                value={formData.role}
-                onChange={(e) => handleInputChange("role", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={Role.VENDOR}>Vendor</option>
-                <option value={Role.VERIFIER}>Verifier</option>
-              </select>
-            </div>
-
-            {/* No Telepon */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                No Telepon
-              </label>
-              <input
-                type="tel"
-                value={formData.no_telp}
-                onChange={(e) => handleInputChange("no_telp", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Masukkan nomor telepon"
-              />
-            </div>
-
-            {/* Nama Vendor (hanya untuk role VENDOR) */}
-            {formData.role === Role.VENDOR && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama Vendor
-                </label>
-                <input
-                  type="text"
-                  value={formData.nama_vendor}
-                  onChange={(e) => handleInputChange("nama_vendor", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Masukkan nama vendor"
-                />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+        <Card className="shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-brand-100 dark:bg-brand-500/20 rounded-full flex items-center justify-center mr-4">
+                {mode === "add" ? (
+                  <UserPlusIcon className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                ) : (
+                  <PencilIcon className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                )}
               </div>
-            )}
-
-            {/* Verified At (hanya untuk edit) */}
-            {mode === "edit" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Verifikasi
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.verified_at}
-                  onChange={(e) => handleInputChange("verified_at", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  {mode === "add" ? "Tambah User Baru" : "Edit User"}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {mode === "add" 
+                    ? "Buat akun user baru dengan informasi lengkap" 
+                    : "Ubah informasi user yang sudah ada"
+                  }
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Alamat */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Alamat
-            </label>
-            <textarea
-              rows={3}
-              value={formData.alamat}
-              onChange={(e) => handleInputChange("alamat", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Masukkan alamat lengkap"
-            />
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end space-x-3 pt-4">
+            </div>
             <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <XMarkIcon className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+            {/* Error Message */}
+            {error && (
+              <Card className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 mb-6">
+                <div className="p-4">
+                  <div className="flex items-start">
+                    <div className="w-5 h-5 text-red-400 mt-0.5 mr-3">⚠️</div>
+                    <div className="text-sm text-red-800 dark:text-red-300">{error}</div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Personal Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <UserIcon className="w-5 h-5 mr-2 text-gray-500" />
+                  Informasi Personal
+                </h3>
+                
+                <Card className="bg-gray-50 dark:bg-gray-800/50">
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Nama Petugas */}
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <UserIcon className="w-4 h-4 text-gray-500 mr-2" />
+                          <Label>Nama Petugas <span className="text-red-500">*</span></Label>
+                        </div>
+                        <Input
+                          type="text"
+                          required
+                          value={formData.nama_petugas}
+                          onChange={(e) => handleInputChange("nama_petugas", e.target.value)}
+                          placeholder="Masukkan nama lengkap petugas"
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <EnvelopeIcon className="w-4 h-4 text-gray-500 mr-2" />
+                          <Label>Email <span className="text-red-500">*</span></Label>
+                        </div>
+                        <Input
+                          type="email"
+                          required
+                          value={formData.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                          placeholder="example@company.com"
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* No Telepon */}
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <PhoneIcon className="w-4 h-4 text-gray-500 mr-2" />
+                          <Label>No. Telepon</Label>
+                        </div>
+                        <Input
+                          type="tel"
+                          value={formData.no_telp}
+                          onChange={(e) => handleInputChange("no_telp", e.target.value)}
+                          placeholder="08xxxxxxxxxx"
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Role */}
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <IdentificationIcon className="w-4 h-4 text-gray-500 mr-2" />
+                          <Label>Role <span className="text-red-500">*</span></Label>
+                        </div>
+                        <select
+                          required
+                          value={formData.role}
+                          onChange={(e) => handleInputChange("role", e.target.value)}
+                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg 
+                                   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 
+                                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                                   transition-colors duration-200"
+                        >
+                          <option value={Role.VENDOR}>Vendor</option>
+                          <option value={Role.VERIFIER}>Verifier</option>
+                          <option value={Role.ADMIN}>Admin</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Alamat */}
+                    <div className="mt-6">
+                      <div className="flex items-center mb-2">
+                        <MapPinIcon className="w-4 h-4 text-gray-500 mr-2" />
+                        <Label>Alamat Lengkap</Label>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={formData.alamat}
+                        onChange={(e) => handleInputChange("alamat", e.target.value)}
+                        placeholder="Masukkan alamat lengkap termasuk kode pos"
+                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg 
+                                 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 
+                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                                 transition-colors duration-200 resize-none"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Account Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                  <ShieldCheckIcon className="w-5 h-5 mr-2 text-gray-500" />
+                  Informasi Akun
+                </h3>
+                
+                <Card className="bg-gray-50 dark:bg-gray-800/50">
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Password */}
+                      <div>
+                        <div className="flex items-center mb-2">
+                          <LockClosedIcon className="w-4 h-4 text-gray-500 mr-2" />
+                          <Label>
+                            Password {mode === "add" ? <span className="text-red-500">*</span> : "(kosongkan jika tidak diubah)"}
+                          </Label>
+                        </div>
+                        <Input
+                          type="password"
+                          required={mode === "add"}
+                          value={formData.password}
+                          onChange={(e) => handleInputChange("password", e.target.value)}
+                          placeholder={mode === "add" ? "Minimal 6 karakter" : "Kosongkan jika tidak diubah"}
+                          minLength={mode === "add" ? 6 : undefined}
+                          className="w-full"
+                        />
+                        {mode === "edit" && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Biarkan kosong untuk mempertahankan password yang ada
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Nama Vendor (hanya untuk role VENDOR) */}
+                      {formData.role === Role.VENDOR && (
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <BuildingOfficeIcon className="w-4 h-4 text-gray-500 mr-2" />
+                            <Label>Nama Vendor</Label>
+                          </div>
+                          <Input
+                            type="text"
+                            value={formData.nama_vendor}
+                            onChange={(e) => handleInputChange("nama_vendor", e.target.value)}
+                            placeholder="Masukkan nama perusahaan vendor"
+                            className="w-full"
+                          />
+                        </div>
+                      )}
+
+                      {/* Verified At (hanya untuk edit mode) */}
+                      {mode === "edit" && (
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <ShieldCheckIcon className="w-4 h-4 text-gray-500 mr-2" />
+                            <Label>Tanggal Verifikasi</Label>
+                          </div>
+                          <Input
+                            type="datetime-local"
+                            value={formData.verified_at}
+                            onChange={(e) => handleInputChange("verified_at", e.target.value)}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Kosongkan jika user belum diverifikasi
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Role-specific Information */}
+              {formData.role === Role.VENDOR && (
+                <Card className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                  <div className="p-4">
+                    <div className="flex items-start">
+                      <BuildingOfficeIcon className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                          Informasi Vendor
+                        </p>
+                        <p className="text-blue-700 dark:text-blue-400">
+                          User dengan role Vendor akan memiliki akses untuk mengelola produk, 
+                          submission, dan dapat mengisi nama vendor sebagai identitas perusahaan.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              variant="outline"
+              size="md"
+              disabled={loading}
             >
               Batal
-            </button>
-            <button
-              type="submit"
+            </Button>
+            <Button
+              onClick={handleSubmit}
               disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="primary"
+              size="md"
             >
-              {loading ? "Menyimpan..." : mode === "add" ? "Tambah" : "Simpan"}
-            </button>
+              {loading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  {mode === "add" ? "Menambah..." : "Menyimpan..."}
+                </span>
+              ) : (
+                <>
+                  {mode === "add" ? (
+                    <>
+                      <UserPlusIcon className="w-4 h-4 mr-2" />
+                      Tambah User
+                    </>
+                  ) : (
+                    <>
+                      <PencilIcon className="w-4 h-4 mr-2" />
+                      Simpan Perubahan
+                    </>
+                  )}
+                </>
+              )}
+            </Button>
           </div>
-        </form>
+        </Card>
       </div>
     </div>
   );

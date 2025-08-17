@@ -22,6 +22,15 @@ const protectedRoutes: { prefix: string; minRole: Role }[] = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Skip verification check for public paths
+  if (pathname === "/verification-pending" || 
+      pathname === "/login" || 
+      pathname === "/signup" || 
+      pathname.startsWith("/api/auth") ||
+      pathname === "/") {
+    return NextResponse.next();
+  }
+
   // check if this path is protected
   const matched = protectedRoutes.find((r) => pathname.startsWith(r.prefix));
   if (!matched) return NextResponse.next();
@@ -30,16 +39,30 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token) {
     const url = req.nextUrl.clone();
-    url.pathname = "/api/auth/signin";
+    url.pathname = "/login";
     url.searchParams.set("callbackUrl", req.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 
   // token may have role (set in callbacks.jwt)
   const userRole = (token as any).role as string | undefined;
+  const verified_at = (token as any).verified_at as string | undefined;
+
+  console.log('Middleware - pathname:', pathname);
+  console.log('Middleware - userRole:', userRole);
+  console.log('Middleware - verified_at:', verified_at);
+
   if (!userRole) {
     // forbidden
     return new NextResponse("Forbidden", { status: 403 });
+  }
+
+  // Check if user is verified (except for admin)
+  if (userRole !== "ADMIN" && !verified_at) {
+    console.log('Middleware - User not verified, redirecting to verification-pending');
+    const url = req.nextUrl.clone();
+    url.pathname = "/verification-pending";
+    return NextResponse.redirect(url);
   }
 
   if (roleHierarchy[userRole as Role] < roleHierarchy[matched.minRole]) {
@@ -51,5 +74,5 @@ export async function middleware(req: NextRequest) {
 
 // apply to all routes; tune matcher as needed
 export const config = {
-  matcher: ["/admin/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*"],
+  matcher: ["/admin/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
 };

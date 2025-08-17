@@ -4,6 +4,7 @@ import { authOptions } from '@/app/lib/auth';
 import RoleGate from '@/components/RoleGate';
 import SidebarLayout from '@/components/SidebarLayout';
 import VendorSubmissionsContent from '@/components/vendor/VendorSubmissionsContent';
+import VerificationGuard from '@/components/VerificationGuard';
 
 export default async function VendorSubmissionsPage() {
   const session = await getServerSession(authOptions);
@@ -16,11 +17,18 @@ export default async function VendorSubmissionsPage() {
     redirect('/');
   }
 
+  // Check verification status on server side
+  if (!session.user.verified_at) {
+    redirect('/verification-pending');
+  }
+
   return (
-    <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Vendor Panel" titlePage="Daftar Pengajuan">
-        <VendorSubmissionsContent />
-      </SidebarLayout>
-    </RoleGate>
+    <VerificationGuard>
+      <RoleGate allowedRoles={["VENDOR"]}>
+        <SidebarLayout title="Vendor Panel" titlePage="Daftar Pengajuan">
+          <VendorSubmissionsContent />
+        </SidebarLayout>
+      </RoleGate>
+    </VerificationGuard>
   );
 }

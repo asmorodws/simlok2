@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "date_created_at";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const role = searchParams.get("role") || "";
+    const verificationStatus = searchParams.get("verificationStatus") || ""; // "pending", "verified", "all"
 
     const skip = (page - 1) * limit;
 
@@ -53,6 +54,14 @@ export async function GET(request: NextRequest) {
     if (role && (role === Role.VENDOR || role === Role.VERIFIER)) {
       where.role = role;
     }
+
+    // Filter by verification status
+    if (verificationStatus === "pending") {
+      where.verified_at = null;
+    } else if (verificationStatus === "verified") {
+      where.verified_at = { not: null };
+    }
+    // "all" shows both pending and verified
 
     // Search functionality
     if (search) {

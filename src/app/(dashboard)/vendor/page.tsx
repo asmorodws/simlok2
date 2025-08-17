@@ -1,13 +1,16 @@
 import RoleGate from "@/components/RoleGate";
 import SidebarLayout from "@/components/SidebarLayout";
-import DashboardMainContent from "@/components/DashboardMainContent";
+import VendorDashboard from "@/components/VendorDashboard";
+import VerificationGuard from "@/components/VerificationGuard";
 
 export default function VendorPage() {
   return (
-    <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
-        <DashboardMainContent />
-      </SidebarLayout>
-    </RoleGate>
+    <VerificationGuard>
+      <RoleGate allowedRoles={["VENDOR"]}>
+        <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
+          <VendorDashboard />
+        </SidebarLayout>
+      </RoleGate>
+    </VerificationGuard>
   );
 }

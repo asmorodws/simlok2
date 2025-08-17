@@ -186,6 +186,7 @@ export default function SubmissionForm() {
                   name="berdasarkan"
                   value={formData.berdasarkan}
                   onChange={handleChange}
+                  type='text'
                   required
                 />
               </div>
@@ -195,9 +196,12 @@ export default function SubmissionForm() {
                 <Input
                   id="nama_petugas"
                   name="nama_petugas"
-                  value={formData.nama_petugas}
+                  value={session?.user?.nama_petugas || formData.nama_petugas || ''}
                   onChange={handleChange}
                   required
+                  readOnly={!!session?.user?.nama_petugas}
+                  disabled={!!session?.user?.nama_petugas}
+                  className={session?.user?.nama_petugas ? "bg-gray-50 cursor-not-allowed" : ""}
                   placeholder="Nama petugas yang bertanggung jawab"
                 />
               </div>
@@ -247,6 +251,7 @@ export default function SubmissionForm() {
                       value={formData.nama_pekerja}
                       onChange={handleChange}
                       required
+                      itemType='text'
                       rows={3}
                       placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -291,24 +296,26 @@ export default function SubmissionForm() {
               <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIMJA</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                  <Label htmlFor="nomor_simja">Nomor SIMJA *</Label>
                   <Input
                     id="nomor_simja"
                     name="nomor_simja"
                     value={formData.nomor_simja}
                     onChange={handleChange}
                     placeholder="Contoh: SIMJA/2024/001"
+                    required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                  <Label htmlFor="tanggal_simja">Tanggal SIMJA *</Label>
                   <DatePicker
                     id="tanggal_simja"
                     name="tanggal_simja"
                     value={formData.tanggal_simja}
                     onChange={handleDateChange('tanggal_simja')}
                     placeholder="Pilih tanggal SIMJA"
+                    required
                   />
                 </div>
               </div>
@@ -319,24 +326,26 @@ export default function SubmissionForm() {
               <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIKA</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                  <Label htmlFor="nomor_sika">Nomor SIKA *</Label>
                   <Input
                     id="nomor_sika"
                     name="nomor_sika"
                     value={formData.nomor_sika}
                     onChange={handleChange}
                     placeholder="Contoh: SIKA/2024/001"
+                    required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                  <Label htmlFor="tanggal_sika">Tanggal SIKA *</Label>
                   <DatePicker
                     id="tanggal_sika"
                     name="tanggal_sika"
                     value={formData.tanggal_sika}
                     onChange={handleDateChange('tanggal_sika')}
                     placeholder="Pilih tanggal SIKA"
+                    required
                   />
                 </div>
               </div>
@@ -357,7 +366,7 @@ export default function SubmissionForm() {
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Upload Dokumen</h3>
+              <h3 className="text-lg font-semibold">Upload Dokumen *</h3>
               
               <FileUpload
                 id="upload_doc_sika"

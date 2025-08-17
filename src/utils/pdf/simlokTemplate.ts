@@ -49,6 +49,7 @@ function toDate(d?: string | Date | null) {
   if (!d) return null;
   return typeof d === "string" ? new Date(d) : d;
 }
+
 function fmtDateID(d?: string | Date | null) {
   const dd = toDate(d);
   if (!dd || isNaN(+dd)) return "-";
@@ -57,6 +58,35 @@ function fmtDateID(d?: string | Date | null) {
     month: "long",
     year: "numeric",
   });
+}
+
+/**
+ * Ekstrak tanggal dari text pelaksanaan
+ * Contoh: "Terhitung mulai tanggal 01 Agustus 2025 sampai 15 Agustus 2025"
+ * Akan mengambil tanggal pertama: "01 Agustus 2025"
+ */
+function extractDateFromPelaksanaan(pelaksanaan?: string | null): Date | null {
+  if (!pelaksanaan) return null;
+  
+  // Pattern untuk menangkap tanggal dalam format: DD Bulan YYYY
+  const datePattern = /(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i;
+  const match = pelaksanaan.match(datePattern);
+  
+  if (!match) return null;
+  
+  const [, day, month, year] = match;
+  
+  // Mapping bulan Indonesia ke nomor bulan
+  const monthMap: { [key: string]: number } = {
+    'januari': 0, 'februari': 1, 'maret': 2, 'april': 3,
+    'mei': 4, 'juni': 5, 'juli': 6, 'agustus': 7,
+    'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
+  };
+  
+  const monthIndex = monthMap[month.toLowerCase()];
+  if (monthIndex === undefined) return null;
+  
+  return new Date(parseInt(year), monthIndex, parseInt(day));
 }
 
 /** Hapus newline ganda & spasi berlebih agar wrap presisi */
@@ -328,19 +358,23 @@ lines.forEach((line, idx) => {
 // SIMLOK 2 hari sebelum masa berlaku habis.`, 50, A4.w - 2 * MARGIN);
 
   // Add signature section
-  k.y -= 50;
+  k.y -= 20;
   const signatureY = k.y;
 
+  // Extract date from pelaksanaan or use tanggal_simlok as fallback
+  const dateFromPelaksanaan = extractDateFromPelaksanaan(s.pelaksanaan);
+  const displayDate = dateFromPelaksanaan || toDate(s.tanggal_simlok);
+
   // Right side - Location and Date (above Head title)
-  k.text("Dikeluarkan di : Jakarta", A4.w - 200, signatureY);
-  k.text("Pada tanggal : " + fmtDateID(s.tanggal_simlok), A4.w - 200, signatureY - 20);
+  k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY);
+  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 20);
 
   // Right side - Head title and name (below location/date)
   const jabatanSigner = s.jabatan_signer || "[Jabatan Penandatangan]";
   const namaSigner = s.nama_signer || "[Nama Penandatangan]";
   
-  k.text(jabatanSigner, A4.w - 200, signatureY - 50);
-  k.text(namaSigner, A4.w - 200, signatureY - 110, { bold: true });
+  k.text(jabatanSigner, A4.w - 230, signatureY - 50);
+  k.text(namaSigner, A4.w - 230, signatureY - 110, { bold: true });
 
   // Bottom section - Tembusan on left, Nama pekerja on right (aligned)
   const bottomY = signatureY - 140;
