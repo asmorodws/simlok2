@@ -166,6 +166,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Admin/Verifier updating approval status
       if (body.status_approval_admin && ['APPROVED', 'REJECTED'].includes(body.status_approval_admin)) {
         console.log('PUT /api/submissions/[id] - Admin/Verifier approval update');
+        console.log('PUT /api/submissions/[id] - Session user ID:', session.user.id);
+        console.log('PUT /api/submissions/[id] - Session user role:', session.user.role);
         
         const approvalData: any = {
           status_approval_admin: body.status_approval_admin,
@@ -187,7 +189,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           updateData.pelaksanaan = body.pelaksanaan;
           updateData.lain_lain = body.lain_lain;
           updateData.content = body.content;
-          updateData.approved_by_admin = session.user.id;
+          updateData.jabatan_signer = body.jabatan_signer;
+          updateData.nama_signer = body.nama_signer;
+          
+          // Verify the user exists before setting approved_by_admin
+          const adminUser = await prisma.user.findUnique({
+            where: { id: session.user.id }
+          });
+          
+          if (adminUser) {
+            updateData.approved_by_admin = session.user.id;
+          } else {
+            console.log('PUT /api/submissions/[id] - Admin user not found:', session.user.id);
+            return NextResponse.json({ 
+              error: 'Admin user not found. Please login again.' 
+            }, { status: 400 });
+          }
         }
       } else {
         console.log('PUT /api/submissions/[id] - Invalid approval status:', body.status_approval_admin);

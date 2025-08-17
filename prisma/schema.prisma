@@ -103,6 +103,8 @@ model Submission {
   nama_pekerja          String   @db.Text
   content               String?  @db.Text
   keterangan            String?  @db.Text
+  jabatan_signer        String?  
+  nama_signer           String?  
   upload_doc_sika       String?
   upload_doc_simja      String?
   upload_doc_id_card    String?

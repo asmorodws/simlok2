@@ -33,6 +33,8 @@ interface Submission {
   upload_doc_id_card?: string;
   qrcode?: string;
   created_at: string;
+  jabatan_signer?: string;
+  nama_signer?: string;
   user: {
     id: string;
     nama_petugas: string;
@@ -77,7 +79,9 @@ export default function AdminSubmissionDetailModal({
     tanggal_simlok: '',
     pelaksanaan: '',
     lain_lain: '',
-    content: ''
+    content: '',
+    jabatan_signer: '',
+    nama_signer: ''
   });
 
   // Template helper fields (tidak disimpan ke database)
@@ -130,7 +134,9 @@ export default function AdminSubmissionDetailModal({
           tanggal_simlok: formatDateForInput(submission.tanggal_simlok),
           pelaksanaan: submission.pelaksanaan || '',
           lain_lain: submission.lain_lain || '',
-          content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.'
+          content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
+          jabatan_signer: submission.jabatan_signer || '',
+          nama_signer: submission.nama_signer || ''
         });
 
         // Reset template fields
@@ -194,7 +200,7 @@ export default function AdminSubmissionDetailModal({
       if (templateFields.tanggal_diterima_security) {
         templateParts.push(
           ` \n`,
-          ` Diterima Head Of Security Region 1`,
+          ` Diterima ${submission?.jabatan_signer || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
           `  ${formatDate(templateFields.tanggal_diterima_security)}`
         );
       }
@@ -210,7 +216,7 @@ export default function AdminSubmissionDetailModal({
       const newTemplate = generateLainLainTemplate();
       setApprovalForm(prev => ({ ...prev, lain_lain: newTemplate }));
     }
-  }, [templateFields.tanggal_diterima_security, submission?.nomor_simja, submission?.tanggal_simja, submission?.nomor_sika, submission?.tanggal_sika]);
+  }, [templateFields.tanggal_diterima_security, submission?.nomor_simja, submission?.tanggal_simja, submission?.nomor_sika, submission?.tanggal_sika, submission?.jabatan_signer, approvalForm.jabatan_signer]);
 
   if (!isOpen || !submission) return null;
 
@@ -402,6 +408,8 @@ export default function AdminSubmissionDetailModal({
         pelaksanaan: approvalForm.pelaksanaan,
         lain_lain: approvalForm.lain_lain,
         content: approvalForm.content,
+        jabatan_signer: approvalForm.jabatan_signer,
+        nama_signer: approvalForm.nama_signer,
       };
 
       // Hanya tambahkan nomor SIMLOK dan tanggal jika di-approve
@@ -644,6 +652,7 @@ export default function AdminSubmissionDetailModal({
                           <p className="mt-1 text-sm text-gray-900">{submission.sarana_kerja}</p>
                         </div>
                       </div>
+
                       {submission.lain_lain && (
                         <div className="mt-4">
                           <label className="block text-sm font-medium text-gray-700">Lain-lain</label>
@@ -697,6 +706,21 @@ export default function AdminSubmissionDetailModal({
                             <p className="mt-1 text-sm text-gray-900">{formatDate(submission.tanggal_simlok)}</p>
                           </div>
                         )}
+                      </div>
+                    </div>
+
+                    {/* Informasi Penandatangan */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Penandatangan</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Jabatan Penandatangan</label>
+                          <p className="mt-1 text-sm text-gray-900">{submission.jabatan_signer || '-'}</p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Nama Penandatangan</label>
+                          <p className="mt-1 text-sm text-gray-900">{submission.nama_signer}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -973,6 +997,35 @@ export default function AdminSubmissionDetailModal({
                               <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.pelaksanaan}</p>
                             )}
                           </div>
+ {/* Jabatan Signer - Admin mengisi */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Jabatan Penandatangan
+                              <span className="text-xs text-gray-500 ml-1">(Jabatan yang menandatangani dokumen)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={approvalForm.jabatan_signer}
+                              onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Contoh: Head Of Security Region I, Manager Operations, dll"
+                            />
+                          </div>
+
+                          {/* Nama Signer - Admin mengisi */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Nama Penandatangan
+                              <span className="text-xs text-gray-500 ml-1">(Nama yang menandatangani dokumen)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={approvalForm.nama_signer}
+                              onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Masukkan nama penandatangan"
+                            />
+                          </div>
 
                           {/* Lain-lain - Admin mengisi */}
                           <div className="space-y-3">
@@ -1025,6 +1078,7 @@ export default function AdminSubmissionDetailModal({
                             />
                           </div>
 
+                         
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Tembusan <span className="text-red-500">*</span>

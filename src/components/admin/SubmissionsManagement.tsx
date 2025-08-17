@@ -41,6 +41,8 @@ interface Submission {
   upload_doc_id_card?: string;
   qrcode?: string;
   created_at: string;
+  jabatan_signer?: string;
+  nama_signer?: string;
   user: {
     id: string;
     nama_petugas: string;
