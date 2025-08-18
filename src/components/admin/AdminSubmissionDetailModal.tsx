@@ -5,6 +5,7 @@ import { XMarkIcon, EyeIcon, DocumentIcon, ArrowDownTrayIcon, PhotoIcon } from '
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DatePicker from '@/components/form/DatePicker';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 
 interface Submission {
   id: string;
@@ -100,6 +101,13 @@ export default function AdminSubmissionDetailModal({
     isOpen: false,
     fileUrl: '',
     fileName: ''
+  });
+
+  // SIMLOK PDF modal state
+  const [simlokPdfModal, setSimlokPdfModal] = useState<{
+    isOpen: boolean;
+  }>({
+    isOpen: false
   });
 
   // Main useEffect for modal state management
@@ -284,6 +292,10 @@ export default function AdminSubmissionDetailModal({
     });
   };
 
+  const handleCloseSilmokPdf = () => {
+    setSimlokPdfModal({ isOpen: false });
+  };
+
   const handleDownload = (fileUrl: string, fileName: string) => {
     if (fileUrl) {
       // Convert legacy URL to new format if needed
@@ -366,7 +378,7 @@ export default function AdminSubmissionDetailModal({
     if (!submission) return;
     
     try {
-      // Generate PDF URL with correct submission ID
+      // Generate PDF URL with correct submission ID  
       const pdfUrl = `/api/submissions/${submission.id}?format=pdf`;
       
       // Test if PDF can be generated first
@@ -379,8 +391,8 @@ export default function AdminSubmissionDetailModal({
         return;
       }
       
-      // Buka PDF di tab baru
-      window.open(pdfUrl, '_blank');
+      // Open SIMLOK PDF modal instead of new tab
+      setSimlokPdfModal({ isOpen: true });
     } catch (error) {
       console.error('Error viewing PDF:', error);
       setErrorMessage('Terjadi kesalahan saat membuka PDF');
@@ -1219,6 +1231,15 @@ export default function AdminSubmissionDetailModal({
           </div>
         </div>
       </div>
+
+      {/* SIMLOK PDF Modal */}
+      <SimlokPdfModal
+        isOpen={simlokPdfModal.isOpen}
+        onClose={handleCloseSilmokPdf}
+        submissionId={submission.id}
+        submissionName={submission.nama_vendor}
+        nomorSimlok={submission.nomor_simlok}
+      />
 
       {/* Document Preview Modal */}
       <DocumentPreviewModal
