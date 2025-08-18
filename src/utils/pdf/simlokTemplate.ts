@@ -5,7 +5,41 @@ import {
   rgb,
   type PDFFont,
   type RGB,
+  type PDFImage,
 } from "pdf-lib";
+
+/**
+ * Load logo image for PDF generation
+ * Works both on client-side (fetch) and server-side (fs)
+ */
+async function loadLogo(pdfDoc: PDFDocument): Promise<PDFImage | null> {
+  try {
+    const logoPath = '/assets/logo_pertamina.png';
+    
+    if (typeof window !== 'undefined') {
+      // Client-side: use fetch
+      const response = await fetch(logoPath);
+      if (response.ok) {
+        const logoBytes = await response.arrayBuffer();
+        return await pdfDoc.embedPng(new Uint8Array(logoBytes));
+      }
+    } else {
+      // Server-side: use file system
+      const fs = await import('fs');
+      const path = await import('path');
+      const logoFilePath = path.join(process.cwd(), 'public', logoPath);
+      
+      if (fs.existsSync(logoFilePath)) {
+        const fileBuffer = fs.readFileSync(logoFilePath);
+        return await pdfDoc.embedPng(fileBuffer);
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load logo:', error);
+  }
+  
+  return null;
+}
 
 /** Struktur data mengikuti placeholder di template kamu */
 export interface SubmissionPDFData {
@@ -223,17 +257,7 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   const { width, height } = page.getSize();
 
   // Load and embed the Pertamina logo
-  let logoImage = null;
-  try {
-    // In Node.js environment, we need to use the file system or a full URL
-    const logoPath = '/media/asmorodwi/DATA/apaaja/penting/tmp/simlok2/src/utils/pdf/logo_pertamina.png';
-    const fs = require('fs');
-    const logoBytes = fs.readFileSync(logoPath);
-    logoImage = await k.doc.embedPng(logoBytes);
-  } catch (error) {
-    console.warn('Failed to load logo:', error);
-    // Continue without logo
-  }
+  const logoImage = await loadLogo(k.doc);
 
   const s = submissionData;
 
@@ -301,7 +325,7 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   k.numberedRow(3, "Pekerjaan", s.pekerjaan);
   k.numberedRow(4, "Lokasi Kerja", s.lokasi_kerja);
   k.numberedRow(5, "Pelaksanaan", normalizeInline(s.pelaksanaan || ""));
-  k.numberedRow(6, "Jam Kerja", `Mulai pukul`);
+  k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.jam_kerja}`);
   
   // Special handling for "Lain-lain" to show as bulleted list
   if (s.lain_lain && s.lain_lain.trim().length > 0) {
