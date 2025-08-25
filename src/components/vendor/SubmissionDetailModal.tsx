@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { XMarkIcon, EyeIcon, DocumentIcon } from '@heroicons/react/24/outline';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import Button from '@/components/ui/button/Button';
 
 interface Submission {
   id: string;
@@ -59,6 +61,13 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
     isOpen: false,
     fileUrl: '',
     fileName: ''
+  });
+
+  // SIMLOK PDF modal state
+  const [simlokPdfModal, setSimlokPdfModal] = useState<{
+    isOpen: boolean;
+  }>({
+    isOpen: false
   });
 
   // Handle escape key press
@@ -132,6 +141,33 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
       fileUrl: '',
       fileName: ''
     });
+  };
+
+  const handleViewSimlokPdf = async () => {
+    if (!submission) return;
+    
+    try {
+      // Generate PDF URL with correct submission ID  
+      const pdfUrl = `/api/submissions/${submission.id}?format=pdf`;
+      
+      // Test if PDF can be generated first
+      const response = await fetch(pdfUrl, { method: 'HEAD' });
+      
+      if (!response.ok) {
+        alert('Gagal memuat PDF SIMLOK. Pastikan dokumen sudah disetujui admin.');
+        return;
+      }
+      
+      // Open SIMLOK PDF modal
+      setSimlokPdfModal({ isOpen: true });
+    } catch (error) {
+      console.error('Error viewing SIMLOK PDF:', error);
+      alert('Terjadi kesalahan saat membuka PDF SIMLOK');
+    }
+  };
+
+  const handleCloseSimlokPdf = () => {
+    setSimlokPdfModal({ isOpen: false });
   };
 
   return (
@@ -290,6 +326,13 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                         {submission.tanggal_simlok && (
                           <p className="text-xs text-gray-500">Tanggal: {formatDate(submission.tanggal_simlok)}</p>
                         )}
+                        <button
+                          onClick={handleViewSimlokPdf}
+                          className="mt-2 flex items-center space-x-2 text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                        >
+                          <DocumentIcon className="w-4 h-4" />
+                          <span>Lihat PDF SIMLOK</span>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -401,16 +444,46 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
           </div>
 
           {/* Footer - Always visible with better positioning */}
-          <div className="bg-white flex justify-end p-6 border-t border-gray-200 flex-shrink-0 sticky bottom-0 z-10 shadow-lg">
-            <button
+          <div className="bg-white flex justify-between items-center p-6 border-t border-gray-200 flex-shrink-0 sticky bottom-0 z-10 shadow-lg">
+            
+            {/* SIMLOK PDF Button - hanya muncul jika sudah APPROVED */}
+            <div className="flex items-center space-x-3">
+              {submission.status_approval_admin === 'APPROVED' && submission.nomor_simlok && (
+                <Button
+                  onClick={handleViewSimlokPdf}
+                  variant="primary"
+                  size="sm"
+                  className="flex items-center"
+                  title="Lihat PDF SIMLOK yang sudah disetujui"
+                >
+                  <DocumentIcon className="h-4 w-4 mr-2" />
+                  Lihat PDF SIMLOK
+                </Button>
+              )}
+            </div>
+
+            <div className="flex-1"></div>
+            
+            <Button
               onClick={onClose}
-              className="px-6 py-2 text-sm font-medium text-white bg-gray-600 border border-gray-600 rounded-md hover:bg-gray-700 hover:border-gray-700 transition-colors flex-shrink-0"
+              variant="secondary"
+              size="sm"
+              className="flex-shrink-0"
             >
               Tutup
-            </button>
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* SIMLOK PDF Modal */}
+      <SimlokPdfModal
+        isOpen={simlokPdfModal.isOpen}
+        onClose={handleCloseSimlokPdf}
+        submissionId={submission?.id || ''}
+        submissionName={submission?.nama_vendor || ''}
+        nomorSimlok={submission?.nomor_simlok}
+      />
 
       {/* Document Preview Modal */}
       <DocumentPreviewModal

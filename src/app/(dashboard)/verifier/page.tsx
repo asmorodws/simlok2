@@ -1,6 +1,6 @@
-import RoleGate from "@/components/RoleGate";
-import SidebarLayout from "@/components/SidebarLayout";
-import DashboardMainContent from "@/components/DashboardMainContent";
+import RoleGate from "@/components/security/RoleGate";
+import SidebarLayout from "@/components/layout/SidebarLayout";
+import DashboardMainContent from "@/components/dashboard/DashboardMainContent";
 
 export default function VerifierPage() {
   return (

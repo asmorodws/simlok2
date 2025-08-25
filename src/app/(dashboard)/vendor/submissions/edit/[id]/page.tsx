@@ -1,9 +1,9 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/app/lib/auth';
+import { authOptions } from '@/lib/auth';
 import EditSubmissionForm from '../../../../../../components/vendor/EditSubmissionForm';
-import SidebarLayout from '@/components/SidebarLayout';
-import { prisma } from '@/app/lib/prisma';
+import SidebarLayout from '@/components/layout/SidebarLayout';
+import { prisma } from '@/lib/prisma';
 
 interface EditSubmissionPageProps {
   params: Promise<{
@@ -25,23 +25,6 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
   // Await params as required by Next.js 15
   const { id } = await params;
 
-  // Fetch submission data
-  const submission = await prisma.submission.findFirst({
-    where: {
-      id: id,
-      userId: session.user.id, // Ensure user owns this submission
-    },
-  });
-
-  if (!submission) {
-    redirect('/vendor/submissions');
-  }
-
-  // Check if submission is still editable (PENDING status)
-  if (submission.status_approval_admin !== 'PENDING') {
-    redirect('/vendor/submissions');
-  }
-
   return (
     <SidebarLayout title="Vendor Panel" titlePage="Edit Pengajuan SIMLOK">
       <div className="space-y-6">
@@ -52,7 +35,7 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
           </p>
         </div>
         
-        <EditSubmissionForm submission={submission} />
+        <EditSubmissionForm submissionId={id} />
       </div>
     </SidebarLayout>
   );

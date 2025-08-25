@@ -3,7 +3,7 @@
 import Checkbox from "@/components/form/Checkbox";
 import Input from "@/components/form/Input";
 import Label from "@/components/form/Label";
-import Button from "@/components/ui/Button";
+import Button from "@/components/ui/button/Button";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import type { FC } from "react";

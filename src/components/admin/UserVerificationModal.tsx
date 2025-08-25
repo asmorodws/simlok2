@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Role } from '@prisma/client';
 import { UserData } from '@/types/user';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/button/Button';
 import { 
   XMarkIcon, 
   CheckCircleIcon, 
@@ -184,12 +184,14 @@ export default function UserVerificationModal({
                   </p>
                 </div>
               </div>
-              <button
+              <Button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                variant="ghost"
+                size="sm"
+                className="p-2"
               >
                 <XMarkIcon className="w-5 h-5 text-gray-500" />
-              </button>
+              </Button>
             </div>
 
             {/* Content */}

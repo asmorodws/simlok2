@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/lib/auth';
-import { prisma } from '@/app/lib/prisma';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { SubmissionApprovalData } from '@/types/submission';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 
@@ -65,7 +65,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Return regular JSON response
-    return NextResponse.json(submission);
+    const response = NextResponse.json(submission);
+    
+    // Add cache control for better performance
+    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching submission:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -276,7 +281,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/submissions/[id] - Delete submission (only vendors can delete their PENDING submissions)
+// DELETE /api/submissions/[id] - Delete submission 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -287,36 +292,63 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params;
 
-    // Only vendors can delete their own submissions and only if PENDING
-    if (session.user.role !== 'VENDOR') {
-      return NextResponse.json({ error: 'Only vendors can delete submissions' }, { status: 403 });
-    }
-
-    const existingSubmission = await prisma.submission.findFirst({
-      where: { 
-        id,
-        userId: session.user.id // Ensure it's their submission
-      }
+    // Fetch the submission first to check permissions
+    const existingSubmission = await prisma.submission.findUnique({
+      where: { id }
     });
 
     if (!existingSubmission) {
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
     }
 
-    if (existingSubmission.status_approval_admin !== 'PENDING') {
+    // Permission checks based on role
+    if (session.user.role === 'VENDOR') {
+      // Vendors can only delete their own PENDING submissions
+      if (existingSubmission.userId !== session.user.id) {
+        return NextResponse.json({ 
+          error: 'Access denied. You can only delete your own submissions.' 
+        }, { status: 403 });
+      }
+      
+      if (existingSubmission.status_approval_admin !== 'PENDING') {
+        return NextResponse.json({ 
+          error: 'Can only delete pending submissions. Approved or rejected submissions cannot be deleted.' 
+        }, { status: 400 });
+      }
+    } else if (session.user.role === 'ADMIN') {
+      // Admins can delete any submission, but warn about approved ones
+      if (existingSubmission.status_approval_admin === 'APPROVED') {
+        return NextResponse.json({ 
+          error: 'Cannot delete approved submissions. This would affect issued SIMLOK documents.' 
+        }, { status: 400 });
+      }
+    } else if (session.user.role === 'VERIFIER') {
+      // Verifiers can delete pending and rejected submissions
+      if (existingSubmission.status_approval_admin === 'APPROVED') {
+        return NextResponse.json({ 
+          error: 'Cannot delete approved submissions.' 
+        }, { status: 400 });
+      }
+    } else {
       return NextResponse.json({ 
-        error: 'Can only delete pending submissions' 
-      }, { status: 400 });
+        error: 'Invalid role. Only admins, verifiers, and vendors can delete submissions.' 
+      }, { status: 403 });
     }
 
+    // Delete the submission
     await prisma.submission.delete({
       where: { id }
     });
 
-    return NextResponse.json({ message: 'Submission deleted successfully' });
+    return NextResponse.json({ 
+      message: 'Submission deleted successfully',
+      deletedId: id 
+    });
 
   } catch (error) {
     console.error('Error deleting submission:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal server error. Please try again later.' 
+    }, { status: 500 });
   }
 }

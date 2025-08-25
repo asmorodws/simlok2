@@ -4,12 +4,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import FileUpload from '@/components/form/FileUpload';
+import Alert from '@/components/ui/alert/Alert';
+import LoadingSpinner from '@/components/ui/loading/LoadingSpinner';
+import { useToast } from '@/hooks/useToast';
 
 interface Submission {
   id: string;
@@ -35,57 +38,120 @@ interface Submission {
 }
 
 interface EditSubmissionFormProps {
-  submission: Submission;
+  submissionId: string;
 }
 
-export default function EditSubmissionForm({ submission }: EditSubmissionFormProps) {
+export default function EditSubmissionForm({ submissionId }: EditSubmissionFormProps) {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const { showSuccess, showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [alert, setAlert] = useState<{ variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string } | null>(null);
+  const [submission, setSubmission] = useState<Submission | null>(null);
+  
+  // Load submission data
+  useEffect(() => {
+    const fetchSubmission = async () => {
+      setIsInitialLoading(true);
+      try {
+        const response = await fetch(`/api/submissions/${submissionId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSubmission(data);
+        } else {
+          setAlert({
+            variant: 'error',
+            title: 'Error!',
+            message: 'Gagal memuat data pengajuan'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching submission:', error);
+        setAlert({
+          variant: 'error',
+          title: 'Error!',
+          message: 'Gagal memuat data pengajuan'
+        });
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+    
+    if (submissionId) {
+      fetchSubmission();
+    }
+  }, [submissionId]);
+
+  const [formData, setFormData] = useState({
+    nama_vendor: '',
+    berdasarkan: '',
+    nama_petugas: '',
+    pekerjaan: '',
+    lokasi_kerja: '',
+    pelaksanaan: '',
+    jam_kerja: '',
+    lain_lain: '',
+    sarana_kerja: '',
+    nomor_simja: '',
+    tanggal_simja: '',
+    nomor_sika: '',
+    tanggal_sika: '',
+    nama_pekerja: '',
+    content: '',
+    upload_doc_sika: '',
+    upload_doc_simja: '',
+    upload_doc_id_card: '',
+  });
+
+  // Update form data when submission is loaded
+  useEffect(() => {
+    if (submission) {
+      setFormData({
+        nama_vendor: submission.nama_vendor || '',
+        berdasarkan: submission.berdasarkan || '',
+        nama_petugas: submission.nama_petugas || '',
+        pekerjaan: submission.pekerjaan || '',
+        lokasi_kerja: submission.lokasi_kerja || '',
+        pelaksanaan: submission.pelaksanaan || '',
+        jam_kerja: submission.jam_kerja || '',
+        lain_lain: submission.lain_lain || '',
+        sarana_kerja: submission.sarana_kerja || '',
+        nomor_simja: submission.nomor_simja || '',
+        tanggal_simja: submission.tanggal_simja ? (() => {
+          const date = new Date(submission.tanggal_simja);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })() : '',
+        nomor_sika: submission.nomor_sika || '',
+        tanggal_sika: submission.tanggal_sika ? (() => {
+          const date = new Date(submission.tanggal_sika);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })() : '',
+        nama_pekerja: submission.nama_pekerja || '',
+        content: submission.content || '',
+        upload_doc_sika: submission.upload_doc_sika || '',
+        upload_doc_simja: submission.upload_doc_simja || '',
+        upload_doc_id_card: submission.upload_doc_id_card || '',
+      });
+    }
+  }, [submission]);
   
   // Auto-fill form data when session is available (for readonly fields)
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && submission) {
       setFormData(prev => ({
         ...prev,
         // Keep vendor name readonly for vendors - use session data if available
         nama_vendor: session.user.nama_vendor || submission.nama_vendor || prev.nama_vendor || '',
       }));
     }
-  }, [session, submission.nama_vendor]);
-
-  const [formData, setFormData] = useState({
-    nama_vendor: submission.nama_vendor || '',
-    berdasarkan: submission.berdasarkan || '',
-    nama_petugas: submission.nama_petugas || '',
-    pekerjaan: submission.pekerjaan || '',
-    lokasi_kerja: submission.lokasi_kerja || '',
-    pelaksanaan: submission.pelaksanaan || '',
-    jam_kerja: submission.jam_kerja || '',
-    lain_lain: submission.lain_lain || '',
-    sarana_kerja: submission.sarana_kerja || '',
-    nomor_simja: submission.nomor_simja || '',
-    tanggal_simja: submission.tanggal_simja ? (() => {
-      const date = new Date(submission.tanggal_simja);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    })() : '',
-    nomor_sika: submission.nomor_sika || '',
-    tanggal_sika: submission.tanggal_sika ? (() => {
-      const date = new Date(submission.tanggal_sika);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    })() : '',
-    nama_pekerja: submission.nama_pekerja || '',
-    content: submission.content || '',
-    upload_doc_sika: submission.upload_doc_sika || '',
-    upload_doc_simja: submission.upload_doc_simja || '',
-    upload_doc_id_card: submission.upload_doc_id_card || '',
-  });
+  }, [session, submission]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
@@ -150,9 +216,23 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if submission is loaded
+    if (!submission) {
+      setAlert({
+        variant: 'error',
+        title: 'Error!',
+        message: 'Data pengajuan belum dimuat'
+      });
+      return;
+    }
+    
     // Check if submission is still editable
     if (submission.status_approval_admin !== 'PENDING') {
-      alert('Tidak dapat mengubah pengajuan yang sudah diproses oleh admin.');
+      setAlert({
+        variant: 'warning',
+        title: 'Peringatan!',
+        message: 'Tidak dapat mengubah pengajuan yang sudah diproses oleh admin.'
+      });
       return;
     }
     
@@ -164,7 +244,11 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
 
     for (const field of requiredFields) {
       if (!formData[field as keyof typeof formData] || formData[field as keyof typeof formData].trim() === '') {
-        alert(`Field ${field} harus diisi!`);
+        setAlert({
+          variant: 'error',
+          title: 'Error!',
+          message: `Field ${field} harus diisi!`
+        });
         return;
       }
     }
@@ -207,14 +291,22 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
         
-        alert(`Error: ${errorMessage}\n\nDetail: ${errorText}`);
+        setAlert({
+          variant: 'error',
+          title: 'Error!',
+          message: `Error: ${errorMessage}`
+        });
+        showError('Gagal Menyimpan', errorMessage);
         return;
       }
 
       const result = await response.json();
       console.log('Update successful:', result);
       
-      alert('Perubahan berhasil disimpan!');
+      // Show success toast and redirect immediately
+      showSuccess('Berhasil!', 'Perubahan berhasil disimpan!');
+      
+      // Redirect immediately without delay
       router.push('/vendor/submissions');
     } catch (error) {
       console.error('Network/unexpected error:', error);
@@ -224,7 +316,12 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
         errorMessage = error.message;
       }
       
-      alert(`Gagal menyimpan perubahan: ${errorMessage}\n\nSilakan coba lagi atau hubungi administrator.`);
+      setAlert({
+        variant: 'error',
+        title: 'Error!',
+        message: `Gagal menyimpan perubahan: ${errorMessage}`
+      });
+      showError('Error!', `Gagal menyimpan perubahan: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -232,30 +329,44 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
 
   return (
     <div className="max-w-4xl mx-auto">
-      <Card>
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Edit Pengajuan SIMLOK</h1>
-            <div className="text-sm text-gray-500">
-              Status: <span className={`font-medium ${
-                submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
-                submission.status_approval_admin === 'APPROVED' ? 'text-green-600' :
-                'text-red-600'
-              }`}>{submission.status_approval_admin}</span>
-            </div>
+      {isInitialLoading ? (
+        <Card>
+          <div className="p-6 text-center">
+            <LoadingSpinner size="lg" className="mx-auto mb-4" />
+            <p className="text-gray-600">Memuat data pengajuan...</p>
           </div>
-          
-          {submission.status_approval_admin !== 'PENDING' && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">
-                <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
-                Anda hanya dapat melihat detailnya saja.
-              </p>
+        </Card>
+      ) : !submission ? (
+        <Card>
+          <div className="p-6 text-center">
+            <p className="text-red-600">Data pengajuan tidak ditemukan</p>
+          </div>
+        </Card>
+      ) : (
+        <Card>
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-2xl font-bold">Edit Pengajuan SIMLOK</h1>
+              <div className="text-sm text-gray-500">
+                Status: <span className={`font-medium ${
+                  submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
+                  submission.status_approval_admin === 'APPROVED' ? 'text-green-600' :
+                  'text-red-600'
+                }`}>{submission.status_approval_admin}</span>
+              </div>
             </div>
-          )}
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
+            
+            {submission.status_approval_admin !== 'PENDING' && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm">
+                  <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
+                  Anda hanya dapat melihat detailnya saja.
+                </p>
+              </div>
+            )}
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label htmlFor="nama_vendor">Nama Vendor *</Label>
@@ -498,8 +609,18 @@ export default function EditSubmissionForm({ submission }: EditSubmissionFormPro
               )}
             </div>
           </form>
+
+          {/* Alert */}
+          {alert && (
+            <Alert
+              variant={alert.variant}
+              title={alert.title}
+              message={alert.message}
+            />
+          )}
         </div>
       </Card>
+      )}
     </div>
   );
 }

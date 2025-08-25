@@ -1,6 +1,6 @@
-import RoleGate from "@/components/RoleGate";
-import SidebarLayout from "@/components/SidebarLayout";
-import AdminDashboard from "@/components/AdminDashboard";
+import RoleGate from "@/components/security/RoleGate";
+import SidebarLayout from "@/components/layout/SidebarLayout";
+import AdminDashboard from "@/components/dashboard/AdminDashboard";
 
 export default function AdminPage() {
   return (

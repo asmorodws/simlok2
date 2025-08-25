@@ -10,6 +10,7 @@ import {
   ChevronDownIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/24/outline";
+import Button from "@/components/ui/button/Button";
 
 interface UsersTableProps {
   onEdit: (user: UserData) => void;
@@ -203,12 +204,14 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
         <div className="text-center py-12">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-red-800">{error}</div>
-            <button 
+            <Button 
               onClick={fetchUsers}
-              className="mt-2 text-red-600 hover:text-red-500 font-medium"
+              variant="destructive"
+              size="sm"
+              className="mt-2"
             >
               Coba Lagi
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -311,27 +314,30 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button
+                      <Button
                         onClick={() => onView(user)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:text-blue-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200"
-                        title="Lihat Detail & Verifikasi User"
+                        variant="info"
+                        size="sm"
+                        className="px-3 py-1.5"
                       >
                         Lihat
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => onEdit(user)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-amber-600 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 hover:text-amber-700 hover:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition-all duration-200"
-                        title="Edit User"
+                        variant="warning"
+                        size="sm"
+                        className="px-3 py-1.5"
                       >
                         Ubah
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         onClick={() => onDelete(user)}
-                        className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:text-red-700 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200"
-                        title="Hapus User"
+                        variant="destructive"
+                        size="sm"
+                        className="px-3 py-1.5"
                       >
                         Hapus
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>

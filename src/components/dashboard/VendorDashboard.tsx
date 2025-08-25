@@ -10,10 +10,12 @@ import {
   XCircleIcon,
   EyeIcon
 } from "@heroicons/react/24/outline";
-import Card from "./ui/Card";
-import { Badge } from "./ui/Badge";
-import Button from "./ui/Button";
-import SubmissionDetailModal from "./vendor/SubmissionDetailModal";
+import Card from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import Button from "../ui/button/Button";
+import Alert from "../ui/alert/Alert";
+import ConfirmModal from "../ui/modal/ConfirmModal";
+import SubmissionDetailModal from "../vendor/SubmissionDetailModal";
 
 interface VendorStats {
   totalApproved: number;
@@ -75,6 +77,34 @@ export default function VendorDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState<VendorSubmission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Alert state
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    variant: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({
+    show: false,
+    variant: 'info',
+    title: '',
+    message: ''
+  });
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isLoading: boolean;
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    isLoading: false
+  });
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -122,12 +152,20 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengajuan ini? Tindakan ini tidak dapat dibatalkan.')) {
-      return;
-    }
+  const handleDelete = useCallback((id: string) => {
+    setConfirmModal({
+      show: true,
+      title: 'Konfirmasi Hapus',
+      message: 'Apakah Anda yakin ingin menghapus pengajuan ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: () => performDelete(id),
+      isLoading: false
+    });
+  }, []);
 
+  const performDelete = async (id: string) => {
     try {
+      setConfirmModal(prev => ({ ...prev, isLoading: true }));
+
       const response = await fetch(`/api/submissions/${id}`, {
         method: 'DELETE',
       });
@@ -137,16 +175,37 @@ export default function VendorDashboard() {
         throw new Error(errorData.error || 'Gagal menghapus pengajuan');
       }
 
+      // Close confirm modal
+      setConfirmModal(prev => ({ ...prev, show: false, isLoading: false }));
+
       // Refresh data setelah berhasil menghapus
       await fetchDashboardData();
       
-      // Show success message (optional)
-      alert('Pengajuan berhasil dihapus');
+      // Show success message
+      setAlert({
+        show: true,
+        variant: 'success',
+        title: 'Berhasil!',
+        message: 'Pengajuan berhasil dihapus'
+      });
+      
+      // Auto hide after 3 seconds
+      setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
     } catch (error) {
+      setConfirmModal(prev => ({ ...prev, isLoading: false }));
+      
       console.error('Error deleting submission:', error);
-      alert(error instanceof Error ? error.message : 'Gagal menghapus pengajuan');
+      setAlert({
+        show: true,
+        variant: 'error',
+        title: 'Gagal Menghapus',
+        message: error instanceof Error ? error.message : 'Gagal menghapus pengajuan'
+      });
+      
+      // Auto hide after 5 seconds
+      setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
     }
-  }, []);
+  };
 
   const handleViewDetail = useCallback((submission: VendorSubmission) => {
     setSelectedSubmission(submission);
@@ -160,6 +219,17 @@ export default function VendorDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Alert Notification */}
+      {alert.show && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            message={alert.message}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -313,29 +383,34 @@ export default function VendorDashboard() {
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center space-x-2">
-                        <button
+                        <Button
                           onClick={() => handleViewDetail(submission)}
-                          className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 text-sm"
+                          variant="info"
+                          size="sm"
                           title="Lihat Detail"
                         >
                           Lihat
-                        </button>
+                        </Button>
                         {submission.status_approval_admin === 'PENDING' && (
                           <>
-                            <Link 
-                              href={`/vendor/submissions/edit/${submission.id}`}
-                              className="text-blue-600 hover:text-blue-900 px-2 py-1 rounded hover:bg-blue-50 text-sm"
-                              title="Ubah Pengajuan"
-                            >
-                              Ubah
+                            <Link href={`/vendor/submissions/edit/${submission.id}`}>
+                              <Button
+                                variant="warning"
+                                size="sm"
+                                title="Ubah Pengajuan"
+                                className="mr-2"
+                              >
+                                Ubah
+                              </Button>
                             </Link>
-                            <button
+                            <Button
                               onClick={() => handleDelete(submission.id)}
-                              className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50 text-sm"
+                              variant="destructive"
+                              size="sm"
                               title="Hapus Pengajuan"
                             >
                               Hapus
-                            </button>
+                            </Button>
                           </>
                         )}
                         {submission.status_approval_admin !== 'PENDING' && (
@@ -375,6 +450,19 @@ export default function VendorDashboard() {
         submission={selectedSubmission}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.show}
+        onClose={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant="danger"
+        confirmText="Hapus"
+        cancelText="Batal"
+        isLoading={confirmModal.isLoading}
       />
     </div>
   );

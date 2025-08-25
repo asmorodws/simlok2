@@ -11,10 +11,12 @@ import {
   CheckIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
-import Card from "./ui/Card";
-import { Badge } from "./ui/Badge";
-import Button from "./ui/Button";
-import UserVerificationModal from "./admin/UserVerificationModal";
+import Card from "../ui/Card";
+import { Badge } from "../ui/Badge";
+import Button from "../ui/button/Button";
+import Alert from "../ui/alert/Alert";
+import ConfirmModal from "../ui/modal/ConfirmModal";
+import UserVerificationModal from "../admin/UserVerificationModal";
 import { UserData } from "@/types/user";
 
 interface DashboardStats {
@@ -49,6 +51,32 @@ export default function AdminDashboard() {
   // Modal states
   const [selectedVendor, setSelectedVendor] = useState<PendingVendor | null>(null);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+
+  // Alert state
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    variant: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({
+    show: false,
+    variant: 'info',
+    title: '',
+    message: ''
+  });
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   useEffect(() => {
     fetchDashboardData();
@@ -102,13 +130,40 @@ export default function AdminDashboard() {
         // Close modal
         setIsVerificationModalOpen(false);
         setSelectedVendor(null);
+        
+        // Show success message
+        setAlert({
+          show: true,
+          variant: 'success',
+          title: 'Berhasil!',
+          message: `Vendor berhasil ${action === 'approve' ? 'disetujui' : 'ditolak'}`
+        });
+        
+        // Auto hide after 3 seconds
+        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
       } else {
         const error = await response.json();
-        alert(error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`);
+        setAlert({
+          show: true,
+          variant: 'error',
+          title: 'Gagal',
+          message: error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`
+        });
+        
+        // Auto hide after 5 seconds
+        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert(`Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`);
+      setAlert({
+        show: true,
+        variant: 'error',
+        title: 'Terjadi Kesalahan',
+        message: `Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`
+      });
+      
+      // Auto hide after 5 seconds
+      setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
     }
   };
 
@@ -158,6 +213,17 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* Alert Notification */}
+      {alert.show && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            message={alert.message}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
@@ -365,6 +431,15 @@ export default function AdminDashboard() {
         onClose={handleCloseVerificationModal}
         onUserUpdate={handleUserUpdate}
         onUserRemove={handleUserRemove}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

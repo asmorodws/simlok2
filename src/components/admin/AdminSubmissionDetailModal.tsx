@@ -6,6 +6,8 @@ import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DatePicker from '@/components/form/DatePicker';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import Alert from '@/components/ui/alert/Alert';
+import Button from '@/components/ui/button/Button';
 
 interface Submission {
   id: string;
@@ -478,52 +480,14 @@ export default function AdminSubmissionDetailModal({
       `}</style>
 
       <div className="fixed inset-0 z-50 overflow-y-auto">
-        {/* Custom Error/Success Alert */}
+        {/* Alert Notification */}
         {showErrorAlert && (
-          <div className="fixed top-4 right-4 z-[100] animate-bounce">
-            <div className={`max-w-md w-full shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${
-              errorMessage.includes('berhasil') 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    {errorMessage.includes('berhasil') ? (
-                      <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    ) : (
-                      <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
-                  </div>
-                  <div className="ml-3 w-0 flex-1 pt-0.5">
-                    <p className={`text-sm font-medium ${
-                      errorMessage.includes('berhasil') ? 'text-green-900' : 'text-red-900'
-                    }`}>
-                      {errorMessage.includes('berhasil') ? 'Berhasil!' : 'Validasi Error'}
-                    </p>
-                    <p className={`mt-1 text-sm ${
-                      errorMessage.includes('berhasil') ? 'text-green-700' : 'text-red-700'
-                    }`}>
-                      {errorMessage}
-                    </p>
-                  </div>
-                  <div className="ml-4 flex-shrink-0 flex">
-                    <button
-                      onClick={() => setShowErrorAlert(false)}
-                      className={`rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                        errorMessage.includes('berhasil') ? 'focus:ring-green-500' : 'focus:ring-red-500'
-                      }`}
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="fixed top-4 right-4 z-[100] max-w-md animate-bounce">
+            <Alert
+              variant={errorMessage.includes('berhasil') ? 'success' : 'error'}
+              title={errorMessage.includes('berhasil') ? 'Berhasil!' : 'Validasi Error'}
+              message={errorMessage}
+            />
           </div>
         )}
 
@@ -1161,16 +1125,15 @@ export default function AdminSubmissionDetailModal({
                           </div>
 
                           <div className="pt-4">
-                            <button
+                            <Button
                               onClick={handleApprovalSubmit}
                               disabled={isProcessing}
-                              className={`w-full font-medium py-3 px-4 rounded-md transition-colors ${approvalForm.status === 'APPROVED'
-                                  ? 'bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white'
-                                  : 'bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white'
-                                }`}
+                              variant={approvalForm.status === 'APPROVED' ? 'primary' : 'destructive'}
+                              size="md"
+                              className="w-full"
                             >
                               {isProcessing ? 'Memproses...' : 'Simpan Perubahan'}
-                            </button>
+                            </Button>
                           </div>
 
                           {/* Validation hints */}
@@ -1208,25 +1171,29 @@ export default function AdminSubmissionDetailModal({
               {/* Tombol PDF - hanya muncul jika sudah APPROVED */}
               <div className="flex items-center space-x-3">
                 {submission.status_approval_admin === 'APPROVED' && (
-                  <button
+                  <Button
                     onClick={handleViewPDF}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 hover:border-blue-700 transition-colors"
+                    variant="primary"
+                    size="sm"
+                    className="flex items-center"
                     title="Lihat PDF SIMLOK"
                   >
                     <DocumentIcon className="h-4 w-4 mr-2" />
                     Lihat PDF
-                  </button>
+                  </Button>
                 )}
               </div>
 
               <div className="flex-1"></div>
               
-              <button
+              <Button
                 onClick={onClose}
-                className="px-6 py-2 text-sm font-medium text-white bg-gray-600 border border-gray-600 rounded-md hover:bg-gray-700 hover:border-gray-700 transition-colors flex-shrink-0"
+                variant="secondary"
+                size="sm"
+                className="flex-shrink-0"
               >
                 Tutup
-              </button>
+              </Button>
             </div>
           </div>
         </div>

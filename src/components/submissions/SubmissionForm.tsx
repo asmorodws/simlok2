@@ -2,18 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import FileUpload from '@/components/form/FileUpload';
+import Alert from "../ui/alert/Alert";
+import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types/submission';
-import { useSession } from 'next-auth/react';
 export default function SubmissionForm() {
   const router = useRouter();
+  const { showSuccess, showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [alert, setAlert] = useState<{ variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string } | null>(null);
 
   const { data: session } = useSession();
 
@@ -132,10 +136,19 @@ export default function SubmissionForm() {
         throw new Error(error.error || 'Failed to create submission');
       }
 
+      // Show success toast and redirect
+      showSuccess('Berhasil!', 'Pengajuan SIMLOK berhasil dibuat!');
       router.push('/vendor/submissions');
     } catch (error) {
       console.error('Error creating submission:', error);
-      alert('Failed to create submission. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create submission. Please try again.';
+      showError('Error!', errorMessage);
+      setAlert({
+        variant: 'error',
+        title: 'Error!',
+        message: errorMessage
+      });
+      setTimeout(() => setAlert(null), 5000);
     } finally {
       setIsLoading(false);
     }
@@ -423,6 +436,15 @@ export default function SubmissionForm() {
           </form>
         </div>
       </Card>
+
+      {/* Alert */}
+      {alert && (
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          message={alert.message}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/app/lib/auth';
-import RoleGate from '@/components/RoleGate';
-import SidebarLayout from '@/components/SidebarLayout';
+import { authOptions } from '@/lib/auth';
+import RoleGate from '@/components/security/RoleGate';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 import AdminSubmissions from '@/components/admin/SubmissionsManagement';
 
 export default async function AdminSubmissionsPage() {

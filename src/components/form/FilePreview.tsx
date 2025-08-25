@@ -91,7 +91,7 @@ export default function FilePreview({ url, filename, type, size, className }: Fi
 
       {/* Preview Modal */}
       {showPreview && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <div className="relative bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">{filename}</h3>

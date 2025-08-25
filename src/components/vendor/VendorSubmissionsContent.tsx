@@ -10,6 +10,11 @@ import {
   PlusIcon
 } from "@heroicons/react/24/outline";
 import SubmissionDetailModal from './SubmissionDetailModal';
+import Button from '../ui/button/Button';
+import Alert from '../ui/alert/Alert';
+import { useToast } from '@/hooks/useToast';
+import ConfirmModal from '../ui/modal/ConfirmModal';
+import LoadingSpinner from '../ui/loading/LoadingSpinner';
 
 interface Submission {
   id: string;
@@ -72,6 +77,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function VendorSubmissionsContent() {
+  const { showSuccess, showError } = useToast();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -93,6 +99,22 @@ export default function VendorSubmissionsContent() {
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Alert state
+  const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'warning' | 'info', message: string } | null>(null);
+  
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   // Ref untuk search input
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -167,12 +189,19 @@ export default function VendorSubmissionsContent() {
     setStatusFilter(e.target.value);
   }, []);
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pengajuan ini? Tindakan ini tidak dapat dibatalkan.')) {
-      return;
-    }
+  const handleDelete = useCallback((id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Konfirmasi Hapus',
+      message: 'Apakah Anda yakin ingin menghapus pengajuan ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: () => performDelete(id)
+    });
+  }, []);
 
+  const performDelete = useCallback(async (id: string) => {
     try {
+      setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      
       const response = await fetch(`/api/submissions/${id}`, {
         method: 'DELETE',
       });
@@ -185,11 +214,17 @@ export default function VendorSubmissionsContent() {
       // Refresh data setelah berhasil menghapus
       await fetchSubmissions();
       
-      // Show success message (optional)
-      alert('Pengajuan berhasil dihapus');
+      // Show success toast
+      showSuccess('Berhasil!', 'Pengajuan berhasil dihapus');
     } catch (error) {
       console.error('Error deleting submission:', error);
-      alert(error instanceof Error ? error.message : 'Gagal menghapus pengajuan');
+      const errorMessage = error instanceof Error ? error.message : 'Gagal menghapus pengajuan';
+      showError('Error!', errorMessage);
+      setAlert({ 
+        type: 'error', 
+        message: errorMessage
+      });
+      setTimeout(() => setAlert(null), 5000);
     }
   }, [fetchSubmissions]);
 
@@ -280,10 +315,13 @@ export default function VendorSubmissionsContent() {
         <div className="text-center py-12">
           <div className="text-gray-500 mb-4">Belum ada pengajuan</div>
           <Link href="/vendor/submissions/create">
-            <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <PlusIcon className="w-4 h-4 mr-2" />
+            <Button 
+              variant="primary"
+              size="md"
+              startIcon={<PlusIcon className="w-4 h-4" />}
+            >
               Buat Pengajuan Pertama
-            </button>
+            </Button>
           </Link>
         </div>
       );
@@ -385,29 +423,34 @@ export default function VendorSubmissionsContent() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      <button
+                      <Button
                         onClick={() => handleViewDetail(submission)}
-                        className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 text-sm"
+                        variant="info"
+                        size="sm"
                         title="Lihat Detail"
                       >
                         Lihat
-                      </button>
+                      </Button>
                       {submission.status_approval_admin === 'PENDING' && (
                         <>
-                          <Link 
-                            href={`/vendor/submissions/edit/${submission.id}`}
-                            className="text-blue-600 hover:text-blue-900 px-2 py-1 rounded hover:bg-blue-50 text-sm"
-                            title="Ubah Pengajuan"
-                          >
-                            Ubah
+                          <Link href={`/vendor/submissions/edit/${submission.id}`}>
+                            <Button
+                              variant="warning"
+                              size="sm"
+                              title="Ubah Pengajuan"
+                              className="mr-2"
+                            >
+                              Ubah
+                            </Button>
                           </Link>
-                          <button
+                          <Button
                             onClick={() => handleDelete(submission.id)}
-                            className="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50 text-sm"
+                            variant="destructive"
+                            size="sm"
                             title="Hapus Pengajuan"
                           >
                             Hapus
-                          </button>
+                          </Button>
                         </>
                       )}
                       {submission.status_approval_admin !== 'PENDING' && (
@@ -440,10 +483,13 @@ export default function VendorSubmissionsContent() {
         </div>
         
         <Link href="/vendor/submissions/create">
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            <PlusIcon className="w-4 h-4 mr-2" />
+          <Button 
+            variant="primary"
+            size="md"
+            startIcon={<PlusIcon className="w-4 h-4" />}
+          >
             Buat Pengajuan Baru
-          </button>
+          </Button>
         </Link>
       </div>
 
@@ -545,6 +591,25 @@ export default function VendorSubmissionsContent() {
         submission={selectedSubmission}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* Alert */}
+      {alert && (
+        <Alert
+          variant={alert.type}
+          title={alert.type === 'success' ? 'Berhasil!' : alert.type === 'error' ? 'Error!' : 'Info'}
+          message={alert.message}
+        />
+      )}
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        variant="danger"
       />
     </div>
   );

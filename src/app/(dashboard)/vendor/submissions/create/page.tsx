@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/app/lib/auth';
+import { authOptions } from '@/lib/auth';
 import SubmissionForm from '@/components/submissions/SubmissionForm';
-import RoleGate from '@/components/RoleGate';
-import SidebarLayout from '@/components/SidebarLayout';
-import VerificationGuard from '@/components/VerificationGuard';
+import RoleGate from '@/components/security/RoleGate';
+import SidebarLayout from '@/components/layout/SidebarLayout';
+import VerificationGuard from '@/components/security/VerificationGuard';
 
 export default async function CreateSubmissionPage() {
   const session = await getServerSession(authOptions);

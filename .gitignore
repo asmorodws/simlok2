@@ -41,6 +41,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma generated
 /src/generated/prisma
 
+# uploads
 /public/uploads
+
+# IDE
+.vscode/
+.idea/
+
+# temp files
+*.tmp
+*.log

@@ -1,9 +1,11 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { JWT_CONFIG, getTimeUntilExpiry, formatExpiryTime } from "@/utils/jwt-config";
+import ConfirmModal from "../ui/modal/ConfirmModal";
+import Alert from "../ui/alert/Alert";
 
 interface SessionExpiryHandlerProps {
   children: React.ReactNode;
@@ -14,6 +16,9 @@ export default function SessionExpiryHandler({ children }: SessionExpiryHandlerP
   const router = useRouter();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
 
   useEffect(() => {
     // Clear existing timeout
@@ -35,26 +40,7 @@ export default function SessionExpiryHandler({ children }: SessionExpiryHandlerP
         const warningTime = Math.max(0, timeUntilExpiry - (JWT_CONFIG.WARNING_BEFORE_EXPIRY * 60 * 1000));
         
         timeoutRef.current = setTimeout(async () => {
-          const shouldExtend = confirm(
-            `Your session will expire in ${JWT_CONFIG.WARNING_BEFORE_EXPIRY} minutes. Would you like to extend your session?`
-          );
-          
-          if (shouldExtend) {
-            // Trigger a session refresh using NextAuth's update method
-            try {
-              await update();
-              console.log('Session refreshed successfully');
-            } catch (error) {
-              console.error('Failed to refresh session:', error);
-              router.push("/login");
-            }
-          } else {
-            // Set another timeout for actual expiry
-            setTimeout(() => {
-              alert("Your session has expired. Please log in again.");
-              router.push("/login");
-            }, JWT_CONFIG.WARNING_BEFORE_EXPIRY * 60 * 1000);
-          }
+          setShowSessionWarning(true);
         }, warningTime);
       } else {
         // Session already expired
@@ -85,11 +71,11 @@ export default function SessionExpiryHandler({ children }: SessionExpiryHandlerP
           const response = await fetch("/api/auth/session");
           if (!response.ok) {
             console.log('Session validation failed, redirecting to login');
-            router.push("/login");
+            setShowSessionExpired(true);
           }
         } catch (error) {
           console.error('Session validation error:', error);
-          router.push("/login");
+          setShowSessionExpired(true);
         }
       }, JWT_CONFIG.AUTO_REFRESH_INTERVAL * 60 * 1000); // Convert minutes to milliseconds
     }
@@ -101,5 +87,52 @@ export default function SessionExpiryHandler({ children }: SessionExpiryHandlerP
     };
   }, [status, router]);
 
-  return <>{children}</>;
+  const handleExtendSession = async () => {
+    try {
+      await update();
+      setShowSessionWarning(false);
+      console.log('Session refreshed successfully');
+    } catch (error) {
+      console.error('Failed to refresh session:', error);
+      setShowSessionExpired(true);
+    }
+  };
+
+  const handleSessionExpiry = () => {
+    setShowSessionWarning(false);
+    setTimeout(() => {
+      setShowSessionExpired(true);
+    }, JWT_CONFIG.WARNING_BEFORE_EXPIRY * 60 * 1000);
+  };
+
+  const handleGoToLogin = () => {
+    setShowSessionExpired(false);
+    router.push("/login");
+  };
+
+  return (
+    <>
+      {children}
+      
+      <ConfirmModal
+        isOpen={showSessionWarning}
+        title="Session Warning"
+        message={`Your session will expire in ${JWT_CONFIG.WARNING_BEFORE_EXPIRY} minutes. Would you like to extend your session?`}
+        onConfirm={handleExtendSession}
+        onClose={handleSessionExpiry}
+        confirmText="Extend Session"
+        cancelText="Let it expire"
+      />
+
+      <ConfirmModal
+        isOpen={showSessionExpired}
+        title="Session Expired"
+        message="Your session has expired. Please log in again."
+        onConfirm={handleGoToLogin}
+        onClose={handleGoToLogin}
+        confirmText="Go to Login"
+        showCancel={false}
+      />
+    </>
+  );
 }

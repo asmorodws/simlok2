@@ -21,7 +21,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileUrl, fileName, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
       <div className="relative max-w-4xl max-h-[90vh] w-full h-full bg-white rounded-lg overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center p-4 bg-gray-50 border-b">

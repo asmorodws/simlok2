@@ -1,7 +1,7 @@
-import RoleGate from "@/components/RoleGate";
-import SidebarLayout from "@/components/SidebarLayout";
-import VendorDashboard from "@/components/VendorDashboard";
-import VerificationGuard from "@/components/VerificationGuard";
+import RoleGate from "@/components/security/RoleGate";
+import SidebarLayout from "@/components/layout/SidebarLayout";
+import VendorDashboard from "@/components/dashboard/VendorDashboard";
+import VerificationGuard from "@/components/security/VerificationGuard";
 
 export default function VendorPage() {
   return (

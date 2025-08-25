@@ -8,8 +8,10 @@ import {
   ChevronUpDownIcon
 } from "@heroicons/react/24/outline";;
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
+import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
+import Alert from '@/components/ui/alert/Alert';
+import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import AdminSubmissionDetailModal from './AdminSubmissionDetailModal';
@@ -81,6 +83,32 @@ export default function AdminSubmissions() {
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  
+  // Alert state
+  const [alert, setAlert] = useState<{
+    show: boolean;
+    variant: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({
+    show: false,
+    variant: 'success',
+    title: '',
+    message: ''
+  });
+
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   
   // Modal detail state
   const [selectedDetailSubmission, setSelectedDetailSubmission] = useState<Submission | null>(null);
@@ -185,15 +213,57 @@ export default function AdminSubmissions() {
     fetchSubmissions();
   }, [selectedDetailSubmission, fetchSubmissions]);
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this submission?')) return;
+  const handleDelete = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Submission',
+      message: 'Apakah Anda yakin ingin menghapus submission ini? Tindakan ini tidak dapat dibatalkan.',
+      onConfirm: () => performDelete(id)
+    });
+  };
+
+  const performDelete = async (id: string) => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+    
     try {
       const response = await fetch(`/api/submissions/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Failed to delete submission');
-      fetchSubmissions();
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete submission');
+      }
+      
+      // Refresh submissions after successful deletion
+      await fetchSubmissions();
+      
+      // Show success message
+      setAlert({
+        show: true,
+        variant: 'success',
+        title: 'Berhasil!',
+        message: 'Submission berhasil dihapus'
+      });
+      
+      // Auto hide after 3 seconds
+      setTimeout(() => {
+        setAlert(prev => ({ ...prev, show: false }));
+      }, 3000);
+      
     } catch (error) {
       console.error('Error deleting submission:', error);
-      alert('Failed to delete submission. Please try again.');
+      
+      // Show error message
+      setAlert({
+        show: true,
+        variant: 'error',
+        title: 'Gagal Menghapus',
+        message: error instanceof Error ? error.message : 'Gagal menghapus submission. Silahkan coba lagi.'
+      });
+      
+      // Auto hide after 5 seconds
+      setTimeout(() => {
+        setAlert(prev => ({ ...prev, show: false }));
+      }, 5000);
     }
   };
 
@@ -237,7 +307,14 @@ export default function AdminSubmissions() {
         <div className="text-center py-12">
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-red-800">{error}</div>
-            <button onClick={fetchSubmissions} className="mt-2 text-red-600 hover:text-red-500 font-medium">Coba Lagi</button>
+            <Button 
+              onClick={fetchSubmissions} 
+              variant="destructive"
+              size="sm"
+              className="mt-2"
+            >
+              Coba Lagi
+            </Button>
           </div>
         </div>
       );
@@ -299,17 +376,25 @@ export default function AdminSubmissions() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center space-x-2">
-                      <button
+                      <Button
                         onClick={() => handleViewDetail(s)}
-                        className="text-gray-600 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50 text-sm"
-                        title="Lihat Detail"
+                        variant="info"
+                        size="sm"
+                        title="Lihat detail submission"
+                        className="text-xs"
                       >
                         Lihat
-                      </button>
+                      </Button>
                      
-                      <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50" title="Hapus">
-                       Hapus
-                      </button>
+                      <Button 
+                        onClick={() => handleDelete(s.id)} 
+                        variant="destructive" 
+                        size="sm"
+                        title="Hapus submission ini"
+                        className="text-xs"
+                      >
+                        Hapus
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -328,6 +413,17 @@ export default function AdminSubmissions() {
 
   return (
     <div className="space-y-4">
+      {/* Alert Notification */}
+      {alert.show && (
+        <div className="fixed top-4 right-4 z-50 max-w-md">
+          <Alert
+            variant={alert.variant}
+            title={alert.title}
+            message={alert.message}
+          />
+        </div>
+      )}
+      
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card><div className="p-4"><h3 className="text-lg font-semibold">Total</h3><p className="text-2xl font-bold text-blue-600">{statistics.total}</p></div></Card>
@@ -410,6 +506,16 @@ export default function AdminSubmissions() {
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         onSubmissionUpdate={handleSubmissionUpdate}
+      />
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        variant="danger"
       />
     </div>
   );

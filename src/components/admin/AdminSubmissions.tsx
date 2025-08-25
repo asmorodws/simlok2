@@ -499,7 +499,7 @@ export default function AdminSubmissions() {
 
       {/* Modal untuk Review Submission */}
       {showModal && selectedSubmission && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Review Pengajuan SIMLOK</h2>
             
