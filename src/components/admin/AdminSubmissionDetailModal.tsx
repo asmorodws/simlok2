@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XMarkIcon, EyeIcon, DocumentIcon, ArrowDownTrayIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, DocumentIcon, ArrowDownTrayIcon, PhotoIcon, BuildingOfficeIcon, UserIcon, BriefcaseIcon, CalendarIcon, ClockIcon, WrenchScrewdriverIcon, CheckCircleIcon, XCircleIcon, ClockIcon as PendingIcon } from '@heroicons/react/24/outline';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DatePicker from '@/components/form/DatePicker';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import WorkersList from '@/components/common/WorkersList';
+import DetailSection from '@/components/common/DetailSection';
+import InfoCard from '@/components/common/InfoCard';
 import Alert from '@/components/ui/alert/Alert';
 import Button from '@/components/ui/button/Button';
 
@@ -537,15 +540,6 @@ export default function AdminSubmissionDetailModal({
                   Detail Submission
                 </button>
                 <button
-                  onClick={() => setActiveTab('documents')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'documents'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  Dokumen Upload
-                </button>
-                <button
                   onClick={() => setActiveTab('approval')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'approval'
                       ? 'border-blue-500 text-blue-600'
@@ -565,272 +559,287 @@ export default function AdminSubmissionDetailModal({
                 {activeTab === 'details' && (
                   <div className="space-y-6">
                     {/* Informasi Vendor */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Vendor</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Nama Vendor</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.nama_vendor}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Nama Petugas</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.nama_petugas}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Email</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.user.email}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Berdasarkan</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.berdasarkan}</p>
-                        </div>
+                    <DetailSection 
+                      title="Informasi Vendor" 
+                      icon={<BuildingOfficeIcon className="h-5 w-5 text-blue-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoCard
+                          label="Nama Vendor"
+                          value={submission.nama_vendor}
+                        />
+                        <InfoCard
+                          label="Nama Petugas"
+                          value={submission.nama_petugas}
+                          icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                        <InfoCard
+                          label="Email"
+                          value={submission.user.email}
+                        />
+                        <InfoCard
+                          label="Berdasarkan"
+                          value={submission.berdasarkan}
+                        />
                       </div>
-                    </div>
+                    </DetailSection>
 
                     {/* Detail Pekerjaan */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Detail Pekerjaan</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Pekerjaan</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.pekerjaan}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Lokasi Kerja</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.lokasi_kerja}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Pelaksanaan</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.pelaksanaan || 'Belum diisi'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Jam Kerja</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.jam_kerja}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Nama Pekerja</label>
-                          <div className="mt-1 text-sm text-gray-900">
-                            {formatNamaPekerjaDisplay(submission.nama_pekerja).length > 0 ? (
-                              <div className="space-y-1">
-                                {formatNamaPekerjaDisplay(submission.nama_pekerja).map((nama, index) => (
-                                  <div key={index} className="flex items-start">
-                                    <span className="text-gray-500 mr-2 min-w-[1.5rem]">{index + 1}.</span>
-                                    <span>{nama}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">-</span>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Sarana Kerja</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.sarana_kerja}</p>
-                        </div>
+                    <DetailSection 
+                      title="Detail Pekerjaan" 
+                      icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoCard
+                          label="Pekerjaan"
+                          value={submission.pekerjaan}
+                        />
+                        <InfoCard
+                          label="Lokasi Kerja"
+                          value={submission.lokasi_kerja}
+                        />
+                        <InfoCard
+                          label="Pelaksanaan"
+                          value={submission.pelaksanaan || 'Belum diisi'}
+                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                        <InfoCard
+                          label="Jam Kerja"
+                          value={submission.jam_kerja}
+                          icon={<ClockIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                        <InfoCard
+                          label="Sarana Kerja"
+                          value={submission.sarana_kerja}
+                          icon={<WrenchScrewdriverIcon className="h-4 w-4 text-gray-500" />}
+                          className="md:col-span-2"
+                        />
                       </div>
 
                       {submission.lain_lain && (
-                        <div className="mt-4">
-                          <label className="block text-sm font-medium text-gray-700">Lain-lain</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.lain_lain}</p>
+                        <div className="mt-6 pt-6 border-t border-gray-200">
+                          <InfoCard
+                            label="Lain-lain"
+                            value={
+                              <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                                {submission.lain_lain}
+                              </div>
+                            }
+                          />
                         </div>
                       )}
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700">Content</label>
-                        <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{submission.content}</p>
+                      
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <InfoCard
+                          label="Content"
+                          value={
+                            <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                              {submission.content}
+                            </div>
+                          }
+                        />
                       </div>
-                    </div>
+                    </DetailSection>
+
+                    {/* Daftar Pekerja */}
+                    <DetailSection 
+                      title="Daftar Pekerja" 
+                      icon={<UserIcon className="h-5 w-5 text-purple-500" />}
+                    >
+                      <WorkersList
+                        submissionId={submission.id}
+                        fallbackWorkers={submission.nama_pekerja}
+                        layout="grid"
+                        showPhotos={true}
+                        maxDisplayCount={6}
+                      />
+                    </DetailSection>
 
                     {/* Nomor Dokumen */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Dokumen</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <DetailSection 
+                      title="Informasi Dokumen" 
+                      icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {submission.nomor_simja && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Nomor SIMJA</label>
-                            <p className="mt-1 text-sm text-gray-900">{submission.nomor_simja}</p>
-                          </div>
+                          <InfoCard
+                            label="Nomor SIMJA"
+                            value={submission.nomor_simja}
+                          />
                         )}
                         {submission.tanggal_simja && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Tanggal SIMJA</label>
-                            <p className="mt-1 text-sm text-gray-900">{formatDate(submission.tanggal_simja)}</p>
-                          </div>
+                          <InfoCard
+                            label="Tanggal SIMJA"
+                            value={formatDate(submission.tanggal_simja)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
                         )}
                         {submission.nomor_sika && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Nomor SIKA</label>
-                            <p className="mt-1 text-sm text-gray-900">{submission.nomor_sika}</p>
-                          </div>
+                          <InfoCard
+                            label="Nomor SIKA"
+                            value={submission.nomor_sika}
+                          />
                         )}
                         {submission.tanggal_sika && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Tanggal SIKA</label>
-                            <p className="mt-1 text-sm text-gray-900">{formatDate(submission.tanggal_sika)}</p>
-                          </div>
+                          <InfoCard
+                            label="Tanggal SIKA"
+                            value={formatDate(submission.tanggal_sika)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
                         )}
                         {/* Nomor SIMLOK - hanya muncul jika sudah APPROVED */}
                         {submission.status_approval_admin === 'APPROVED' && submission.nomor_simlok && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Nomor SIMLOK</label>
-                            <p className="mt-1 text-sm text-gray-900">{submission.nomor_simlok}</p>
-                          </div>
+                          <InfoCard
+                            label="Nomor SIMLOK"
+                            value={submission.nomor_simlok}
+                          />
                         )}
                         {submission.status_approval_admin === 'APPROVED' && submission.tanggal_simlok && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Tanggal SIMLOK</label>
-                            <p className="mt-1 text-sm text-gray-900">{formatDate(submission.tanggal_simlok)}</p>
-                          </div>
+                          <InfoCard
+                            label="Tanggal SIMLOK"
+                            value={formatDate(submission.tanggal_simlok)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
                         )}
                       </div>
-                    </div>
+                    </DetailSection>
 
                     {/* Informasi Penandatangan */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Informasi Penandatangan</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Jabatan Penandatangan</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.jabatan_signer || '-'}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Nama Penandatangan</label>
-                          <p className="mt-1 text-sm text-gray-900">{submission.nama_signer}</p>
-                        </div>
+                    <DetailSection 
+                      title="Informasi Penandatangan" 
+                      icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoCard
+                          label="Jabatan Penandatangan"
+                          value={submission.jabatan_signer || '-'}
+                        />
+                        <InfoCard
+                          label="Nama Penandatangan"
+                          value={submission.nama_signer || '-'}
+                        />
                       </div>
-                    </div>
-                  </div>
-                )}
+                    </DetailSection>
 
-                {/* Tab 2: Documents */}
-                {activeTab === 'documents' && (
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Dokumen yang Diupload</h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {/* Dokumen SIKA */}
-                      {submission.upload_doc_sika && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              {getFileIcon(submission.upload_doc_sika)}
-                              <h4 className="font-medium text-gray-900">Dokumen SIKA</h4>
+                    {/* Dokumen Upload dalam Detail */}
+                    <DetailSection 
+                      title="Dokumen Upload" 
+                      icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Dokumen SIKA */}
+                        {submission.upload_doc_sika && (
+                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                <DocumentIcon className="h-5 w-5 text-blue-500" />
+                                <div>
+                                  <h4 className="font-medium text-gray-900">Dokumen SIKA</h4>
+                                  <p className="text-xs text-gray-500">Surat Izin Kerja Aman</p>
+                                </div>
+                              </div>
+                              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                Tersedia
+                              </span>
                             </div>
-                          </div>
-                          <div className="space-y-2">
                             <button
                               onClick={() => handleFileView(submission.upload_doc_sika!, 'Dokumen SIKA')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                              title="Buka preview di tab baru"
+                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                             >
                               <EyeIcon className="h-4 w-4 mr-2" />
-                              Preview
-                              <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDownload(submission.upload_doc_sika!, 'Dokumen_SIKA.pdf')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                            >
-                              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                              Download
+                              Preview Dokumen
                             </button>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Dokumen SIMJA */}
-                      {submission.upload_doc_simja && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              {getFileIcon(submission.upload_doc_simja)}
-                              <h4 className="font-medium text-gray-900">Dokumen SIMJA</h4>
+                        {/* Dokumen SIMJA */}
+                        {submission.upload_doc_simja && (
+                          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                <DocumentIcon className="h-5 w-5 text-green-500" />
+                                <div>
+                                  <h4 className="font-medium text-gray-900">Dokumen SIMJA</h4>
+                                  <p className="text-xs text-gray-500">Surat Izin Masuk Area</p>
+                                </div>
+                              </div>
+                              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                Tersedia
+                              </span>
                             </div>
-                          </div>
-                          <div className="space-y-2">
                             <button
                               onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                              title="Buka preview di tab baru"
+                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                               <EyeIcon className="h-4 w-4 mr-2" />
-                              Preview
-                              <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDownload(submission.upload_doc_simja!, 'Dokumen_SIMJA.pdf')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                            >
-                              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                              Download
+                              Preview Dokumen
                             </button>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
 
-                    {/* Message if no documents */}
-                    {!submission.upload_doc_sika && !submission.upload_doc_simja && (
-                      <div className="text-center py-8">
-                        <DocumentIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">Tidak ada dokumen yang diupload</p>
+                        {/* Message if no documents */}
+                        {!submission.upload_doc_sika && !submission.upload_doc_simja && (
+                          <div className="md:col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                            <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                            <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </DetailSection>
                   </div>
                 )}
 
-                {/* Tab 3: Approval */}
+                {/* Tab 2: Approval */}
                 {activeTab === 'approval' && (
                   <div className="space-y-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Status Approval</h3>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Status Saat Ini</label>
-                          <div className="mt-1">
-                            {getStatusBadge(submission.status_approval_admin)}
-                          </div>
-                        </div>
+                    {/* Status Saat Ini */}
+                    <DetailSection 
+                      title="Status Approval" 
+                      icon={
+                        submission.status_approval_admin === 'APPROVED' ? (
+                          <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                        ) : submission.status_approval_admin === 'REJECTED' ? (
+                          <XCircleIcon className="h-5 w-5 text-red-500" />
+                        ) : (
+                          <PendingIcon className="h-5 w-5 text-yellow-500" />
+                        )
+                      }
+                      badge={getStatusBadge(submission.status_approval_admin)}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoCard
+                          label="Status Saat Ini"
+                          value={getStatusBadge(submission.status_approval_admin)}
+                        />
                         {submission.approvedByUser && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">Disetujui Oleh</label>
-                            <p className="mt-1 text-sm text-gray-900">{submission.approvedByUser.nama_petugas}</p>
-                          </div>
+                          <InfoCard
+                            label="Disetujui Oleh"
+                            value={submission.approvedByUser.nama_petugas}
+                            icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+                          />
                         )}
                         {submission.keterangan && (
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Keterangan</label>
-                            <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{submission.keterangan}</p>
-                          </div>
+                          <InfoCard
+                            label="Keterangan"
+                            value={
+                              <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                                {submission.keterangan}
+                              </div>
+                            }
+                            className="md:col-span-2"
+                          />
                         )}
-                        {/* {submission.tembusan && (
-                          <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700">Tembusan</label>
-                            <div className="mt-1 text-sm text-gray-900 space-y-1">
-                              {formatTembusanDisplay(submission.tembusan).map((item, index) => (
-                                <div key={index} className="flex items-center">
-                                  <span className="w-4 text-gray-600">{index + 1}.</span>
-                                  <span className="ml-2">{item}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )} */}
                       </div>
-                    </div>
+                    </DetailSection>
 
                     {/* Approval Form - Only show if status is PENDING */}
                     {submission.status_approval_admin === 'PENDING' && (
-                      <div className="bg-white border border-gray-200 rounded-lg p-6">
-                        <h4 className="text-lg font-medium text-gray-900 mb-4">Proses Approval</h4>
-
-                        <div className="space-y-4">
+                      <DetailSection 
+                        title="Proses Approval" 
+                        icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
+                      >
+                        <div className="space-y-6">
                           {/* Status Dropdown */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1104,7 +1113,7 @@ export default function AdminSubmissionDetailModal({
                             </ul>
                           </div>
                         </div>
-                      </div>
+                      </DetailSection>
                     )}
 
                     {/* Document Actions if approved */}

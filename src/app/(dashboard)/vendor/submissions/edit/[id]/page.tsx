@@ -26,14 +26,9 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
   const { id } = await params;
 
   return (
-    <SidebarLayout title="Vendor Panel" titlePage="Edit Pengajuan SIMLOK">
+    <SidebarLayout title="Vendor Panel" titlePage="Ubah Pengajuan SIMLOK">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Pengajuan SIMLOK</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Edit detail pengajuan Surat Izin Masuk Lokasi (SIMLOK)
-          </p>
-        </div>
+      
         
         <EditSubmissionForm submissionId={id} />
       </div>

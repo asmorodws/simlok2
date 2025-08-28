@@ -257,22 +257,7 @@ export default function DocumentPreviewModal({
             {renderPreviewContent()}
           </div>
 
-          {/* Footer - Always visible */}
-          <div className="bg-gray-50 flex justify-between items-center p-4 border-t border-gray-200 flex-shrink-0">
-            <div className="text-sm text-gray-600">
-              {detectedFileType === 'pdf' && 'Tip: Gunakan scroll untuk navigasi atau Ctrl+F untuk pencarian'}
-              {detectedFileType === 'image' && 'Tip: Klik kanan untuk menyimpan gambar'}
-              {detectedFileType === 'document' && 'Dokumen Word memerlukan aplikasi eksternal untuk ditampilkan'}
-              {detectedFileType === 'unknown' && 'File ini memerlukan aplikasi khusus untuk dibuka'}
-            </div>
-            
-            <button
-              onClick={onClose}
-              className="px-6 py-2 text-sm font-medium text-white bg-gray-600 border border-gray-600 rounded-md hover:bg-gray-700 hover:border-gray-700 transition-colors"
-            >
-              Tutup
-            </button>
-          </div>
+
         </div>
       </div>
     </div>

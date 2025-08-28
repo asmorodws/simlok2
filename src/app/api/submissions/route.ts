@@ -197,16 +197,20 @@ export async function POST(request: NextRequest) {
 
     console.log('POST /api/submissions - User verified:', userExists.email);
 
+    // Extract workers data and remove it from body since it's not part of Submission model
+    const { workers, ...submissionData } = body as any;
+
     // Generate QR Code (simple implementation)
     const qrData = `${session.user.id}-${Date.now()}`;
     
     try {
+      // Create submission first
       const submission = await prisma.submission.create({
         data: {
-          ...body,
+          ...submissionData,
           userId: session.user.id,
-          tanggal_simja: body.tanggal_simja ? new Date(body.tanggal_simja) : null,
-          tanggal_sika: body.tanggal_sika ? new Date(body.tanggal_sika) : null,
+          tanggal_simja: submissionData.tanggal_simja ? new Date(submissionData.tanggal_simja) : null,
+          tanggal_sika: submissionData.tanggal_sika ? new Date(submissionData.tanggal_sika) : null,
           qrcode: qrData,
         },
         include: {
@@ -220,6 +224,21 @@ export async function POST(request: NextRequest) {
           }
         }
       });
+
+      // Create workers if they exist
+      if (workers && Array.isArray(workers) && workers.length > 0) {
+        const workersData = workers.map((worker: any) => ({
+          nama_pekerja: worker.nama_pekerja,
+          foto_pekerja: worker.foto_pekerja || null,
+          submission_id: submission.id,
+        }));
+
+        await prisma.daftarPekerja.createMany({
+          data: workersData,
+        });
+
+        console.log('POST /api/submissions - Workers created:', workersData.length);
+      }
 
       console.log('POST /api/submissions - Submission created successfully:', submission.id);
       return NextResponse.json(submission, { status: 201 });

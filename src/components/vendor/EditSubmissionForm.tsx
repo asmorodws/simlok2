@@ -14,6 +14,13 @@ import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/loading/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
 
+// Define Worker interface for dynamic inputs
+interface Worker {
+  id: string;
+  nama_pekerja: string;
+  foto_pekerja: string;
+}
+
 interface Submission {
   id: string;
   status_approval_admin: string;
@@ -49,6 +56,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   const [alert, setAlert] = useState<{ variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string } | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
   
+  // State for dynamic workers
+  const [workers, setWorkers] = useState<Worker[]>([
+    { id: '1', nama_pekerja: '', foto_pekerja: '' }
+  ]);
+  
   // Load submission data
   useEffect(() => {
     const fetchSubmission = async () => {
@@ -58,6 +70,19 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         if (response.ok) {
           const data = await response.json();
           setSubmission(data);
+          
+          // Also fetch workers data
+          const workersResponse = await fetch(`/api/submissions/${submissionId}/workers`);
+          if (workersResponse.ok) {
+            const workersData = await workersResponse.json();
+            if (workersData.length > 0) {
+              setWorkers(workersData.map((worker: any) => ({
+                id: worker.id,
+                nama_pekerja: worker.nama_pekerja,
+                foto_pekerja: worker.foto_pekerja || ''
+              })));
+            }
+          }
         } else {
           setAlert({
             variant: 'error',
@@ -191,23 +216,32 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }));
   };
 
-  // Function to format multiple names with line breaks for display
-  const formatNamaPekerjaDisplay = (names: string): string[] => {
-    // Split by newlines or commas, clean up each name, and return as array
-    return names
-      .split(/[\n,]+/) // Split by newlines or commas
-      .map(name => name.trim()) // Remove whitespace
-      .filter(name => name.length > 0); // Remove empty strings
+  // Functions for managing dynamic workers
+  const addWorker = () => {
+    const newWorker: Worker = {
+      id: Date.now().toString(),
+      nama_pekerja: '',
+      foto_pekerja: ''
+    };
+    setWorkers(prev => [...prev, newWorker]);
   };
 
-  // Function to format multiple names for database (with line breaks)
-  const formatNamaPekerja = (names: string): string => {
-    // Split by newlines or commas, clean up each name, and rejoin with line breaks
-    return names
-      .split(/[\n,]+/) // Split by newlines or commas
-      .map(name => name.trim()) // Remove whitespace
-      .filter(name => name.length > 0) // Remove empty strings
-      .join('\n'); // Join with line breaks for database
+  const removeWorker = (id: string) => {
+    if (workers.length > 1) {
+      setWorkers(prev => prev.filter(worker => worker.id !== id));
+    }
+  };
+
+  const updateWorkerName = (id: string, nama: string) => {
+    setWorkers(prev => prev.map(worker =>
+      worker.id === id ? { ...worker, nama_pekerja: nama } : worker
+    ));
+  };
+
+  const updateWorkerPhoto = (id: string, foto: string) => {
+    setWorkers(prev => prev.map(worker =>
+      worker.id === id ? { ...worker, foto_pekerja: foto } : worker
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,10 +287,38 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     setIsLoading(true);
 
     try {
-      // Format nama pekerja before sending
+      // Validate workers
+      const validWorkers = workers.filter(worker => worker.nama_pekerja.trim() !== '');
+      if (validWorkers.length === 0) {
+        setAlert({
+          variant: 'error',
+          title: 'Error!',
+          message: 'Minimal harus ada satu pekerja yang diisi'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if all workers have photos
+      const workersWithoutPhoto = validWorkers.filter(worker => !worker.foto_pekerja.trim());
+      if (workersWithoutPhoto.length > 0) {
+        setAlert({
+          variant: 'error',
+          title: 'Error!',
+          message: 'Semua pekerja harus memiliki foto. Silakan upload foto untuk semua pekerja.'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Format worker names for database
+      const workerNames = validWorkers.map(worker => worker.nama_pekerja.trim()).join('\n');
+
+      // Prepare submission data
       const formattedData = {
         ...formData,
-        nama_pekerja: formatNamaPekerja(formData.nama_pekerja)
+        nama_pekerja: workerNames,
+        workers: validWorkers // Include workers data for API processing
       };
 
       console.log('Sending update request:', {
@@ -325,7 +387,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto p-6">
       {isInitialLoading ? (
         <Card>
           <div className="p-6 text-center">
@@ -343,7 +405,6 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         <Card>
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold">Edit Pengajuan SIMLOK</h1>
               <div className="text-sm text-gray-500">
                 Status: <span className={`font-medium ${
                   submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
@@ -362,16 +423,15 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               </div>
             )}
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
               <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
             
-            {/* Informasi Vendor Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Vendor</h3>
-              
+            {/* Informasi Vendor */}
+            <div className="p-6 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="nama_vendor">Nama Vendor *</Label>
+                  <Label htmlFor="nama_vendor">Nama vendor</Label>
                   <Input
                     id="nama_vendor"
                     name="nama_vendor"
@@ -380,26 +440,12 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                     required
                     readOnly={!!session?.user?.nama_vendor}
                     disabled={!!session?.user?.nama_vendor}
-                    className={session?.user?.nama_vendor ? "bg-gray-50 cursor-not-allowed" : ""}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    {session?.user?.nama_vendor ? "Nama vendor tidak dapat diubah" : ""}
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="berdasarkan">Berdasarkan *</Label>
-                  <Input
-                    id="berdasarkan"
-                    name="berdasarkan"
-                    value={formData.berdasarkan}
-                    onChange={handleChange}
-                    required
+                    className={session?.user?.nama_vendor ? "cursor-not-allowed" : ""}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="nama_petugas">Nama Petugas *</Label>
+                  <Label htmlFor="nama_petugas">Nama petugas</Label>
                   <Input
                     id="nama_petugas"
                     name="nama_petugas"
@@ -409,99 +455,111 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
                 </div>
-              </div>
 
-              {/* SIMJA Section */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium text-gray-700">Dokumen SIMJA</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
-                    <Input
-                      id="nomor_simja"
-                      name="nomor_simja"
-                      value={formData.nomor_simja}
-                      onChange={handleChange}
-                      placeholder="Contoh: SIMJA/2024/001"
-                    />
-                  </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="berdasarkan">Berdasarkan</Label>
+                  <Input
+                    id="berdasarkan"
+                    name="berdasarkan"
+                    value={formData.berdasarkan}
+                    onChange={handleChange}
+                    type='text'
+                    required
+                  />
+                </div>
 
-                  <div>
-                    <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
-                    <DatePicker
-                      id="tanggal_simja"
-                      name="tanggal_simja"
-                      value={formData.tanggal_simja}
-                      onChange={handleDateChange('tanggal_simja')}
-                      placeholder="Pilih tanggal SIMJA"
+                {/* Document Numbers */}
+                <div>
+                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                  <Input
+                    id="nomor_simja"
+                    name="nomor_simja"
+                    value={formData.nomor_simja}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIMJA/2024/001"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                  <Input
+                    id="nomor_sika"
+                    name="nomor_sika"
+                    value={formData.nomor_sika}
+                    onChange={handleChange}
+                    placeholder="Contoh: SIKA/2024/001"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                  <DatePicker
+                    id="tanggal_simja"
+                    name="tanggal_simja"
+                    value={formData.tanggal_simja}
+                    onChange={handleDateChange('tanggal_simja')}
+                    placeholder="Pilih tanggal SIMJA"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                  <DatePicker
+                    id="tanggal_sika"
+                    name="tanggal_sika"
+                    value={formData.tanggal_sika}
+                    onChange={handleDateChange('tanggal_sika')}
+                    placeholder="Pilih tanggal SIKA"
+                    required
+                  />
+                </div>
+
+                {/* File Upload Areas */}
+                <div className="space-y-2">
+                  <Label htmlFor="upload_doc_simja">UPLOAD DOKUMEN SIMJA</Label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <FileUpload
+                      id="upload_doc_simja"
+                      name="upload_doc_simja"
+                      label=""
+                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      value={formData.upload_doc_simja}
+                      onChange={handleFileUpload('upload_doc_simja')}
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      maxSize={5}
+                      required={false}
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* SIKA Section */}
-              <div className="space-y-4">
-                <h4 className="text-md font-medium text-gray-700">Dokumen SIKA</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label htmlFor="nomor_sika">Nomor SIKA</Label>
-                    <Input
-                      id="nomor_sika"
-                      name="nomor_sika"
-                      value={formData.nomor_sika}
-                      onChange={handleChange}
-                      placeholder="Contoh: SIKA/2024/001"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
-                    <DatePicker
-                      id="tanggal_sika"
-                      name="tanggal_sika"
-                      value={formData.tanggal_sika}
-                      onChange={handleDateChange('tanggal_sika')}
-                      placeholder="Pilih tanggal SIKA"
+                <div className="space-y-2">
+                  <Label htmlFor="upload_doc_sika">UPLOAD DOKUMEN SIKA</Label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <FileUpload
+                      id="upload_doc_sika"
+                      name="upload_doc_sika"
+                      label=""
+                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      value={formData.upload_doc_sika}
+                      onChange={handleFileUpload('upload_doc_sika')}
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      maxSize={5}
+                      required={false}
                     />
                   </div>
                 </div>
-              </div>
-
-              {/* Upload Dokumen */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FileUpload
-                  id="upload_doc_simja"
-                  name="upload_doc_simja"
-                  label="Upload Dokumen SIMJA"
-                  description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                  value={formData.upload_doc_simja}
-                  onChange={handleFileUpload('upload_doc_simja')}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  maxSize={5}
-                  required={false}
-                />
-
-                <FileUpload
-                  id="upload_doc_sika"
-                  name="upload_doc_sika"
-                  label="Upload Dokumen SIKA"
-                  description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                  value={formData.upload_doc_sika}
-                  onChange={handleFileUpload('upload_doc_sika')}
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                  maxSize={5}
-                  required={false}
-                />
               </div>
             </div>
 
-            {/* Informasi Pekerjaan Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Pekerjaan</h3>
-              
+            {/* Informasi Pekerjaan */}
+            <div className="p-6 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="pekerjaan">Pekerjaan *</Label>
+                  <Label htmlFor="pekerjaan">Pekerjaan</Label>
                   <Input
                     id="pekerjaan"
                     name="pekerjaan"
@@ -512,7 +570,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                 </div>
 
                 <div>
-                  <Label htmlFor="lokasi_kerja">Lokasi Kerja *</Label>
+                  <Label htmlFor="lokasi_kerja">Lokasi kerja</Label>
                   <Input
                     id="lokasi_kerja"
                     name="lokasi_kerja"
@@ -523,7 +581,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                 </div>
 
                 <div>
-                  <Label htmlFor="jam_kerja">Jam Kerja *</Label>
+                  <Label htmlFor="jam_kerja">Jam kerja</Label>
                   <TimePicker
                     id="jam_kerja"
                     name="jam_kerja"
@@ -535,68 +593,170 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                 </div>
 
                 <div>
-                  <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
-                  <textarea
+                  <Label htmlFor="sarana_kerja">Sarana kerja</Label>
+                  <Input
                     id="sarana_kerja"
                     name="sarana_kerja"
                     value={formData.sarana_kerja}
                     onChange={handleChange}
-                    required
-                    rows={2}
                     placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Daftar nama pekerja Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Daftar nama pekerja</h3>
+            {/* Daftar nama pekerja */}
+            <div className="p-6 rounded-lg">
+              <div className="flex justify-between items-center mb-6 border-b border-gray-300 ">
+                <div className='flex justify-between'>
+                  <h2 className="text-lg font-semibold text-gray-900 pb-2">Daftar Nama Pekerja</h2>
+                  <p className="text-sm text-gray-500 mt-2">Total: {workers.length} pekerja</p>
+                </div>
+               
+              </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
-                  <textarea
-                    id="nama_pekerja"
-                    name="nama_pekerja"
-                    value={formData.nama_pekerja}
-                    onChange={handleChange}
-                    required
-                    rows={5}
-                    placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Tip: Pisahkan nama dengan enter atau koma. Akan ditampilkan satu nama per baris.
-                  </p>
-                  {formData.nama_pekerja && (
-                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
-                      <p className="text-sm text-blue-700 font-medium mb-2">Preview tampilan:</p>
-                      <div className="text-sm text-blue-800 space-y-1">
-                        {formatNamaPekerjaDisplay(formData.nama_pekerja).map((name, index) => (
-                          <div key={index} className="flex items-center">
-                            <span className="w-4 text-blue-600">{index + 1}.</span>
-                            <span className="ml-2">{name}</span>
+              {/* Workers Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {workers.map((worker, index) => (
+                  <div key={worker.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md">
+                    {/* Header */}
+                    <div className="flex justify-between items-center mb-3">
+                      <div className="flex items-center gap-2">
+                        {/* <div className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">
+                          {index + 1}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Pekerja {index + 1}</span> */}
+                      </div>
+                      {workers.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => removeWorker(worker.id)}
+                          variant="outline"
+                          className="text-red-500 hover:bg-red-50 border-red-200 w-8 h-8 p-0 rounded-full"
+                          title="Hapus pekerja"
+                          disabled={submission.status_approval_admin !== 'PENDING'}
+                        >
+                          ✕
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* Photo Preview */}
+                    <div className="mb-4">
+
+                      <div className="relative">
+                        {worker.foto_pekerja ? (
+                          <div className="relative group">
+                            <img 
+                              src={worker.foto_pekerja} 
+                              alt={`Foto ${worker.nama_pekerja || 'pekerja'}`}
+                              className="w-full h-50 object-cover rounded-lg border-2 border-gray-300"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                                className="bg-white text-gray-800 hover:bg-gray-100 text-xs px-3 py-1"
+                                disabled={submission.status_approval_admin !== 'PENDING'}
+                              >
+                                Ganti Foto
+                              </Button>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => updateWorkerPhoto(worker.id, '')}
+                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                              title="Hapus foto"
+                              disabled={submission.status_approval_admin !== 'PENDING'}
+                            >
+                              ✕
+                            </button>
                           </div>
-                        ))}
+                        ) : (
+                          <div 
+                            onClick={() => submission.status_approval_admin === 'PENDING' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                            className={`w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center transition-all duration-200 bg-gray-50 ${
+                              submission.status_approval_admin === 'PENDING' 
+                                ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50' 
+                                : 'cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                           
+                            <p className="text-sm font-medium text-gray-600">Upload Foto Pekerja</p>
+                            <p className="text-xs text-gray-500 mt-1">Klik atau drag & drop foto</p>
+   
+                          </div>
+                        )}
+                        <FileUpload
+                          id={`foto_pekerja_${worker.id}`}
+                          name={`foto_pekerja_${worker.id}`}
+                          label=""
+                          description=""
+                          value={worker.foto_pekerja}
+                          onChange={(url) => updateWorkerPhoto(worker.id, url)}
+                          accept=".jpg,.jpeg,.png"
+                          maxSize={5}
+                          required={false}
+                          className="sr-only"
+                        />
                       </div>
                     </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col justify-center items-center border-2 border-dashed border-gray-300 rounded-lg p-6 min-h-[200px]">
-                  <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                    
+                    {/* Name Input */}
+                    <div>
+                      <Label htmlFor={`nama_pekerja_${worker.id}`} className="text-sm font-medium text-gray-700">
+                        Nama Lengkap
+                      </Label>
+                      <Input
+                        id={`nama_pekerja_${worker.id}`}
+                        name={`nama_pekerja_${worker.id}`}
+                        value={worker.nama_pekerja}
+                        onChange={(e) => updateWorkerName(worker.id, e.target.value)}
+                        placeholder="Masukkan nama lengkap"
+                        required
+                        className="mt-1"
+                      />
                     </div>
-                    <p className="text-gray-500 text-sm">Placeholder untuk foto pekerja</p>
-                    <p className="text-gray-400 text-xs mt-1">Fitur upload foto akan tersedia nanti</p>
+                    
+                    {/* Status Indicator */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${
+                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                          ? 'bg-green-400' 
+                          : 'bg-red-400'
+                      }`}></div>
+                      <span className={`text-xs ${
+                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      }`}>
+                        {worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                          ? 'Lengkap' 
+                          : worker.nama_pekerja.trim() 
+                            ? 'Perlu foto' 
+                            : 'Belum lengkap'}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ))}
+                
+                {/* Add New Worker Card */}
+                {submission.status_approval_admin === 'PENDING' && (
+                  <div 
+                    onClick={addWorker}
+                    className="border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[280px] text-gray-500 hover:text-blue-600"
+                  >
+                    <div className="text-4xl mb-2">➕</div>
+                    <p className="text-sm font-medium">Tambah Pekerja Baru</p>
+                    <p className="text-xs mt-1">Klik untuk menambah</p>
+                  </div>
+                )}
               </div>
+              
+           
+             
             </div>
 
             </fieldset>

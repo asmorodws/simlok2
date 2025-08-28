@@ -1,9 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XMarkIcon, EyeIcon, DocumentIcon } from '@heroicons/react/24/outline';
+import { 
+  XMarkIcon, 
+  EyeIcon, 
+  DocumentIcon, 
+  ArrowDownTrayIcon,
+  BuildingOfficeIcon,
+  UserIcon,
+  BriefcaseIcon,
+  CalendarIcon,
+  ClockIcon,
+  WrenchScrewdriverIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon as PendingIcon,
+  PencilIcon
+} from '@heroicons/react/24/outline';
+import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import WorkersList from '@/components/common/WorkersList';
+import DetailSection from '@/components/common/DetailSection';
+import InfoCard from '@/components/common/InfoCard';
 import Button from '@/components/ui/button/Button';
 
 interface Submission {
@@ -32,6 +51,8 @@ interface Submission {
   upload_doc_simja?: string;
   qrcode?: string;
   created_at: string;
+  jabatan_signer?: string;
+  nama_signer?: string;
   user: {
     id: string;
     nama_petugas: string;
@@ -52,6 +73,7 @@ interface SubmissionDetailModalProps {
 }
 
 export default function SubmissionDetailModal({ submission, isOpen, onClose }: SubmissionDetailModalProps) {
+  const [activeTab, setActiveTab] = useState('details');
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     fileUrl: string;
@@ -89,85 +111,85 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
     };
   }, [isOpen, onClose]);
 
-  // Function to format names for display (similar to create form)
-  const formatNamaPekerjaDisplay = (names: string): string[] => {
-    if (!names) return [];
-    // Split by newlines or commas, clean up each name, and return as array
-    return names
-      .split(/[\n,]+/) // Split by newlines or commas
-      .map(name => name.trim()) // Remove whitespace
-      .filter(name => name.length > 0); // Remove empty strings
-  };
-
-  if (!isOpen || !submission) return null;
-
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      year: 'numeric',
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
       month: 'long',
-      day: 'numeric'
+      year: 'numeric'
     });
   };
 
   const getStatusBadge = (status: string) => {
-    const colors = {
-      'PENDING': "bg-yellow-100 text-yellow-800 border-yellow-200",
-      'APPROVED': "bg-green-100 text-green-800 border-green-200",
-      'REJECTED': "bg-red-100 text-red-800 border-red-200"
+    const statusConfig = {
+      PENDING: { 
+        className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        icon: <PendingIcon className="h-4 w-4 mr-1" />,
+        text: 'Menunggu Review'
+      },
+      APPROVED: { 
+        className: 'bg-green-100 text-green-800 border-green-200',
+        icon: <CheckCircleIcon className="h-4 w-4 mr-1" />,
+        text: 'Disetujui'
+      },
+      REJECTED: { 
+        className: 'bg-red-100 text-red-800 border-red-200',
+        icon: <XCircleIcon className="h-4 w-4 mr-1" />,
+        text: 'Ditolak'
+      }
     };
-    
+
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+      className: 'bg-gray-100 text-gray-800 border-gray-200',
+      icon: null,
+      text: status
+    };
+
     return (
-      <span className={`px-3 py-1 text-sm font-medium rounded-full border ${colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-        {status}
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${config.className}`}>
+        {config.icon}
+        {config.text}
       </span>
     );
   };
 
   const handleFileView = (fileUrl: string, fileName: string) => {
     if (fileUrl) {
+      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
       setPreviewModal({
         isOpen: true,
-        fileUrl,
+        fileUrl: convertedUrl,
         fileName
       });
     }
   };
 
-  const handleClosePreview = () => {
-    setPreviewModal({
-      isOpen: false,
-      fileUrl: '',
-      fileName: ''
-    });
-  };
-
-  const handleViewSimlokPdf = async () => {
-    if (!submission) return;
-    
-    try {
-      // Generate PDF URL with correct submission ID  
-      const pdfUrl = `/api/submissions/${submission.id}?format=pdf`;
-      
-      // Test if PDF can be generated first
-      const response = await fetch(pdfUrl, { method: 'HEAD' });
-      
-      if (!response.ok) {
-        alert('Gagal memuat PDF SIMLOK. Pastikan dokumen sudah disetujui admin.');
-        return;
-      }
-      
-      // Open SIMLOK PDF modal
-      setSimlokPdfModal({ isOpen: true });
-    } catch (error) {
-      console.error('Error viewing SIMLOK PDF:', error);
-      alert('Terjadi kesalahan saat membuka PDF SIMLOK');
+  const handleDownload = (fileUrl: string, fileName: string) => {
+    if (fileUrl) {
+      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
+      const link = document.createElement('a');
+      link.href = convertedUrl;
+      const category = fileUrlHelper.getCategoryFromField(fileName, fileUrl);
+      const downloadName = fileUrlHelper.generateDownloadFilename(fileUrl, category, fileName);
+      link.download = downloadName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
-  const handleCloseSimlokPdf = () => {
-    setSimlokPdfModal({ isOpen: false });
+  const getFileIcon = (fileName: string) => {
+    if (fileUrlHelper.isImage(fileName)) {
+      return <img className="h-5 w-5 text-blue-500" />;
+    }
+    return <DocumentIcon className="h-5 w-5 text-gray-500" />;
   };
+
+  if (!isOpen || !submission) return null;
+
+  // Debug: log submission data
+  console.log('Submission data:', submission);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -178,263 +200,435 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
       />
       
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4 pb-20">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[95vh] flex flex-col">
           
           {/* Header - Fixed */}
           <div className="bg-white flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Detail Pengajuan SIMLOK
+              <h3 className="text-xl font-bold text-gray-900">
+                Detail Submission SIMLOK
               </h3>
               {getStatusBadge(submission.status_approval_admin)}
+              <span className="text-sm text-gray-500">
+                Dibuat: {formatDate(submission.created_at)}
+              </span>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors p-3 hover:bg-gray-100 rounded-full flex-shrink-0 ml-4"
+              className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full flex-shrink-0"
               title="Tutup Modal"
             >
               <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
 
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200 bg-white flex-shrink-0">
+            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('details')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'details'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Detail Submission
+              </button>
+              <button
+                onClick={() => setActiveTab('status')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'status'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Status & Keterangan
+              </button>
+            </nav>
+          </div>
+
           {/* Content - Scrollable */}
-          <div className="bg-white flex-1 overflow-y-auto min-h-0">
-            <div className="p-6 pb-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
+          <div className="bg-white flex-1 overflow-y-auto min-h-0 p-6">
+            {/* Tab Content */}
+            {activeTab === 'details' && (
+              <div className="space-y-6">
+                {/* Debug Information */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-xs">
+                    <h4 className="font-bold mb-2">Debug Info:</h4>
+                    <pre className="whitespace-pre-wrap">
+                      {JSON.stringify({
+                        id: submission.id,
+                        nama_vendor: submission.nama_vendor,
+                        nama_petugas: submission.nama_petugas,
+                        user: submission.user,
+                        berdasarkan: submission.berdasarkan,
+                        pekerjaan: submission.pekerjaan,
+                        lokasi_kerja: submission.lokasi_kerja,
+                        pelaksanaan: submission.pelaksanaan,
+                        jam_kerja: submission.jam_kerja,
+                        sarana_kerja: submission.sarana_kerja,
+                        lain_lain: submission.lain_lain,
+                        content: submission.content
+                      }, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
                 {/* Informasi Vendor */}
-                <div className="space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Informasi Vendor
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Nama Vendor</label>
-                      <p className="text-sm text-gray-900">{submission.nama_vendor}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Nama Petugas</label>
-                      <p className="text-sm text-gray-900">{submission.nama_petugas}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Email</label>
-                      <p className="text-sm text-gray-900">{submission.user?.email}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Berdasarkan</label>
-                      <p className="text-sm text-gray-900">{submission.berdasarkan}</p>
-                    </div>
+                <DetailSection 
+                  title="Informasi Vendor" 
+                  icon={<BuildingOfficeIcon className="h-5 w-5 text-blue-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoCard
+                      label="Nama Vendor"
+                      value={submission.nama_vendor || '-'}
+                    />
+                    <InfoCard
+                      label="Nama Petugas"
+                      value={submission.nama_petugas || '-'}
+                      icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                    <InfoCard
+                      label="Email"
+                      value={submission.user?.email || '-'}
+                    />
+                    <InfoCard
+                      label="Berdasarkan"
+                      value={submission.berdasarkan || '-'}
+                    />
                   </div>
-                </div>
+                </DetailSection>
 
-                {/* Informasi Pekerjaan */}
-                <div className="space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Informasi Pekerjaan
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Jenis Pekerjaan</label>
-                      <p className="text-sm text-gray-900">{submission.pekerjaan}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Lokasi Kerja</label>
-                      <p className="text-sm text-gray-900">{submission.lokasi_kerja}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Waktu Pelaksanaan</label>
-                      <p className="text-sm text-gray-900">{submission.pelaksanaan || 'Belum diisi'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Jam Kerja</label>
-                      <p className="text-sm text-gray-900">{submission.jam_kerja}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Nama Pekerja</label>
-                      <div className="text-sm text-gray-900">
-                        {formatNamaPekerjaDisplay(submission.nama_pekerja).map((name, index) => (
-                          <div key={index} className="flex items-start">
-                            <span className="w-6 text-gray-600 flex-shrink-0">{index + 1}.</span>
-                            <span className="flex-1">{name}</span>
+                {/* Detail Pekerjaan */}
+                <DetailSection 
+                  title="Detail Pekerjaan" 
+                  icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoCard
+                      label="Pekerjaan"
+                      value={submission.pekerjaan || '-'}
+                    />
+                    <InfoCard
+                      label="Lokasi Kerja"
+                      value={submission.lokasi_kerja || '-'}
+                    />
+                    <InfoCard
+                      label="Pelaksanaan"
+                      value={submission.pelaksanaan || 'Akan diisi oleh admin saat approval'}
+                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                    <InfoCard
+                      label="Jam Kerja"
+                      value={submission.jam_kerja || '-'}
+                      icon={<ClockIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                    <InfoCard
+                      label="Sarana Kerja"
+                      value={submission.sarana_kerja || '-'}
+                      icon={<WrenchScrewdriverIcon className="h-4 w-4 text-gray-500" />}
+                      className="md:col-span-2"
+                    />
+                  </div>
+
+                  {submission.lain_lain && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <InfoCard
+                        label="Lain-lain"
+                        value={
+                          <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                            {submission.lain_lain}
                           </div>
-                        ))}
-                      </div>
+                        }
+                      />
                     </div>
-                  </div>
-                </div>
+                  )}
+                  
+                  {submission.content && (
+                    <div className="mt-6 pt-6 border-t border-gray-200">
+                      <InfoCard
+                        label="Content"
+                        value={
+                          <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
+                            {submission.content}
+                          </div>
+                        }
+                      />
+                    </div>
+                  )}
+                </DetailSection>
 
-                {/* Detail Teknis */}
-                <div className="space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Detail Teknis
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Sarana Kerja</label>
-                      <p className="text-sm text-gray-900">{submission.sarana_kerja}</p>
-                    </div>
-                    {submission.lain_lain && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Lain-lain</label>
-                        <p className="text-sm text-gray-900">{submission.lain_lain}</p>
+                {/* Daftar Pekerja */}
+                <DetailSection 
+                  title="Daftar Pekerja" 
+                  icon={<UserIcon className="h-5 w-5 text-purple-500" />}
+                >
+                  {submission.nama_pekerja ? (
+                    <>
+                      <div className="mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Nama Pekerja (dari form):</h4>
+                        <div className="bg-gray-50 p-3 rounded-md">
+                          <div className="whitespace-pre-wrap text-sm text-gray-900">
+                            {submission.nama_pekerja.split(/[\n,]+/).map((name, index) => (
+                              <div key={index} className="flex items-start py-1">
+                                <span className="w-6 text-gray-600 flex-shrink-0">{index + 1}.</span>
+                                <span className="flex-1">{name.trim()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {/* {submission.tembusan && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Tembusan</label>
-                        <p className="text-sm text-gray-900">{submission.tembusan}</p>
-                      </div>
-                    )} */}
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Konten/Deskripsi</label>
-                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{submission.content}</p>
+                      <WorkersList
+                        submissionId={submission.id}
+                        fallbackWorkers={submission.nama_pekerja}
+                        layout="grid"
+                        showPhotos={true}
+                        maxDisplayCount={6}
+                      />
+                    </>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                      <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-500">Tidak ada data pekerja</p>
                     </div>
-                  </div>
-                </div>
+                  )}
+                </DetailSection>
 
                 {/* Nomor Dokumen */}
-                <div className="space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Nomor Dokumen
-                  </h4>
-                  <div className="space-y-3">
+                <DetailSection 
+                  title="Informasi Dokumen" 
+                  icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {submission.nomor_simja && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Nomor SIMJA</label>
-                        <p className="text-sm text-gray-900">{submission.nomor_simja}</p>
-                        {submission.tanggal_simja && (
-                          <p className="text-xs text-gray-500">Tanggal: {formatDate(submission.tanggal_simja)}</p>
-                        )}
-                      </div>
+                      <InfoCard
+                        label="Nomor SIMJA"
+                        value={submission.nomor_simja}
+                      />
+                    )}
+                    {submission.tanggal_simja && (
+                      <InfoCard
+                        label="Tanggal SIMJA"
+                        value={formatDate(submission.tanggal_simja)}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
                     )}
                     {submission.nomor_sika && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Nomor SIKA</label>
-                        <p className="text-sm text-gray-900">{submission.nomor_sika}</p>
-                        {submission.tanggal_sika && (
-                          <p className="text-xs text-gray-500">Tanggal: {formatDate(submission.tanggal_sika)}</p>
-                        )}
-                      </div>
+                      <InfoCard
+                        label="Nomor SIKA"
+                        value={submission.nomor_sika}
+                      />
                     )}
-                    {/* Nomor SIMLOK - hanya muncul jika sudah APPROVED */}
+                    {submission.tanggal_sika && (
+                      <InfoCard
+                        label="Tanggal SIKA"
+                        value={formatDate(submission.tanggal_sika)}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
+                    )}
                     {submission.status_approval_admin === 'APPROVED' && submission.nomor_simlok && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Nomor SIMLOK</label>
-                        <p className="text-sm text-gray-900">{submission.nomor_simlok}</p>
-                        {submission.tanggal_simlok && (
-                          <p className="text-xs text-gray-500">Tanggal: {formatDate(submission.tanggal_simlok)}</p>
-                        )}
-                        <button
-                          onClick={handleViewSimlokPdf}
-                          className="mt-2 flex items-center space-x-2 text-blue-600 hover:text-blue-800 text-sm font-medium hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                        >
-                          <DocumentIcon className="w-4 h-4" />
-                          <span>Lihat PDF SIMLOK</span>
-                        </button>
-                      </div>
+                      <InfoCard
+                        label="Nomor SIMLOK"
+                        value={submission.nomor_simlok}
+                      />
+                    )}
+                    {submission.status_approval_admin === 'APPROVED' && submission.tanggal_simlok && (
+                      <InfoCard
+                        label="Tanggal SIMLOK"
+                        value={formatDate(submission.tanggal_simlok)}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
                     )}
                   </div>
-                </div>
+                </DetailSection>
 
-                {/* Dokumen Upload */}
-                <div className="lg:col-span-2 space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Dokumen Upload
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Dokumen Upload dalam Detail */}
+                <DetailSection 
+                  title="Dokumen Upload" 
+                  icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Dokumen SIKA */}
                     {submission.upload_doc_sika && (
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <DocumentIcon className="w-5 h-5 text-blue-500" />
-                          <span className="text-sm font-medium text-gray-900">Dokumen SIKA</span>
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <DocumentIcon className="h-5 w-5 text-blue-500" />
+                            <div>
+                              <h4 className="font-medium text-gray-900">Dokumen SIKA</h4>
+                              <p className="text-xs text-gray-500">Surat Izin Kerja Aman</p>
+                            </div>
+                          </div>
+                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                            Tersedia
+                          </span>
                         </div>
                         <button
                           onClick={() => handleFileView(submission.upload_doc_sika!, 'Dokumen SIKA')}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                          className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
-                          <EyeIcon className="w-4 h-4" />
-                          <span>Lihat Dokumen</span>
+                          <EyeIcon className="h-4 w-4 mr-2" />
+                          Preview Dokumen
                         </button>
                       </div>
                     )}
+
+                    {/* Dokumen SIMJA */}
                     {submission.upload_doc_simja && (
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <DocumentIcon className="w-5 h-5 text-green-500" />
-                          <span className="text-sm font-medium text-gray-900">Dokumen SIMJA</span>
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <DocumentIcon className="h-5 w-5 text-green-500" />
+                            <div>
+                              <h4 className="font-medium text-gray-900">Dokumen SIMJA</h4>
+                              <p className="text-xs text-gray-500">Surat Izin Masuk Area</p>
+                            </div>
+                          </div>
+                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                            Tersedia
+                          </span>
                         </div>
                         <button
                           onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                          className="w-full flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                         >
-                          <EyeIcon className="w-4 h-4" />
-                          <span>Lihat Dokumen</span>
+                          <EyeIcon className="h-4 w-4 mr-2" />
+                          Preview Dokumen
                         </button>
                       </div>
                     )}
-                  </div>
-                </div>
 
-                {/* Status dan Approval */}
-                <div className="lg:col-span-2 space-y-4">
-                  <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                    Status dan Approval
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Status Approval</label>
-                      <div className="mt-1">
-                        {getStatusBadge(submission.status_approval_admin)}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Tanggal Dibuat</label>
-                      <p className="text-sm text-gray-900">{formatDate(submission.created_at)}</p>
-                    </div>
-                    {submission.approvedByUser && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Disetujui oleh</label>
-                        <p className="text-sm text-gray-900">{submission.approvedByUser.nama_petugas}</p>
-                        <p className="text-xs text-gray-500">{submission.approvedByUser.email}</p>
-                      </div>
-                    )}
-                    {submission.keterangan && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500">Keterangan</label>
-                        <p className="text-sm text-gray-900 whitespace-pre-wrap">{submission.keterangan}</p>
+                    {/* Message if no documents */}
+                    {!submission.upload_doc_sika && !submission.upload_doc_simja && (
+                      <div className="md:col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                        <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
                       </div>
                     )}
                   </div>
-                </div>
+                </DetailSection>
 
-                {/* QR Code
-                {submission.qrcode && (
-                  <div className="lg:col-span-2 space-y-4">
-                    <h4 className="text-base font-semibold text-gray-900 border-b border-gray-200 pb-2">
-                      QR Code
-                    </h4>
-                    <div className="flex justify-center">
-                      <img 
-                        src={submission.qrcode} 
-                        alt="QR Code SIMLOK" 
-                        className="w-32 h-32 border border-gray-200 rounded-lg"
+                {/* Informasi Penandatangan - hanya tampil jika ada */}
+                {(submission.jabatan_signer || submission.nama_signer) && (
+                  <DetailSection 
+                    title="Informasi Penandatangan" 
+                    icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Jabatan Penandatangan"
+                        value={submission.jabatan_signer || '-'}
+                      />
+                      <InfoCard
+                        label="Nama Penandatangan"
+                        value={submission.nama_signer || '-'}
                       />
                     </div>
-                  </div>
-                )} */}
+                  </DetailSection>
+                )}
               </div>
-            </div>
+            )}
+
+            {/* Tab 2: Status */}
+            {activeTab === 'status' && (
+              <DetailSection 
+                title="Status & Keterangan" 
+                icon={
+                  submission.status_approval_admin === 'APPROVED' ? (
+                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                  ) : submission.status_approval_admin === 'REJECTED' ? (
+                    <XCircleIcon className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <PendingIcon className="h-5 w-5 text-yellow-500" />
+                  )
+                }
+                badge={getStatusBadge(submission.status_approval_admin)}
+              >
+                <div className="space-y-6">
+                  <InfoCard
+                    label="Status Saat Ini"
+                    value={getStatusBadge(submission.status_approval_admin)}
+                  />
+                  
+                  {submission.approvedByUser && (
+                    <InfoCard
+                      label="Disetujui Oleh"
+                      value={submission.approvedByUser.nama_petugas}
+                      icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                  )}
+                  
+                  {submission.keterangan && (
+                    <InfoCard
+                      label="Keterangan"
+                      value={
+                        <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-4 rounded-md border-l-4 border-blue-500">
+                          {submission.keterangan}
+                        </div>
+                      }
+                    />
+                  )}
+
+                  {/* Status-specific information */}
+                  {submission.status_approval_admin === 'PENDING' && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <PendingIcon className="h-5 w-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-medium text-yellow-800">Menunggu Review</h4>
+                          <p className="text-sm text-yellow-700 mt-1">
+                            Submission Anda sedang dalam proses review oleh admin. 
+                            Anda masih dapat melakukan edit jika diperlukan.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {submission.status_approval_admin === 'APPROVED' && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <CheckCircleIcon className="h-5 w-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-medium text-green-800">Submission Disetujui</h4>
+                          <p className="text-sm text-green-700 mt-1">
+                            Selamat! Submission Anda telah disetujui. Anda dapat mendownload PDF SIMLOK dari footer.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {submission.status_approval_admin === 'REJECTED' && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <XCircleIcon className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-sm font-medium text-red-800">Submission Ditolak</h4>
+                          <p className="text-sm text-red-700 mt-1">
+                            Submission Anda ditolak. Silakan periksa keterangan di atas dan buat submission baru dengan perbaikan yang diperlukan.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </DetailSection>
+            )}
           </div>
 
           {/* Footer - Always visible with better positioning */}
-          <div className="bg-white flex justify-between items-center p-6 border-t border-gray-200 flex-shrink-0 sticky bottom-0 z-10 shadow-lg">
-            
-            {/* SIMLOK PDF Button - hanya muncul jika sudah APPROVED */}
+          <div className="bg-white flex justify-between items-center p-6 border-t border-gray-200 flex-shrink-0">
+            {/* Action Buttons */}
             <div className="flex items-center space-x-3">
               {submission.status_approval_admin === 'APPROVED' && submission.nomor_simlok && (
                 <Button
-                  onClick={handleViewSimlokPdf}
+                  onClick={() => setSimlokPdfModal({ isOpen: true })}
                   variant="primary"
                   size="sm"
                   className="flex items-center"
@@ -460,21 +654,20 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
         </div>
       </div>
 
-      {/* SIMLOK PDF Modal */}
+      {/* Modals */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={() => setPreviewModal({ isOpen: false, fileUrl: '', fileName: '' })}
+        fileUrl={previewModal.fileUrl}
+        fileName={previewModal.fileName}
+      />
+
       <SimlokPdfModal
         isOpen={simlokPdfModal.isOpen}
-        onClose={handleCloseSimlokPdf}
+        onClose={() => setSimlokPdfModal({ isOpen: false })}
         submissionId={submission?.id || ''}
         submissionName={submission?.nama_vendor || ''}
         nomorSimlok={submission?.nomor_simlok}
-      />
-
-      {/* Document Preview Modal */}
-      <DocumentPreviewModal
-        isOpen={previewModal.isOpen}
-        onClose={handleClosePreview}
-        fileUrl={previewModal.fileUrl}
-        fileName={previewModal.fileName}
       />
     </div>
   );

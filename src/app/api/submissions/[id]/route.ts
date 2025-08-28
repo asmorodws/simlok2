@@ -46,6 +46,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             nama_petugas: true,
             email: true,
           }
+        },
+        daftarPekerja: {
+          orderBy: {
+            created_at: 'asc'
+          }
         }
       }
     });
@@ -242,12 +247,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (body.tanggal_sika) {
         updateData.tanggal_sika = new Date(body.tanggal_sika);
       }
-    } else {
-      console.log('PUT /api/submissions/[id] - Invalid role:', session.user.role);
-      return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
-    }
 
-    console.log('PUT /api/submissions/[id] - Update data keys:', Object.keys(updateData));
+      // Handle workers update
+      const { workers, ...submissionData } = body;
+    }
 
     // Perform the update
     const updatedSubmission = await prisma.submission.update({
@@ -272,9 +275,33 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     });
 
+    // Handle workers if provided (only for vendor updates)
+    if (session.user.role === 'VENDOR' && body.workers && Array.isArray(body.workers)) {
+      // Delete existing workers for this submission
+      await prisma.daftarPekerja.deleteMany({
+        where: {
+          submission_id: id
+        }
+      });
+
+      // Create new workers
+      const validWorkers = body.workers.filter((worker: any) => 
+        worker.nama_pekerja && worker.nama_pekerja.trim() !== ''
+      );
+
+      if (validWorkers.length > 0) {
+        await prisma.daftarPekerja.createMany({
+          data: validWorkers.map((worker: any) => ({
+            nama_pekerja: worker.nama_pekerja.trim(),
+            foto_pekerja: worker.foto_pekerja || null,
+            submission_id: id
+          }))
+        });
+      }
+    }
+
     console.log('PUT /api/submissions/[id] - Update successful');
     return NextResponse.json(updatedSubmission);
-
   } catch (error) {
     console.error('PUT /api/submissions/[id] - Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
