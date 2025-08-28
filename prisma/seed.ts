@@ -214,7 +214,7 @@ async function main() {
         submissionData.approved_by_admin = admin.id;
         submissionData.nomor_simlok = `SIMLOK/2024/${String(submissionCount + 1).padStart(3, '0')}`;
         submissionData.tanggal_simlok = new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000);
-        submissionData.tembusan = `Tembusan kepada: Manager Operasional, HSE Coordinator, Security - ${vendorData.nama_vendor}`;
+        // submissionData.tembusan = `Tembusan kepada: Manager Operasional, HSE Coordinator, Security - ${vendorData.nama_vendor}`;
         submissionData.keterangan = 'Pengajuan disetujui dengan catatan mengikuti prosedur K3 dan laporan harian';
         // Admin mengisi pelaksanaan, lain_lain, dan content saat approve
         submissionData.pelaksanaan = `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} s/d 2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;

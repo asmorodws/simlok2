@@ -55,15 +55,6 @@ export default function FilesPage() {
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
               maxSize={5}
             />
-            
-            <FileUpload
-              name="upload_doc_id_card"
-              label="Upload ID Card"
-              description="File akan disimpan di folder 'id-card'"
-              onChange={handleFileUpload('id_card')}
-              accept=".pdf,.jpg,.jpeg,.png"
-              maxSize={5}
-            />
           </div>
         </Card>
 

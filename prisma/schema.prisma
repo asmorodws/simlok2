@@ -93,7 +93,6 @@ model Submission {
   jam_kerja             String
   lain_lain             String?  @db.Text
   sarana_kerja          String
-  tembusan              String?  @db.Text
   nomor_simja           String?
   tanggal_simja         DateTime?
   nomor_sika            String?
@@ -107,7 +106,6 @@ model Submission {
   nama_signer           String?  
   upload_doc_sika       String?
   upload_doc_simja      String?
-  upload_doc_id_card    String?
   qrcode                String?
   created_at            DateTime @default(now())
   
@@ -116,6 +114,23 @@ model Submission {
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   approvedByUser        User?    @relation("ApprovedSubmissions", fields: [approved_by_admin], references: [id])
+  
+  // Relasi ke daftar pekerja
+  daftarPekerja         DaftarPekerja[]
+}
+
+/* ----------  DAFTAR PEKERJA  ---------- */
+model DaftarPekerja {
+  id            String   @id @default(cuid())
+  nama_pekerja  String
+  foto_pekerja  String?
+  submission_id String
+  created_at    DateTime @default(now())
+  
+  // Relations
+  submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  
+  @@index([submission_id])
 }
 
 /* ----------  ENUM  ---------- */

@@ -21,7 +21,7 @@ interface Submission {
   jam_kerja: string;
   lain_lain?: string;
   sarana_kerja: string;
-  tembusan?: string;
+  // tembusan?: string;
   nomor_simja?: string;
   tanggal_simja?: string | null;
   nomor_sika?: string;
@@ -33,7 +33,6 @@ interface Submission {
   keterangan?: string;
   upload_doc_sika?: string;
   upload_doc_simja?: string;
-  upload_doc_id_card?: string;
   qrcode?: string;
   created_at: string;
   jabatan_signer?: string;
@@ -70,28 +69,28 @@ export default function AdminSubmissionDetailModal({
     nomor_simlok: '',
     pelaksanaan: '',
     keterangan: '',
-    tembusan: ''
+    // tembusan: ''
   });
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [approvalForm, setApprovalForm] = useState({
     status: 'APPROVED' as 'APPROVED' | 'REJECTED',
     keterangan: '',
-    tembusan: '',
+    // tembusan: '',
     nomor_simlok: '',
     tanggal_simlok: '',
     pelaksanaan: '',
     lain_lain: '',
     content: '',
-    jabatan_signer: '',
-    nama_signer: ''
+    jabatan_signer: 'Hend Or Secunty Region I',
+    nama_signer: 'Julianto Santoso'
   });
 
   // Template helper fields (tidak disimpan ke database)
   const [templateFields, setTemplateFields] = useState({
     tanggal_dari: '',
     tanggal_sampai: '',
-    tanggal_diterima_security: ''
+    tanggal_simlok: submission?.tanggal_simlok || '',
   });
 
   // Preview modal state
@@ -112,6 +111,17 @@ export default function AdminSubmissionDetailModal({
     isOpen: false
   });
 
+  // Format date function - defined before useEffect to avoid hoisting issues
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
   // Main useEffect for modal state management
   useEffect(() => {
     if (isOpen) {
@@ -123,10 +133,10 @@ export default function AdminSubmissionDetailModal({
           if (!dateString) {
             // Return today's date in local timezone
             const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            const todayYear = today.getFullYear();
+            const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(today.getDate()).padStart(2, '0');
+            return `${todayYear}-${todayMonth}-${todayDay}`;
           }
           
           const date = new Date(dateString);
@@ -139,21 +149,21 @@ export default function AdminSubmissionDetailModal({
         setApprovalForm({
           status: 'APPROVED',
           keterangan: submission.keterangan || '',
-          tembusan: submission.tembusan || '',
+          // tembusan: submission.tembusan || '',
           nomor_simlok: submission.nomor_simlok || '',
           tanggal_simlok: formatDateForInput(submission.tanggal_simlok),
           pelaksanaan: submission.pelaksanaan || '',
           lain_lain: submission.lain_lain || '',
           content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
-          jabatan_signer: submission.jabatan_signer || '',
-          nama_signer: submission.nama_signer || ''
+          jabatan_signer: submission.jabatan_signer || 'Hend Or Secunty Region I',
+          nama_signer: submission.nama_signer || 'Julianto Santoso'
         });
 
         // Reset template fields
         setTemplateFields({
           tanggal_dari: '',
           tanggal_sampai: '',
-          tanggal_diterima_security: ''
+          tanggal_simlok: submission?.tanggal_simlok || '',
         });
 
         // Reset validation errors
@@ -161,7 +171,7 @@ export default function AdminSubmissionDetailModal({
           nomor_simlok: '',
           pelaksanaan: '',
           keterangan: '',
-          tembusan: ''
+          // tembusan: ''
         });
         setShowErrorAlert(false);
       }
@@ -207,11 +217,12 @@ export default function AdminSubmissionDetailModal({
       }
       
       // Head of Security section
-      if (templateFields.tanggal_diterima_security) {
+      const tanggalDiterima = approvalForm.tanggal_simlok;
+      if (tanggalDiterima) {
         templateParts.push(
           ` \n`,
           ` Diterima ${submission?.jabatan_signer || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
-          `  ${formatDate(templateFields.tanggal_diterima_security)}`
+          `  ${formatDate(tanggalDiterima)}`
         );
       }
       
@@ -219,26 +230,16 @@ export default function AdminSubmissionDetailModal({
     };
 
     // Update template jika ada data yang diperlukan
-    const shouldUpdate = templateFields.tanggal_diterima_security || 
+    const shouldUpdate = approvalForm.tanggal_simlok ||
                         (submission?.nomor_simja && submission?.nomor_sika);
     
     if (shouldUpdate) {
       const newTemplate = generateLainLainTemplate();
       setApprovalForm(prev => ({ ...prev, lain_lain: newTemplate }));
     }
-  }, [templateFields.tanggal_diterima_security, submission?.nomor_simja, submission?.tanggal_simja, submission?.nomor_sika, submission?.tanggal_sika, submission?.jabatan_signer, approvalForm.jabatan_signer]);
+  }, [approvalForm.tanggal_simlok, submission?.nomor_simja, submission?.tanggal_simja, submission?.nomor_sika, submission?.tanggal_sika, submission?.jabatan_signer, approvalForm.jabatan_signer]);
 
   if (!isOpen || !submission) return null;
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
 
   // Function to format and display nama pekerja as list
   const formatNamaPekerjaDisplay = (namaPekerja: string) => {
@@ -250,13 +251,13 @@ export default function AdminSubmissionDetailModal({
   };
 
   // Function to format and display tembusan as list
-  const formatTembusanDisplay = (tembusan: string) => {
-    if (!tembusan) return [];
-    return tembusan
-      .split(/[\n,]+/) // Split by newlines or commas
-      .map(item => item.trim())
-      .filter(item => item.length > 0);
-  };
+  // const formatTembusanDisplay = (tembusan: string) => {
+  //   if (!tembusan) return [];
+  //   return tembusan
+  //     .split(/[\n,]+/) // Split by newlines or commas
+  //     .map(item => item.trim())
+  //     .filter(item => item.length > 0);
+  // };
 
  
   const getStatusBadge = (status: string) => {
@@ -334,29 +335,29 @@ export default function AdminSubmissionDetailModal({
 
     let hasErrors = false;
 
-    // Validasi untuk approve: harus ada nomor SIMLOK dan pelaksanaan
+    // Validasi untuk approve: harus ada nomor SIMLOK
     if (approvalForm.status === 'APPROVED' && !approvalForm.nomor_simlok.trim()) {
       errors.nomor_simlok = 'Nomor SIMLOK harus diisi untuk menyetujui submission';
       hasErrors = true;
     }
 
-    // Validasi pelaksanaan wajib diisi
-    if (!approvalForm.pelaksanaan.trim()) {
-      errors.pelaksanaan = 'Pelaksanaan harus diisi';
+    // Validasi pelaksanaan wajib diisi HANYA untuk APPROVED
+    if (approvalForm.status === 'APPROVED' && !approvalForm.pelaksanaan.trim()) {
+      errors.pelaksanaan = 'Pelaksanaan harus diisi untuk menyetujui submission';
       hasErrors = true;
     }
 
-    // Validasi keterangan wajib diisi
+    // Validasi keterangan wajib diisi untuk semua status
     if (!approvalForm.keterangan.trim()) {
       errors.keterangan = 'Keterangan harus diisi';
       hasErrors = true;
     }
 
     // Validasi tembusan wajib diisi
-    if (!approvalForm.tembusan.trim()) {
-      errors.tembusan = 'Tembusan harus diisi';
-      hasErrors = true;
-    }
+    // if (!approvalForm.tembusan.trim()) {
+    //   errors.tembusan = 'Tembusan harus diisi';
+    //   hasErrors = true;
+    // }
 
     setValidationErrors(errors);
 
@@ -418,7 +419,7 @@ export default function AdminSubmissionDetailModal({
       const requestBody: any = {
         status_approval_admin: approvalForm.status,
         keterangan: approvalForm.keterangan,
-        tembusan: approvalForm.tembusan,
+        // tembusan: approvalForm.tembusan,
         pelaksanaan: approvalForm.pelaksanaan,
         lain_lain: approvalForm.lain_lain,
         content: approvalForm.content,
@@ -771,42 +772,10 @@ export default function AdminSubmissionDetailModal({
                           </div>
                         </div>
                       )}
-
-                      {/* ID Card */}
-                      {submission.upload_doc_id_card && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                              {getFileIcon(submission.upload_doc_id_card)}
-                              <h4 className="font-medium text-gray-900">ID Card</h4>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <button
-                              onClick={() => handleFileView(submission.upload_doc_id_card!, 'ID Card')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                              title="Buka preview di tab baru"
-                            >
-                              <EyeIcon className="h-4 w-4 mr-2" />
-                              Preview
-                              <svg className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDownload(submission.upload_doc_id_card!, 'ID_Card')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                            >
-                              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                              Download
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Message if no documents */}
-                    {!submission.upload_doc_sika && !submission.upload_doc_simja && !submission.upload_doc_id_card && (
+                    {!submission.upload_doc_sika && !submission.upload_doc_simja && (
                       <div className="text-center py-8">
                         <DocumentIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-500">Tidak ada dokumen yang diupload</p>
@@ -840,7 +809,7 @@ export default function AdminSubmissionDetailModal({
                             <p className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{submission.keterangan}</p>
                           </div>
                         )}
-                        {submission.tembusan && (
+                        {/* {submission.tembusan && (
                           <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700">Tembusan</label>
                             <div className="mt-1 text-sm text-gray-900 space-y-1">
@@ -852,7 +821,7 @@ export default function AdminSubmissionDetailModal({
                               ))}
                             </div>
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </div>
 
@@ -1010,26 +979,6 @@ export default function AdminSubmissionDetailModal({
                               <span className="text-xs text-gray-500 ml-1">(Catatan tambahan)</span>
                             </label>
 
-                            {/* Template Helper untuk Lain-lain */}
-                            <div className="bg-green-50 p-3 rounded-md border border-green-200">
-                              <div className="space-y-2 mb-2">
-                                <div className="text-xs text-green-600">
-                                  <p><strong>SIMJA:</strong> {submission.nomor_simja || 'Tidak ada'} - {submission.tanggal_simja ? formatDate(submission.tanggal_simja) : 'Tidak ada'}</p>
-                                  <p><strong>SIKA:</strong> {submission.nomor_sika || 'Tidak ada'} - {submission.tanggal_sika ? formatDate(submission.tanggal_sika) : 'Tidak ada'}</p>
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-green-700 mb-1">Tanggal Diterima Head of Security:</label>
-                                  <DatePicker
-                                    value={templateFields.tanggal_diterima_security}
-                                    onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_diterima_security: value }))}
-                                    placeholder="Pilih tanggal diterima"
-                                    className="w-full px-2 py-1 text-xs border border-green-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                  />
-                                </div>
-                              </div>
-
-                            </div>
-
                             <textarea
                               value={approvalForm.lain_lain}
                               onChange={(e) => setApprovalForm(prev => ({ ...prev, lain_lain: e.target.value }))}
@@ -1055,7 +1004,7 @@ export default function AdminSubmissionDetailModal({
                           </div>
 
                          
-                          <div>
+                          {/* <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Tembusan <span className="text-red-500">*</span>
                               <span className="text-xs text-gray-500 ml-1">(Wajib diisi)</span>
@@ -1092,7 +1041,7 @@ export default function AdminSubmissionDetailModal({
                             {validationErrors.tembusan && (
                               <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.tembusan}</p>
                             )}
-                          </div>
+                          </div> */}
                             </>
                           )}
 
@@ -1143,11 +1092,11 @@ export default function AdminSubmissionDetailModal({
                               {approvalForm.status === 'APPROVED' ? (
                                 <>
                                   <li>Nomor SIMLOK dan Tanggal SIMLOK wajib diisi</li>
-                                  <li>Pelaksanaan, Keterangan, dan Tembusan wajib diisi</li>
+                                  <li>Pelaksanaan dan Keterangan wajib diisi</li>
                                 </>
                               ) : (
                                 <>
-                                  <li>Pelaksanaan, Keterangan, dan Tembusan wajib diisi</li>
+                                  <li>Hanya Keterangan yang wajib diisi</li>
                                   <li>Jelaskan alasan penolakan secara detail di keterangan</li>
                                 </>
                               )}

@@ -57,10 +57,14 @@ export interface SubmissionPDFData {
   lain_lain?: string | null;
   sarana_kerja: string;
   nama_pekerja?: string | null;
-  tembusan?: string | null;
   content?: string | null;
   jabatan_signer?: string | null;
   nama_signer?: string | null;
+  // Tambahkan untuk daftar pekerja dari tabel terpisah
+  daftarPekerja?: Array<{
+    nama_pekerja: string;
+    foto_pekerja?: string | null;
+  }>;
 }
 
 export type SIMLOKOptions = {
@@ -400,24 +404,21 @@ lines.forEach((line, idx) => {
   k.text(jabatanSigner, A4.w - 230, signatureY - 50);
   k.text(namaSigner, A4.w - 230, signatureY - 110, { bold: true });
 
-  // Bottom section - Tembusan on left, Nama pekerja on right (aligned)
+  // Bottom section - Nama pekerja dari daftar pekerja terpisah
   const bottomY = signatureY - 140;
 
-  // Left side - Tembusan
-  if (s.tembusan && s.tembusan.trim().length > 0) {
-    const tembusanLines = s.tembusan.split('\n').map(line => line.trim()).filter(line => line);
-    k.text("Tembusan:", 50, bottomY);
-    tembusanLines.forEach((line, index) => {
-      k.text(`${index + 1} ${line}`, 50, bottomY - 20 - (index * 15));
+  // Right side - Worker names from DaftarPekerja table
+  if (s.daftarPekerja && s.daftarPekerja.length > 0) {
+    k.text("Nama pekerja:", A4.w - 200, bottomY);
+    s.daftarPekerja.forEach((pekerja, index) => {
+      k.text(`${index + 1}. ${pekerja.nama_pekerja}`, A4.w - 190, bottomY - 20 - (index * 15));
     });
-  }
-
-  // Right side - Worker names (aligned with tembusan)
-  if (s.nama_pekerja && s.nama_pekerja.trim().length > 0) {
+  } else if (s.nama_pekerja && s.nama_pekerja.trim().length > 0) {
+    // Fallback ke nama_pekerja lama jika daftarPekerja kosong
     k.text("Nama pekerja:", A4.w - 200, bottomY);
     const workerNames = s.nama_pekerja.split('\n').map(name => name.trim()).filter(name => name);
     workerNames.forEach((name, index) => {
-      k.text(`${index + 1} ${name}`, A4.w - 190, bottomY - 20 - (index * 15));
+      k.text(`${index + 1}. ${name}`, A4.w - 190, bottomY - 20 - (index * 15));
     });
   }
 

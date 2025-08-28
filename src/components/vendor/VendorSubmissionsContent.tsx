@@ -28,7 +28,7 @@ interface Submission {
   jam_kerja: string;
   lain_lain?: string;
   sarana_kerja: string;
-  tembusan?: string;
+  // tembusan?: string;
   nomor_simja?: string;
   tanggal_simja?: string | null;
   nomor_sika?: string;
@@ -40,7 +40,6 @@ interface Submission {
   keterangan?: string;
   upload_doc_sika?: string;
   upload_doc_simja?: string;
-  upload_doc_id_card?: string;
   qrcode?: string;
   created_at: string;
   user: {

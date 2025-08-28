@@ -34,7 +34,6 @@ interface Submission {
   content: string | null;
   upload_doc_sika?: string | null;
   upload_doc_simja?: string | null;
-  upload_doc_id_card?: string | null;
 }
 
 interface EditSubmissionFormProps {
@@ -101,7 +100,6 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     content: '',
     upload_doc_sika: '',
     upload_doc_simja: '',
-    upload_doc_id_card: '',
   });
 
   // Update form data when submission is loaded
@@ -137,7 +135,6 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         content: submission.content || '',
         upload_doc_sika: submission.upload_doc_sika || '',
         upload_doc_simja: submission.upload_doc_simja || '',
-        upload_doc_id_card: submission.upload_doc_id_card || '',
       });
     }
   }, [submission]);
@@ -367,225 +364,239 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="nama_vendor">Nama Vendor *</Label>
-                <Input
-                  id="nama_vendor"
-                  name="nama_vendor"
-                  value={session?.user?.nama_vendor || formData.nama_vendor || ''}
-                  onChange={handleChange}
-                  required
-                  readOnly={!!session?.user?.nama_vendor}
-                  disabled={!!session?.user?.nama_vendor}
-                  className={session?.user?.nama_vendor ? "bg-gray-50 cursor-not-allowed" : ""}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {session?.user?.nama_vendor ? "Nama vendor tidak dapat diubah" : ""}
-                </p>
+            
+            {/* Informasi Vendor Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Vendor</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nama_vendor">Nama Vendor *</Label>
+                  <Input
+                    id="nama_vendor"
+                    name="nama_vendor"
+                    value={session?.user?.nama_vendor || formData.nama_vendor || ''}
+                    onChange={handleChange}
+                    required
+                    readOnly={!!session?.user?.nama_vendor}
+                    disabled={!!session?.user?.nama_vendor}
+                    className={session?.user?.nama_vendor ? "bg-gray-50 cursor-not-allowed" : ""}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {session?.user?.nama_vendor ? "Nama vendor tidak dapat diubah" : ""}
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="berdasarkan">Berdasarkan *</Label>
+                  <Input
+                    id="berdasarkan"
+                    name="berdasarkan"
+                    value={formData.berdasarkan}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nama_petugas">Nama Petugas *</Label>
+                  <Input
+                    id="nama_petugas"
+                    name="nama_petugas"
+                    value={formData.nama_petugas}
+                    onChange={handleChange}
+                    required
+                    placeholder="Nama petugas yang bertanggung jawab"
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="berdasarkan">Berdasarkan *</Label>
-                <Input
-                  id="berdasarkan"
-                  name="berdasarkan"
-                  value={formData.berdasarkan}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="nama_petugas">Nama Petugas *</Label>
-                <Input
-                  id="nama_petugas"
-                  name="nama_petugas"
-                  value={formData.nama_petugas}
-                  onChange={handleChange}
-                  required
-                  placeholder="Nama petugas yang bertanggung jawab"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="pekerjaan">Pekerjaan *</Label>
-                <Input
-                  id="pekerjaan"
-                  name="pekerjaan"
-                  value={formData.pekerjaan}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="lokasi_kerja">Lokasi Kerja *</Label>
-                <Input
-                  id="lokasi_kerja"
-                  name="lokasi_kerja"
-                  value={formData.lokasi_kerja}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="jam_kerja">Jam Kerja *</Label>
-                <TimePicker
-                  id="jam_kerja"
-                  name="jam_kerja"
-                  value={formData.jam_kerja}
-                  onChange={handleTimeChange}
-                  required
-                  placeholder="Pilih jam kerja"
-                />
-              </div>
-
-              {/* Nama Pekerja dan Sarana Kerja - sejajar */}
-              <div className="md:col-span-2">
+              {/* SIMJA Section */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-gray-700">Dokumen SIMJA</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
-                    <textarea
-                      id="nama_pekerja"
-                      name="nama_pekerja"
-                      value={formData.nama_pekerja}
+                    <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                    <Input
+                      id="nomor_simja"
+                      name="nomor_simja"
+                      value={formData.nomor_simja}
                       onChange={handleChange}
-                      required
-                      rows={3}
-                      placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contoh: SIMJA/2024/001"
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      Tip: Pisahkan nama dengan enter atau koma. Akan ditampilkan satu nama per baris.
-                    </p>
-                    {formData.nama_pekerja && (
-                      <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
-                        <p className="text-sm text-blue-700 font-medium mb-2">Preview tampilan:</p>
-                        <div className="text-sm text-blue-800 space-y-1">
-                          {formatNamaPekerjaDisplay(formData.nama_pekerja).map((name, index) => (
-                            <div key={index} className="flex items-center">
-                              <span className="w-4 text-blue-600">{index + 1}.</span>
-                              <span className="ml-2">{name}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
-                    <textarea
-                      id="sarana_kerja"
-                      name="sarana_kerja"
-                      value={formData.sarana_kerja}
-                      onChange={handleChange}
-                      required
-                      rows={3}
-                      placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                    <DatePicker
+                      id="tanggal_simja"
+                      name="tanggal_simja"
+                      value={formData.tanggal_simja}
+                      onChange={handleDateChange('tanggal_simja')}
+                      placeholder="Pilih tanggal SIMJA"
                     />
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* SIMJA Section */}
-            <div className="space-y-4">
-              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIMJA</h3>
+              {/* SIKA Section */}
+              <div className="space-y-4">
+                <h4 className="text-md font-medium text-gray-700">Dokumen SIKA</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                    <Input
+                      id="nomor_sika"
+                      name="nomor_sika"
+                      value={formData.nomor_sika}
+                      onChange={handleChange}
+                      placeholder="Contoh: SIKA/2024/001"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                    <DatePicker
+                      id="tanggal_sika"
+                      name="tanggal_sika"
+                      value={formData.tanggal_sika}
+                      onChange={handleDateChange('tanggal_sika')}
+                      placeholder="Pilih tanggal SIKA"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Upload Dokumen */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
-                  <Input
-                    id="nomor_simja"
-                    name="nomor_simja"
-                    value={formData.nomor_simja}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIMJA/2024/001"
-                  />
-                </div>
+                <FileUpload
+                  id="upload_doc_simja"
+                  name="upload_doc_simja"
+                  label="Upload Dokumen SIMJA"
+                  description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                  value={formData.upload_doc_simja}
+                  onChange={handleFileUpload('upload_doc_simja')}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  maxSize={5}
+                  required={false}
+                />
 
-                <div>
-                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
-                  <DatePicker
-                    id="tanggal_simja"
-                    name="tanggal_simja"
-                    value={formData.tanggal_simja}
-                    onChange={handleDateChange('tanggal_simja')}
-                    placeholder="Pilih tanggal SIMJA"
-                  />
-                </div>
+                <FileUpload
+                  id="upload_doc_sika"
+                  name="upload_doc_sika"
+                  label="Upload Dokumen SIKA"
+                  description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                  value={formData.upload_doc_sika}
+                  onChange={handleFileUpload('upload_doc_sika')}
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  maxSize={5}
+                  required={false}
+                />
               </div>
             </div>
 
-            {/* SIKA Section */}
-            <div className="space-y-4">
-              <h3 className="text-md font-semibold text-gray-900 border-b pb-2">Dokumen SIKA</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
-                  <Input
-                    id="nomor_sika"
-                    name="nomor_sika"
-                    value={formData.nomor_sika}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIKA/2024/001"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
-                  <DatePicker
-                    id="tanggal_sika"
-                    name="tanggal_sika"
-                    value={formData.tanggal_sika}
-                    onChange={handleDateChange('tanggal_sika')}
-                    placeholder="Pilih tanggal SIKA"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Upload Dokumen</h3>
+            {/* Informasi Pekerjaan Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Informasi Pekerjaan</h3>
               
-              <FileUpload
-                id="upload_doc_sika"
-                name="upload_doc_sika"
-                label="Upload Dokumen SIKA"
-                description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                value={formData.upload_doc_sika}
-                onChange={handleFileUpload('upload_doc_sika')}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                maxSize={5}
-                required={false}
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="pekerjaan">Pekerjaan *</Label>
+                  <Input
+                    id="pekerjaan"
+                    name="pekerjaan"
+                    value={formData.pekerjaan}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-              <FileUpload
-                id="upload_doc_simja"
-                name="upload_doc_simja"
-                label="Upload Dokumen SIMJA"
-                description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                value={formData.upload_doc_simja}
-                onChange={handleFileUpload('upload_doc_simja')}
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                maxSize={5}
-                required={false}
-              />
+                <div>
+                  <Label htmlFor="lokasi_kerja">Lokasi Kerja *</Label>
+                  <Input
+                    id="lokasi_kerja"
+                    name="lokasi_kerja"
+                    value={formData.lokasi_kerja}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-              <FileUpload
-                id="upload_doc_id_card"
-                name="upload_doc_id_card"
-                label="Upload ID Card"
-                description="Upload foto ID Card (KTP/SIM/Passport) dalam format gambar (JPG, PNG) atau PDF maksimal 5MB"
-                value={formData.upload_doc_id_card}
-                onChange={handleFileUpload('upload_doc_id_card')}
-                accept=".pdf,.jpg,.jpeg,.png"
-                maxSize={5}
-                required={false}
-              />
+                <div>
+                  <Label htmlFor="jam_kerja">Jam Kerja *</Label>
+                  <TimePicker
+                    id="jam_kerja"
+                    name="jam_kerja"
+                    value={formData.jam_kerja}
+                    onChange={handleTimeChange}
+                    required
+                    placeholder="Pilih jam kerja"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="sarana_kerja">Sarana Kerja *</Label>
+                  <textarea
+                    id="sarana_kerja"
+                    name="sarana_kerja"
+                    value={formData.sarana_kerja}
+                    onChange={handleChange}
+                    required
+                    rows={2}
+                    placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Daftar nama pekerja Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Daftar nama pekerja</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="nama_pekerja">Nama Pekerja *</Label>
+                  <textarea
+                    id="nama_pekerja"
+                    name="nama_pekerja"
+                    value={formData.nama_pekerja}
+                    onChange={handleChange}
+                    required
+                    rows={5}
+                    placeholder="Masukkan nama pekerja (pisahkan dengan enter atau koma)&#10;Contoh:&#10;Ahmad Budi&#10;Siti Aisyah&#10;atau: Ahmad Budi, Siti Aisyah, Joko Widodo"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Tip: Pisahkan nama dengan enter atau koma. Akan ditampilkan satu nama per baris.
+                  </p>
+                  {formData.nama_pekerja && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-sm text-blue-700 font-medium mb-2">Preview tampilan:</p>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        {formatNamaPekerjaDisplay(formData.nama_pekerja).map((name, index) => (
+                          <div key={index} className="flex items-center">
+                            <span className="w-4 text-blue-600">{index + 1}.</span>
+                            <span className="ml-2">{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col justify-center items-center border-2 border-dashed border-gray-300 rounded-lg p-6 min-h-[200px]">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-gray-500 text-sm">Placeholder untuk foto pekerja</p>
+                    <p className="text-gray-400 text-xs mt-1">Fitur upload foto akan tersedia nanti</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             </fieldset>

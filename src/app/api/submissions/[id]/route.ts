@@ -179,7 +179,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           keterangan: body.keterangan,
           nomor_simlok: body.nomor_simlok,
           tanggal_simlok: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
-          tembusan: body.tembusan,
+          // tembusan: body.tembusan,
         };
 
         // Only add fields that are provided and valid
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
         'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nomor_simja', 
         'tanggal_simja', 'nomor_sika', 'tanggal_sika', 'nama_pekerja',
-        'upload_doc_sika', 'upload_doc_simja', 'upload_doc_id_card'
+        'upload_doc_sika', 'upload_doc_simja'
       ];
 
       allowedFields.forEach(field => {

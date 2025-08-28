@@ -18,7 +18,7 @@ interface Submission {
   jam_kerja: string;
   lain_lain?: string;
   sarana_kerja: string;
-  tembusan?: string;
+  // tembusan?: string;
   nomor_simja?: string;
   tanggal_simja?: string | null;
   nomor_sika?: string;
@@ -30,7 +30,6 @@ interface Submission {
   keterangan?: string;
   upload_doc_sika?: string;
   upload_doc_simja?: string;
-  upload_doc_id_card?: string;
   qrcode?: string;
   created_at: string;
   user: {
@@ -281,12 +280,12 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                         <p className="text-sm text-gray-900">{submission.lain_lain}</p>
                       </div>
                     )}
-                    {submission.tembusan && (
+                    {/* {submission.tembusan && (
                       <div>
                         <label className="text-sm font-medium text-gray-500">Tembusan</label>
                         <p className="text-sm text-gray-900">{submission.tembusan}</p>
                       </div>
-                    )}
+                    )} */}
                     <div>
                       <label className="text-sm font-medium text-gray-500">Konten/Deskripsi</label>
                       <p className="text-sm text-gray-900 whitespace-pre-wrap">{submission.content}</p>
@@ -367,21 +366,6 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                         </div>
                         <button
                           onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}
-                          className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          <EyeIcon className="w-4 h-4" />
-                          <span>Lihat Dokumen</span>
-                        </button>
-                      </div>
-                    )}
-                    {submission.upload_doc_id_card && (
-                      <div className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <DocumentIcon className="w-5 h-5 text-purple-500" />
-                          <span className="text-sm font-medium text-gray-900">ID Card</span>
-                        </div>
-                        <button
-                          onClick={() => handleFileView(submission.upload_doc_id_card!, 'ID Card')}
                           className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
                         >
                           <EyeIcon className="w-4 h-4" />

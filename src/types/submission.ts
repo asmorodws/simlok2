@@ -16,7 +16,6 @@ export interface SubmissionData {
   content?: string; // akan diisi oleh admin saat approve
   upload_doc_sika?: string;
   upload_doc_simja?: string;
-  upload_doc_id_card?: string;
 }
 
 export interface SubmissionApprovalData {
@@ -24,7 +23,14 @@ export interface SubmissionApprovalData {
   keterangan?: string;
   nomor_simlok?: string;
   tanggal_simlok?: string;
-  tembusan?: string;
+}
+
+export interface DaftarPekerja {
+  id: string;
+  nama_pekerja: string;
+  foto_pekerja?: string | null;
+  submission_id: string;
+  created_at: Date;
 }
 
 export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
