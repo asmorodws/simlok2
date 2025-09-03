@@ -264,15 +264,17 @@ export default function VendorSubmissionsContent() {
   }, []);
 
   const getStatusBadge = useCallback((status: string) => {
-    const colors = {
-      'PENDING': "bg-yellow-100 text-yellow-800",
-      'APPROVED': "bg-green-100 text-green-800",
-      'REJECTED': "bg-red-100 text-red-800"
+    const statusConfig = {
+      'PENDING': { label: "Menunggu Review", className: "bg-yellow-100 text-yellow-800" },
+      'APPROVED': { label: "Disetujui", className: "bg-green-100 text-green-800" },
+      'REJECTED': { label: "Ditolak", className: "bg-red-100 text-red-800" }
     };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, className: 'bg-gray-100 text-gray-800' };
     
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
-        {status}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.className}`}>
+        {config.label}
       </span>
     );
   }, []);
@@ -516,9 +518,9 @@ export default function VendorSubmissionsContent() {
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Semua Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
+          <option value="PENDING">Menunggu Review</option>
+          <option value="APPROVED">Disetujui</option>
+          <option value="REJECTED">Ditolak</option>
         </select>
       </div>
 

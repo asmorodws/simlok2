@@ -147,9 +147,8 @@ export default function WorkersList({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <UserIcon className="h-5 w-5 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">
-            Daftar Pekerja ({workers.length} orang)
+            Jumlah pekerja ({workers.length} orang)
           </span>
           {verificationMode && (
             <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
@@ -170,91 +169,82 @@ export default function WorkersList({
 
       {/* Workers Display */}
       {layout === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
           {displayedWorkers.map((worker, index) => (
             <div
               key={worker.id}
-              className={`bg-white border rounded-lg p-4 hover:shadow-md transition-all duration-200 ${
+              className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border ${
                 verificationMode 
                   ? 'border-purple-200 hover:border-purple-300' 
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-100 hover:border-gray-200'
               }`}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3 flex-1">
-                  {/* Photo */}
-                  {showPhotos && (
-                    <div className="flex-shrink-0 relative">
-                      {worker.foto_pekerja && !imageErrors.has(worker.id) ? (
-                        <img
-                          src={fileUrlHelper.convertLegacyUrl(worker.foto_pekerja, `foto_pekerja_${worker.id}`)}
-                          alt={`Foto ${worker.nama_pekerja}`}
-                          className="h-12 w-12 rounded-full object-cover border-2 border-gray-300 cursor-pointer hover:border-blue-400 transition-colors"
-                          onError={() => handleImageError(worker.id)}
-                          onClick={() => handleImageClick(worker.foto_pekerja!)}
-                          title="Klik untuk memperbesar"
-                        />
-                      ) : (
-                        <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
-                          {worker.foto_pekerja ? (
-                            <PhotoIcon className="h-6 w-6 text-gray-400" />
-                          ) : (
-                            <UserIcon className="h-6 w-6 text-gray-400" />
-                          )}
-                        </div>
-                      )}
-                      {verificationMode && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-purple-100 border-2 border-white rounded-full flex items-center justify-center">
-                          <EyeIcon className="h-3 w-3 text-purple-600" />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Worker Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                        #{index + 1}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-medium text-gray-900 mt-1 truncate">
-                      {worker.nama_pekerja}
-                    </h4>
-
-                    <div className="flex items-center mt-2">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        worker.foto_pekerja && !imageErrors.has(worker.id)
-                          ? 'bg-green-400' 
-                          : 'bg-orange-400'
-                      }`}></div>
-                      <span className={`text-xs ${
-                        worker.foto_pekerja && !imageErrors.has(worker.id)
-                          ? 'text-green-600' 
-                          : 'text-orange-600'
-                      }`}>
-                        {worker.foto_pekerja && !imageErrors.has(worker.id) 
-                          ? 'Foto tersedia' 
-                          : 'Tanpa foto'}
-                      </span>
-                    </div>
+              {/* Photo Section - Large and prominent */}
+              <div className="relative p-4 pb-2">
+                {showPhotos && (
+                  <div className="relative">
+                    {worker.foto_pekerja && !imageErrors.has(worker.id) ? (
+                      <img
+                        src={fileUrlHelper.convertLegacyUrl(worker.foto_pekerja, `foto_pekerja_${worker.id}`)}
+                        alt={`Foto ${worker.nama_pekerja}`}
+                        className="w-full h-48 rounded-lg object-cover cursor-pointer hover:scale-105 transition-transform duration-200 shadow-sm"
+                        onError={() => handleImageError(worker.id)}
+                        onClick={() => handleImageClick(worker.foto_pekerja!)}
+                        title="Klik untuk memperbesar"
+                      />
+                    ) : (
+                      <div className="w-full h-48 rounded-lg bg-gray-100 flex flex-col items-center justify-center shadow-sm">
+                        {worker.foto_pekerja ? (
+                          <>
+                            <PhotoIcon className="h-12 w-12 text-gray-400 mb-2" />
+                            <span className="text-xs text-gray-500">Gagal memuat foto</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserIcon className="h-12 w-12 text-gray-400 mb-2" />
+                            <span className="text-xs text-gray-500">Tidak ada foto</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Status indicator */}
+                    <div className={`absolute top-2 right-2 w-3 h-3 rounded-full border-2 border-white ${
+                      worker.foto_pekerja && !imageErrors.has(worker.id)
+                        ? 'bg-green-500' 
+                        : 'bg-orange-500'
+                    }`}></div>
+                    
+                    {/* Verification badge */}
+                    {verificationMode && (
+                      <div className="absolute top-2 left-2 w-6 h-6 bg-purple-500 border-2 border-white rounded-full flex items-center justify-center">
+                        <EyeIcon className="h-3 w-3 text-white" />
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
+              </div>
+
+              {/* Content Section - Name and details below photo */}
+              <div className="p-4 pt-2">
+                <h2 className="font-semibold text-gray-900 text-base mb-1">
+                  {worker.nama_pekerja}
+                </h2>
 
                 {/* Verification Actions */}
                 {verificationMode && (
-                  <div className="flex flex-col space-y-2 ml-3">
+                  <div className="flex justify-center space-x-2 pt-3 border-t border-gray-100">
                     <button 
-                      className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                      className="flex items-center justify-center w-8 h-8 text-green-600 hover:bg-green-50 rounded-full transition-colors"
                       title="Verifikasi Valid"
                     >
-                      <CheckCircleIcon className="h-4 w-4" />
+                      <CheckCircleIcon className="h-5 w-5" />
                     </button>
                     <button 
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                      className="flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                       title="Perlu Koreksi"
                     >
-                      <XCircleIcon className="h-4 w-4" />
+                      <XCircleIcon className="h-5 w-5" />
                     </button>
                   </div>
                 )}
@@ -263,20 +253,22 @@ export default function WorkersList({
           ))}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {displayedWorkers.map((worker, index) => (
             <div
               key={worker.id}
-              className={`flex items-center space-x-3 p-3 bg-white border rounded-lg hover:bg-gray-50 transition-colors ${
+              className={`flex items-center space-x-4 p-4 bg-white border rounded-xl hover:shadow-md transition-all duration-200 ${
                 verificationMode 
                   ? 'border-purple-200 hover:border-purple-300' 
-                  : 'border-gray-200'
+                  : 'border-gray-100 hover:border-gray-200'
               }`}
             >
               {/* Number */}
-              <span className="text-sm text-gray-500 min-w-[2rem]">
-                {index + 1}.
-              </span>
+              <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium text-gray-600">
+                  {index + 1}
+                </span>
+              </div>
               
               {/* Photo */}
               {showPhotos && (
@@ -285,67 +277,78 @@ export default function WorkersList({
                     <img
                       src={fileUrlHelper.convertLegacyUrl(worker.foto_pekerja, `foto_pekerja_${worker.id}`)}
                       alt={`Foto ${worker.nama_pekerja}`}
-                      className="h-10 w-10 rounded-full object-cover border-2 border-gray-300 cursor-pointer hover:border-blue-400 transition-colors"
+                      className="h-12 w-12 rounded-lg object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-400 transition-colors shadow-sm"
                       onError={() => handleImageError(worker.id)}
                       onClick={() => handleImageClick(worker.foto_pekerja!)}
                       title="Klik untuk memperbesar"
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                    <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center border-2 border-gray-200">
                       {worker.foto_pekerja ? (
-                        <PhotoIcon className="h-5 w-5 text-gray-400" />
+                        <PhotoIcon className="h-6 w-6 text-gray-400" />
                       ) : (
-                        <UserIcon className="h-5 w-5 text-gray-400" />
+                        <UserIcon className="h-6 w-6 text-gray-400" />
                       )}
                     </div>
                   )}
+                  
+                  {/* Status indicator */}
+                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                    worker.foto_pekerja && !imageErrors.has(worker.id)
+                      ? 'bg-green-500' 
+                      : 'bg-orange-500'
+                  }`}></div>
+                  
                   {verificationMode && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-purple-100 border-2 border-white rounded-full flex items-center justify-center">
-                      <EyeIcon className="h-2.5 w-2.5 text-purple-600" />
+                    <div className="absolute -top-1 -left-1 w-4 h-4 bg-purple-500 border-2 border-white rounded-full flex items-center justify-center">
+                      <EyeIcon className="h-2.5 w-2.5 text-white" />
                     </div>
                   )}
                 </div>
               )}
               
-              {/* Name */}
+              {/* Worker Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <h3 className="text-base font-medium text-gray-900 truncate">
                   {worker.nama_pekerja}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Pekerja #{index + 1}
                 </p>
               </div>
               
-              {/* Status */}
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
+              {/* Status Badge */}
+              <div className="flex-shrink-0">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   worker.foto_pekerja && !imageErrors.has(worker.id)
-                    ? 'bg-green-400' 
-                    : 'bg-orange-400'
-                }`}></div>
-                <span className={`text-xs ${
-                  worker.foto_pekerja && !imageErrors.has(worker.id)
-                    ? 'text-green-600' 
-                    : 'text-orange-600'
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-orange-100 text-orange-800'
                 }`}>
+                  <div className={`w-2 h-2 rounded-full mr-1.5 ${
+                    worker.foto_pekerja && !imageErrors.has(worker.id)
+                      ? 'bg-green-400' 
+                      : 'bg-orange-400'
+                  }`}></div>
                   {worker.foto_pekerja && !imageErrors.has(worker.id) 
-                    ? 'Foto tersedia' 
-                    : 'Tanpa foto'}
+                    ? 'Foto Tersedia' 
+                    : 'Tanpa Foto'}
                 </span>
               </div>
 
               {/* Verification Actions */}
               {verificationMode && (
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 flex-shrink-0">
                   <button 
-                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors"
                     title="Verifikasi Valid"
                   >
-                    <CheckCircleIcon className="h-4 w-4" />
+                    <CheckCircleIcon className="h-5 w-5" />
                   </button>
                   <button 
-                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
                     title="Perlu Koreksi"
                   >
-                    <XCircleIcon className="h-4 w-4" />
+                    <XCircleIcon className="h-5 w-5" />
                   </button>
                 </div>
               )}

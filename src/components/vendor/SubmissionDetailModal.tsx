@@ -165,26 +165,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
     }
   };
 
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    if (fileUrl) {
-      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
-      const link = document.createElement('a');
-      link.href = convertedUrl;
-      const category = fileUrlHelper.getCategoryFromField(fileName, fileUrl);
-      const downloadName = fileUrlHelper.generateDownloadFilename(fileUrl, category, fileName);
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
 
-  const getFileIcon = (fileName: string) => {
-    if (fileUrlHelper.isImage(fileName)) {
-      return <img className="h-5 w-5 text-blue-500" />;
-    }
-    return <DocumentIcon className="h-5 w-5 text-gray-500" />;
-  };
 
   if (!isOpen || !submission) return null;
 
@@ -192,7 +173,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
   console.log('Submission data:', submission);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto ">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black/30 transition-opacity"
@@ -305,7 +286,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
 
                 {/* Detail Pekerjaan */}
                 <DetailSection 
-                  title="Detail Pekerjaan" 
+                  title="Informasi Pekerjaan" 
                   icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -320,17 +301,14 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                     <InfoCard
                       label="Pelaksanaan"
                       value={submission.pelaksanaan || 'Akan diisi oleh admin saat approval'}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                     />
                     <InfoCard
                       label="Jam Kerja"
                       value={submission.jam_kerja || '-'}
-                      icon={<ClockIcon className="h-4 w-4 text-gray-500" />}
                     />
                     <InfoCard
                       label="Sarana Kerja"
                       value={submission.sarana_kerja || '-'}
-                      icon={<WrenchScrewdriverIcon className="h-4 w-4 text-gray-500" />}
                       className="md:col-span-2"
                     />
                   </div>
@@ -368,20 +346,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                   icon={<UserIcon className="h-5 w-5 text-purple-500" />}
                 >
                   {submission.nama_pekerja ? (
-                    <>
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Nama Pekerja (dari form):</h4>
-                        <div className="bg-gray-50 p-3 rounded-md">
-                          <div className="whitespace-pre-wrap text-sm text-gray-900">
-                            {submission.nama_pekerja.split(/[\n,]+/).map((name, index) => (
-                              <div key={index} className="flex items-start py-1">
-                                <span className="w-6 text-gray-600 flex-shrink-0">{index + 1}.</span>
-                                <span className="flex-1">{name.trim()}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
+                      
                       <WorkersList
                         submissionId={submission.id}
                         fallbackWorkers={submission.nama_pekerja}
@@ -389,7 +354,6 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                         showPhotos={true}
                         maxDisplayCount={6}
                       />
-                    </>
                   ) : (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">
                       <UserIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
@@ -454,7 +418,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Dokumen SIKA */}
                     {submission.upload_doc_sika && (
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                      <div className="border border-blue-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-2">
                             <DocumentIcon className="h-5 w-5 text-blue-500" />
@@ -463,9 +427,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                               <p className="text-xs text-gray-500">Surat Izin Kerja Aman</p>
                             </div>
                           </div>
-                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                            Tersedia
-                          </span>
+                          
                         </div>
                         <button
                           onClick={() => handleFileView(submission.upload_doc_sika!, 'Dokumen SIKA')}
@@ -479,7 +441,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
 
                     {/* Dokumen SIMJA */}
                     {submission.upload_doc_simja && (
-                      <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                      <div className="border border-green-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center space-x-2">
                             <DocumentIcon className="h-5 w-5 text-green-500" />
@@ -488,9 +450,7 @@ export default function SubmissionDetailModal({ submission, isOpen, onClose }: S
                               <p className="text-xs text-gray-500">Surat Izin Masuk Area</p>
                             </div>
                           </div>
-                          <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                            Tersedia
-                          </span>
+                          
                         </div>
                         <button
                           onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}

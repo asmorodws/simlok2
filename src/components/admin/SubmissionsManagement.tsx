@@ -5,16 +5,16 @@ import {
   MagnifyingGlassIcon,
   ChevronUpIcon,
   ChevronDownIcon,
-  ChevronUpDownIcon
-} from "@heroicons/react/24/outline";;
+  ChevronUpDownIcon,
+  ArrowDownTrayIcon
+} from "@heroicons/react/24/outline";
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
-import Input from '@/components/form/Input';
-import Label from '@/components/form/Label';
 import AdminSubmissionDetailModal from './AdminSubmissionDetailModal';
+import ExportModal from './ExportModal';
 
 interface Submission {
   id: string;
@@ -77,7 +77,7 @@ interface Statistics {
   rejected: number;
 }
 
-export default function AdminSubmissions() {
+export default function SubmissionsManagement() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({ total: 0, pending: 0, approved: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
@@ -112,6 +112,7 @@ export default function AdminSubmissions() {
   // Modal detail state
   const [selectedDetailSubmission, setSelectedDetailSubmission] = useState<Submission | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -268,9 +269,9 @@ export default function AdminSubmissions() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING': return <Badge variant="warning">Pending</Badge>;
-      case 'APPROVED': return <Badge variant="success">Approved</Badge>;
-      case 'REJECTED': return <Badge variant="destructive">Rejected</Badge>;
+      case 'PENDING': return <Badge variant="warning">Menunggu Review</Badge>;
+      case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
+      case 'REJECTED': return <Badge variant="destructive">Ditolak</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
@@ -438,6 +439,18 @@ export default function AdminSubmissions() {
             <h2 className="text-xl font-semibold text-gray-900">Kelola Submissions</h2>
             <span className="text-sm text-gray-500">({statistics.total} submissions)</span>
           </div>
+          
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setShowExportModal(true)}
+              variant="outline"
+              size="sm"
+              className="bg-green-900 inline-flex items-center"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+              Export Excel
+            </Button>
+          </div>
         </div>
 
         {/* Search & Filter */}
@@ -461,9 +474,9 @@ export default function AdminSubmissions() {
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Semua Status</option>
-          <option value="PENDING">Pending</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
+          <option value="PENDING">Menunggu Review</option>
+          <option value="APPROVED">Disetujui</option>
+          <option value="REJECTED">Ditolak</option>
         </select>
         </div>
       </div>
@@ -515,6 +528,12 @@ export default function AdminSubmissions() {
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         variant="danger"
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
       />
     </div>
   );

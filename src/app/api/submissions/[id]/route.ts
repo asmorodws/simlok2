@@ -5,6 +5,37 @@ import { prisma } from '@/lib/prisma';
 import { SubmissionApprovalData } from '@/types/submission';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 
+// Function to generate auto SIMLOK number
+async function generateSimlokNumber(): Promise<string> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM format
+
+  // Get the last SIMLOK number for current month/year
+  const lastSubmission = await prisma.submission.findFirst({
+    where: {
+      nomor_simlok: {
+        contains: `/${month}/${year}`
+      }
+    },
+    orderBy: {
+      nomor_simlok: 'desc'
+    }
+  });
+
+  let nextNumber = 1;
+  
+  if (lastSubmission?.nomor_simlok) {
+    // Extract number from format: number/MM/YYYY
+    const match = lastSubmission.nomor_simlok.match(/^(\d+)\/\d{2}\/\d{4}$/);
+    if (match) {
+      nextNumber = parseInt(match[1]) + 1;
+    }
+  }
+
+  return `${nextNumber}/${month}/${year}`;
+}
+
 interface RouteParams {
   params: Promise<{
     id: string;
@@ -182,7 +213,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const approvalData: any = {
           status_approval_admin: body.status_approval_admin,
           keterangan: body.keterangan,
-          nomor_simlok: body.nomor_simlok,
           tanggal_simlok: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
           // tembusan: body.tembusan,
         };
@@ -196,6 +226,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
         // If approving, add additional fields
         if (body.status_approval_admin === 'APPROVED') {
+          // Generate auto SIMLOK number
+          const autoSimlokNumber = await generateSimlokNumber();
+          updateData.nomor_simlok = autoSimlokNumber;
+          
           updateData.pelaksanaan = body.pelaksanaan;
           updateData.lain_lain = body.lain_lain;
           updateData.content = body.content;

@@ -204,9 +204,9 @@ export default function AdminDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'PENDING': return <Badge variant="warning">Pending</Badge>;
-      case 'APPROVED': return <Badge variant="success">Approved</Badge>;
-      case 'REJECTED': return <Badge variant="destructive">Rejected</Badge>;
+      case 'PENDING': return <Badge variant="warning">Menunggu Review</Badge>;
+      case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
+      case 'REJECTED': return <Badge variant="destructive">Ditolak</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };

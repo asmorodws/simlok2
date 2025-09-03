@@ -69,7 +69,6 @@ export default function AdminSubmissionDetailModal({
   const [activeTab, setActiveTab] = useState('details');
   const [isProcessing, setIsProcessing] = useState(false);
   const [validationErrors, setValidationErrors] = useState({
-    nomor_simlok: '',
     pelaksanaan: '',
     keterangan: '',
     // tembusan: ''
@@ -80,7 +79,6 @@ export default function AdminSubmissionDetailModal({
     status: 'APPROVED' as 'APPROVED' | 'REJECTED',
     keterangan: '',
     // tembusan: '',
-    nomor_simlok: '',
     tanggal_simlok: '',
     pelaksanaan: '',
     lain_lain: '',
@@ -153,7 +151,6 @@ export default function AdminSubmissionDetailModal({
           status: 'APPROVED',
           keterangan: submission.keterangan || '',
           // tembusan: submission.tembusan || '',
-          nomor_simlok: submission.nomor_simlok || '',
           tanggal_simlok: formatDateForInput(submission.tanggal_simlok),
           pelaksanaan: submission.pelaksanaan || '',
           lain_lain: submission.lain_lain || '',
@@ -171,7 +168,6 @@ export default function AdminSubmissionDetailModal({
 
         // Reset validation errors
         setValidationErrors({
-          nomor_simlok: '',
           pelaksanaan: '',
           keterangan: '',
           // tembusan: ''
@@ -265,15 +261,16 @@ export default function AdminSubmissionDetailModal({
  
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      APPROVED: 'bg-green-100 text-green-800',
-      REJECTED: 'bg-red-100 text-red-800'
+      PENDING: { label: 'Menunggu Review', className: 'bg-yellow-100 text-yellow-800' },
+      APPROVED: { label: 'Disetujui', className: 'bg-green-100 text-green-800' },
+      REJECTED: { label: 'Ditolak', className: 'bg-red-100 text-red-800' }
     };
 
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, className: 'bg-gray-100 text-gray-800' };
+
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[status as keyof typeof statusConfig] || 'bg-gray-100 text-gray-800'
-        }`}>
-        {status}
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.className}`}>
+        {config.label}
       </span>
     );
   };
@@ -330,19 +327,12 @@ export default function AdminSubmissionDetailModal({
 
   const validateForm = () => {
     const errors = {
-      nomor_simlok: '',
       pelaksanaan: '',
       keterangan: '',
       tembusan: ''
     };
 
     let hasErrors = false;
-
-    // Validasi untuk approve: harus ada nomor SIMLOK
-    if (approvalForm.status === 'APPROVED' && !approvalForm.nomor_simlok.trim()) {
-      errors.nomor_simlok = 'Nomor SIMLOK harus diisi untuk menyetujui submission';
-      hasErrors = true;
-    }
 
     // Validasi pelaksanaan wajib diisi HANYA untuk APPROVED
     if (approvalForm.status === 'APPROVED' && !approvalForm.pelaksanaan.trim()) {
@@ -430,9 +420,8 @@ export default function AdminSubmissionDetailModal({
         nama_signer: approvalForm.nama_signer,
       };
 
-      // Hanya tambahkan nomor SIMLOK dan tanggal jika di-approve
+      // Hanya tambahkan tanggal jika di-approve (nomor akan auto-generate)
       if (approvalForm.status === 'APPROVED') {
-        requestBody.nomor_simlok = approvalForm.nomor_simlok;
         requestBody.tanggal_simlok = approvalForm.tanggal_simlok;
       }
 
@@ -586,7 +575,7 @@ export default function AdminSubmissionDetailModal({
 
                     {/* Detail Pekerjaan */}
                     <DetailSection 
-                      title="Detail Pekerjaan" 
+                      title="Informasi Pekerjaan" 
                       icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -601,17 +590,14 @@ export default function AdminSubmissionDetailModal({
                         <InfoCard
                           label="Pelaksanaan"
                           value={submission.pelaksanaan || 'Belum diisi'}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                         />
                         <InfoCard
                           label="Jam Kerja"
                           value={submission.jam_kerja}
-                          icon={<ClockIcon className="h-4 w-4 text-gray-500" />}
                         />
                         <InfoCard
                           label="Sarana Kerja"
                           value={submission.sarana_kerja}
-                          icon={<WrenchScrewdriverIcon className="h-4 w-4 text-gray-500" />}
                           className="md:col-span-2"
                         />
                       </div>
@@ -729,7 +715,7 @@ export default function AdminSubmissionDetailModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Dokumen SIKA */}
                         {submission.upload_doc_sika && (
-                          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                          <div className="border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
                                 <DocumentIcon className="h-5 w-5 text-blue-500" />
@@ -738,9 +724,6 @@ export default function AdminSubmissionDetailModal({
                                   <p className="text-xs text-gray-500">Surat Izin Kerja Aman</p>
                                 </div>
                               </div>
-                              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                                Tersedia
-                              </span>
                             </div>
                             <button
                               onClick={() => handleFileView(submission.upload_doc_sika!, 'Dokumen SIKA')}
@@ -754,7 +737,7 @@ export default function AdminSubmissionDetailModal({
 
                         {/* Dokumen SIMJA */}
                         {submission.upload_doc_simja && (
-                          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                          <div className="border border-green-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
                                 <DocumentIcon className="h-5 w-5 text-green-500" />
@@ -763,9 +746,6 @@ export default function AdminSubmissionDetailModal({
                                   <p className="text-xs text-gray-500">Surat Izin Masuk Area</p>
                                 </div>
                               </div>
-                              <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
-                                Tersedia
-                              </span>
                             </div>
                             <button
                               onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}
@@ -861,29 +841,7 @@ export default function AdminSubmissionDetailModal({
                           {/* Nomor SIMLOK - Only show if APPROVED */}
                           {approvalForm.status === 'APPROVED' && (
                             <>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Nomor SIMLOK <span className="text-red-500">*</span>
-                                  <span className="text-xs text-gray-500 ml-1">(Wajib untuk menyetujui)</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  value={approvalForm.nomor_simlok}
-                                  onChange={(e) => {
-                                    setApprovalForm(prev => ({ ...prev, nomor_simlok: e.target.value }));
-                                    clearFieldError('nomor_simlok');
-                                  }}
-                                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${validationErrors.nomor_simlok
-                                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500 shake'
-                                      : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                                    }`}
-                                  placeholder="Contoh: SIMLOK/2024/001"
-                                />
-                                {validationErrors.nomor_simlok && (
-                                  <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.nomor_simlok}</p>
-                                )}
-                              </div>
-
+                              
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Tanggal SIMLOK <span className="text-red-500">*</span>
@@ -1100,8 +1058,8 @@ export default function AdminSubmissionDetailModal({
                             <ul className="list-disc list-inside space-y-1">
                               {approvalForm.status === 'APPROVED' ? (
                                 <>
-                                  <li>Nomor SIMLOK dan Tanggal SIMLOK wajib diisi</li>
-                                  <li>Pelaksanaan dan Keterangan wajib diisi</li>
+                                  <li>Nomor SIMLOK akan dibuat otomatis saat di-approve</li>
+                                  <li>Tanggal SIMLOK, Pelaksanaan dan Keterangan wajib diisi</li>
                                 </>
                               ) : (
                                 <>

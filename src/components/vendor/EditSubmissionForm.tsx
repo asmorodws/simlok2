@@ -410,7 +410,12 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                   submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
                   submission.status_approval_admin === 'APPROVED' ? 'text-green-600' :
                   'text-red-600'
-                }`}>{submission.status_approval_admin}</span>
+                }`}>{
+                  submission.status_approval_admin === 'PENDING' ? 'Menunggu Review' :
+                  submission.status_approval_admin === 'APPROVED' ? 'Disetujui' :
+                  submission.status_approval_admin === 'REJECTED' ? 'Ditolak' :
+                  submission.status_approval_admin
+                }</span>
               </div>
             </div>
             
