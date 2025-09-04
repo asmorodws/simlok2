@@ -7,7 +7,7 @@ import { z } from "zod";
 // Validation schema for vendor registration
 const vendorRegistrationSchema = z.object({
   csrfToken: z.string().min(1, "CSRF token is required"),
-  nama_petugas: z.string()
+  officer_name: z.string()
     .min(2, "Nama petugas minimal 2 karakter")
     .max(100, "Nama petugas maksimal 100 karakter")
     .trim(),
@@ -20,15 +20,15 @@ const vendorRegistrationSchema = z.object({
     .min(8, "Password minimal 8 karakter")
     .max(100, "Password terlalu panjang")
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, "Password harus mengandung huruf besar, huruf kecil, dan angka"),
-  nama_vendor: z.string()
+  vendor_name: z.string()
     .min(2, "Nama vendor minimal 2 karakter")
     .max(150, "Nama vendor maksimal 150 karakter")
     .trim(),
-  alamat: z.string()
+  address: z.string()
     .min(10, "Alamat minimal 10 karakter")
     .max(500, "Alamat maksimal 500 karakter")
     .trim(),
-  no_telp: z.string()
+  phone_number: z.string()
     .min(10, "Nomor telepon minimal 10 digit")
     .max(15, "Nomor telepon maksimal 15 digit")
     .regex(/^[0-9+\-\s]+$/, "Nomor telepon hanya boleh berisi angka, +, -, dan spasi")
@@ -79,7 +79,7 @@ function validateCsrfToken(req: NextRequest, csrfToken: string): boolean {
     }
 
     // Format cookie: token|hash, URL encoded %7C = |
-    const cookieValue = decodeURIComponent(csrfCookie.split("=")[1]);
+    const cookieValue = decodeURIComponent(csrfCookie.split("=")[1] || '');
     const [expectedToken] = cookieValue.split("|");
     
     return expectedToken === csrfToken;
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400 });
     }
 
-    const { csrfToken, nama_petugas, email, password, nama_vendor, alamat, no_telp } = validationResult.data;
+    const { csrfToken, officer_name, email, password, vendor_name, address, phone_number } = validationResult.data;
 
     // Validate CSRF token
     if (!validateCsrfToken(req, csrfToken)) {
@@ -135,11 +135,11 @@ export async function POST(req: NextRequest) {
     // Check if vendor name already exists (case-insensitive)
     const existingVendor = await prisma.user.findFirst({
       where: { 
-        nama_vendor: {
-          equals: nama_vendor,
+        vendor_name: {
+          equals: vendor_name,
         }
       },
-      select: { id: true, nama_vendor: true }
+      select: { id: true, vendor_name: true }
     });
 
     if (existingVendor) {
@@ -153,37 +153,37 @@ export async function POST(req: NextRequest) {
     // Create new vendor user
     const newUser = await prisma.user.create({
       data: {
-        nama_petugas,
+        officer_name,
         email,
         password: hashedPassword,
-        nama_vendor,
-        alamat,
-        no_telp,
+        vendor_name,
+        address,
+        phone_number,
         role: "VENDOR", // Always VENDOR for this registration endpoint
         verified_at: null, // Requires admin verification
       },
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
-        nama_vendor: true,
+        vendor_name: true,
         role: true,
-        date_created_at: true,
+        created_at: true,
         verified_at: true,
       }
     });
 
     // Log successful registration (for audit purposes)
-    console.log(`New vendor registered: ${email} (${nama_vendor}) at ${new Date().toISOString()}`);
+    console.log(`New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);
 
     return NextResponse.json(
       { 
-        message: "Pendaftaran berhasil! Akun Anda sedang menunggu verifikasi admin.", 
+        message: "Pendaftiran berhasil! Akun Anda sedang menunggu verifikasi admin.", 
         user: {
           id: newUser.id,
-          nama_petugas: newUser.nama_petugas,
+          officer_name: newUser.officer_name,
           email: newUser.email,
-          nama_vendor: newUser.nama_vendor,
+          vendor_name: newUser.vendor_name,
           role: newUser.role,
           verified: !!newUser.verified_at,
         }

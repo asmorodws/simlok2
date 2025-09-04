@@ -7,7 +7,7 @@ import Card from '@/components/ui/Card';
 import { DocumentPlusIcon } from '@heroicons/react/24/outline';
 
 export default function FilesPage() {
-  const [uploadingCategory, setUploadingCategory] = useState<string>('');
+  const [_uploadingCategory, setUploadingCategory] = useState<string>('');
 
   const handleFileUpload = (category: string) => (url: string) => {
     console.log(`File uploaded to ${category}:`, url);

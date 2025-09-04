@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import EditSubmissionForm from '../../../../../../components/vendor/EditSubmissionForm';
 import SidebarLayout from '@/components/layout/SidebarLayout';
-import { prisma } from '@/lib/prisma';
 
 interface EditSubmissionPageProps {
   params: Promise<{

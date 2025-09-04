@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { 
   EyeIcon, 
   DocumentIcon, 
-  ArrowDownTrayIcon, 
   BuildingOfficeIcon, 
   UserIcon, 
   BriefcaseIcon, 
@@ -138,27 +137,6 @@ export default function VendorSubmissionDetail({ submission }: VendorSubmissionD
         fileName
       });
     }
-  };
-
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    if (fileUrl) {
-      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
-      const link = document.createElement('a');
-      link.href = convertedUrl;
-      const category = fileUrlHelper.getCategoryFromField(fileName, fileUrl);
-      const downloadName = fileUrlHelper.generateDownloadFilename(fileUrl, category, fileName);
-      link.download = downloadName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const getFileIcon = (fileName: string) => {
-    if (fileUrlHelper.isImage(fileName)) {
-      return <img className="h-5 w-5 text-blue-500" />;
-    }
-    return <DocumentIcon className="h-5 w-5 text-gray-500" />;
   };
 
   const handleEdit = () => {
@@ -590,7 +568,7 @@ export default function VendorSubmissionDetail({ submission }: VendorSubmissionD
         onClose={() => setSimlokPdfModal({ isOpen: false })}
         submissionId={submission.id}
         submissionName={submission.nama_vendor}
-        nomorSimlok={submission.nomor_simlok}
+        nomorSimlok={submission.nomor_simlok || ''}
       />
     </div>
   );

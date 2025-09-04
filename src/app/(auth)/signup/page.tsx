@@ -79,12 +79,12 @@ export default function SignupPage() {
         credentials: "include",
         body: JSON.stringify({
           csrfToken: csrf,
-          nama_petugas: nama_petugas.trim(),
+          officer_name: nama_petugas.trim(),
           email: email.trim().toLowerCase(),
           password,
-          nama_vendor: nama_vendor.trim(),
-          alamat: alamat.trim(),
-          no_telp: no_telp.trim(),
+          vendor_name: nama_vendor.trim(),
+          address: alamat.trim(),
+          phone_number: no_telp.trim(),
         }),
       });
 

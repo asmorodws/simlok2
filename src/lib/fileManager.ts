@@ -57,7 +57,7 @@ export class FileManager {
   /**
    * Generate a clean, descriptive filename
    */
-  private generateFileName(originalName: string, category: string, userId: string): string {
+  private generateFileName(originalName: string, category: string, _userId: string): string {
     const timestamp = Date.now();
     const randomString = crypto.randomBytes(4).toString('hex');
     const extension = originalName.split('.').pop()?.toLowerCase() || '';
@@ -124,14 +124,6 @@ export class FileManager {
 
     // Get file stats
     const stats = await stat(filePath);
-
-    // Generate URLs
-    const relativePath = join(userId, {
-      sika: 'dokumen-sika',
-      simja: 'dokumen-simja', 
-      id_card: 'id-card',
-      other: 'lainnya'
-    }[category], newFileName);
 
     return {
       originalName,
@@ -275,15 +267,17 @@ export class FileManager {
             const filePath = join(folder, fileName);
             const stats = await stat(filePath);
             
-            result[category].push({
-              originalName: fileName,
-              newName: fileName,
-              path: filePath,
-              url: `/api/files/${userId}/${category}/${fileName}`,
-              size: stats.size,
-              type: this.getFileType(fileName),
-              category: category as 'sika' | 'simja' | 'id_card' | 'other'
-            });
+            if (result[category]) {
+              result[category].push({
+                originalName: fileName,
+                newName: fileName,
+                path: filePath,
+                url: `/api/files/${userId}/${category}/${fileName}`,
+                size: stats.size,
+                type: this.getFileType(fileName),
+                category: category as 'sika' | 'simja' | 'id_card' | 'other'
+              });
+            }
           }
         }
       } catch (error) {

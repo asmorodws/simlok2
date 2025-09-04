@@ -31,38 +31,38 @@ async function main() {
   
   const users = [
     {
-      nama_petugas: "Admin Utama",
+      officer_name: "Admin Utama",
       email: "admin@example.com",
       password: "admin123",
       role: Role.ADMIN,
-      foto_profil: null,
-      alamat: "Jl. Admin No. 1, Jakarta",
-      no_telp: "081234567890",
-      nama_vendor: null, // kosong untuk admin
+      profile_photo: null,
+      address: "Jl. Admin No. 1, Jakarta",
+      phone_number: "081234567890",
+      vendor_name: null, // kosong untuk admin
       verified_at: new Date(), // admin sudah terverifikasi
       verified_by: "SYSTEM",
     },
     {
-      nama_petugas: "Verifier Utama",
+      officer_name: "Verifier Utama",
       email: "verifier@example.com",
       password: "verifier123",
       role: Role.VERIFIER,
-      foto_profil: null,
-      alamat: "Jl. Verifier No. 2, Jakarta",
-      no_telp: "081234567891",
-      nama_vendor: null, // kosong untuk verifier
+      profile_photo: null,
+      address: "Jl. Verifier No. 2, Jakarta",
+      phone_number: "081234567891",
+      vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
       verified_by: "ADMIN",
     },
     {
-      nama_petugas: "Vendor A",
+      officer_name: "Vendor A",
       email: "vendora@example.com",
       password: "vendor123",
       role: Role.VENDOR,
-      foto_profil: null,
-      alamat: "Jl. Vendor A No. 3, Jakarta",
-      no_telp: "081234567892",
-      nama_vendor: "Vendor A",
+      profile_photo: null,
+      address: "Jl. Vendor A No. 3, Jakarta",
+      phone_number: "081234567892",
+      vendor_name: "Vendor A",
       verified_at: new Date(), // vendor sudah terverifikasi
       verified_by: "ADMIN",}
   ];
@@ -77,14 +77,14 @@ async function main() {
       where: { email: user.email },
       update: {}, // tidak update kalau sudah ada
       create: {
-        nama_petugas: user.nama_petugas,
+        officer_name: user.officer_name,
         email: user.email,
         password: hashedPassword,
         role: user.role,
-        foto_profil: user.foto_profil,
-        alamat: user.alamat,
-        no_telp: user.no_telp,
-        nama_vendor: user.nama_vendor,
+        profile_photo: user.profile_photo,
+        address: user.address,
+        phone_number: user.phone_number,
+        vendor_name: user.vendor_name,
         verified_at: user.verified_at,
         verified_by: user.verified_by,
       },
@@ -181,6 +181,12 @@ async function main() {
     
     for (let i = 0; i < numSubmissions; i++) {
       const template = submissionTemplates[submissionCount % submissionTemplates.length];
+      
+      if (!template) {
+        console.warn('Template is undefined, skipping submission');
+        continue;
+      }
+      
       const status = statuses[submissionCount % 3];
       
       // Create date variations

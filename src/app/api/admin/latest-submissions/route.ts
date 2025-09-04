@@ -15,9 +15,9 @@ export async function GET() {
     const submissions = await prisma.submission.findMany({
       select: {
         id: true,
-        nama_vendor: true,
-        pekerjaan: true,
-        status_approval_admin: true,
+        vendor_name: true,
+        job_description: true,
+        approval_status: true,
         created_at: true
       },
       orderBy: {

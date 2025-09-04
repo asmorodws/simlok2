@@ -4,11 +4,10 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
+  ClockIcon,
   PlusIcon,
   CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
-  EyeIcon
+  XCircleIcon
 } from "@heroicons/react/24/outline";
 import Card from "../ui/Card";
 import { Badge } from "../ui/Badge";
@@ -25,39 +24,38 @@ interface VendorStats {
 
 interface VendorSubmission {
   id: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  status_approval_admin: string;
-  nomor_simlok?: string;
+  job_description: string;
+  work_location: string;
+  approval_status: string;
+  simlok_number?: string;
   created_at: string;
-  pelaksanaan: string | null;
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  jam_kerja: string;
-  lain_lain?: string;
-  sarana_kerja: string;
-  // tembusan?: string;
-  nomor_simja?: string;
-  tanggal_simja?: string | null;
-  nomor_sika?: string;
-  tanggal_sika?: string | null;
-  tanggal_simlok?: string | null;
-  nama_pekerja: string;
+  implementation: string | null;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  working_hours: string;
+  other_notes?: string;
+  work_facilities: string;
+  simja_number?: string;
+  simja_date?: string | null;
+  sika_number?: string;
+  sika_date?: string | null;
+  simlok_date?: string | null;
+  worker_names: string;
   content: string;
-  keterangan?: string;
-  upload_doc_sika?: string;
-  upload_doc_simja?: string;
+  notes?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
   qrcode?: string;
   user: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
-    nama_vendor: string;
+    vendor_name: string;
   };
   approvedByUser?: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
   };
 }
@@ -234,10 +232,10 @@ export default function VendorDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-              Selamat datang di dashboard vendor, {session?.user.nama_petugas ?? session?.user.name ?? "Vendor"}
+              Selamat datang di dashboard vendor, {session?.user.officer_name ?? session?.user.name ?? "Vendor"}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {session?.user.nama_vendor && `${session.user.nama_vendor} - `}
+              {session?.user.vendor_name && `${session.user.vendor_name} - `}
               Kelola pengajuan SIMLOK Anda
             </p>
           </div>
@@ -362,20 +360,20 @@ export default function VendorDashboard() {
                 submissions.map((submission) => (
                   <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
-                      <div className="max-w-xs truncate" title={submission.pekerjaan}>
-                        {submission.pekerjaan}
+                      <div className="max-w-xs truncate" title={submission.job_description}>
+                        {submission.job_description}
                       </div>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      <div className="max-w-xs truncate" title={submission.lokasi_kerja}>
-                        {submission.lokasi_kerja}
+                      <div className="max-w-xs truncate" title={submission.work_location}>
+                        {submission.work_location}
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      {getStatusBadge(submission.status_approval_admin)}
+                      {getStatusBadge(submission.approval_status)}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
-                      {submission.nomor_simlok || '-'}
+                      {submission.simlok_number || '-'}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(submission.created_at)}
@@ -390,7 +388,7 @@ export default function VendorDashboard() {
                         >
                           Lihat
                         </Button>
-                        {submission.status_approval_admin === 'PENDING' && (
+                        {submission.approval_status === 'PENDING' && (
                           <>
                             <Link href={`/vendor/submissions/edit/${submission.id}`}>
                               <Button
@@ -412,7 +410,7 @@ export default function VendorDashboard() {
                             </Button>
                           </>
                         )}
-                        {submission.status_approval_admin !== 'PENDING' && (
+                        {submission.approval_status !== 'PENDING' && (
                           <span className="text-gray-400 text-xs">Tidak dapat diubah</span>
                         )}
                       </div>
@@ -445,11 +443,13 @@ export default function VendorDashboard() {
       </Card>
 
       {/* Modal Detail */}
-      <SubmissionDetailModal
-        submission={selectedSubmission}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-      />
+      {selectedSubmission && (
+        <SubmissionDetailModal
+          submission={selectedSubmission}
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+        />
+      )}
 
       {/* Confirm Modal */}
       <ConfirmModal

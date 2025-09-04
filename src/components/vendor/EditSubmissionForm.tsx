@@ -49,7 +49,7 @@ interface EditSubmissionFormProps {
 
 export default function EditSubmissionForm({ submissionId }: EditSubmissionFormProps) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status: _status } = useSession();
   const { showSuccess, showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -170,21 +170,10 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       setFormData(prev => ({
         ...prev,
         // Keep vendor name readonly for vendors - use session data if available
-        nama_vendor: session.user.nama_vendor || submission.nama_vendor || prev.nama_vendor || '',
+        nama_vendor: session.user.vendor_name || submission.nama_vendor || prev.nama_vendor || '',
       }));
     }
   }, [session, submission]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      // For now, just store the file name. In production, you'd upload to a file storage service
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0].name
-      }));
-    }
-  };
 
   // Handle file upload from FileUpload component
   const handleFileUpload = (fieldName: string) => (url: string) => {
@@ -440,12 +429,12 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                   <Input
                     id="nama_vendor"
                     name="nama_vendor"
-                    value={session?.user?.nama_vendor || formData.nama_vendor || ''}
+                    value={session?.user?.vendor_name || formData.nama_vendor || ''}
                     onChange={handleChange}
                     required
-                    readOnly={!!session?.user?.nama_vendor}
-                    disabled={!!session?.user?.nama_vendor}
-                    className={session?.user?.nama_vendor ? "cursor-not-allowed" : ""}
+                    readOnly={!!session?.user?.vendor_name}
+                    disabled={!!session?.user?.vendor_name}
+                    className={session?.user?.vendor_name ? "cursor-not-allowed" : ""}
                   />
                 </div>
 
@@ -623,7 +612,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               
               {/* Workers Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {workers.map((worker, index) => (
+                {workers.map((worker, _index) => (
                   <div key={worker.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-3">

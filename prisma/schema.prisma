@@ -11,14 +11,14 @@ datasource db {
 model User {
   id            String   @id @default(cuid())
   role          Role     @default(VENDOR)
-  nama_petugas  String
-  foto_profil   String?
+  officer_name  String
+  profile_photo String?
   email         String   @unique
   password      String   // hashed password (Credentials / JWT)
-  alamat        String?
-  no_telp       String?
-  nama_vendor   String?  // hanya untuk role VENDOR, kosong untuk ADMIN dan VERIFIER
-  date_created_at DateTime @default(now())
+  address       String?
+  phone_number  String?
+  vendor_name   String?  // hanya untuk role VENDOR, kosong untuk ADMIN dan VERIFIER
+  created_at    DateTime @default(now())
   verified_at   DateTime?
   verified_by   String?
 
@@ -82,48 +82,48 @@ model VerificationToken {
 /* ----------  SUBMISSION  ---------- */
 model Submission {
   id                    String   @id @default(cuid())
-  status_approval_admin String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  approved_by_admin     String?
-  nama_vendor           String
-  berdasarkan           String
-  nama_petugas          String
-  pekerjaan             String
-  lokasi_kerja          String
-  pelaksanaan           String?  @db.Text
-  jam_kerja             String
-  lain_lain             String?  @db.Text
-  sarana_kerja          String
-  nomor_simja           String?
-  tanggal_simja         DateTime?
-  nomor_sika            String?
-  tanggal_sika          DateTime?
-  nomor_simlok          String?
-  tanggal_simlok        DateTime?
-  nama_pekerja          String   @db.Text
+  approval_status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  approved_by           String?
+  vendor_name           String
+  based_on              String
+  officer_name          String
+  job_description       String
+  work_location         String
+  implementation        String?  @db.Text
+  working_hours         String
+  other_notes           String?  @db.Text
+  work_facilities       String
+  simja_number          String?
+  simja_date            DateTime?
+  sika_number           String?
+  sika_date             DateTime?
+  simlok_number         String?
+  simlok_date           DateTime?
+  worker_names          String   @db.Text
   content               String?  @db.Text
-  keterangan            String?  @db.Text
-  jabatan_signer        String?  
-  nama_signer           String?  
-  upload_doc_sika       String?
-  upload_doc_simja      String?
+  notes                 String?  @db.Text
+  signer_position       String?  
+  signer_name           String?  
+  sika_document_upload  String?
+  simja_document_upload String?
   qrcode                String?
   created_at            DateTime @default(now())
   
   // Relations
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user_id               String
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   
-  approvedByUser        User?    @relation("ApprovedSubmissions", fields: [approved_by_admin], references: [id])
+  approved_by_user      User?    @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
   
   // Relasi ke daftar pekerja
-  daftarPekerja         DaftarPekerja[]
+  worker_list           WorkerList[]
 }
 
-/* ----------  DAFTAR PEKERJA  ---------- */
-model DaftarPekerja {
+/* ----------  WORKER LIST  ---------- */
+model WorkerList {
   id            String   @id @default(cuid())
-  nama_pekerja  String
-  foto_pekerja  String?
+  worker_name   String
+  worker_photo  String?
   submission_id String
   created_at    DateTime @default(now())
   

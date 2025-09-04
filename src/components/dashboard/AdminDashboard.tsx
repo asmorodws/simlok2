@@ -7,9 +7,7 @@ import {
   UserGroupIcon, 
   ClipboardDocumentCheckIcon, 
   ClockIcon,
-  EyeIcon,
-  CheckIcon,
-  XMarkIcon
+  EyeIcon
 } from "@heroicons/react/24/outline";
 import Card from "../ui/Card";
 import { Badge } from "../ui/Badge";
@@ -27,9 +25,9 @@ interface DashboardStats {
 
 interface LatestSubmission {
   id: string;
-  nama_vendor: string;
-  pekerjaan: string;
-  status_approval_admin: string;
+  vendor_name: string;
+  job_description: string;
+  approval_status: string;
   created_at: string;
 }
 
@@ -53,7 +51,7 @@ export default function AdminDashboard() {
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
 
   // Alert state
-  const [alert, setAlert] = useState<{
+  const [alert, _setAlert] = useState<{
     show: boolean;
     variant: 'success' | 'error' | 'warning' | 'info';
     title: string;
@@ -111,59 +109,6 @@ export default function AdminDashboard() {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleVerifyVendor = async (vendorId: string, action: 'approve' | 'reject') => {
-    try {
-      const response = await fetch(`/api/users/${vendorId}/verify`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      if (response.ok) {
-        // Refresh data after verification
-        fetchDashboardData();
-        // Close modal
-        setIsVerificationModalOpen(false);
-        setSelectedVendor(null);
-        
-        // Show success message
-        setAlert({
-          show: true,
-          variant: 'success',
-          title: 'Berhasil!',
-          message: `Vendor berhasil ${action === 'approve' ? 'disetujui' : 'ditolak'}`
-        });
-        
-        // Auto hide after 3 seconds
-        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 3000);
-      } else {
-        const error = await response.json();
-        setAlert({
-          show: true,
-          variant: 'error',
-          title: 'Gagal',
-          message: error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`
-        });
-        
-        // Auto hide after 5 seconds
-        setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      setAlert({
-        show: true,
-        variant: 'error',
-        title: 'Terjadi Kesalahan',
-        message: `Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} vendor`
-      });
-      
-      // Auto hide after 5 seconds
-      setTimeout(() => setAlert(prev => ({ ...prev, show: false })), 5000);
     }
   };
 
@@ -227,7 +172,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          Selamat datang di dashboard admin, {session?.user.nama_petugas ?? session?.user.name ?? "Admin"}
+          Selamat datang di dashboard admin, {session?.user.officer_name ?? session?.user.name ?? "Admin"}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-1">
           Kelola sistem dan monitor aktivitas pengguna
@@ -325,13 +270,13 @@ export default function AdminDashboard() {
                   latestSubmissions.map((submission) => (
                     <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                        {submission.nama_vendor}
+                        {submission.vendor_name}
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300 truncate max-w-xs">
-                        {submission.pekerjaan}
+                        {submission.job_description}
                       </td>
                       <td className="px-3 py-4">
-                        {getStatusBadge(submission.status_approval_admin)}
+                        {getStatusBadge(submission.approval_status)}
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
                         {formatDate(submission.created_at)}
@@ -390,10 +335,10 @@ export default function AdminDashboard() {
                       <td className="px-3 py-4">
                         <div>
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {vendor.nama_petugas}
+                            {vendor.officer_name}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {vendor.nama_vendor}
+                            {vendor.vendor_name}
                           </div>
                         </div>
                       </td>
@@ -401,7 +346,7 @@ export default function AdminDashboard() {
                         {vendor.email}
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(vendor.date_created_at)}
+                        {formatDate(vendor.created_at)}
                       </td>
                       <td className="px-3 py-4">
                         <div className="flex space-x-2">

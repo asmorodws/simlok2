@@ -6,20 +6,20 @@ declare module "next-auth" {
     user: {
       id: string;
       role: Role;
-      nama_petugas: string;
-      nama_vendor?: string | null;
+      officer_name: string;
+      vendor_name?: string | null;
       verified_at?: Date | null;
-      date_created_at?: Date;
+      created_at?: Date;
     } & DefaultSession["user"];
     accessToken?: string;
   }
 
   interface User extends DefaultUser {
     role: Role;
-    nama_petugas: string;
-    nama_vendor?: string | null;
+    officer_name: string;
+    vendor_name?: string | null;
     verified_at?: Date | null;
-    date_created_at?: Date;
+    created_at?: Date;
   }
 }
 
@@ -27,10 +27,10 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: Role;
-    nama_petugas?: string;
-    nama_vendor?: string | null;
+    officer_name?: string;
+    vendor_name?: string | null;
     verified_at?: Date | null;
-    date_created_at?: Date;
+    created_at?: Date;
     accessToken?: string;
   }
 }

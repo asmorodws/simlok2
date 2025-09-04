@@ -28,17 +28,17 @@ export async function GET(request: NextRequest) {
 
     // Filter by role
     if (session.user.role === 'VENDOR') {
-      whereClause.userId = session.user.id;
+      whereClause.user_id = session.user.id;
     }
 
     // Filter by status if provided
     if (status) {
-      whereClause.status_approval_admin = status;
+      whereClause.approval_status = status;
     }
 
     // Filter by vendor name if provided (admin/verifier only)
     if (vendorName && session.user.role !== 'VENDOR') {
-      whereClause.nama_vendor = {
+      whereClause.vendor_name = {
         contains: vendorName
       };
     }
@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
     // Add search functionality
     if (search) {
       const searchConditions = [
-        { nama_vendor: { contains: search } },
-        { nama_petugas: { contains: search } },
-        { pekerjaan: { contains: search } },
-        { lokasi_kerja: { contains: search } },
-        { nama_pekerja: { contains: search } }
+        { vendor_name: { contains: search } },
+        { officer_name: { contains: search } },
+        { job_description: { contains: search } },
+        { work_location: { contains: search } },
+        { worker_names: { contains: search } }
       ];
       
       whereClause.OR = searchConditions;
@@ -67,15 +67,15 @@ export async function GET(request: NextRequest) {
           user: {
             select: {
               id: true,
-              nama_petugas: true,
+              officer_name: true,
               email: true,
-              nama_vendor: true,
+              vendor_name: true,
             }
           },
-          approvedByUser: {
+          approved_by_user: {
             select: {
               id: true,
-              nama_petugas: true,
+              officer_name: true,
               email: true,
             }
           }
@@ -100,17 +100,17 @@ export async function GET(request: NextRequest) {
     // Include statistics for admin requests
     if (includeStats && session.user.role === 'ADMIN') {
       const statistics = await prisma.submission.groupBy({
-        by: ['status_approval_admin'],
+        by: ['approval_status'],
         _count: {
-          status_approval_admin: true
+          approval_status: true
         }
       });
 
       response.statistics = {
         total: total,
-        pending: statistics.find(s => s.status_approval_admin === 'PENDING')?._count.status_approval_admin || 0,
-        approved: statistics.find(s => s.status_approval_admin === 'APPROVED')?._count.status_approval_admin || 0,
-        rejected: statistics.find(s => s.status_approval_admin === 'REJECTED')?._count.status_approval_admin || 0,
+        pending: statistics.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+        approved: statistics.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+        rejected: statistics.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
       };
     }
 
@@ -149,21 +149,21 @@ export async function POST(request: NextRequest) {
       ...body,
       // Don't log sensitive data, just check if required fields exist
       hasRequiredFields: {
-        nama_vendor: !!body.nama_vendor,
-        berdasarkan: !!body.berdasarkan,
-        nama_petugas: !!body.nama_petugas,
-        pekerjaan: !!body.pekerjaan,
-        lokasi_kerja: !!body.lokasi_kerja,
-        jam_kerja: !!body.jam_kerja,
-        sarana_kerja: !!body.sarana_kerja,
-        nama_pekerja: !!body.nama_pekerja
+        vendor_name: !!body.vendor_name,
+        based_on: !!body.based_on,
+        officer_name: !!body.officer_name,
+        job_description: !!body.job_description,
+        work_location: !!body.work_location,
+        working_hours: !!body.working_hours,
+        work_facilities: !!body.work_facilities,
+        worker_names: !!body.worker_names
       }
     });
 
     // Validate required fields
     const requiredFields = [
-      'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
-      'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nama_pekerja'
+      'vendor_name', 'based_on', 'officer_name', 'job_description', 
+      'work_location', 'working_hours', 'work_facilities', 'worker_names'
     ];
 
     for (const field of requiredFields) {
@@ -208,18 +208,18 @@ export async function POST(request: NextRequest) {
       const submission = await prisma.submission.create({
         data: {
           ...submissionData,
-          userId: session.user.id,
-          tanggal_simja: submissionData.tanggal_simja ? new Date(submissionData.tanggal_simja) : null,
-          tanggal_sika: submissionData.tanggal_sika ? new Date(submissionData.tanggal_sika) : null,
+          user_id: session.user.id,
+          simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
+          sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,
           qrcode: qrData,
         },
         include: {
           user: {
             select: {
               id: true,
-              nama_petugas: true,
+              officer_name: true,
               email: true,
-              nama_vendor: true,
+              vendor_name: true,
             }
           }
         }
@@ -228,12 +228,12 @@ export async function POST(request: NextRequest) {
       // Create workers if they exist
       if (workers && Array.isArray(workers) && workers.length > 0) {
         const workersData = workers.map((worker: any) => ({
-          nama_pekerja: worker.nama_pekerja,
-          foto_pekerja: worker.foto_pekerja || null,
+          worker_name: worker.worker_name,
+          worker_photo: worker.worker_photo || null,
           submission_id: submission.id,
         }));
 
-        await prisma.daftarPekerja.createMany({
+        await prisma.workerList.createMany({
           data: workersData,
         });
 

@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { fileManager } from '@/lib/fileManager';
 
 // GET /api/files/manage - List all user files
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {

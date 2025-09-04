@@ -2,14 +2,14 @@ import { Role } from "@prisma/client";
 
 export interface UserData {
   id: string;
-  nama_petugas: string;
+  officer_name: string;
   email: string;
   role: Role;
-  alamat?: string | null;
-  no_telp?: string | null;
-  nama_vendor?: string | null;
-  date_created_at: string | Date;
+  address?: string | null;
+  phone_number?: string | null;
+  vendor_name?: string | null;
+  created_at: string | Date;
   verified_at?: string | Date | null;
   verified_by?: string | null;
-  foto_profil?: string | null;
+  profile_photo?: string | null;
 }

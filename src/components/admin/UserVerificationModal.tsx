@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { Role } from '@prisma/client';
 import { UserData } from '@/types/user';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
@@ -116,7 +115,7 @@ export default function UserVerificationModal({
 
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Apakah Anda yakin ingin {isApprove ? 'menyetujui' : 'menolak'} user{' '}
-              <strong className="text-gray-900 dark:text-white">{user.nama_petugas}</strong>?
+              <strong className="text-gray-900 dark:text-white">{user.officer_name}</strong>?
             </p>
 
             {!isApprove && (
@@ -243,7 +242,7 @@ export default function UserVerificationModal({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nama Petugas</p>
                             <p className="text-base font-medium text-gray-900 dark:text-white break-words">
-                              {user.nama_petugas}
+                              {user.officer_name}
                             </p>
                           </div>
                         </div>
@@ -260,7 +259,7 @@ export default function UserVerificationModal({
                           </div>
                         </div>
 
-                        {user.no_telp && (
+                        {user.phone_number && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <PhoneIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -268,13 +267,13 @@ export default function UserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No. Telepon</p>
                               <p className="text-base font-medium text-gray-900 dark:text-white">
-                                {user.no_telp}
+                                {user.phone_number}
                               </p>
                             </div>
                           </div>
                         )}
 
-                        {user.alamat && (
+                        {user.address && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-purple-100 dark:bg-purple-500/20 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <MapPinIcon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -282,7 +281,7 @@ export default function UserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Alamat</p>
                               <p className="text-base font-medium text-gray-900 dark:text-white break-words">
-                                {user.alamat}
+                                {user.address}
                               </p>
                             </div>
                           </div>
@@ -300,7 +299,7 @@ export default function UserVerificationModal({
                       </h3>
 
                       <div className="space-y-4">
-                        {user.nama_vendor && (
+                        {user.vendor_name && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <BuildingOfficeIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -308,7 +307,7 @@ export default function UserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nama Vendor</p>
                               <p className="text-base font-medium text-gray-900 dark:text-white break-words">
-                                {user.nama_vendor}
+                                {user.vendor_name}
                               </p>
                             </div>
                           </div>
@@ -321,7 +320,7 @@ export default function UserVerificationModal({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Tanggal Daftar</p>
                             <p className="text-base font-medium text-gray-900 dark:text-white">
-                              {formatDate(user.date_created_at)}
+                              {formatDate(user.created_at)}
                             </p>
                           </div>
                         </div>

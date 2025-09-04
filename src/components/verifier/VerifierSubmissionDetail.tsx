@@ -670,7 +670,7 @@ export default function VerifierSubmissionDetail({ submission }: VerifierSubmiss
         onClose={() => setSimlokPdfModal({ isOpen: false })}
         submissionId={submission.id}
         submissionName={submission.nama_vendor}
-        nomorSimlok={submission.nomor_simlok}
+        nomorSimlok={submission.nomor_simlok || ''}
       />
     </div>
   );

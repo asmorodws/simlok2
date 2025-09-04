@@ -8,7 +8,7 @@ interface Params {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<Params> }
 ) {
   try {
@@ -31,7 +31,7 @@ export async function GET(
       submission = await prisma.submission.findFirst({
         where: {
           id: id,
-          userId: session.user.id
+          user_id: session.user.id
         }
       });
     }
@@ -41,7 +41,7 @@ export async function GET(
     }
 
     // Get workers for this submission
-    const workers = await prisma.daftarPekerja.findMany({
+    const workers = await prisma.workerList.findMany({
       where: {
         submission_id: id
       },

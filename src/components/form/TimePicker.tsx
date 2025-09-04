@@ -54,8 +54,14 @@ export default function TimePicker({
   const compareTime = (time1: string, time2: string) => {
     if (!time1 || !time2) return true;
     
-    const [hours1, minutes1] = time1.split(':').map(Number);
-    const [hours2, minutes2] = time2.split(':').map(Number);
+    const time1Parts = time1.split(':').map(Number);
+    const time2Parts = time2.split(':').map(Number);
+    
+    const [hours1, minutes1] = time1Parts;
+    const [hours2, minutes2] = time2Parts;
+    
+    if (hours1 === undefined || minutes1 === undefined || 
+        hours2 === undefined || minutes2 === undefined) return true;
     
     const totalMinutes1 = hours1 * 60 + minutes1;
     const totalMinutes2 = hours2 * 60 + minutes2;
@@ -78,13 +84,13 @@ export default function TimePicker({
     if (value) {
       if (value.includes(' - ')) {
         const parts = value.split(' - ');
-        if (parts.length >= 2) {
+        if (parts.length >= 2 && parts[0] && parts[1]) {
           setStartTime(parts[0].trim());
           setEndTime(parts[1].replace(' WIB', '').trim());
         }
       } else if (value.includes(' s/d ')) {
         const parts = value.split(' s/d ');
-        if (parts.length >= 2) {
+        if (parts.length >= 2 && parts[0] && parts[1]) {
           setStartTime(parts[0].trim());
           setEndTime(parts[1].replace(' WIB', '').trim());
         }

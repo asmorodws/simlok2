@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { JWT_CONFIG, getTimeUntilExpiry, formatExpiryTime } from "@/utils/jwt-config";
 import ConfirmModal from "../ui/modal/ConfirmModal";
-import Alert from "../ui/alert/Alert";
 
 interface SessionExpiryHandlerProps {
   children: React.ReactNode;

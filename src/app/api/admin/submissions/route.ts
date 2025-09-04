@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
 
     // Filter by status if provided
     if (status) {
-      whereClause.status_approval_admin = status;
+      whereClause.approval_status = status;
     }
 
     // Filter by vendor name if provided
     if (vendorName) {
-      whereClause.nama_vendor = {
+      whereClause.vendor_name = {
         contains: vendorName,
         mode: 'insensitive'
       };
@@ -46,15 +46,15 @@ export async function GET(request: NextRequest) {
           user: {
             select: {
               id: true,
-              nama_petugas: true,
+              officer_name: true,
               email: true,
-              nama_vendor: true,
+              vendor_name: true,
             }
           },
-          approvedByUser: {
+          approved_by_user: {
             select: {
               id: true,
-              nama_petugas: true,
+              officer_name: true,
               email: true,
             }
           }
@@ -66,9 +66,9 @@ export async function GET(request: NextRequest) {
       prisma.submission.count({ where: whereClause }),
       // Get statistics
       prisma.submission.groupBy({
-        by: ['status_approval_admin'],
+        by: ['approval_status'],
         _count: {
-          status_approval_admin: true
+          approval_status: true
         }
       })
     ]);
@@ -76,9 +76,9 @@ export async function GET(request: NextRequest) {
     // Format statistics
     const stats = {
       total: total,
-      pending: statistics.find(s => s.status_approval_admin === 'PENDING')?._count.status_approval_admin || 0,
-      approved: statistics.find(s => s.status_approval_admin === 'APPROVED')?._count.status_approval_admin || 0,
-      rejected: statistics.find(s => s.status_approval_admin === 'REJECTED')?._count.status_approval_admin || 0,
+      pending: statistics.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+      approved: statistics.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+      rejected: statistics.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
     };
 
     return NextResponse.json({

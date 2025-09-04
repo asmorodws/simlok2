@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { SubmissionApprovalData } from '@/types/submission';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 
 // Function to generate auto SIMLOK number
@@ -14,21 +13,21 @@ async function generateSimlokNumber(): Promise<string> {
   // Get the last SIMLOK number for current month/year
   const lastSubmission = await prisma.submission.findFirst({
     where: {
-      nomor_simlok: {
+      simlok_number: {
         contains: `/${month}/${year}`
       }
     },
     orderBy: {
-      nomor_simlok: 'desc'
+      simlok_number: 'desc'
     }
   });
 
   let nextNumber = 1;
   
-  if (lastSubmission?.nomor_simlok) {
+  if (lastSubmission?.simlok_number) {
     // Extract number from format: number/MM/YYYY
-    const match = lastSubmission.nomor_simlok.match(/^(\d+)\/\d{2}\/\d{4}$/);
-    if (match) {
+    const match = lastSubmission.simlok_number.match(/^(\d+)\/\d{2}\/\d{4}$/);
+    if (match && match[1]) {
       nextNumber = parseInt(match[1]) + 1;
     }
   }
@@ -60,25 +59,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { 
         id,
         // Vendors can only see their own submissions
-        ...(session.user.role === 'VENDOR' ? { userId: session.user.id } : {})
+        ...(session.user.role === 'VENDOR' ? { user_id: session.user.id } : {})
       },
       include: {
         user: {
           select: {
             id: true,
-            nama_petugas: true,
+            officer_name: true,
             email: true,
-            nama_vendor: true,
+            vendor_name: true,
           }
         },
-        approvedByUser: {
+        approved_by_user: {
           select: {
             id: true,
-            nama_petugas: true,
+            officer_name: true,
             email: true,
           }
         },
-        daftarPekerja: {
+        worker_list: {
           orderBy: {
             created_at: 'asc'
           }
@@ -91,7 +90,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check permissions
-    if (session.user.role === 'VENDOR' && submission.userId !== session.user.id) {
+    if (session.user.role === 'VENDOR' && submission.user_id !== session.user.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
@@ -117,7 +116,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 async function generatePDF(submission: any) {
   try {
     // Only allow PDF generation for APPROVED submissions
-    if (submission.status_approval_admin !== 'APPROVED') {
+    if (submission.approval_status !== 'APPROVED') {
       return NextResponse.json({ error: 'PDF only available for approved submissions' }, { status: 400 });
     }
 
@@ -129,7 +128,7 @@ async function generatePDF(submission: any) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="SIMLOK_${submission.nomor_simlok?.replace(/\//g, '_')}.pdf"`,
+        'Content-Disposition': `inline; filename="SIMLOK_${submission.simlok_number?.replace(/\//g, '_')}.pdf"`,
       },
     });
 
@@ -166,14 +165,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       where: { 
         id,
         // Vendors can only edit their own submissions
-        ...(session.user.role === 'VENDOR' ? { userId: session.user.id } : {})
+        ...(session.user.role === 'VENDOR' ? { user_id: session.user.id } : {})
       }
     });
 
     console.log('PUT /api/submissions/[id] - Existing submission:', {
       found: !!existingSubmission,
-      status: existingSubmission?.status_approval_admin,
-      userId: existingSubmission?.userId
+      status: existingSubmission?.approval_status,
+      userId: existingSubmission?.user_id
     });
 
     if (!existingSubmission) {
@@ -184,12 +183,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Check permissions based on role
     if (session.user.role === 'VENDOR') {
       // Vendors can only edit PENDING submissions and only their own
-      if (existingSubmission.userId !== session.user.id) {
+      if (existingSubmission.user_id !== session.user.id) {
         console.log('PUT /api/submissions/[id] - Access denied: not owner');
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
       
-      if (existingSubmission.status_approval_admin !== 'PENDING') {
+      if (existingSubmission.approval_status !== 'PENDING') {
         console.log('PUT /api/submissions/[id] - Cannot edit non-pending submission');
         return NextResponse.json({ 
           error: 'Can only edit pending submissions' 
@@ -211,10 +210,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         console.log('PUT /api/submissions/[id] - Session user role:', session.user.role);
         
         const approvalData: any = {
-          status_approval_admin: body.status_approval_admin,
-          keterangan: body.keterangan,
-          tanggal_simlok: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
-          // tembusan: body.tembusan,
+          approval_status: body.status_approval_admin,
+          notes: body.keterangan,
+          simlok_date: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
         };
 
         // Only add fields that are provided and valid
@@ -228,21 +226,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         if (body.status_approval_admin === 'APPROVED') {
           // Generate auto SIMLOK number
           const autoSimlokNumber = await generateSimlokNumber();
-          updateData.nomor_simlok = autoSimlokNumber;
+          updateData.simlok_number = autoSimlokNumber;
           
-          updateData.pelaksanaan = body.pelaksanaan;
-          updateData.lain_lain = body.lain_lain;
+          updateData.implementation = body.pelaksanaan;
+          updateData.other_notes = body.lain_lain;
           updateData.content = body.content;
-          updateData.jabatan_signer = body.jabatan_signer;
-          updateData.nama_signer = body.nama_signer;
+          updateData.signer_position = body.jabatan_signer;
+          updateData.signer_name = body.nama_signer;
           
-          // Verify the user exists before setting approved_by_admin
+          // Verify the user exists before setting approved_by
           const adminUser = await prisma.user.findUnique({
             where: { id: session.user.id }
           });
           
           if (adminUser) {
-            updateData.approved_by_admin = session.user.id;
+            updateData.approved_by = session.user.id;
           } else {
             console.log('PUT /api/submissions/[id] - Admin user not found:', session.user.id);
             return NextResponse.json({ 
@@ -262,10 +260,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       
       // Only allow vendor to update certain fields and only if submission is PENDING
       const allowedFields = [
-        'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
-        'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nomor_simja', 
-        'tanggal_simja', 'nomor_sika', 'tanggal_sika', 'nama_pekerja',
-        'upload_doc_sika', 'upload_doc_simja'
+        'vendor_name', 'based_on', 'officer_name', 'job_description', 
+        'work_location', 'working_hours', 'work_facilities', 'simja_number', 
+        'simja_date', 'sika_number', 'sika_date', 'worker_names',
+        'sika_document_upload', 'simja_document_upload'
       ];
 
       allowedFields.forEach(field => {
@@ -275,15 +273,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
 
       // Handle date fields
-      if (body.tanggal_simja) {
-        updateData.tanggal_simja = new Date(body.tanggal_simja);
+      if (body.simja_date) {
+        updateData.simja_date = new Date(body.simja_date);
       }
-      if (body.tanggal_sika) {
-        updateData.tanggal_sika = new Date(body.tanggal_sika);
+      if (body.sika_date) {
+        updateData.sika_date = new Date(body.sika_date);
       }
 
-      // Handle workers update
-      const { workers, ...submissionData } = body;
     }
 
     // Perform the update
@@ -294,15 +290,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         user: {
           select: {
             id: true,
-            nama_petugas: true,
+            officer_name: true,
             email: true,
-            nama_vendor: true,
+            vendor_name: true,
           }
         },
-        approvedByUser: {
+        approved_by_user: {
           select: {
             id: true,
-            nama_petugas: true,
+            officer_name: true,
             email: true,
           }
         }
@@ -312,7 +308,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Handle workers if provided (only for vendor updates)
     if (session.user.role === 'VENDOR' && body.workers && Array.isArray(body.workers)) {
       // Delete existing workers for this submission
-      await prisma.daftarPekerja.deleteMany({
+      await prisma.workerList.deleteMany({
         where: {
           submission_id: id
         }
@@ -320,14 +316,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
       // Create new workers
       const validWorkers = body.workers.filter((worker: any) => 
-        worker.nama_pekerja && worker.nama_pekerja.trim() !== ''
+        worker.worker_name && worker.worker_name.trim() !== ''
       );
 
       if (validWorkers.length > 0) {
-        await prisma.daftarPekerja.createMany({
+        await prisma.workerList.createMany({
           data: validWorkers.map((worker: any) => ({
-            nama_pekerja: worker.nama_pekerja.trim(),
-            foto_pekerja: worker.foto_pekerja || null,
+            worker_name: worker.worker_name.trim(),
+            worker_photo: worker.worker_photo || null,
             submission_id: id
           }))
         });
@@ -343,7 +339,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/submissions/[id] - Delete submission 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -365,27 +361,27 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Permission checks based on role
     if (session.user.role === 'VENDOR') {
       // Vendors can only delete their own PENDING submissions
-      if (existingSubmission.userId !== session.user.id) {
+      if (existingSubmission.user_id !== session.user.id) {
         return NextResponse.json({ 
           error: 'Access denied. You can only delete your own submissions.' 
         }, { status: 403 });
       }
       
-      if (existingSubmission.status_approval_admin !== 'PENDING') {
+      if (existingSubmission.approval_status !== 'PENDING') {
         return NextResponse.json({ 
           error: 'Can only delete pending submissions. Approved or rejected submissions cannot be deleted.' 
         }, { status: 400 });
       }
     } else if (session.user.role === 'ADMIN') {
       // Admins can delete any submission, but warn about approved ones
-      if (existingSubmission.status_approval_admin === 'APPROVED') {
+      if (existingSubmission.approval_status === 'APPROVED') {
         return NextResponse.json({ 
           error: 'Cannot delete approved submissions. This would affect issued SIMLOK documents.' 
         }, { status: 400 });
       }
     } else if (session.user.role === 'VERIFIER') {
       // Verifiers can delete pending and rejected submissions
-      if (existingSubmission.status_approval_admin === 'APPROVED') {
+      if (existingSubmission.approval_status === 'APPROVED') {
         return NextResponse.json({ 
           error: 'Cannot delete approved submissions.' 
         }, { status: 400 });

@@ -59,13 +59,13 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
     if (isOpen) {
       if (mode === "edit" && user) {
         setFormData({
-          nama_petugas: user.nama_petugas,
+          nama_petugas: user.officer_name,
           email: user.email,
           password: "",
           role: user.role,
-          alamat: user.alamat || "",
-          no_telp: user.no_telp || "",
-          nama_vendor: user.nama_vendor || "",
+          alamat: user.address || "",
+          no_telp: user.phone_number || "",
+          nama_vendor: user.vendor_name || "",
           verified_at: user.verified_at ? new Date(user.verified_at).toISOString().slice(0, 16) : "",
         });
       } else {

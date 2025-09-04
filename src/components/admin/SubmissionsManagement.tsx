@@ -18,41 +18,41 @@ import ExportModal from './ExportModal';
 
 interface Submission {
   id: string;
-  status_approval_admin: string;
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan: string | null;
-  jam_kerja: string;
-  lain_lain?: string;
-  sarana_kerja: string;
+  approval_status: string;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
+  working_hours: string;
+  other_notes?: string;
+  work_facilities: string;
   // tembusan?: string;
-  nomor_simja?: string;
-  tanggal_simja?: string | null;
-  nomor_sika?: string;
-  tanggal_sika?: string | null;
-  nomor_simlok?: string;
-  tanggal_simlok?: string | null;
-  nama_pekerja: string;
+  simja_number?: string;
+  simja_date?: string | null;
+  sika_number?: string;
+  sika_date?: string | null;
+  simlok_number?: string;
+  simlok_date?: string | null;
+  worker_names: string;
   content: string;
-  keterangan?: string;
-  upload_doc_sika?: string;
-  upload_doc_simja?: string;
+  notes?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
   qrcode?: string;
   created_at: string;
-  jabatan_signer?: string;
-  nama_signer?: string;
+  signer_position?: string;
+  signer_name?: string;
   user: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
-    nama_vendor: string;
+    vendor_name: string;
   };
   approvedByUser?: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
   };
 }
@@ -334,15 +334,15 @@ export default function SubmissionsManagement() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th onClick={() => handleSort("nama_vendor")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
-                  <div className="flex items-center space-x-1"><span>Nama Vendor</span>{getSortIcon("nama_vendor")}</div>
+                <th onClick={() => handleSort("vendor_name")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
+                  <div className="flex items-center space-x-1"><span>Nama Vendor</span>{getSortIcon("vendor_name")}</div>
                 </th>
-                <th onClick={() => handleSort("pekerjaan")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
-                  <div className="flex items-center space-x-1"><span>Pekerjaan</span>{getSortIcon("pekerjaan")}</div>
+                <th onClick={() => handleSort("job_description")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
+                  <div className="flex items-center space-x-1"><span>Pekerjaan</span>{getSortIcon("job_description")}</div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasi & Waktu</th>
-                <th onClick={() => handleSort("status_approval_admin")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
-                  <div className="flex items-center space-x-1"><span>Status</span>{getSortIcon("status_approval_admin")}</div>
+                <th onClick={() => handleSort("approval_status")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
+                  <div className="flex items-center space-x-1"><span>Status</span>{getSortIcon("approval_status")}</div>
                 </th>
                 <th onClick={() => handleSort("created_at")} className="cursor-pointer px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hover:bg-gray-100">
                   <div className="flex items-center space-x-1"><span>Tgl Dibuat</span>{getSortIcon("created_at")}</div>
@@ -354,22 +354,22 @@ export default function SubmissionsManagement() {
               {submissions.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{s.nama_vendor}</div>
-                    <div className="text-sm text-gray-500">{s.nama_petugas}</div>
+                    <div className="text-sm font-medium text-gray-900">{s.vendor_name}</div>
+                    <div className="text-sm text-gray-500">{s.officer_name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 max-w-xs truncate" title={s.pekerjaan}>{s.pekerjaan}</div>
-                    <div className="text-sm text-gray-500" title={s.nama_pekerja}>
-                      {formatNamaPekerjaPreview(s.nama_pekerja)}
+                    <div className="text-sm text-gray-900 max-w-xs truncate" title={s.job_description}>{s.job_description}</div>
+                    <div className="text-sm text-gray-500" title={s.worker_names}>
+                      {formatNamaPekerjaPreview(s.worker_names)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 max-w-xs truncate" title={s.lokasi_kerja}>{s.lokasi_kerja}</div>
-                    <div className="text-sm text-gray-500">{s.jam_kerja}</div>
+                    <div className="text-sm text-gray-900 max-w-xs truncate" title={s.work_location}>{s.work_location}</div>
+                    <div className="text-sm text-gray-500">{s.working_hours}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(s.status_approval_admin)}
-                    {s.nomor_simlok && <div className="text-xs text-gray-500 mt-1">SIMLOK: {s.nomor_simlok}</div>}
+                    {getStatusBadge(s.approval_status)}
+                    {s.simlok_number && <div className="text-xs text-gray-500 mt-1">SIMLOK: {s.simlok_number}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{formatDate(s.created_at)}</div>

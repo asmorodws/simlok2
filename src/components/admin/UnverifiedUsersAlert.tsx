@@ -1,16 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ExclamationTriangleIcon, UserIcon, ClockIcon } from '@heroicons/react/24/outline';
-
-interface UnverifiedUser {
-  id: string;
-  nama_petugas: string;
-  email: string;
-  role: string;
-  nama_vendor?: string;
-  date_created_at: string;
-}
+import { ExclamationTriangleIcon, UserIcon } from '@heroicons/react/24/outline';
 
 interface UnverifiedUsersAlertProps {
   onViewPendingUsers?: () => void;

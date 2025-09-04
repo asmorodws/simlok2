@@ -1,34 +1,34 @@
 export interface SubmissionData {
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan?: string; // akan diisi oleh admin saat approve
-  jam_kerja: string;
-  lain_lain?: string; // akan diisi oleh admin saat approve
-  sarana_kerja: string;
-  nomor_simja?: string;
-  tanggal_simja?: string;
-  nomor_sika?: string;
-  tanggal_sika?: string;
-  nama_pekerja: string;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation?: string; // akan diisi oleh admin saat approve
+  working_hours: string;
+  other_notes?: string; // akan diisi oleh admin saat approve
+  work_facilities: string;
+  simja_number?: string;
+  simja_date?: string;
+  sika_number?: string;
+  sika_date?: string;
+  worker_names: string;
   content?: string; // akan diisi oleh admin saat approve
-  upload_doc_sika?: string;
-  upload_doc_simja?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
 }
 
 export interface SubmissionApprovalData {
-  status_approval_admin: 'APPROVED' | 'REJECTED';
-  keterangan?: string;
-  nomor_simlok?: string;
-  tanggal_simlok?: string;
+  approval_status: 'APPROVED' | 'REJECTED';
+  notes?: string;
+  simlok_number?: string;
+  simlok_date?: string;
 }
 
-export interface DaftarPekerja {
+export interface WorkerList {
   id: string;
-  nama_pekerja: string;
-  foto_pekerja?: string | null;
+  worker_name: string;
+  worker_photo?: string | null;
   submission_id: string;
   created_at: Date;
 }

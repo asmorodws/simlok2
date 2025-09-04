@@ -181,8 +181,8 @@ export const exportSubmissionsToExcel = (data: SubmissionData[], options: Export
 
     // Add workers detail sheet if there's worker data
     const allWorkers: any[] = [];
-    filteredData.forEach((submission, submissionIndex) => {
-      submission.daftarPekerja.forEach((worker, workerIndex) => {
+    filteredData.forEach((submission, _submissionIndex) => {
+      submission.daftarPekerja.forEach((worker, _workerIndex) => {
         allWorkers.push({
           'No': allWorkers.length + 1,
           'ID Submission': submission.id,

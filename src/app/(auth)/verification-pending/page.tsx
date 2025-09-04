@@ -30,6 +30,7 @@ export default function VerificationPendingPage() {
     } else if (status === 'unauthenticated' && autoRedirect && countdown === 0) {
       router.push("/login");
     }
+    return undefined;
   }, [countdown, autoRedirect, router, status]);
 
   useEffect(() => {
@@ -230,13 +231,13 @@ export default function VerificationPendingPage() {
                   <div className="flex justify-between">
                     <span>Nama:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {session?.user?.nama_petugas || session?.user?.name || 'N/A'}
+                      {session?.user?.officer_name || session?.user?.name || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Vendor:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {session?.user?.nama_vendor || 'N/A'}
+                      {session?.user?.vendor_name || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -248,8 +249,8 @@ export default function VerificationPendingPage() {
                   <div className="flex justify-between">
                     <span>Tanggal Daftar:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {session?.user?.date_created_at ? 
-                        formatDate(session.user.date_created_at.toString()) : 
+                      {session?.user?.created_at ? 
+                        formatDate(session.user.created_at.toString()) : 
                         'N/A'
                       }
                     </span>
@@ -257,8 +258,8 @@ export default function VerificationPendingPage() {
                   <div className="flex justify-between">
                     <span>Waktu:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {session?.user?.date_created_at ? 
-                        formatTime(session.user.date_created_at.toString()) : 
+                      {session?.user?.created_at ? 
+                        formatTime(session.user.created_at.toString()) : 
                         'N/A'
                       }
                     </span>

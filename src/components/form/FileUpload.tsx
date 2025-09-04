@@ -90,6 +90,8 @@ export default function FileUpload({
     if (!files || files.length === 0) return;
 
     const file = files[0];
+    if (!file) return;
+    
     setError(null);
 
     // Validate file

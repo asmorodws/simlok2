@@ -3,9 +3,10 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
-import { JWT_CONFIG, isTokenExpired, getTimeUntilExpiry } from "@/utils/jwt-config";
+import { JWT_CONFIG } from "@/utils/jwt-config";
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -29,13 +30,13 @@ export const authOptions: NextAuthOptions = {
         // return the minimal shape Next-Auth expects
         return {
           id: user.id,
-          email: user.email,
-          name: user.nama_petugas,
           role: user.role,
-          nama_petugas: user.nama_petugas,
-          nama_vendor: user.nama_vendor,
+          name: user.officer_name,
+          email: user.email || null,
+          officer_name: user.officer_name,
+          vendor_name: user.vendor_name,
           verified_at: user.verified_at,
-          date_created_at: user.date_created_at,
+          created_at: user.created_at,
         };
       },
     }),
@@ -60,10 +61,12 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
-        token.nama_petugas = user.nama_petugas;
-        token.nama_vendor = user.nama_vendor;
-        token.verified_at = user.verified_at;
-        token.date_created_at = user.date_created_at;
+        token.officer_name = user.officer_name;
+        token.vendor_name = user.vendor_name || null;
+        token.verified_at = user.verified_at || null;
+        if (user.created_at) {
+          token.created_at = user.created_at;
+        }
         // Set issued at time and expiry using configured values
         token.iat = now;
         token.exp = now + JWT_CONFIG.JWT_EXPIRE_TIME;
@@ -100,23 +103,23 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         session.user.id   = token.id as string; // Use the stored user.id instead of token.sub
         session.user.role = token.role as import("@prisma/client").Role;
-        session.user.nama_petugas = token.nama_petugas as string;
-        session.user.nama_vendor = token.nama_vendor as string | null;
+        session.user.officer_name = token.officer_name as string;
+        session.user.vendor_name = token.vendor_name as string | null;
         session.user.verified_at = token.verified_at as Date | null;
-        session.user.date_created_at = token.date_created_at as Date;
+        session.user.created_at = token.created_at as Date;
         console.log('Session callback - session.user.id:', session.user.id); // Debug log
       }
       return session;
     },
   },
   events: {
-    async signIn({ user, account, profile, isNewUser }) {
+    async signIn({ user }) {
       console.log(`User ${user.email} signed in at ${new Date()}`);
     },
-    async signOut({ session, token }) {
+    async signOut() {
       console.log(`User signed out at ${new Date()}`);
     },
-    async session({ session, token }) {
+    async session({ token }) {
       // Called whenever a session is checked
       if (token.exp && typeof token.exp === 'number') {
         const now = Date.now() / 1000;
@@ -127,5 +130,4 @@ export const authOptions: NextAuthOptions = {
     }
   },
   pages: { signIn: "/login" },
-  secret: process.env.NEXTAUTH_SECRET,
 };

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import Toast, { ToastProps } from './Toast';
+import Toast from './Toast';
 
 interface ToastData {
   id: string;
@@ -45,7 +45,7 @@ export default function ToastContainer() {
           variant={toast.variant}
           title={toast.title}
           message={toast.message}
-          duration={toast.duration}
+          duration={toast.duration || 5000}
           onClose={removeToast}
         />
       ))}

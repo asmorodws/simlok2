@@ -60,8 +60,8 @@ export default function UnverifiedUserPage() {
           <div className="mb-8">
             <p className="text-sm text-gray-700 mb-2">Akun anda di daftarkan pada</p>
             <div className="text-sm font-medium text-gray-800">
-              <div>tanggal {session?.user?.date_created_at ? formatDate(session.user.date_created_at.toString()) : '6-6-2006'}</div>
-              <div>jam {session?.user?.date_created_at ? formatTime(session.user.date_created_at.toString()) : '16:06'}</div>
+              <div>tanggal {session?.user?.created_at ? formatDate(session.user.created_at.toString()) : '6-6-2006'}</div>
+              <div>jam {session?.user?.created_at ? formatTime(session.user.created_at.toString()) : '16:06'}</div>
             </div>
           </div>
 

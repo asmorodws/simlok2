@@ -14,43 +14,41 @@ import Button from '../ui/button/Button';
 import Alert from '../ui/alert/Alert';
 import { useToast } from '@/hooks/useToast';
 import ConfirmModal from '../ui/modal/ConfirmModal';
-import LoadingSpinner from '../ui/loading/LoadingSpinner';
 
 interface Submission {
   id: string;
-  status_approval_admin: string;
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan: string | null;
-  jam_kerja: string;
-  lain_lain?: string;
-  sarana_kerja: string;
-  // tembusan?: string;
-  nomor_simja?: string;
-  tanggal_simja?: string | null;
-  nomor_sika?: string;
-  tanggal_sika?: string | null;
-  nomor_simlok?: string;
-  tanggal_simlok?: string | null;
-  nama_pekerja: string;
+  approval_status: string;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
+  working_hours: string;
+  other_notes?: string;
+  work_facilities: string;
+  simja_number?: string;
+  simja_date?: string | null;
+  sika_number?: string;
+  sika_date?: string | null;
+  simlok_number?: string;
+  simlok_date?: string | null;
+  worker_names: string;
   content: string;
-  keterangan?: string;
-  upload_doc_sika?: string;
-  upload_doc_simja?: string;
+  notes?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
   qrcode?: string;
   created_at: string;
   user: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
-    nama_vendor: string;
+    vendor_name: string;
   };
   approvedByUser?: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
   };
 }
@@ -335,33 +333,33 @@ export default function VendorSubmissionsContent() {
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  onClick={() => handleSort("nama_vendor")}
+                  onClick={() => handleSort("vendor_name")}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 >
                   <div className="flex items-center space-x-1">
                     <span>Nama Vendor</span>
-                    {getSortIcon("nama_vendor")}
+                    {getSortIcon("vendor_name")}
                   </div>
                 </th>
                 <th 
-                  onClick={() => handleSort("pekerjaan")}
+                  onClick={() => handleSort("job_description")}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 >
                   <div className="flex items-center space-x-1">
                     <span>Pekerjaan</span>
-                    {getSortIcon("pekerjaan")}
+                    {getSortIcon("job_description")}
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lokasi & Waktu
                 </th>
                 <th 
-                  onClick={() => handleSort("status_approval_admin")}
+                  onClick={() => handleSort("approval_status")}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 >
                   <div className="flex items-center space-x-1">
                     <span>Status</span>
-                    {getSortIcon("status_approval_admin")}
+                    {getSortIcon("approval_status")}
                   </div>
                 </th>
                 <th 
@@ -385,28 +383,28 @@ export default function VendorSubmissionsContent() {
               {submissions.map((submission) => (
                 <tr key={submission.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{submission.nama_vendor}</div>
-                    <div className="text-sm text-gray-500">{submission.nama_petugas}</div>
+                    <div className="text-sm font-medium text-gray-900">{submission.vendor_name}</div>
+                    <div className="text-sm text-gray-500">{submission.officer_name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.pekerjaan}>
-                      {submission.pekerjaan}
+                    <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.job_description}>
+                      {submission.job_description}
                     </div>
-                    <div className="text-sm text-gray-500" title={submission.nama_pekerja}>
-                      {formatNamaPekerjaPreview(submission.nama_pekerja)}
+                    <div className="text-sm text-gray-500" title={submission.worker_names}>
+                      {formatNamaPekerjaPreview(submission.worker_names)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.lokasi_kerja}>
-                      {submission.lokasi_kerja}
+                    <div className="text-sm text-gray-900 max-w-xs truncate" title={submission.work_location}>
+                      {submission.work_location}
                     </div>
-                    <div className="text-sm text-gray-500">{submission.pelaksanaan}</div>
+                    <div className="text-sm text-gray-500">{submission.implementation}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(submission.status_approval_admin)}
-                    {submission.nomor_simlok && (
+                    {getStatusBadge(submission.approval_status)}
+                    {submission.simlok_number && (
                       <div className="text-xs text-gray-500 mt-1">
-                        SIMLOK: {submission.nomor_simlok}
+                        SIMLOK: {submission.simlok_number}
                       </div>
                     )}
                   </td>
@@ -414,10 +412,10 @@ export default function VendorSubmissionsContent() {
                     <div className="text-sm text-gray-900">{formatDate(submission.created_at)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {submission.keterangan && (
+                    {submission.notes && (
                       <div className="max-w-xs">
-                        <p className="text-sm text-gray-600 truncate" title={submission.keterangan}>
-                          {submission.keterangan}
+                        <p className="text-sm text-gray-600 truncate" title={submission.notes}>
+                          {submission.notes}
                         </p>
                       </div>
                     )}
@@ -432,7 +430,7 @@ export default function VendorSubmissionsContent() {
                       >
                         Lihat
                       </Button>
-                      {submission.status_approval_admin === 'PENDING' && (
+                      {submission.approval_status === 'PENDING' && (
                         <>
                           <Link href={`/vendor/submissions/edit/${submission.id}`}>
                             <Button
@@ -454,7 +452,7 @@ export default function VendorSubmissionsContent() {
                           </Button>
                         </>
                       )}
-                      {submission.status_approval_admin !== 'PENDING' && (
+                      {submission.approval_status !== 'PENDING' && (
                         <span className="text-gray-400 text-xs">Tidak dapat diubah</span>
                       )}
                     </div>

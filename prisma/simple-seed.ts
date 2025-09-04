@@ -8,59 +8,59 @@ async function main() {
   
   const users = [
     {
-      nama_petugas: "Admin Utama",
+      officer_name: "Admin Utama",
       email: "admin@example.com",
       password: "admin123",
       role: Role.ADMIN,
-      alamat: "Jl. Admin No. 1, Jakarta",
-      no_telp: "081234567890",
-      nama_vendor: null, // kosong untuk admin
+      address: "Jl. Admin No. 1, Jakarta",
+      phone_number: "081234567890",
+      vendor_name: null, // kosong untuk admin
       verified_at: new Date(), // admin sudah terverifikasi
       verified_by: "SYSTEM",
     },
     {
-      nama_petugas: "Verifier Utama",
+      officer_name: "Verifier Utama",
       email: "verifier@example.com",
       password: "verifier123",
       role: Role.VERIFIER,
-      alamat: "Jl. Verifier No. 2, Jakarta",
-      no_telp: "081234567891",
-      nama_vendor: null, // kosong untuk verifier
+      address: "Jl. Verifier No. 2, Jakarta",
+      phone_number: "081234567891",
+      vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
       verified_by: "ADMIN",
     },
     {
-      nama_petugas: "John Doe",
-      email: "vendor1@example.com",
+      officer_name: "John Doe",
+      email: "john@vendorsatu.com",
       password: "vendor123",
       role: Role.VENDOR,
-      alamat: "Jl. Vendor 1 No. 3, Jakarta",
-      no_telp: "081234567892",
-      nama_vendor: "PT. Vendor Satu",
+      address: "Jl. Vendor Satu No. 10, Jakarta",
+      phone_number: "081234567892",
+      vendor_name: "PT. Vendor Satu",
       verified_at: new Date(), // vendor sudah terverifikasi
       verified_by: "ADMIN",
     },
     {
-      nama_petugas: "Jane Smith",
-      email: "vendor2@example.com",
+      officer_name: "Jane Smith",
+      email: "jane@vendordua.com",
       password: "vendor123",
       role: Role.VENDOR,
-      alamat: "Jl. Vendor 2 No. 4, Jakarta",
-      no_telp: "081234567893",
-      nama_vendor: "CV. Vendor Dua",
+      address: "Jl. Vendor Dua No. 20, Jakarta",
+      phone_number: "081234567893",
+      vendor_name: "CV. Vendor Dua",
       verified_at: new Date(), // vendor sudah terverifikasi
       verified_by: "ADMIN",
     },
     {
-      nama_petugas: "Bob Wilson",
-      email: "vendor3@example.com",
+      officer_name: "Bob Wilson",
+      email: "bob@vendortiga.com",
       password: "vendor123",
       role: Role.VENDOR,
-      alamat: "Jl. Vendor 3 No. 5, Jakarta",
-      no_telp: "081234567894",
-      nama_vendor: "PT. Vendor Tiga",
-      verified_at: null, // vendor belum terverifikasi
-      verified_by: null,
+      address: "Jl. Vendor Tiga No. 30, Jakarta",
+      phone_number: "081234567894",
+      vendor_name: "PT. Vendor Tiga",
+      verified_at: new Date(), // vendor sudah terverifikasi
+      verified_by: "ADMIN",
     },
   ];
 
@@ -71,27 +71,27 @@ async function main() {
     try {
       const hashedPassword = await bcrypt.hash(user.password, 10);
 
-      const createdUser = await prisma.user.upsert({
+      await prisma.user.upsert({
         where: { email: user.email },
         update: {
           // Update existing user data
-          nama_petugas: user.nama_petugas,
+          officer_name: user.officer_name,
           password: hashedPassword,
           role: user.role,
-          alamat: user.alamat,
-          no_telp: user.no_telp,
-          nama_vendor: user.nama_vendor,
+          address: user.address,
+          phone_number: user.phone_number,
+          vendor_name: user.vendor_name,
           verified_at: user.verified_at,
           verified_by: user.verified_by,
         },
         create: {
-          nama_petugas: user.nama_petugas,
+          officer_name: user.officer_name,
           email: user.email,
           password: hashedPassword,
           role: user.role,
-          alamat: user.alamat,
-          no_telp: user.no_telp,
-          nama_vendor: user.nama_vendor,
+          address: user.address,
+          phone_number: user.phone_number,
+          vendor_name: user.vendor_name,
           verified_at: user.verified_at,
           verified_by: user.verified_by,
         },

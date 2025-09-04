@@ -12,13 +12,13 @@ import TimePicker from '@/components/form/TimePicker';
 import FileUpload from '@/components/form/FileUpload';
 import Alert from "../ui/alert/Alert";
 import { useToast } from '@/hooks/useToast';
-import { SubmissionData, DaftarPekerja } from '@/types/submission';
+import { SubmissionData } from '@/types/submission';
 
 // Define Worker interface for dynamic inputs
 interface Worker {
   id: string;
-  nama_pekerja: string;
-  foto_pekerja: string;
+  worker_name: string;
+  worker_photo: string;
 }
 
 export default function SubmissionForm() {
@@ -31,7 +31,7 @@ export default function SubmissionForm() {
 
   // State for dynamic workers
   const [workers, setWorkers] = useState<Worker[]>([
-    { id: '1', nama_pekerja: '', foto_pekerja: '' }
+    { id: '1', worker_name: '', worker_photo: '' }
   ]);
 
   // Auto-fill form data when session is available
@@ -40,40 +40,29 @@ export default function SubmissionForm() {
       console.log('Session user data:', session.user); // Debug log
       setFormData(prev => ({
         ...prev,
-        nama_vendor: session.user.nama_vendor || prev.nama_vendor || '',
-        nama_petugas: session.user.nama_petugas || prev.nama_petugas || '',
+        vendor_name: session.user.vendor_name || prev.vendor_name || '',
+        officer_name: session.user.officer_name || prev.officer_name || '',
       }));
     }
   }, [session]);
 
   
   const [formData, setFormData] = useState<SubmissionData>({
-    nama_vendor: '',
-    berdasarkan: '',
-    nama_petugas: '',
-    pekerjaan: '',
-    lokasi_kerja: '',
-    jam_kerja: '',
-    sarana_kerja: '',
-    nomor_simja: '',
-    tanggal_simja: '',
-    nomor_sika: '',
-    tanggal_sika: '',
-    nama_pekerja: '',
-    upload_doc_sika: '',
-    upload_doc_simja: '',
+    vendor_name: '',
+    based_on: '',
+    officer_name: '',
+    job_description: '',
+    work_location: '',
+    working_hours: '',
+    work_facilities: '',
+    simja_number: '',
+    simja_date: '',
+    sika_number: '',
+    sika_date: '',
+    worker_names: '',
+    sika_document_upload: '',
+    simja_document_upload: '',
   });
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, files } = e.target;
-    if (files && files[0]) {
-      // For now, just store the file name. In production, you'd upload to a file storage service
-      setFormData(prev => ({
-        ...prev,
-        [name]: files[0].name
-      }));
-    }
-  };
 
   // Handle file upload from FileUpload component
   const handleFileUpload = (fieldName: string) => (url: string) => {
@@ -101,7 +90,7 @@ export default function SubmissionForm() {
   const handleTimeChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
-      jam_kerja: value
+      working_hours: value
     }));
   };
 
@@ -109,8 +98,8 @@ export default function SubmissionForm() {
   const addWorker = () => {
     const newWorker: Worker = {
       id: Date.now().toString(),
-      nama_pekerja: '',
-      foto_pekerja: ''
+      worker_name: '',
+      worker_photo: ''
     };
     setWorkers(prev => [...prev, newWorker]);
   };
@@ -123,13 +112,13 @@ export default function SubmissionForm() {
 
   const updateWorkerName = (id: string, nama: string) => {
     setWorkers(prev => prev.map(worker =>
-      worker.id === id ? { ...worker, nama_pekerja: nama } : worker
+      worker.id === id ? { ...worker, worker_name: nama } : worker
     ));
   };
 
   const updateWorkerPhoto = (id: string, foto: string) => {
     setWorkers(prev => prev.map(worker =>
-      worker.id === id ? { ...worker, foto_pekerja: foto } : worker
+      worker.id === id ? { ...worker, worker_photo: foto } : worker
     ));
   };
 
@@ -139,7 +128,7 @@ export default function SubmissionForm() {
 
     try {
       // Validate workers
-      const validWorkers = workers.filter(worker => worker.nama_pekerja.trim() !== '');
+      const validWorkers = workers.filter(worker => worker.worker_name.trim() !== '');
       if (validWorkers.length === 0) {
         setAlert({
           variant: 'error',
@@ -151,7 +140,7 @@ export default function SubmissionForm() {
       }
 
       // Check if all workers have photos
-      const workersWithoutPhoto = validWorkers.filter(worker => !worker.foto_pekerja.trim());
+      const workersWithoutPhoto = validWorkers.filter(worker => !worker.worker_photo.trim());
       if (workersWithoutPhoto.length > 0) {
         setAlert({
           variant: 'error',
@@ -163,12 +152,12 @@ export default function SubmissionForm() {
       }
 
       // Format worker names for database
-      const workerNames = validWorkers.map(worker => worker.nama_pekerja.trim()).join('\n');
+      const workerNames = validWorkers.map(worker => worker.worker_name.trim()).join('\n');
 
       // Prepare submission data
       const formattedData = {
         ...formData,
-        nama_pekerja: workerNames,
+        worker_names: workerNames,
         workers: validWorkers // Include workers data for API processing
       };
 
@@ -231,40 +220,40 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="nama_vendor">Nama vendor</Label>
+                  <Label htmlFor="vendor_name">Nama vendor</Label>
                   <Input
-                    id="nama_vendor"
-                    name="nama_vendor"
-                    value={session?.user?.nama_vendor || formData.nama_vendor || ''}
+                    id="vendor_name"
+                    name="vendor_name"
+                    value={session?.user?.vendor_name || formData.vendor_name || ''}
                     onChange={handleChange}
                     required
-                    readOnly={!!session?.user?.nama_vendor}
-                    disabled={!!session?.user?.nama_vendor}
-                    className={session?.user?.nama_vendor ? " cursor-not-allowed" : ""}
+                    readOnly={!!session?.user?.vendor_name}
+                    disabled={!!session?.user?.vendor_name}
+                    className={session?.user?.vendor_name ? " cursor-not-allowed" : ""}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="nama_petugas">Nama petugas</Label>
+                  <Label htmlFor="officer_name">Nama petugas</Label>
                   <Input
-                    id="nama_petugas"
-                    name="nama_petugas"
-                    value={session?.user?.nama_petugas || formData.nama_petugas || ''}
+                    id="officer_name"
+                    name="officer_name"
+                    value={session?.user?.officer_name || formData.officer_name || ''}
                     onChange={handleChange}
                     required
-                    readOnly={!!session?.user?.nama_petugas}
-                    disabled={!!session?.user?.nama_petugas}
-                    className={session?.user?.nama_petugas ? " cursor-not-allowed" : ""}
+                    readOnly={!!session?.user?.officer_name}
+                    disabled={!!session?.user?.officer_name}
+                    className={session?.user?.officer_name ? " cursor-not-allowed" : ""}
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="berdasarkan">Berdasarkan</Label>
+                  <Label htmlFor="based_on">Berdasarkan</Label>
                   <Input
-                    id="berdasarkan"
-                    name="berdasarkan"
-                    value={formData.berdasarkan}
+                    id="based_on"
+                    name="based_on"
+                    value={formData.based_on}
                     onChange={handleChange}
                     type='text'
                     required
@@ -273,11 +262,11 @@ export default function SubmissionForm() {
 
                 {/* Document Numbers */}
                 <div>
-                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
+                  <Label htmlFor="simja_number">Nomor SIMJA</Label>
                   <Input
-                    id="nomor_simja"
-                    name="nomor_simja"
-                    value={formData.nomor_simja}
+                    id="simja_number"
+                    name="simja_number"
+                    value={formData.simja_number}
                     onChange={handleChange}
                     placeholder="Contoh: SIMJA/2024/001"
                     required
@@ -285,11 +274,11 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
+                  <Label htmlFor="sika_number">Nomor SIKA</Label>
                   <Input
-                    id="nomor_sika"
-                    name="nomor_sika"
-                    value={formData.nomor_sika}
+                    id="sika_number"
+                    name="sika_number"
+                    value={formData.sika_number}
                     onChange={handleChange}
                     placeholder="Contoh: SIKA/2024/001"
                     required
@@ -297,24 +286,24 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
+                  <Label htmlFor="simja_date">Tanggal SIMJA</Label>
                   <DatePicker
-                    id="tanggal_simja"
-                    name="tanggal_simja"
-                    value={formData.tanggal_simja}
-                    onChange={handleDateChange('tanggal_simja')}
+                    id="simja_date"
+                    name="simja_date"
+                    value={formData.simja_date || ''}
+                    onChange={handleDateChange('simja_date')}
                     placeholder="Pilih tanggal SIMJA"
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
+                  <Label htmlFor="sika_date">Tanggal SIKA</Label>
                   <DatePicker
-                    id="tanggal_sika"
-                    name="tanggal_sika"
-                    value={formData.tanggal_sika}
-                    onChange={handleDateChange('tanggal_sika')}
+                    id="sika_date"
+                    name="sika_date"
+                    value={formData.sika_date || ''}
+                    onChange={handleDateChange('sika_date')}
                     placeholder="Pilih tanggal SIKA"
                     required
                   />
@@ -322,15 +311,15 @@ export default function SubmissionForm() {
 
                 {/* File Upload Areas */}
                 <div className="space-y-2">
-                  <Label htmlFor="upload_doc_simja">UPLOAD DOKUMEN SIMJA</Label>
+                  <Label htmlFor="simja_document_upload">UPLOAD DOKUMEN SIMJA</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <FileUpload
-                      id="upload_doc_simja"
-                      name="upload_doc_simja"
+                      id="simja_document_upload"
+                      name="simja_document_upload"
                       label=""
                       description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                      value={formData.upload_doc_simja}
-                      onChange={handleFileUpload('upload_doc_simja')}
+                      value={formData.simja_document_upload || ''}
+                      onChange={handleFileUpload('simja_document_upload')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       maxSize={5}
                       required
@@ -339,15 +328,15 @@ export default function SubmissionForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="upload_doc_sika">UPLOAD DOKUMEN SIKA</Label>
+                  <Label htmlFor="sika_document_upload">UPLOAD DOKUMEN SIKA</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <FileUpload
-                      id="upload_doc_sika"
-                      name="upload_doc_sika"
+                      id="sika_document_upload"
+                      name="sika_document_upload"
                       label=""
                       description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
-                      value={formData.upload_doc_sika}
-                      onChange={handleFileUpload('upload_doc_sika')}
+                      value={formData.sika_document_upload || ''}
+                      onChange={handleFileUpload('sika_document_upload')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                       maxSize={5}
                       required
@@ -362,33 +351,33 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="pekerjaan">Pekerjaan</Label>
+                  <Label htmlFor="job_description">Pekerjaan</Label>
                   <Input
-                    id="pekerjaan"
-                    name="pekerjaan"
-                    value={formData.pekerjaan}
+                    id="job_description"
+                    name="job_description"
+                    value={formData.job_description}
                     onChange={handleChange}
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="lokasi_kerja">Lokasi kerja</Label>
+                  <Label htmlFor="work_location">Lokasi kerja</Label>
                   <Input
-                    id="lokasi_kerja"
-                    name="lokasi_kerja"
-                    value={formData.lokasi_kerja}
+                    id="work_location"
+                    name="work_location"
+                    value={formData.work_location}
                     onChange={handleChange}
                     required
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="jam_kerja">Jam kerja</Label>
+                  <Label htmlFor="working_hours">Jam kerja</Label>
                   <TimePicker
-                    id="jam_kerja"
-                    name="jam_kerja"
-                    value={formData.jam_kerja}
+                    id="working_hours"
+                    name="working_hours"
+                    value={formData.working_hours}
                     onChange={handleTimeChange}
                     required
                     placeholder="Pilih jam kerja"
@@ -396,11 +385,11 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="sarana_kerja">Sarana kerja</Label>
+                  <Label htmlFor="work_facilities">Sarana kerja</Label>
                   <Input
-                    id="sarana_kerja"
-                    name="sarana_kerja"
-                    value={formData.sarana_kerja}
+                    id="work_facilities"
+                    name="work_facilities"
+                    value={formData.work_facilities}
                     onChange={handleChange}
                     placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
                     required
@@ -421,7 +410,7 @@ export default function SubmissionForm() {
               
               {/* Workers Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {workers.map((worker, index) => (
+                {workers.map((worker, _index) => (
                   <div key={worker.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-3">
@@ -448,18 +437,18 @@ export default function SubmissionForm() {
                     <div className="mb-4">
 
                       <div className="relative">
-                        {worker.foto_pekerja ? (
+                        {worker.worker_photo ? (
                           <div className="relative group">
                             <img 
-                              src={worker.foto_pekerja} 
-                              alt={`Foto ${worker.nama_pekerja || 'pekerja'}`}
+                              src={worker.worker_photo} 
+                              alt={`Foto ${worker.worker_name || 'pekerja'}`}
                               className="w-full h-50 object-cover rounded-lg border-2 border-gray-300"
                             />
                             <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                                onClick={() => document.getElementById(`worker_photo_${worker.id}`)?.click()}
                                 className="bg-white text-gray-800 hover:bg-gray-100 text-xs px-3 py-1"
                               >
                                 Ganti Foto
@@ -476,7 +465,7 @@ export default function SubmissionForm() {
                           </div>
                         ) : (
                           <div 
-                            onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                            onClick={() => document.getElementById(`worker_photo_${worker.id}`)?.click()}
                             className="w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 bg-gray-50"
                           >
                            
@@ -486,11 +475,11 @@ export default function SubmissionForm() {
                           </div>
                         )}
                         <FileUpload
-                          id={`foto_pekerja_${worker.id}`}
-                          name={`foto_pekerja_${worker.id}`}
+                          id={`worker_photo_${worker.id}`}
+                          name={`worker_photo_${worker.id}`}
                           label=""
                           description=""
-                          value={worker.foto_pekerja}
+                          value={worker.worker_photo}
                           onChange={(url) => updateWorkerPhoto(worker.id, url)}
                           accept=".jpg,.jpeg,.png"
                           maxSize={5}
@@ -502,13 +491,13 @@ export default function SubmissionForm() {
                     
                     {/* Name Input */}
                     <div>
-                      <Label htmlFor={`nama_pekerja_${worker.id}`} className="text-sm font-medium text-gray-700">
+                      <Label htmlFor={`worker_name_${worker.id}`} className="text-sm font-medium text-gray-700">
                         Nama Lengkap
                       </Label>
                       <Input
-                        id={`nama_pekerja_${worker.id}`}
-                        name={`nama_pekerja_${worker.id}`}
-                        value={worker.nama_pekerja}
+                        id={`worker_name_${worker.id}`}
+                        name={`worker_name_${worker.id}`}
+                        value={worker.worker_name}
                         onChange={(e) => updateWorkerName(worker.id, e.target.value)}
                         placeholder="Masukkan nama lengkap"
                         required
@@ -519,18 +508,18 @@ export default function SubmissionForm() {
                     {/* Status Indicator */}
                     <div className="mt-3 flex items-center gap-2">
                       <div className={`w-2 h-2 rounded-full ${
-                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                        worker.worker_name.trim() && worker.worker_photo.trim()
                           ? 'bg-green-400' 
                           : 'bg-red-400'
                       }`}></div>
                       <span className={`text-xs ${
-                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                        worker.worker_name.trim() && worker.worker_photo.trim()
                           ? 'text-green-600' 
                           : 'text-red-600'
                       }`}>
-                        {worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
+                        {worker.worker_name.trim() && worker.worker_photo.trim()
                           ? 'Lengkap' 
-                          : worker.nama_pekerja.trim() 
+                          : worker.worker_name.trim() 
                             ? 'Perlu foto' 
                             : 'Belum lengkap'}
                       </span>

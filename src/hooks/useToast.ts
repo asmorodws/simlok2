@@ -21,19 +21,19 @@ export function useToast() {
   };
 
   const showSuccess = (title: string, message: string, duration?: number) => {
-    showToast({ variant: 'success', title, message, duration });
+    showToast({ variant: 'success', title, message, duration: duration || 5000 });
   };
 
   const showError = (title: string, message: string, duration?: number) => {
-    showToast({ variant: 'error', title, message, duration });
+    showToast({ variant: 'error', title, message, duration: duration || 5000 });
   };
 
   const showWarning = (title: string, message: string, duration?: number) => {
-    showToast({ variant: 'warning', title, message, duration });
+    showToast({ variant: 'warning', title, message, duration: duration || 5000 });
   };
 
   const showInfo = (title: string, message: string, duration?: number) => {
-    showToast({ variant: 'info', title, message, duration });
+    showToast({ variant: 'info', title, message, duration: duration || 5000 });
   };
 
   return {

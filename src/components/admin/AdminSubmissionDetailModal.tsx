@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XMarkIcon, EyeIcon, DocumentIcon, ArrowDownTrayIcon, PhotoIcon, BuildingOfficeIcon, UserIcon, BriefcaseIcon, CalendarIcon, ClockIcon, WrenchScrewdriverIcon, CheckCircleIcon, XCircleIcon, ClockIcon as PendingIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, EyeIcon, DocumentIcon, BuildingOfficeIcon, UserIcon, BriefcaseIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, ClockIcon as PendingIcon } from '@heroicons/react/24/outline';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import DatePicker from '@/components/form/DatePicker';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
@@ -14,41 +14,42 @@ import Button from '@/components/ui/button/Button';
 
 interface Submission {
   id: string;
-  status_approval_admin: string;
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan: string | null;
-  jam_kerja: string;
-  lain_lain?: string;
-  sarana_kerja: string;
+  approval_status: string;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
+  working_hours: string;
+  other_notes?: string;
+  work_facilities: string;
   // tembusan?: string;
-  nomor_simja?: string;
-  tanggal_simja?: string | null;
-  nomor_sika?: string;
-  tanggal_sika?: string | null;
-  nomor_simlok?: string;
-  tanggal_simlok?: string | null;
-  nama_pekerja: string;
+  simja_number?: string;
+  simja_date?: string | null;
+  sika_number?: string;
+  sika_date?: string | null;
+  simlok_number?: string;
+  simlok_date?: string | null;
+  worker_names: string;
   content: string;
-  keterangan?: string;
-  upload_doc_sika?: string;
-  upload_doc_simja?: string;
+  notes?: string;
+  implementation_notes?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
   qrcode?: string;
   created_at: string;
-  jabatan_signer?: string;
-  nama_signer?: string;
+  signer_position?: string;
+  signer_name?: string;
   user: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
-    nama_vendor: string;
+    vendor_name: string;
   };
-  approvedByUser?: {
+  approved_by_user?: {
     id: string;
-    nama_petugas: string;
+    officer_name: string;
     email: string;
   };
 }
@@ -91,7 +92,7 @@ export default function AdminSubmissionDetailModal({
   const [templateFields, setTemplateFields] = useState({
     tanggal_dari: '',
     tanggal_sampai: '',
-    tanggal_simlok: submission?.tanggal_simlok || '',
+    tanggal_simlok: submission?.simlok_date || '',
   });
 
   // Preview modal state
@@ -149,21 +150,21 @@ export default function AdminSubmissionDetailModal({
 
         setApprovalForm({
           status: 'APPROVED',
-          keterangan: submission.keterangan || '',
+          keterangan: submission.other_notes || '',
           // tembusan: submission.tembusan || '',
-          tanggal_simlok: formatDateForInput(submission.tanggal_simlok),
-          pelaksanaan: submission.pelaksanaan || '',
-          lain_lain: submission.lain_lain || '',
+          tanggal_simlok: formatDateForInput(submission.simlok_date),
+          pelaksanaan: submission.implementation || '',
+          lain_lain: submission.other_notes || '',
           content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
-          jabatan_signer: submission.jabatan_signer || 'Hend Or Secunty Region I',
-          nama_signer: submission.nama_signer || 'Julianto Santoso'
+          jabatan_signer: submission.signer_position || 'Hend Or Secunty Region I',
+          nama_signer: submission.signer_name || 'Julianto Santoso'
         });
 
         // Reset template fields
         setTemplateFields({
           tanggal_dari: '',
           tanggal_sampai: '',
-          tanggal_simlok: submission?.tanggal_simlok || '',
+          tanggal_simlok: submission?.simlok_date || '',
         });
 
         // Reset validation errors
@@ -200,18 +201,18 @@ export default function AdminSubmissionDetailModal({
       templateParts.push("Izin diberikan berdasarkan:");
       
       // SIMJA section
-      if (submission?.nomor_simja && submission?.tanggal_simja) {
+      if (submission?.simja_number && submission?.simja_date) {
         templateParts.push(
           `• Simja Ast Man Facility Management`,
-          `  ${submission.nomor_simja} Tgl. ${formatDate(submission.tanggal_simja)}`
+          `  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`
         );
       }
       
       // SIKA section  
-      if (submission?.nomor_sika && submission?.tanggal_sika) {
+      if (submission?.sika_number && submission?.sika_date) {
         templateParts.push(
           `• SIKA Pekerjaan Dingin`,
-          `  ${submission.nomor_sika} Tgl. ${formatDate(submission.tanggal_sika)}`
+          `  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`
         );
       }
       
@@ -220,7 +221,7 @@ export default function AdminSubmissionDetailModal({
       if (tanggalDiterima) {
         templateParts.push(
           ` \n`,
-          ` Diterima ${submission?.jabatan_signer || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
+          ` Diterima ${submission?.signer_position || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
           `  ${formatDate(tanggalDiterima)}`
         );
       }
@@ -230,24 +231,15 @@ export default function AdminSubmissionDetailModal({
 
     // Update template jika ada data yang diperlukan
     const shouldUpdate = approvalForm.tanggal_simlok ||
-                        (submission?.nomor_simja && submission?.nomor_sika);
+                        (submission?.simja_number && submission?.sika_number);
     
     if (shouldUpdate) {
       const newTemplate = generateLainLainTemplate();
       setApprovalForm(prev => ({ ...prev, lain_lain: newTemplate }));
     }
-  }, [approvalForm.tanggal_simlok, submission?.nomor_simja, submission?.tanggal_simja, submission?.nomor_sika, submission?.tanggal_sika, submission?.jabatan_signer, approvalForm.jabatan_signer]);
+  }, [approvalForm.tanggal_simlok, submission?.simja_number, submission?.simja_date, submission?.sika_number, submission?.sika_date, submission?.signer_position, approvalForm.jabatan_signer]);
 
   if (!isOpen || !submission) return null;
-
-  // Function to format and display nama pekerja as list
-  const formatNamaPekerjaDisplay = (namaPekerja: string) => {
-    if (!namaPekerja) return [];
-    return namaPekerja
-      .split(/[\n,]+/) // Split by newlines or commas
-      .map(nama => nama.trim())
-      .filter(nama => nama.length > 0);
-  };
 
   // Function to format and display tembusan as list
   // const formatTembusanDisplay = (tembusan: string) => {
@@ -297,32 +289,6 @@ export default function AdminSubmissionDetailModal({
 
   const handleCloseSilmokPdf = () => {
     setSimlokPdfModal({ isOpen: false });
-  };
-
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    if (fileUrl) {
-      // Convert legacy URL to new format if needed
-      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
-
-      const link = document.createElement('a');
-      link.href = convertedUrl;
-
-      // Generate appropriate download filename
-      const category = fileUrlHelper.getCategoryFromField(fileName, fileUrl);
-      const downloadName = fileUrlHelper.generateDownloadFilename(fileUrl, category, fileName);
-      link.download = downloadName;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  const getFileIcon = (fileName: string) => {
-    if (fileUrlHelper.isImage(fileName)) {
-      return <PhotoIcon className="h-5 w-5 text-blue-500" />;
-    }
-    return <DocumentIcon className="h-5 w-5 text-gray-500" />;
   };
 
   const validateForm = () => {
@@ -412,7 +378,6 @@ export default function AdminSubmissionDetailModal({
       const requestBody: any = {
         status_approval_admin: approvalForm.status,
         keterangan: approvalForm.keterangan,
-        // tembusan: approvalForm.tembusan,
         pelaksanaan: approvalForm.pelaksanaan,
         lain_lain: approvalForm.lain_lain,
         content: approvalForm.content,
@@ -498,10 +463,10 @@ export default function AdminSubmissionDetailModal({
             <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  Detail Submission - {submission.nama_vendor}
+                  Detail Submission - {submission.vendor_name}
                 </h2>
                 <div className="flex items-center space-x-4 mt-2">
-                  {getStatusBadge(submission.status_approval_admin)}
+                  {getStatusBadge(submission.approval_status)}
                   <span className="text-sm text-gray-500">
                     {formatDate(submission.created_at)}
                   </span>
@@ -555,11 +520,11 @@ export default function AdminSubmissionDetailModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoCard
                           label="Nama Vendor"
-                          value={submission.nama_vendor}
+                          value={submission.vendor_name}
                         />
                         <InfoCard
                           label="Nama Petugas"
-                          value={submission.nama_petugas}
+                          value={submission.officer_name}
                           icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                         />
                         <InfoCard
@@ -568,7 +533,7 @@ export default function AdminSubmissionDetailModal({
                         />
                         <InfoCard
                           label="Berdasarkan"
-                          value={submission.berdasarkan}
+                          value={submission.based_on}
                         />
                       </div>
                     </DetailSection>
@@ -581,34 +546,34 @@ export default function AdminSubmissionDetailModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoCard
                           label="Pekerjaan"
-                          value={submission.pekerjaan}
+                          value={submission.job_description}
                         />
                         <InfoCard
                           label="Lokasi Kerja"
-                          value={submission.lokasi_kerja}
+                          value={submission.work_location}
                         />
                         <InfoCard
                           label="Pelaksanaan"
-                          value={submission.pelaksanaan || 'Belum diisi'}
+                          value={submission.implementation || 'Belum diisi'}
                         />
                         <InfoCard
                           label="Jam Kerja"
-                          value={submission.jam_kerja}
+                          value={submission.working_hours}
                         />
                         <InfoCard
                           label="Sarana Kerja"
-                          value={submission.sarana_kerja}
+                          value={submission.work_facilities}
                           className="md:col-span-2"
                         />
                       </div>
 
-                      {submission.lain_lain && (
+                      {submission.other_notes && (
                         <div className="mt-6 pt-6 border-t border-gray-200">
                           <InfoCard
                             label="Lain-lain"
                             value={
                               <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                                {submission.lain_lain}
+                                {submission.other_notes}
                               </div>
                             }
                           />
@@ -634,7 +599,7 @@ export default function AdminSubmissionDetailModal({
                     >
                       <WorkersList
                         submissionId={submission.id}
-                        fallbackWorkers={submission.nama_pekerja}
+                        fallbackWorkers={submission.worker_names}
                         layout="grid"
                         showPhotos={true}
                         maxDisplayCount={6}
@@ -647,43 +612,43 @@ export default function AdminSubmissionDetailModal({
                       icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {submission.nomor_simja && (
+                        {submission.simja_number && (
                           <InfoCard
                             label="Nomor SIMJA"
-                            value={submission.nomor_simja}
+                            value={submission.simja_number}
                           />
                         )}
-                        {submission.tanggal_simja && (
+                        {submission.simja_date && (
                           <InfoCard
                             label="Tanggal SIMJA"
-                            value={formatDate(submission.tanggal_simja)}
+                            value={formatDate(submission.simja_date)}
                             icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                           />
                         )}
-                        {submission.nomor_sika && (
+                        {submission.sika_number && (
                           <InfoCard
                             label="Nomor SIKA"
-                            value={submission.nomor_sika}
+                            value={submission.sika_number}
                           />
                         )}
-                        {submission.tanggal_sika && (
+                        {submission.sika_date && (
                           <InfoCard
                             label="Tanggal SIKA"
-                            value={formatDate(submission.tanggal_sika)}
+                            value={formatDate(submission.sika_date)}
                             icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                           />
                         )}
                         {/* Nomor SIMLOK - hanya muncul jika sudah APPROVED */}
-                        {submission.status_approval_admin === 'APPROVED' && submission.nomor_simlok && (
+                        {submission.approval_status === 'APPROVED' && submission.simlok_number && (
                           <InfoCard
                             label="Nomor SIMLOK"
-                            value={submission.nomor_simlok}
+                            value={submission.simlok_number}
                           />
                         )}
-                        {submission.status_approval_admin === 'APPROVED' && submission.tanggal_simlok && (
+                        {submission.approval_status === 'APPROVED' && submission.simlok_date && (
                           <InfoCard
                             label="Tanggal SIMLOK"
-                            value={formatDate(submission.tanggal_simlok)}
+                            value={formatDate(submission.simlok_date)}
                             icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                           />
                         )}
@@ -698,11 +663,11 @@ export default function AdminSubmissionDetailModal({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoCard
                           label="Jabatan Penandatangan"
-                          value={submission.jabatan_signer || '-'}
+                          value={submission.signer_position || '-'}
                         />
                         <InfoCard
                           label="Nama Penandatangan"
-                          value={submission.nama_signer || '-'}
+                          value={submission.signer_name || '-'}
                         />
                       </div>
                     </DetailSection>
@@ -714,7 +679,7 @@ export default function AdminSubmissionDetailModal({
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Dokumen SIKA */}
-                        {submission.upload_doc_sika && (
+                        {submission.sika_document_upload && (
                           <div className="border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
@@ -726,7 +691,7 @@ export default function AdminSubmissionDetailModal({
                               </div>
                             </div>
                             <button
-                              onClick={() => handleFileView(submission.upload_doc_sika!, 'Dokumen SIKA')}
+                              onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
                               className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                             >
                               <EyeIcon className="h-4 w-4 mr-2" />
@@ -736,7 +701,7 @@ export default function AdminSubmissionDetailModal({
                         )}
 
                         {/* Dokumen SIMJA */}
-                        {submission.upload_doc_simja && (
+                        {submission.simja_document_upload && (
                           <div className="border border-green-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-2">
@@ -748,7 +713,7 @@ export default function AdminSubmissionDetailModal({
                               </div>
                             </div>
                             <button
-                              onClick={() => handleFileView(submission.upload_doc_simja!, 'Dokumen SIMJA')}
+                              onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
                               className="w-full flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                             >
                               <EyeIcon className="h-4 w-4 mr-2" />
@@ -758,7 +723,7 @@ export default function AdminSubmissionDetailModal({
                         )}
 
                         {/* Message if no documents */}
-                        {!submission.upload_doc_sika && !submission.upload_doc_simja && (
+                        {!submission.sika_document_upload && !submission.simja_document_upload && (
                           <div className="md:col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                             <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                             <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
@@ -777,34 +742,34 @@ export default function AdminSubmissionDetailModal({
                     <DetailSection 
                       title="Status Approval" 
                       icon={
-                        submission.status_approval_admin === 'APPROVED' ? (
+                        submission.approval_status === 'APPROVED' ? (
                           <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                        ) : submission.status_approval_admin === 'REJECTED' ? (
+                        ) : submission.approval_status === 'REJECTED' ? (
                           <XCircleIcon className="h-5 w-5 text-red-500" />
                         ) : (
                           <PendingIcon className="h-5 w-5 text-yellow-500" />
                         )
                       }
-                      badge={getStatusBadge(submission.status_approval_admin)}
+                      badge={getStatusBadge(submission.approval_status)}
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoCard
                           label="Status Saat Ini"
-                          value={getStatusBadge(submission.status_approval_admin)}
+                          value={getStatusBadge(submission.approval_status)}
                         />
-                        {submission.approvedByUser && (
+                        {submission.approved_by_user && (
                           <InfoCard
                             label="Disetujui Oleh"
-                            value={submission.approvedByUser.nama_petugas}
+                            value={submission.approved_by_user.officer_name}
                             icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                           />
                         )}
-                        {submission.keterangan && (
+                        {submission.notes && (
                           <InfoCard
                             label="Keterangan"
                             value={
                               <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                                {submission.keterangan}
+                                {submission.notes}
                               </div>
                             }
                             className="md:col-span-2"
@@ -814,7 +779,7 @@ export default function AdminSubmissionDetailModal({
                     </DetailSection>
 
                     {/* Approval Form - Only show if status is PENDING */}
-                    {submission.status_approval_admin === 'PENDING' && (
+                    {submission.approval_status === 'PENDING' && (
                       <DetailSection 
                         title="Proses Approval" 
                         icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
@@ -1086,7 +1051,7 @@ export default function AdminSubmissionDetailModal({
               
               {/* Tombol PDF - hanya muncul jika sudah APPROVED */}
               <div className="flex items-center space-x-3">
-                {submission.status_approval_admin === 'APPROVED' && (
+                {submission.approval_status === 'APPROVED' && (
                   <Button
                     onClick={handleViewPDF}
                     variant="primary"
@@ -1120,8 +1085,8 @@ export default function AdminSubmissionDetailModal({
         isOpen={simlokPdfModal.isOpen}
         onClose={handleCloseSilmokPdf}
         submissionId={submission.id}
-        submissionName={submission.nama_vendor}
-        nomorSimlok={submission.nomor_simlok}
+        submissionName={submission.vendor_name}
+        nomorSimlok={submission.simlok_number || ''}
       />
 
       {/* Document Preview Modal */}

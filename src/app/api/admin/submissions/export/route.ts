@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
@@ -28,23 +28,23 @@ export async function GET(request: NextRequest) {
         user: {
           select: {
             id: true,
-            nama_petugas: true,
-            nama_vendor: true,
+            officer_name: true,
+            vendor_name: true,
             email: true,
-            no_telp: true,
+            phone_number: true,
           }
         },
-        daftarPekerja: {
+        worker_list: {
           select: {
             id: true,
-            nama_pekerja: true,
-            foto_pekerja: true,
+            worker_name: true,
+            worker_photo: true,
           }
         },
-        approvedByUser: {
+        approved_by_user: {
           select: {
             id: true,
-            nama_petugas: true,
+            officer_name: true,
             email: true,
           }
         }
@@ -58,32 +58,32 @@ export async function GET(request: NextRequest) {
     const exportData = submissions.map(submission => ({
       // Submission Info
       id: submission.id,
-      nomorSurat: submission.berdasarkan,
-      perihal: submission.pekerjaan,
-      tujuan: submission.lokasi_kerja,
-      tempatPelaksanaan: submission.lokasi_kerja,
-      tanggalMulai: submission.tanggal_simja ? new Date(submission.tanggal_simja).toLocaleDateString('id-ID') : '',
-      tanggalSelesai: submission.tanggal_sika ? new Date(submission.tanggal_sika).toLocaleDateString('id-ID') : '',
-      statusApproval: submission.status_approval_admin,
+      nomorSurat: submission.based_on,
+      perihal: submission.job_description,
+      tujuan: submission.work_location,
+      tempatPelaksanaan: submission.work_location,
+      tanggalMulai: submission.simja_date ? new Date(submission.simja_date).toLocaleDateString('id-ID') : '',
+      tanggalSelesai: submission.sika_date ? new Date(submission.sika_date).toLocaleDateString('id-ID') : '',
+      statusApproval: submission.approval_status,
       
       // User Info
-      vendorName: submission.user.nama_petugas,
-      vendorCompany: submission.user.nama_vendor || '',
+      vendorName: submission.user.officer_name,
+      vendorCompany: submission.user.vendor_name || '',
       vendorEmail: submission.user.email,
-      vendorPhone: submission.user.no_telp || '',
+      vendorPhone: submission.user.phone_number || '',
       
       // Submission dates
       submittedAt: new Date(submission.created_at).toLocaleDateString('id-ID'),
       approvedAt: '', // No approvedAt field in current schema
       
       // Workers count
-      totalWorkers: submission.daftarPekerja.length,
+      totalWorkers: submission.worker_list.length,
       
       // Workers data (simplified structure)
-      daftarPekerja: submission.daftarPekerja.map(worker => ({
+      daftarPekerja: submission.worker_list.map(worker => ({
         id: worker.id,
-        namaLengkap: worker.nama_pekerja,
-        foto: worker.foto_pekerja || '',
+        namaLengkap: worker.worker_name,
+        foto: worker.worker_photo || '',
         // Other fields not available in current schema
         nik: '',
         tempatLahir: '',
@@ -103,29 +103,29 @@ export async function GET(request: NextRequest) {
       })),
       
       // Documents info
-      dokumenSika: submission.upload_doc_sika || '',
-      dokumenSimja: submission.upload_doc_simja || '',
+      dokumenSika: submission.sika_document_upload || '',
+      dokumenSimja: submission.simja_document_upload || '',
       
       // Additional info
-      catatan: submission.keterangan || '',
-      signerName: submission.nama_signer || '',
-      signerTitle: submission.jabatan_signer || '',
+      catatan: submission.content || '',
+      signerName: submission.signer_name || '',
+      signerTitle: submission.signer_position || '',
       
       // Additional fields from schema
-      jamKerja: submission.jam_kerja,
-      saranaKerja: submission.sarana_kerja,
-      pelaksanaan: submission.pelaksanaan || '',
-      lainLain: submission.lain_lain || '',
-      nomorSimja: submission.nomor_simja || '',
-      tanggalSimja: submission.tanggal_simja ? new Date(submission.tanggal_simja).toLocaleDateString('id-ID') : '',
-      nomorSika: submission.nomor_sika || '',
-      tanggalSika: submission.tanggal_sika ? new Date(submission.tanggal_sika).toLocaleDateString('id-ID') : '',
-      nomorSimlok: submission.nomor_simlok || '',
-      tanggalSimlok: submission.tanggal_simlok ? new Date(submission.tanggal_simlok).toLocaleDateString('id-ID') : '',
-      namaPerkerjaText: submission.nama_pekerja,
+      jamKerja: submission.working_hours,
+      saranaKerja: submission.work_facilities,
+      pelaksanaan: submission.implementation || '',
+      lainLain: submission.other_notes || '',
+      nomorSimja: submission.simja_number || '',
+      tanggalSimja: submission.simja_date ? new Date(submission.simja_date).toLocaleDateString('id-ID') : '',
+      nomorSika: submission.sika_number || '',
+      tanggalSika: submission.sika_date ? new Date(submission.sika_date).toLocaleDateString('id-ID') : '',
+      nomorSimlok: submission.simlok_number || '',
+      tanggalSimlok: submission.simlok_date ? new Date(submission.simlok_date).toLocaleDateString('id-ID') : '',
+      namaPerkerjaText: submission.worker_names,
       content: submission.content || '',
       qrcode: submission.qrcode || '',
-      approvedBy: submission.approvedByUser?.nama_petugas || ''
+      approvedBy: submission.approved_by_user?.officer_name || ''
     }));
 
     return NextResponse.json({

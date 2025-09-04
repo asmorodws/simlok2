@@ -8,15 +8,15 @@ import { z } from "zod";
 
 // Schema validasi untuk user
 const userSchema = z.object({
-  nama_petugas: z.string().min(1, "Nama petugas wajib diisi"),
+  officer_name: z.string().min(1, "Nama petugas wajib diisi"),
   email: z.string().email("Email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter").optional(),
   role: z.nativeEnum(Role).refine((val) => val === Role.VENDOR || val === Role.VERIFIER, {
     message: "Role harus VENDOR atau VERIFIER"
   }),
-  alamat: z.string().optional(),
-  no_telp: z.string().optional(),
-  nama_vendor: z.string().optional(),
+  address: z.string().optional(),
+  phone_number: z.string().optional(),
+  vendor_name: z.string().optional(),
 });
 
 // GET - Mengambil daftar user dengan pagination, search, dan sort
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
-    const sortBy = searchParams.get("sortBy") || "date_created_at";
+    const sortBy = searchParams.get("sortBy") || "created_at";
     const sortOrder = searchParams.get("sortOrder") || "desc";
     const role = searchParams.get("role") || "";
     const verificationStatus = searchParams.get("verificationStatus") || ""; // "pending", "verified", "all"
@@ -66,10 +66,10 @@ export async function GET(request: NextRequest) {
     // Search functionality
     if (search) {
       where.OR = [
-        { nama_petugas: { contains: search } },
+        { officer_name: { contains: search } },
         { email: { contains: search } },
-        { nama_vendor: { contains: search } },
-        { no_telp: { contains: search } },
+        { vendor_name: { contains: search } },
+        { phone_number: { contains: search } },
       ];
     }
 
@@ -86,16 +86,16 @@ export async function GET(request: NextRequest) {
       },
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
         role: true,
-        alamat: true,
-        no_telp: true,
-        nama_vendor: true,
-        date_created_at: true,
+        address: true,
+        phone_number: true,
+        vendor_name: true,
+        created_at: true,
         verified_at: true,
         verified_by: true,
-        foto_profil: true,
+        profile_photo: true,
       }
     });
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { nama_petugas, email, password, role, alamat, no_telp, nama_vendor } = validation.data;
+    const { officer_name, email, password, role, address, phone_number, vendor_name } = validation.data;
 
     // Cek apakah email sudah ada
     const existingUser = await prisma.user.findUnique({
@@ -161,25 +161,25 @@ export async function POST(request: NextRequest) {
     // Buat user baru
     const newUser = await prisma.user.create({
       data: {
-        nama_petugas,
+        officer_name,
         email,
         password: hashedPassword,
         role,
-        alamat,
-        no_telp,
-        nama_vendor: role === Role.VENDOR ? nama_vendor : null,
-        verified_by: session.user.nama_petugas,
+        address: address || null,
+        phone_number: phone_number || null,
+        vendor_name: role === Role.VENDOR ? (vendor_name || null) : null,
+        verified_by: session.user.officer_name,
         verified_at: new Date(),
       },
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
         role: true,
-        alamat: true,
-        no_telp: true,
-        nama_vendor: true,
-        date_created_at: true,
+        address: true,
+        phone_number: true,
+        vendor_name: true,
+        created_at: true,
         verified_at: true,
         verified_by: true,
       }

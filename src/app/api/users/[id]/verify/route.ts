@@ -40,12 +40,12 @@ export async function PUT(
         },
         select: {
           id: true,
-          nama_petugas: true,
+          officer_name: true,
           email: true,
           role: true,
-          nama_vendor: true,
+          vendor_name: true,
           verified_at: true,
-          date_created_at: true,
+          created_at: true,
         },
       });
     } else if (action === "reject") {

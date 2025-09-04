@@ -22,7 +22,7 @@ const updateUserSchema = z.object({
 
 // GET - Mengambil detail user berdasarkan ID
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -46,16 +46,16 @@ export async function GET(
       },
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
         role: true,
-        alamat: true,
-        no_telp: true,
-        nama_vendor: true,
-        date_created_at: true,
+        address: true,
+        phone_number: true,
+        vendor_name: true,
+        created_at: true,
         verified_at: true,
         verified_by: true,
-        foto_profil: true,
+        profile_photo: true,
       }
     });
 
@@ -157,16 +157,16 @@ export async function PUT(
       data: updateData,
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
         role: true,
-        alamat: true,
-        no_telp: true,
-        nama_vendor: true,
-        date_created_at: true,
+        address: true,
+        phone_number: true,
+        vendor_name: true,
+        created_at: true,
         verified_at: true,
         verified_by: true,
-        foto_profil: true,
+        profile_photo: true,
       }
     });
 
@@ -183,7 +183,7 @@ export async function PUT(
 
 // DELETE - Hapus user
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {

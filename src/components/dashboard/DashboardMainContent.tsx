@@ -7,7 +7,6 @@ import { SectionTitle } from "../ui/SectionTitle";
 import { Stat } from "../ui/Stat";
 import { ActivityList } from "../ui/ActivityList";
 import PageHeader from "../layout/PageHeader";
-import { is } from "zod/locales";
 
 export default function DashboardMainContent() {
   const { data: session } = useSession();
@@ -48,10 +47,10 @@ export default function DashboardMainContent() {
       <div className="space-y-6 lg:col-span-2">
         {/* Header */}
         <PageHeader
-          title={`Welcome back, ${session?.user.nama_petugas ?? session?.user.name ?? "User"}!`}
+          title={`Welcome back, ${session?.user.officer_name ?? session?.user.name ?? "User"}!`}
           subtitle={
-            role === "VENDOR" && session?.user.nama_vendor 
-              ? `${session.user.nama_vendor} - You are logged in as ${role.toLowerCase()}.`
+            role === "VENDOR" && session?.user.vendor_name 
+              ? `${session.user.vendor_name} - You are logged in as ${role.toLowerCase()}.`
               : `You are logged in as ${role.toLowerCase()}.`
           }
           cta={
@@ -99,13 +98,13 @@ export default function DashboardMainContent() {
               <div>
                 <span className="text-sm font-medium text-gray-500">Nama Vendor</span>
                 <p className="text-sm text-gray-900 font-semibold">
-                  {session?.user.nama_vendor || "Belum diisi"}
+                  {session?.user.vendor_name || "Belum diisi"}
                 </p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-500">Nama Petugas</span>
                 <p className="text-sm text-gray-900">
-                  {session?.user.nama_petugas || session?.user.name || "Belum diisi"}
+                  {session?.user.officer_name || session?.user.name || "Belum diisi"}
                 </p>
               </div>
               <div>

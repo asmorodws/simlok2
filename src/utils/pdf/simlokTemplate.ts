@@ -43,27 +43,27 @@ async function loadLogo(pdfDoc: PDFDocument): Promise<PDFImage | null> {
 
 /** Struktur data mengikuti placeholder di template kamu */
 export interface SubmissionPDFData {
-  nomor_simlok?: string | null;
-  tanggal_simlok?: string | Date | null | undefined;
-  nama_vendor: string;
-  nomor_simja?: string | null;
-  tanggal_simja?: string | Date | null | undefined;
-  nomor_sika?: string | null;
-  tanggal_sika?: string | Date | null | undefined;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan: string | null;
-  jam_kerja: string;            // contoh: "08:30 - 06:30 WIB"
-  lain_lain?: string | null;
-  sarana_kerja: string;
-  nama_pekerja?: string | null;
+  simlok_number?: string | null;
+  simlok_date?: string | Date | null | undefined;
+  vendor_name: string;
+  simja_number?: string | null;
+  simja_date?: string | Date | null | undefined;
+  sika_number?: string | null;
+  sika_date?: string | Date | null | undefined;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
+  working_hours: string;            // contoh: "08:30 - 06:30 WIB"
+  other_notes?: string | null;
+  work_facilities: string;
+  worker_names?: string | null;
   content?: string | null;
-  jabatan_signer?: string | null;
-  nama_signer?: string | null;
+  signer_position?: string | null;
+  signer_name?: string | null;
   // Tambahkan untuk daftar pekerja dari tabel terpisah
-  daftarPekerja?: Array<{
-    nama_pekerja: string;
-    foto_pekerja?: string | null;
+  workerList?: Array<{
+    worker_name: string;
+    worker_photo?: string | null;
   }>;
 }
 
@@ -121,8 +121,8 @@ function extractDateFromPelaksanaan(pelaksanaan?: string | null): Date | null {
     'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
   };
   
-  const monthIndex = monthMap[month.toLowerCase()];
-  if (monthIndex === undefined) return null;
+  const monthIndex = month ? monthMap[month.toLowerCase()] : undefined;
+  if (monthIndex === undefined || !year || !day) return null;
   
   return new Date(parseInt(year), monthIndex, parseInt(day));
 }
@@ -131,12 +131,6 @@ function extractDateFromPelaksanaan(pelaksanaan?: string | null): Date | null {
 function normalizeInline(s?: string | null) {
   if (!s) return "";
   return s.replace(/\s+/g, " ").trim();
-}
-function asList(value?: string | null) {
-  return (value ?? "")
-    .split(/[\n,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 class PDFKit {
@@ -214,7 +208,7 @@ class PDFKit {
     if (line) lines.push(line);
     for (const ln of lines) {
       this.pageBreak();
-      this.text(ln, x, this.y, { size, bold: o?.bold });
+      this.text(ln, x, this.y, { size, bold: o?.bold ?? false });
       this.y -= this.lineGap;
     }
   }
@@ -305,7 +299,7 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   });
 
   // SIMLOK number (centered)
-  const simlokNo = s.nomor_simlok ? `${s.nomor_simlok}` : "";
+  const simlokNo = s.simlok_number ? `${s.simlok_number}` : "";
   k.center(`SIMLOK NO-${simlokNo}`, height - 120, {
     size: 14,
   });
@@ -318,21 +312,21 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   // Move to content area and add numbered items
   k.y = height - 190;
 
-  k.numberedRow(1, "Nama", s.nama_vendor, { valueBold: false });
+  k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
   // Format berdasarkan (SIMJA info)
-  const berdasarkan = s.nomor_simja
-    ? `${normalizeInline(s.nomor_simja)} Tgl. ${fmtDateID(s.tanggal_simja)}`
+  const berdasarkan = s.simja_number
+    ? `${normalizeInline(s.simja_number)} Tgl. ${fmtDateID(s.simja_date)}`
     : "";
   
   k.numberedRow(2, "Berdasarkan", berdasarkan);
-  k.numberedRow(3, "Pekerjaan", s.pekerjaan);
-  k.numberedRow(4, "Lokasi Kerja", s.lokasi_kerja);
-  k.numberedRow(5, "Pelaksanaan", normalizeInline(s.pelaksanaan || ""));
-  k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.jam_kerja}`);
+  k.numberedRow(3, "Pekerjaan", s.job_description);
+  k.numberedRow(4, "Lokasi Kerja", s.work_location);
+  k.numberedRow(5, "Pelaksanaan", normalizeInline(s.implementation || ""));
+  k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
   
   // Special handling for "Lain-lain" to show as bulleted list
-  if (s.lain_lain && s.lain_lain.trim().length > 0) {
+  if (s.other_notes && s.other_notes.trim().length > 0) {
     k.pageBreak();
     
     // Label kiri (bold)
@@ -344,11 +338,11 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
     k.text(":", colonX, k.y);
 
     // Process lain-lain as bulleted list
-   const lines = s.lain_lain.split('\n').map(l => l.trim()).filter(Boolean);
+   const lines = s.other_notes.split('\n').map((l: string) => l.trim()).filter(Boolean);
 const rightX = k.x + k.leftLabelWidth + 4;
 const rightW = A4.w - MARGIN - rightX;
 
-lines.forEach((line, idx) => {
+lines.forEach((line: string, idx: number) => {
   const isFirst = idx === 0;
   const isLast  = idx === lines.length - 2;
 
@@ -367,7 +361,7 @@ lines.forEach((line, idx) => {
     k.numberedRow(7, "Lain-lain", "");
   }
   
-  k.numberedRow(8, "Sarana Kerja", s.sarana_kerja);
+  k.numberedRow(8, "Sarana Kerja", s.work_facilities);
 
   // Add content paragraph if available
   k.y -= 10;
@@ -390,16 +384,16 @@ lines.forEach((line, idx) => {
   const signatureY = k.y;
 
   // Extract date from pelaksanaan or use tanggal_simlok as fallback
-  const dateFromPelaksanaan = extractDateFromPelaksanaan(s.pelaksanaan);
-  const displayDate = dateFromPelaksanaan || toDate(s.tanggal_simlok);
+  const dateFromPelaksanaan = extractDateFromPelaksanaan(s.implementation);
+  const displayDate = dateFromPelaksanaan || toDate(s.simlok_date);
 
   // Right side - Location and Date (above Head title)
   k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY);
   k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 20);
 
   // Right side - Head title and name (below location/date)
-  const jabatanSigner = s.jabatan_signer || "[Jabatan Penandatangan]";
-  const namaSigner = s.nama_signer || "[Nama Penandatangan]";
+  const jabatanSigner = s.signer_position || "[Jabatan Penandatangan]";
+  const namaSigner = s.signer_name || "[Nama Penandatangan]";
   
   k.text(jabatanSigner, A4.w - 230, signatureY - 50);
   k.text(namaSigner, A4.w - 230, signatureY - 110, { bold: true });
@@ -407,16 +401,16 @@ lines.forEach((line, idx) => {
   // Bottom section - Nama pekerja dari daftar pekerja terpisah
   const bottomY = signatureY - 140;
 
-  // Right side - Worker names from DaftarPekerja table
-  if (s.daftarPekerja && s.daftarPekerja.length > 0) {
+  // Right side - Worker names from WorkerList table
+  if (s.workerList && s.workerList.length > 0) {
     k.text("Nama pekerja:", A4.w - 200, bottomY);
-    s.daftarPekerja.forEach((pekerja, index) => {
-      k.text(`${index + 1}. ${pekerja.nama_pekerja}`, A4.w - 190, bottomY - 20 - (index * 15));
+    s.workerList.forEach((pekerja, index) => {
+      k.text(`${index + 1}. ${pekerja.worker_name}`, A4.w - 190, bottomY - 20 - (index * 15));
     });
-  } else if (s.nama_pekerja && s.nama_pekerja.trim().length > 0) {
-    // Fallback ke nama_pekerja lama jika daftarPekerja kosong
+  } else if (s.worker_names && s.worker_names.trim().length > 0) {
+    // Fallback ke worker_names lama jika workerList kosong
     k.text("Nama pekerja:", A4.w - 200, bottomY);
-    const workerNames = s.nama_pekerja.split('\n').map(name => name.trim()).filter(name => name);
+    const workerNames = s.worker_names.split('\n').map(name => name.trim()).filter(name => name);
     workerNames.forEach((name, index) => {
       k.text(`${index + 1}. ${name}`, A4.w - 190, bottomY - 20 - (index * 15));
     });

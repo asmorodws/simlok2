@@ -1,4 +1,9 @@
 /* Custom DatePicker Styles */
+#datepicker-portal {
+  z-index: 9999;
+  position: relative;
+}
+
 .react-datepicker-wrapper {
   width: 100%;
 }
@@ -8,7 +13,8 @@
 }
 
 .react-datepicker-popper {
-  z-index: 50;
+  z-index: 9999 !important;
+  position: fixed !important;
 }
 
 .react-datepicker-calendar {
@@ -16,6 +22,40 @@
   border-radius: 0.5rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   font-family: inherit;
+  background: white;
+  z-index: 9999;
+}
+
+/* Ensure datepicker appears above modal overlays */
+.react-datepicker__tab-loop {
+  z-index: 9999 !important;
+  position: relative;
+}
+
+/* Fix for modal overflow issues */
+.fixed.inset-0.z-50.overflow-y-auto:has(.react-datepicker-popper) {
+  overflow: visible !important;
+}
+
+/* Alternative approach - ensure datepicker container is not clipped */
+.react-datepicker__tab-loop__div {
+  position: static !important;
+}
+
+/* Ensure proper layering in modals */
+.react-datepicker__month-container {
+  z-index: 9999;
+}
+
+/* Portal-specific styles */
+.react-datepicker__portal {
+  z-index: 9999 !important;
+  position: fixed !important;
+}
+
+.react-datepicker__portal .react-datepicker {
+  z-index: 9999 !important;
+  position: relative !important;
 }
 
 .react-datepicker__header {

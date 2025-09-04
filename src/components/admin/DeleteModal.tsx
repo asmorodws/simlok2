@@ -77,7 +77,7 @@ export default function DeleteModal({ isOpen, onClose, onConfirm, user }: Delete
           
           <div className="bg-gray-50 p-4 rounded-lg">
             <div className="text-sm">
-              <div className="font-medium text-gray-900">{user.nama_petugas}</div>
+              <div className="font-medium text-gray-900">{user.officer_name}</div>
               <div className="text-gray-600">{user.email}</div>
               <div className="text-gray-600 capitalize">{user.role.toLowerCase()}</div>
             </div>

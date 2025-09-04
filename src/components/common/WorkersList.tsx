@@ -170,7 +170,7 @@ export default function WorkersList({
       {/* Workers Display */}
       {layout === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-          {displayedWorkers.map((worker, index) => (
+          {displayedWorkers.map((worker) => (
             <div
               key={worker.id}
               className={`bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden border ${

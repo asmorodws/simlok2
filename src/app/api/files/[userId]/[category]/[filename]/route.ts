@@ -6,7 +6,7 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ userId: string; category: string; filename: string }> }
 ) {
   try {

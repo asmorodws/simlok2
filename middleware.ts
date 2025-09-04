@@ -36,7 +36,10 @@ export async function middleware(req: NextRequest) {
   if (!matched) return NextResponse.next();
 
   // read token (jwt) from cookie (NEXTAUTH_TOKEN)
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET || 'fallback-secret' 
+  });
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

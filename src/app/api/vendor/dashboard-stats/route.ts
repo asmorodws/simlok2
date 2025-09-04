@@ -17,20 +17,20 @@ export async function GET() {
     const [totalApproved, totalPending, totalRejected] = await Promise.all([
       prisma.submission.count({
         where: {
-          userId: userId,
-          status_approval_admin: "APPROVED"
+          user_id: userId,
+          approval_status: "APPROVED"
         }
       }),
       prisma.submission.count({
         where: {
-          userId: userId,
-          status_approval_admin: "PENDING"
+          user_id: userId,
+          approval_status: "PENDING"
         }
       }),
       prisma.submission.count({
         where: {
-          userId: userId,
-          status_approval_admin: "REJECTED"
+          user_id: userId,
+          approval_status: "REJECTED"
         }
       })
     ]);

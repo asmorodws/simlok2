@@ -60,7 +60,7 @@ export class FileUrlHelper {
     // Remove timestamp and random string prefix if present
     // Format: CATEGORY_timestamp_random_originalname.ext
     const parts = filename.split('_');
-    if (parts.length >= 4 && parts[0].match(/^(SIKA|SIMJA|ID-CARD|DOC)$/i)) {
+    if (parts.length >= 4 && parts[0]?.match(/^(SIKA|SIMJA|ID-CARD|DOC)$/i)) {
       // Remove first 3 parts (category, timestamp, random)
       return parts.slice(3).join('_');
     }
@@ -143,7 +143,6 @@ export class FileUrlHelper {
     }
 
     const filename = originalUrl.split('/').pop() || 'download';
-    const displayName = this.getDisplayFilename(filename);
     const extension = this.getFileExtension(filename);
     
     const categoryNames = {

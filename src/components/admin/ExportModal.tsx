@@ -39,8 +39,8 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
       
       // Export to Excel
       const result = exportSubmissionsToExcel(data.submissions, {
-        dateFrom: dateFrom || undefined,
-        dateTo: dateTo || undefined,
+        dateFrom: dateFrom || '',
+        dateTo: dateTo || '',
         filename: `submissions_export_${dateFrom || 'all'}_${dateTo || 'all'}_${new Date().toISOString().split('T')[0]}.xlsx`
       });
 

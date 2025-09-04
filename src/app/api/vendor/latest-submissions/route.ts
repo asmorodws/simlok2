@@ -16,14 +16,14 @@ export async function GET() {
     // Get latest 5 submissions for current vendor
     const submissions = await prisma.submission.findMany({
       where: {
-        userId: userId
+        user_id: userId
       },
       select: {
         id: true,
-        pekerjaan: true,
-        lokasi_kerja: true,
-        status_approval_admin: true,
-        nomor_simlok: true,
+        job_description: true,
+        work_location: true,
+        approval_status: true,
+        simlok_number: true,
         created_at: true
       },
       orderBy: {

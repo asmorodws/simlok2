@@ -19,18 +19,18 @@ export async function GET() {
       },
       select: {
         id: true,
-        nama_petugas: true,
+        officer_name: true,
         email: true,
-        nama_vendor: true,
-        date_created_at: true,
+        vendor_name: true,
+        created_at: true,
         role: true,
-        alamat: true,
-        no_telp: true,
+        address: true,
+        phone_number: true,
         verified_at: true,
         verified_by: true
       },
       orderBy: {
-        date_created_at: "desc"
+        created_at: "desc"
       },
       take: 5
     });

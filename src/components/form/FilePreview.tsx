@@ -11,7 +11,7 @@ interface FilePreviewProps {
   className?: string;
 }
 
-export default function FilePreview({ url, filename, type, size, className }: FilePreviewProps) {
+export default function FilePreview({ url, filename, size, className }: FilePreviewProps) {
   const [showPreview, setShowPreview] = useState(false);
 
   const getFileExtension = () => {

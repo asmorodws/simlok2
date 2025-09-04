@@ -40,7 +40,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTrigger }: UsersTableProps) {
+export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }: UsersTableProps) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,7 +57,7 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
   const [verificationFilter, setVerificationFilter] = useState<"all" | "pending" | "verified">("all");
   
   // Sorting
-  const [sortField, setSortField] = useState<SortField>("date_created_at");
+  const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Ref untuk search input
@@ -232,12 +232,12 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  onClick={() => handleSort("nama_petugas")}
+                  onClick={() => handleSort("officer_name")}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 >
                   <div className="flex items-center space-x-1">
                     <span>Nama Petugas</span>
-                    {getSortIcon("nama_petugas")}
+                    {getSortIcon("officer_name")}
                   </div>
                 </th>
                 <th 
@@ -262,12 +262,12 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
                   Vendor/Kontak
                 </th>
                 <th 
-                  onClick={() => handleSort("date_created_at")}
+                  onClick={() => handleSort("created_at")}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
                 >
                   <div className="flex items-center space-x-1">
                     <span>Tgl Dibuat</span>
-                    {getSortIcon("date_created_at")}
+                    {getSortIcon("created_at")}
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -282,9 +282,9 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
               {users.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.nama_petugas}</div>
-                    {user.alamat && (
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{user.alamat}</div>
+                    <div className="text-sm font-medium text-gray-900">{user.officer_name}</div>
+                    {user.address && (
+                      <div className="text-sm text-gray-500 truncate max-w-xs">{user.address}</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -295,14 +295,14 @@ export default function UsersTable({ onEdit, onDelete, onView, onAdd, refreshTri
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {user.nama_vendor || "-"}
+                      {user.vendor_name || "-"}
                     </div>
-                    {user.no_telp && (
-                      <div className="text-sm text-gray-500">{user.no_telp}</div>
+                    {user.phone_number && (
+                      <div className="text-sm text-gray-500">{user.phone_number}</div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{formatDate(user.date_created_at)}</div>
+                    <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getVerificationStatus(user.verified_at)}

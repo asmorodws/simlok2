@@ -11,7 +11,6 @@ import UserModal from "@/components/admin/UserModal";
 import DeleteModal from "@/components/admin/DeleteModal";
 import UserVerificationModal from "@/components/admin/UserVerificationModal";
 import { UserData } from "@/types/user";
-import { Suspense } from "react";
 
 export default function ManageUsersPage() {
   const { data: session, status } = useSession();
@@ -77,11 +76,11 @@ export default function ManageUsersPage() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const handleUserUpdate = (updatedUser: UserData) => {
+  const handleUserUpdate = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const handleUserRemove = (userId: string) => {
+  const handleUserRemove = () => {
     setRefreshTrigger(prev => prev + 1);
   };
 

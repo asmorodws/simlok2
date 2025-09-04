@@ -60,7 +60,9 @@ export default function DatePicker({
       // Parse the date string properly to avoid timezone issues
       // Assuming value is in YYYY-MM-DD format
       const [year, month, day] = value.split('-').map(Number);
-      setSelectedDate(new Date(year, month - 1, day)); // month is 0-indexed in Date constructor
+      if (year && month && day) {
+        setSelectedDate(new Date(year, month - 1, day)); // month is 0-indexed in Date constructor
+      }
     } else {
       setSelectedDate(null);
     }
@@ -84,23 +86,43 @@ export default function DatePicker({
 
   return (
     <ReactDatePicker
-      id={id}
-      name={name}
-      selected={selectedDate}
-      onChange={handleDateChange}
-      showTimeSelect={showTimeSelect}
-      timeIntervals={timeIntervals}
-      dateFormat={showTimeSelect ? `${dateFormat} HH:mm` : dateFormat}
-      placeholderText={placeholder}
-      disabled={disabled}
-      required={required}
-      customInput={<CustomInput className={className} />}
-      popperClassName="react-datepicker-popper"
-      calendarClassName="react-datepicker-calendar"
-      locale="id"
-      todayButton="Hari ini"
-      showPopperArrow={false}
-      popperPlacement="bottom-start"
+      {...{
+        id: id || undefined,
+        name: name || undefined,
+        selected: selectedDate,
+        onChange: handleDateChange,
+        showTimeSelect,
+        timeIntervals,
+        dateFormat: showTimeSelect ? `${dateFormat} HH:mm` : dateFormat,
+        placeholderText: placeholder,
+        disabled,
+        required,
+        customInput: <CustomInput className={className} />,
+        popperClassName: "react-datepicker-popper",
+        calendarClassName: "react-datepicker-calendar",
+        locale: "id",
+        todayButton: "Hari ini",
+        showPopperArrow: false,
+        popperPlacement: "bottom-start",
+        popperModifiers: [
+          {
+            name: "offset",
+            options: {
+              offset: [0, 5],
+            },
+          },
+          {
+            name: "preventOverflow",
+            options: {
+              rootBoundary: "viewport",
+              tether: false,
+              altAxis: true,
+            },
+          },
+        ],
+        withPortal: true,
+        portalId: "datepicker-portal"
+      } as any}
     />
   );
 }

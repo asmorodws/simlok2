@@ -29,7 +29,7 @@ export async function GET() {
     // Get pending verification submissions (submissions with PENDING status)
     const pendingVerificationSubmissions = await prisma.submission.count({
       where: {
-        status_approval_admin: "PENDING"
+        approval_status: "PENDING"
       }
     });
 
