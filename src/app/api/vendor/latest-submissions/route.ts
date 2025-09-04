@@ -24,7 +24,20 @@ export async function GET() {
         work_location: true,
         approval_status: true,
         simlok_number: true,
-        created_at: true
+        created_at: true,
+        vendor_name: true,
+        officer_name: true,
+        based_on: true,
+        working_hours: true,
+        implementation: true,
+        user: {
+          select: {
+            id: true,
+            officer_name: true,
+            email: true,
+            vendor_name: true
+          }
+        }
       },
       orderBy: {
         created_at: "desc"

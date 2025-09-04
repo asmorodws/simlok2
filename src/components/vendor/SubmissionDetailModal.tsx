@@ -152,40 +152,43 @@ export default function SubmissionDetailModal({
   };
 
   return (
-    <>
-      {/* Modal Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onClose} />
-      
-      {/* Modal Content */}
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4 text-center">
-          <div className="w-full max-w-6xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <BuildingOfficeIcon className="h-8 w-8 text-blue-500" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Dibuat pada {formatDate(submission.created_at)}
-                  </p>
-                </div>
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/30 transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-200 p-6 flex-shrink-0">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <BuildingOfficeIcon className="h-8 w-8 text-blue-500" />
               </div>
-              <div className="flex items-center space-x-3">
-                {getStatusBadge(submission.approval_status)}
-                <button
-                  onClick={onClose}
-                  className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Dibuat pada {formatDate(submission.created_at)}
+                </p>
               </div>
             </div>
+            <div className="flex items-center space-x-3">
+              {getStatusBadge(submission.approval_status)}
+              <button
+                onClick={onClose}
+                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
 
-            {/* Content */}
-            <div className="space-y-8 max-h-[70vh] overflow-y-auto">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="space-y-8">
               {/* Debug Section - Development Only */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -561,6 +564,6 @@ export default function SubmissionDetailModal({
         submissionName={submission?.vendor_name || ''}
         nomorSimlok={submission?.simlok_number || ''}
       />
-    </>
+    </div>
   );
 }

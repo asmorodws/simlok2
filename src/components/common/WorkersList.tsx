@@ -13,8 +13,8 @@ import { fileUrlHelper } from '@/lib/fileUrlHelper';
 
 interface Worker {
   id: string;
-  nama_pekerja: string;
-  foto_pekerja: string | null;
+  worker_name: string;
+  worker_photo: string | null;
   submission_id: string;
   created_at: string;
 }
@@ -67,8 +67,8 @@ export default function WorkersList({
         if (fallbackWorkers) {
           const fallbackWorkersList = fallbackWorkers.split(',').map((name, index) => ({
             id: `fallback-${index}`,
-            nama_pekerja: name.trim(),
-            foto_pekerja: null,
+            worker_name: name.trim(),
+            worker_photo: null,
             submission_id: submissionId,
             created_at: new Date().toISOString(),
           }));
@@ -183,18 +183,18 @@ export default function WorkersList({
               <div className="relative p-4 pb-2">
                 {showPhotos && (
                   <div className="relative">
-                    {worker.foto_pekerja && !imageErrors.has(worker.id) ? (
+                    {worker.worker_photo && !imageErrors.has(worker.id) ? (
                       <img
-                        src={fileUrlHelper.convertLegacyUrl(worker.foto_pekerja, `foto_pekerja_${worker.id}`)}
-                        alt={`Foto ${worker.nama_pekerja}`}
+                        src={fileUrlHelper.convertLegacyUrl(worker.worker_photo, `foto_pekerja_${worker.id}`)}
+                        alt={`Foto ${worker.worker_name}`}
                         className="w-full h-48 rounded-lg object-cover cursor-pointer hover:scale-105 transition-transform duration-200 shadow-sm"
                         onError={() => handleImageError(worker.id)}
-                        onClick={() => handleImageClick(worker.foto_pekerja!)}
+                        onClick={() => handleImageClick(worker.worker_photo!)}
                         title="Klik untuk memperbesar"
                       />
                     ) : (
                       <div className="w-full h-48 rounded-lg bg-gray-100 flex flex-col items-center justify-center shadow-sm">
-                        {worker.foto_pekerja ? (
+                        {worker.worker_photo ? (
                           <>
                             <PhotoIcon className="h-12 w-12 text-gray-400 mb-2" />
                             <span className="text-xs text-gray-500">Gagal memuat foto</span>
@@ -210,7 +210,7 @@ export default function WorkersList({
                     
                     {/* Status indicator */}
                     <div className={`absolute top-2 right-2 w-3 h-3 rounded-full border-2 border-white ${
-                      worker.foto_pekerja && !imageErrors.has(worker.id)
+                      worker.worker_photo && !imageErrors.has(worker.id)
                         ? 'bg-green-500' 
                         : 'bg-orange-500'
                     }`}></div>
@@ -228,7 +228,7 @@ export default function WorkersList({
               {/* Content Section - Name and details below photo */}
               <div className="p-4 pt-2">
                 <h2 className="font-semibold text-gray-900 text-base mb-1">
-                  {worker.nama_pekerja}
+                  {worker.worker_name}
                 </h2>
 
                 {/* Verification Actions */}
@@ -273,18 +273,18 @@ export default function WorkersList({
               {/* Photo */}
               {showPhotos && (
                 <div className="flex-shrink-0 relative">
-                  {worker.foto_pekerja && !imageErrors.has(worker.id) ? (
+                  {worker.worker_photo && !imageErrors.has(worker.id) ? (
                     <img
-                      src={fileUrlHelper.convertLegacyUrl(worker.foto_pekerja, `foto_pekerja_${worker.id}`)}
-                      alt={`Foto ${worker.nama_pekerja}`}
+                      src={fileUrlHelper.convertLegacyUrl(worker.worker_photo, `foto_pekerja_${worker.id}`)}
+                      alt={`Foto ${worker.worker_name}`}
                       className="h-12 w-12 rounded-lg object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-400 transition-colors shadow-sm"
                       onError={() => handleImageError(worker.id)}
-                      onClick={() => handleImageClick(worker.foto_pekerja!)}
+                      onClick={() => handleImageClick(worker.worker_photo!)}
                       title="Klik untuk memperbesar"
                     />
                   ) : (
                     <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center border-2 border-gray-200">
-                      {worker.foto_pekerja ? (
+                      {worker.worker_photo ? (
                         <PhotoIcon className="h-6 w-6 text-gray-400" />
                       ) : (
                         <UserIcon className="h-6 w-6 text-gray-400" />
@@ -294,7 +294,7 @@ export default function WorkersList({
                   
                   {/* Status indicator */}
                   <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                    worker.foto_pekerja && !imageErrors.has(worker.id)
+                    worker.worker_photo && !imageErrors.has(worker.id)
                       ? 'bg-green-500' 
                       : 'bg-orange-500'
                   }`}></div>
@@ -310,7 +310,7 @@ export default function WorkersList({
               {/* Worker Info */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-medium text-gray-900 truncate">
-                  {worker.nama_pekerja}
+                  {worker.worker_name}
                 </h3>
                 <p className="text-sm text-gray-500">
                   Pekerja #{index + 1}
@@ -320,16 +320,16 @@ export default function WorkersList({
               {/* Status Badge */}
               <div className="flex-shrink-0">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  worker.foto_pekerja && !imageErrors.has(worker.id)
+                  worker.worker_photo && !imageErrors.has(worker.id)
                     ? 'bg-green-100 text-green-800' 
                     : 'bg-orange-100 text-orange-800'
                 }`}>
                   <div className={`w-2 h-2 rounded-full mr-1.5 ${
-                    worker.foto_pekerja && !imageErrors.has(worker.id)
+                    worker.worker_photo && !imageErrors.has(worker.id)
                       ? 'bg-green-400' 
                       : 'bg-orange-400'
                   }`}></div>
-                  {worker.foto_pekerja && !imageErrors.has(worker.id) 
+                  {worker.worker_photo && !imageErrors.has(worker.id) 
                     ? 'Foto Tersedia' 
                     : 'Tanpa Foto'}
                 </span>
@@ -359,19 +359,28 @@ export default function WorkersList({
 
       {/* Photo Modal for worker photos */}
       {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden">
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 z-10 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg transition-colors"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-            <img
-              src={selectedImage}
-              alt="Preview"
-              className="max-w-full max-h-[90vh] object-contain"
-            />
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/75 transition-opacity"
+            onClick={closeModal}
+          />
+          
+          {/* Modal */}
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-lg overflow-hidden">
+              <button
+                onClick={closeModal}
+                className="absolute top-2 right-2 z-10 bg-white hover:bg-gray-100 rounded-full p-2 shadow-lg transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-w-full max-h-[90vh] object-contain"
+              />
+            </div>
           </div>
         </div>
       )}

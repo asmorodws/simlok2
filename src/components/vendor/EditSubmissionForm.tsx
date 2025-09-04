@@ -23,24 +23,24 @@ interface Worker {
 
 interface Submission {
   id: string;
-  status_approval_admin: string;
-  nama_vendor: string;
-  berdasarkan: string;
-  nama_petugas: string;
-  pekerjaan: string;
-  lokasi_kerja: string;
-  pelaksanaan: string | null;
-  jam_kerja: string;
-  lain_lain?: string | null;
-  sarana_kerja: string;
-  nomor_simja?: string | null;
-  tanggal_simja?: Date | null;
-  nomor_sika?: string | null;
-  tanggal_sika?: Date | null;
-  nama_pekerja: string;
+  approval_status: string;
+  vendor_name: string;
+  based_on: string;
+  officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
+  working_hours: string;
+  other_notes?: string | null;
+  work_facilities: string;
+  simja_number?: string | null;
+  simja_date?: Date | null;
+  sika_number?: string | null;
+  sika_date?: Date | null;
+  worker_names: string;
   content: string | null;
-  upload_doc_sika?: string | null;
-  upload_doc_simja?: string | null;
+  sika_document_upload?: string | null;
+  simja_document_upload?: string | null;
 }
 
 interface EditSubmissionFormProps {
@@ -75,11 +75,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
           const workersResponse = await fetch(`/api/submissions/${submissionId}/workers`);
           if (workersResponse.ok) {
             const workersData = await workersResponse.json();
-            if (workersData.length > 0) {
-              setWorkers(workersData.map((worker: any) => ({
+            if (workersData.workers && workersData.workers.length > 0) {
+              setWorkers(workersData.workers.map((worker: any) => ({
                 id: worker.id,
-                nama_pekerja: worker.nama_pekerja,
-                foto_pekerja: worker.foto_pekerja || ''
+                nama_pekerja: worker.worker_name || worker.nama_pekerja || '',
+                foto_pekerja: worker.worker_photo || worker.foto_pekerja || ''
               })));
             }
           }
@@ -131,35 +131,35 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   useEffect(() => {
     if (submission) {
       setFormData({
-        nama_vendor: submission.nama_vendor || '',
-        berdasarkan: submission.berdasarkan || '',
-        nama_petugas: submission.nama_petugas || '',
-        pekerjaan: submission.pekerjaan || '',
-        lokasi_kerja: submission.lokasi_kerja || '',
-        pelaksanaan: submission.pelaksanaan || '',
-        jam_kerja: submission.jam_kerja || '',
-        lain_lain: submission.lain_lain || '',
-        sarana_kerja: submission.sarana_kerja || '',
-        nomor_simja: submission.nomor_simja || '',
-        tanggal_simja: submission.tanggal_simja ? (() => {
-          const date = new Date(submission.tanggal_simja);
+        nama_vendor: submission.vendor_name || '',
+        berdasarkan: submission.based_on || '',
+        nama_petugas: submission.officer_name || '',
+        pekerjaan: submission.job_description || '',
+        lokasi_kerja: submission.work_location || '',
+        pelaksanaan: submission.implementation || '',
+        jam_kerja: submission.working_hours || '',
+        lain_lain: submission.other_notes || '',
+        sarana_kerja: submission.work_facilities || '',
+        nomor_simja: submission.simja_number || '',
+        tanggal_simja: submission.simja_date ? (() => {
+          const date = new Date(submission.simja_date);
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         })() : '',
-        nomor_sika: submission.nomor_sika || '',
-        tanggal_sika: submission.tanggal_sika ? (() => {
-          const date = new Date(submission.tanggal_sika);
+        nomor_sika: submission.sika_number || '',
+        tanggal_sika: submission.sika_date ? (() => {
+          const date = new Date(submission.sika_date);
           const year = date.getFullYear();
           const month = String(date.getMonth() + 1).padStart(2, '0');
           const day = String(date.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         })() : '',
-        nama_pekerja: submission.nama_pekerja || '',
+        nama_pekerja: submission.worker_names || '',
         content: submission.content || '',
-        upload_doc_sika: submission.upload_doc_sika || '',
-        upload_doc_simja: submission.upload_doc_simja || '',
+        upload_doc_sika: submission.sika_document_upload || '',
+        upload_doc_simja: submission.simja_document_upload || '',
       });
     }
   }, [submission]);
@@ -170,7 +170,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       setFormData(prev => ({
         ...prev,
         // Keep vendor name readonly for vendors - use session data if available
-        nama_vendor: session.user.vendor_name || submission.nama_vendor || prev.nama_vendor || '',
+        nama_vendor: session.user.vendor_name || submission.vendor_name || prev.nama_vendor || '',
       }));
     }
   }, [session, submission]);
@@ -247,7 +247,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }
     
     // Check if submission is still editable
-    if (submission.status_approval_admin !== 'PENDING') {
+    if (submission.approval_status !== 'PENDING') {
       setAlert({
         variant: 'warning',
         title: 'Peringatan!',
@@ -303,11 +303,29 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       // Format worker names for database
       const workerNames = validWorkers.map(worker => worker.nama_pekerja.trim()).join('\n');
 
-      // Prepare submission data
+      // Prepare submission data - transform Indonesian field names to English for API
       const formattedData = {
-        ...formData,
-        nama_pekerja: workerNames,
-        workers: validWorkers // Include workers data for API processing
+        vendor_name: formData.nama_vendor,
+        based_on: formData.berdasarkan,
+        officer_name: formData.nama_petugas,
+        job_description: formData.pekerjaan,
+        work_location: formData.lokasi_kerja,
+        implementation: formData.pelaksanaan,
+        working_hours: formData.jam_kerja,
+        other_notes: formData.lain_lain,
+        work_facilities: formData.sarana_kerja,
+        simja_number: formData.nomor_simja,
+        simja_date: formData.tanggal_simja ? new Date(formData.tanggal_simja) : null,
+        sika_number: formData.nomor_sika,
+        sika_date: formData.tanggal_sika ? new Date(formData.tanggal_sika) : null,
+        worker_names: workerNames,
+        content: formData.content,
+        sika_document_upload: formData.upload_doc_sika,
+        simja_document_upload: formData.upload_doc_simja,
+        workers: validWorkers.map(worker => ({
+          worker_name: worker.nama_pekerja.trim(),
+          worker_photo: worker.foto_pekerja
+        }))
       };
 
       console.log('Sending update request:', {
@@ -396,19 +414,19 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
             <div className="flex justify-between items-center mb-6">
               <div className="text-sm text-gray-500">
                 Status: <span className={`font-medium ${
-                  submission.status_approval_admin === 'PENDING' ? 'text-yellow-600' :
-                  submission.status_approval_admin === 'APPROVED' ? 'text-green-600' :
+                  submission.approval_status === 'PENDING' ? 'text-yellow-600' :
+                  submission.approval_status === 'APPROVED' ? 'text-green-600' :
                   'text-red-600'
                 }`}>{
-                  submission.status_approval_admin === 'PENDING' ? 'Menunggu Review' :
-                  submission.status_approval_admin === 'APPROVED' ? 'Disetujui' :
-                  submission.status_approval_admin === 'REJECTED' ? 'Ditolak' :
-                  submission.status_approval_admin
+                  submission.approval_status === 'PENDING' ? 'Menunggu Review' :
+                  submission.approval_status === 'APPROVED' ? 'Disetujui' :
+                  submission.approval_status === 'REJECTED' ? 'Ditolak' :
+                  submission.approval_status
                 }</span>
               </div>
             </div>
             
-            {submission.status_approval_admin !== 'PENDING' && (
+            {submission.approval_status !== 'PENDING' && (
               <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-yellow-800 text-sm">
                   <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
@@ -418,7 +436,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
             )}
             
             <form onSubmit={handleSubmit} className="space-y-8">
-              <fieldset disabled={submission.status_approval_admin !== 'PENDING'} className={submission.status_approval_admin !== 'PENDING' ? 'opacity-60' : ''}>
+              <fieldset disabled={submission.approval_status !== 'PENDING'} className={submission.approval_status !== 'PENDING' ? 'opacity-60' : ''}>
             
             {/* Informasi Vendor */}
             <div className="p-6 rounded-lg">
@@ -629,7 +647,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                           variant="outline"
                           className="text-red-500 hover:bg-red-50 border-red-200 w-8 h-8 p-0 rounded-full"
                           title="Hapus pekerja"
-                          disabled={submission.status_approval_admin !== 'PENDING'}
+                          disabled={submission.approval_status !== 'PENDING'}
                         >
                           ✕
                         </Button>
@@ -653,7 +671,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                                 variant="outline"
                                 onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
                                 className="bg-white text-gray-800 hover:bg-gray-100 text-xs px-3 py-1"
-                                disabled={submission.status_approval_admin !== 'PENDING'}
+                                disabled={submission.approval_status !== 'PENDING'}
                               >
                                 Ganti Foto
                               </Button>
@@ -663,16 +681,16 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                               onClick={() => updateWorkerPhoto(worker.id, '')}
                               className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
                               title="Hapus foto"
-                              disabled={submission.status_approval_admin !== 'PENDING'}
+                              disabled={submission.approval_status !== 'PENDING'}
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
                           <div 
-                            onClick={() => submission.status_approval_admin === 'PENDING' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                            onClick={() => submission.approval_status === 'PENDING' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
                             className={`w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center transition-all duration-200 bg-gray-50 ${
-                              submission.status_approval_admin === 'PENDING' 
+                              submission.approval_status === 'PENDING' 
                                 ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50' 
                                 : 'cursor-not-allowed opacity-60'
                             }`}
@@ -737,7 +755,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                 ))}
                 
                 {/* Add New Worker Card */}
-                {submission.status_approval_admin === 'PENDING' && (
+                {submission.approval_status === 'PENDING' && (
                   <div 
                     onClick={addWorker}
                     className="border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[280px] text-gray-500 hover:text-blue-600"
@@ -764,7 +782,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               >
                 Batal
               </Button>
-              {submission.status_approval_admin === 'PENDING' && (
+              {submission.approval_status === 'PENDING' && (
                 <Button
                   type="submit"
                   disabled={isLoading}

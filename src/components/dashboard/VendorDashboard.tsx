@@ -24,15 +24,13 @@ interface VendorStats {
 
 interface VendorSubmission {
   id: string;
-  job_description: string;
-  work_location: string;
   approval_status: string;
-  simlok_number?: string;
-  created_at: string;
-  implementation: string | null;
   vendor_name: string;
   based_on: string;
   officer_name: string;
+  job_description: string;
+  work_location: string;
+  implementation: string | null;
   working_hours: string;
   other_notes?: string;
   work_facilities: string;
@@ -40,6 +38,7 @@ interface VendorSubmission {
   simja_date?: string | null;
   sika_number?: string;
   sika_date?: string | null;
+  simlok_number?: string;
   simlok_date?: string | null;
   worker_names: string;
   content: string;
@@ -47,6 +46,9 @@ interface VendorSubmission {
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;
+  created_at: string;
+  signer_position?: string;
+  signer_name?: string;
   user: {
     id: string;
     officer_name: string;
@@ -204,9 +206,32 @@ export default function VendorDashboard() {
     }
   };
 
-  const handleViewDetail = useCallback((submission: VendorSubmission) => {
-    setSelectedSubmission(submission);
-    setIsModalOpen(true);
+  const handleViewDetail = useCallback(async (submission: VendorSubmission) => {
+    try {
+      // Fetch full submission data from API
+      const response = await fetch(`/api/submissions/${submission.id}`);
+      if (response.ok) {
+        const fullSubmissionData = await response.json();
+        setSelectedSubmission(fullSubmissionData);
+        setIsModalOpen(true);
+      } else {
+        console.error('Failed to fetch submission details');
+        setAlert({
+          show: true,
+          variant: 'error',
+          title: 'Error',
+          message: 'Gagal memuat detail pengajuan'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching submission details:', error);
+      setAlert({
+        show: true,
+        variant: 'error',
+        title: 'Error',
+        message: 'Terjadi kesalahan saat memuat detail pengajuan'
+      });
+    }
   }, []);
 
   const handleCloseModal = useCallback(() => {
