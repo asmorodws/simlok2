@@ -16,38 +16,38 @@ import Alert from "../ui/alert/Alert";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import UserVerificationModal from "../admin/UserVerificationModal";
 import { UserData } from "@/types/user";
-
-interface DashboardStats {
-  totalVendors: number;
-  pendingVerificationVendors: number;
-  pendingVerificationSubmissions: number;
-}
-
-interface LatestSubmission {
-  id: string;
-  vendor_name: string;
-  job_description: string;
-  approval_status: string;
-  created_at: string;
-}
-
-interface PendingVendor extends UserData {
-  // Extending UserData to ensure compatibility
-}
+import { useStatsStore } from "@/store/useStatsStore";
+import { useSubmissionStore } from "@/store/useSubmissionStore";
+import { useUserStore } from "@/store/useUserStore";
+import { useSocket } from "@/components/common/RealtimeUpdates";
 
 export default function AdminDashboard() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalVendors: 0,
-    pendingVerificationVendors: 0,
-    pendingVerificationSubmissions: 0
-  });
-  const [latestSubmissions, setLatestSubmissions] = useState<LatestSubmission[]>([]);
-  const [pendingVendors, setPendingVendors] = useState<PendingVendor[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use Zustand stores for realtime data
+  const { 
+    adminStats,
+    loading: statsLoading,
+    fetchAdminStats 
+  } = useStatsStore();
+  
+  const { 
+    submissions,
+    loading: submissionsLoading,
+    fetchLatestSubmissions 
+  } = useSubmissionStore();
+  
+  const { 
+    pendingUsers,
+    loading: usersLoading,
+    fetchPendingUsers 
+  } = useUserStore();
+  
+  // Initialize Socket.IO connection
+  useSocket();
   
   // Modal states
-  const [selectedVendor, setSelectedVendor] = useState<PendingVendor | null>(null);
+  const [selectedVendor, setSelectedVendor] = useState<UserData | null>(null);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
 
   // Alert state
@@ -77,42 +77,13 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    // Initialize data fetching
+    fetchAdminStats();
+    fetchLatestSubmissions();
+    fetchPendingUsers();
+  }, [fetchAdminStats, fetchLatestSubmissions, fetchPendingUsers]);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch statistics
-      const [statsRes, submissionsRes, vendorsRes] = await Promise.all([
-        fetch('/api/admin/dashboard-stats'),
-        fetch('/api/admin/latest-submissions'),
-        fetch('/api/admin/pending-vendors')
-      ]);
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-
-      if (submissionsRes.ok) {
-        const submissionsData = await submissionsRes.json();
-        setLatestSubmissions(submissionsData.submissions || []);
-      }
-
-      if (vendorsRes.ok) {
-        const vendorsData = await vendorsRes.json();
-        setPendingVendors(vendorsData.vendors || []);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenVerificationModal = (vendor: PendingVendor) => {
+  const handleOpenVerificationModal = (vendor: UserData) => {
     setSelectedVendor(vendor);
     setIsVerificationModalOpen(true);
   };
@@ -122,18 +93,16 @@ export default function AdminDashboard() {
     setSelectedVendor(null);
   };
 
-  const handleUserUpdate = (updatedUser: any) => {
-    // Update pending vendors list
-    setPendingVendors(prev => prev.filter(v => v.id !== updatedUser.id));
-    // Refresh dashboard data
-    fetchDashboardData();
+  const handleUserUpdate = (_updatedUser: any) => {
+    // Refresh data after user update
+    fetchPendingUsers();
+    fetchAdminStats();
   };
 
-  const handleUserRemove = (userId: string) => {
-    // Remove vendor from pending list
-    setPendingVendors(prev => prev.filter(v => v.id !== userId));
-    // Refresh dashboard data
-    fetchDashboardData();
+  const handleUserRemove = (_userId: string) => {
+    // Refresh data after user removal
+    fetchPendingUsers();
+    fetchAdminStats();
   };
 
   const formatDate = (dateString: string | Date) => {
@@ -186,7 +155,7 @@ export default function AdminDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Vendor</p>
               <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-                {loading ? '...' : stats.totalVendors}
+                {statsLoading ? '...' : adminStats?.totalVendors || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 rounded-lg flex items-center justify-center">
@@ -200,7 +169,7 @@ export default function AdminDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Vendor</p>
               <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">
-                {loading ? '...' : stats.pendingVerificationVendors}
+                {statsLoading ? '...' : adminStats?.pendingVerificationVendors || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center">
@@ -214,7 +183,7 @@ export default function AdminDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Pengajuan SIMLOK</p>
               <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
-                {loading ? '...' : stats.pendingVerificationSubmissions}
+                {statsLoading ? '...' : adminStats?.pendingVerificationSubmissions || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center">
@@ -254,20 +223,20 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
+                {submissionsLoading ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
-                ) : latestSubmissions.length === 0 ? (
+                ) : submissions.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
                       Belum ada pengajuan
                     </td>
                   </tr>
                 ) : (
-                  latestSubmissions.map((submission) => (
+                  submissions.slice(0, 5).map((submission: any) => (
                     <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                         {submission.vendor_name}
@@ -317,20 +286,20 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
+                {usersLoading ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
-                ) : pendingVendors.length === 0 ? (
+                ) : pendingUsers.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
                       Tidak ada vendor yang perlu diverifikasi
                     </td>
                   </tr>
                 ) : (
-                  pendingVendors.map((vendor) => (
+                  pendingUsers.slice(0, 5).map((vendor: any) => (
                     <tr key={vendor.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                       <td className="px-3 py-4">
                         <div>

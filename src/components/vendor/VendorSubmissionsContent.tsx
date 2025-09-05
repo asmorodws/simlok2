@@ -14,6 +14,8 @@ import Button from '../ui/button/Button';
 import Alert from '../ui/alert/Alert';
 import { useToast } from '@/hooks/useToast';
 import ConfirmModal from '../ui/modal/ConfirmModal';
+import { useSubmissionStore } from '@/store/useSubmissionStore';
+import { useSocket } from '@/components/common/RealtimeUpdates';
 
 interface Submission {
   id: string;
@@ -53,8 +55,7 @@ interface Submission {
   };
 }
 
-type SortField = keyof Submission;
-type SortOrder = "asc" | "desc";
+// Types already defined in the store
 
 // Custom hook untuk debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -75,23 +76,31 @@ function useDebounce<T>(value: T, delay: number): T {
 
 export default function VendorSubmissionsContent() {
   const { showSuccess, showError } = useToast();
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalSubmissions, setTotalSubmissions] = useState(0);
+  // Use Zustand store for realtime submissions data
+  const { 
+    submissions,
+    loading,
+    searchTerm,
+    sortField,
+    sortOrder,
+    currentPage,
+    totalPages,
+    fetchVendorSubmissions,
+    setSearchTerm,
+    setSortField,
+    setSortOrder,
+    setCurrentPage
+  } = useSubmissionStore();
+  
+  // Initialize Socket.IO connection
+  useSocket();
+  
+  const [error] = useState("");
+  
+  // Status filter (local state)
+  const [statusFilter, setStatusFilter] = useState("");
   const [limit] = useState(10);
-  
-  // Search & Filter
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  
-  // Sorting
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -120,41 +129,19 @@ export default function VendorSubmissionsContent() {
   // Debounced search term
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const fetchSubmissions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: limit.toString(),
-        search: debouncedSearchTerm,
-        sortBy: sortField,
-        sortOrder: sortOrder,
-        ...(statusFilter && { status: statusFilter }),
-      });
-
-      const response = await fetch(`/api/submissions?${params}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Gagal mengambil data submission");
-      }
-      
-      const data = await response.json();
-      setSubmissions(data.submissions);
-      setTotalPages(data.pagination.pages);
-      setTotalSubmissions(data.pagination.total);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-      console.error('Error fetching submissions:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, debouncedSearchTerm, statusFilter, sortField, sortOrder, limit]);
-
+  // Fetch submissions when filters change
   useEffect(() => {
-    fetchSubmissions();
-  }, [fetchSubmissions]);
+    const params = {
+      page: currentPage,
+      limit,
+      search: debouncedSearchTerm,
+      sortBy: sortField,
+      sortOrder,
+      ...(statusFilter && { status: statusFilter }),
+    };
+    
+    fetchVendorSubmissions(params);
+  }, [currentPage, limit, debouncedSearchTerm, sortField, sortOrder, statusFilter, fetchVendorSubmissions]);
 
   // Kembalikan fokus ke search input setelah data reload
   useEffect(() => {
@@ -166,16 +153,17 @@ export default function VendorSubmissionsContent() {
   // Reset ke halaman 1 saat search term berubah
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, statusFilter, sortField, sortOrder]);
+  }, [debouncedSearchTerm, statusFilter]);
 
-  const handleSort = useCallback((field: SortField) => {
-    if (sortField === field) {
+  const handleSort = useCallback((field: string) => {
+    if (field === sortField) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortOrder("asc");
+      setSortOrder("desc");
     }
-  }, [sortField, sortOrder]);
+    setCurrentPage(1);
+  }, [sortField, sortOrder, setSortField, setSortOrder, setCurrentPage]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -209,7 +197,16 @@ export default function VendorSubmissionsContent() {
       }
 
       // Refresh data setelah berhasil menghapus
-      await fetchSubmissions();
+      const params = {
+        page: currentPage,
+        limit,
+        search: debouncedSearchTerm,
+        sortBy: sortField,
+        sortOrder,
+        ...(statusFilter && { status: statusFilter }),
+      };
+      
+      await fetchVendorSubmissions(params);
       
       // Show success toast
       showSuccess('Berhasil!', 'Pengajuan berhasil dihapus');
@@ -223,7 +220,7 @@ export default function VendorSubmissionsContent() {
       });
       setTimeout(() => setAlert(null), 5000);
     }
-  }, [fetchSubmissions]);
+  }, [currentPage, limit, debouncedSearchTerm, sortField, sortOrder, statusFilter, fetchVendorSubmissions]);
 
   const handleViewDetail = useCallback((submission: Submission) => {
     setSelectedSubmission(submission);
@@ -238,13 +235,13 @@ export default function VendorSubmissionsContent() {
   const paginationInfo = useMemo(() => ({
     currentPage,
     totalPages,
-    totalSubmissions,
+    totalSubmissions: submissions.length,
     limit,
     startItem: ((currentPage - 1) * limit) + 1,
-    endItem: Math.min(currentPage * limit, totalSubmissions)
-  }), [currentPage, totalPages, totalSubmissions, limit]);
+    endItem: Math.min(currentPage * limit, submissions.length)
+  }), [currentPage, totalPages, submissions.length, limit]);
 
-  const getSortIcon = useCallback((field: SortField) => {
+  const getSortIcon = useCallback((field: string) => {
     if (sortField !== field) {
       return <ChevronUpDownIcon className="w-4 h-4 text-gray-400" />;
     }
@@ -299,7 +296,17 @@ export default function VendorSubmissionsContent() {
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="text-red-800">{error}</div>
             <button 
-              onClick={fetchSubmissions}
+              onClick={() => {
+                const params = {
+                  page: currentPage,
+                  limit,
+                  search: debouncedSearchTerm,
+                  sortBy: sortField,
+                  sortOrder,
+                  ...(statusFilter && { status: statusFilter }),
+                };
+                fetchVendorSubmissions(params);
+              }}
               className="mt-2 text-red-600 hover:text-red-500 font-medium"
             >
               Coba Lagi
@@ -380,7 +387,7 @@ export default function VendorSubmissionsContent() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {submissions.map((submission) => (
+              {submissions.map((submission: any) => (
                 <tr key={submission.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{submission.vendor_name}</div>
@@ -470,7 +477,7 @@ export default function VendorSubmissionsContent() {
         )}
       </div>
     );
-  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge, fetchSubmissions]);
+  }, [submissions, loading, error, handleSort, getSortIcon, formatDate, getStatusBadge]);
 
   return (
     <div className="space-y-4">
@@ -478,7 +485,7 @@ export default function VendorSubmissionsContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-4">
           <h2 className="text-xl font-semibold text-gray-900">Pengajuan SIMLOK Saya</h2>
-          <span className="text-sm text-gray-500">({totalSubmissions} pengajuan)</span>
+          <span className="text-sm text-gray-500">({submissions.length} pengajuan)</span>
         </div>
         
         <Link href="/vendor/submissions/create">
@@ -536,7 +543,7 @@ export default function VendorSubmissionsContent() {
           
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((prev: number) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -575,7 +582,7 @@ export default function VendorSubmissionsContent() {
             </div>
             
             <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={() => setCurrentPage((prev: number) => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >

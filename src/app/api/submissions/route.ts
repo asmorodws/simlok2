@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { SubmissionData } from '@/types/submission';
+import { notifyAdminNewSubmission } from '@/server/events';
 
 // GET /api/submissions - Get all submissions
 export async function GET(request: NextRequest) {
@@ -239,6 +240,9 @@ export async function POST(request: NextRequest) {
 
         console.log('POST /api/submissions - Workers created:', workersData.length);
       }
+
+      // Notify admin about new submission
+      await notifyAdminNewSubmission(submission.id);
 
       console.log('POST /api/submissions - Submission created successfully:', submission.id);
       return NextResponse.json(submission, { status: 201 });

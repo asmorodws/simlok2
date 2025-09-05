@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
+import { notifyVendorStatusChange } from '@/server/events';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
@@ -200,6 +201,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     console.log('PUT /api/submissions/[id] - Request body keys:', Object.keys(body));
 
     let updateData: any = {};
+    let statusChanged = false;
+    let newStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | undefined;
 
     // Handle different types of updates based on user role
     if (session.user.role === 'ADMIN' || session.user.role === 'VERIFIER') {
@@ -214,6 +217,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           notes: body.keterangan,
           simlok_date: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
         };
+
+        // Track status change for notification
+        if (existingSubmission.approval_status !== body.status_approval_admin) {
+          statusChanged = true;
+          newStatus = body.status_approval_admin;
+        }
 
         // Only add fields that are provided and valid
         Object.entries(approvalData).forEach(([key, value]) => {
@@ -328,6 +337,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           }))
         });
       }
+    }
+
+    // Notify vendor if status changed
+    if (statusChanged && newStatus && existingSubmission.user_id) {
+      await notifyVendorStatusChange(
+        existingSubmission.user_id,
+        id,
+        newStatus
+      );
     }
 
     console.log('PUT /api/submissions/[id] - Update successful');

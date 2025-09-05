@@ -133,9 +133,47 @@ model WorkerList {
   @@index([submission_id])
 }
 
+/* ----------  NOTIFICATION  ---------- */
+model Notification {
+  id         String   @id @default(cuid())
+  scope      NotificationScope
+  vendor_id  String?
+  type       String
+  title      String
+  message    String   @db.Text
+  data       String?  @db.LongText // JSON data
+  created_at DateTime @default(now())
+  
+  // Relations
+  reads      NotificationRead[]
+  
+  @@index([scope, vendor_id, created_at])
+}
+
+model NotificationRead {
+  id              String   @id @default(cuid())
+  notification_id String
+  user_id         String?
+  vendor_id       String?
+  read_at         DateTime @default(now())
+  
+  // Relations
+  notification    Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+  
+  @@unique([notification_id, user_id])
+  @@unique([notification_id, vendor_id])
+  @@index([user_id])
+  @@index([vendor_id])
+}
+
 /* ----------  ENUM  ---------- */
 enum Role {
   VENDOR
   VERIFIER
   ADMIN
+}
+
+enum NotificationScope {
+  admin
+  vendor
 }

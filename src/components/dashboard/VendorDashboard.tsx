@@ -15,12 +15,9 @@ import Button from "../ui/button/Button";
 import Alert from "../ui/alert/Alert";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import SubmissionDetailModal from "../vendor/SubmissionDetailModal";
-
-interface VendorStats {
-  totalApproved: number;
-  totalPending: number;
-  totalRejected: number;
-}
+import { useStatsStore } from "@/store/useStatsStore";
+import { useSubmissionStore } from "@/store/useSubmissionStore";
+import { useSocket } from "@/components/common/RealtimeUpdates";
 
 interface VendorSubmission {
   id: string;
@@ -64,13 +61,22 @@ interface VendorSubmission {
 
 export default function VendorDashboard() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<VendorStats>({
-    totalApproved: 0,
-    totalPending: 0,
-    totalRejected: 0
-  });
-  const [submissions, setSubmissions] = useState<VendorSubmission[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use Zustand stores for realtime data
+  const { 
+    vendorStats,
+    loading: statsLoading,
+    fetchVendorStats 
+  } = useStatsStore();
+  
+  const { 
+    submissions,
+    loading: submissionsLoading,
+    fetchVendorSubmissions 
+  } = useSubmissionStore();
+  
+  // Initialize Socket.IO connection
+  useSocket();
 
   // Modal state
   const [selectedSubmission, setSelectedSubmission] = useState<VendorSubmission | null>(null);
@@ -105,34 +111,12 @@ export default function VendorDashboard() {
   });
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch vendor statistics and submissions
-      const [statsRes, submissionsRes] = await Promise.all([
-        fetch('/api/vendor/dashboard-stats'),
-        fetch('/api/vendor/latest-submissions')
-      ]);
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-
-      if (submissionsRes.ok) {
-        const submissionsData = await submissionsRes.json();
-        setSubmissions(submissionsData.submissions || []);
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+    // Initialize data fetching
+    if (session?.user?.id) {
+      fetchVendorStats();
+      fetchVendorSubmissions();
     }
-  };
+  }, [session?.user?.id, fetchVendorStats, fetchVendorSubmissions]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -178,7 +162,8 @@ export default function VendorDashboard() {
       setConfirmModal(prev => ({ ...prev, show: false, isLoading: false }));
 
       // Refresh data setelah berhasil menghapus
-      await fetchDashboardData();
+      await fetchVendorSubmissions();
+      await fetchVendorStats();
       
       // Show success message
       setAlert({
@@ -282,7 +267,7 @@ export default function VendorDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Disetujui</p>
               <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">
-                {loading ? '...' : stats.totalApproved}
+                {statsLoading ? '...' : vendorStats?.totalApproved || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-500/20 rounded-lg flex items-center justify-center">
@@ -296,7 +281,7 @@ export default function VendorDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu</p>
               <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">
-                {loading ? '...' : stats.totalPending}
+                {statsLoading ? '...' : vendorStats?.totalPending || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center">
@@ -310,7 +295,7 @@ export default function VendorDashboard() {
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Ditolak</p>
               <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
-                {loading ? '...' : stats.totalRejected}
+                {statsLoading ? '...' : vendorStats?.totalRejected || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center">
@@ -354,7 +339,7 @@ export default function VendorDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
+              {submissionsLoading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     <div className="flex items-center justify-center">
@@ -382,7 +367,7 @@ export default function VendorDashboard() {
                   </td>
                 </tr>
               ) : (
-                submissions.map((submission) => (
+                submissions.slice(0, 5).map((submission: any) => (
                   <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
                       <div className="max-w-xs truncate" title={submission.job_description}>

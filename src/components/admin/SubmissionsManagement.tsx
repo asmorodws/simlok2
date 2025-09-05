@@ -15,6 +15,8 @@ import Alert from '@/components/ui/alert/Alert';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import AdminSubmissionDetailModal from './AdminSubmissionDetailModal';
 import ExportModal from './ExportModal';
+import { useSubmissionStore } from '@/store/useSubmissionStore';
+import { useSocket } from '@/components/common/RealtimeUpdates';
 
 interface Submission {
   id: string;
@@ -57,8 +59,7 @@ interface Submission {
   };
 }
 
-type SortField = keyof Submission;
-type SortOrder = "asc" | "desc";
+// Types already defined in store
 
 // Custom hook untuk debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -70,18 +71,30 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-interface Statistics {
-  total: number;
-  pending: number;
-  approved: number;
-  rejected: number;
-}
+// Statistics interface removed (using store types)
 
 export default function SubmissionsManagement() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [statistics, setStatistics] = useState<Statistics>({ total: 0, pending: 0, approved: 0, rejected: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Use Zustand store for realtime submissions data
+  const { 
+    submissions,
+    loading,
+    statistics,
+    searchTerm,
+    sortField,
+    sortOrder,
+    currentPage,
+    totalPages,
+    fetchSubmissions,
+    setSearchTerm,
+    setSortField,
+    setSortOrder,
+    setCurrentPage
+  } = useSubmissionStore();
+  
+  // Initialize Socket.IO connection
+  useSocket();
+  
+  const [error] = useState("");
   
   // Alert state
   const [alert, setAlert] = useState<{
@@ -114,49 +127,28 @@ export default function SubmissionsManagement() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   
-  const [searchTerm, setSearchTerm] = useState("");
+  // Status filter (this is not in store yet, keep local)
   const [statusFilter, setStatusFilter] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [limit] = useState(10);
-  const [sortField, setSortField] = useState<SortField>("created_at");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const fetchSubmissions = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: limit.toString(),
-        search: debouncedSearchTerm,
-        sortBy: sortField,
-        sortOrder: sortOrder,
-        stats: 'true',
-        ...(statusFilter && { status: statusFilter }),
-      });
-
-      const response = await fetch(`/api/submissions?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch submissions');
-
-      const data = await response.json();
-      setSubmissions(data.submissions);
-      setStatistics(data.statistics);
-      setTotalPages(data.pagination.pages);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, debouncedSearchTerm, statusFilter, sortField, sortOrder, limit]);
-
+  // Fetch submissions when filters change
   useEffect(() => {
-    fetchSubmissions();
-  }, [fetchSubmissions]);
+    const params = {
+      page: currentPage,
+      limit,
+      search: debouncedSearchTerm,
+      sortBy: sortField,
+      sortOrder,
+      stats: true,
+      ...(statusFilter && { status: statusFilter }),
+    };
+    
+    fetchSubmissions(params);
+  }, [currentPage, limit, debouncedSearchTerm, sortField, sortOrder, statusFilter, fetchSubmissions]);
 
   useEffect(() => {
     if (!loading && isInputFocused && searchInputRef.current) {
@@ -164,18 +156,14 @@ export default function SubmissionsManagement() {
     }
   }, [loading, isInputFocused]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchTerm, statusFilter, sortField, sortOrder]);
-
-  const handleSort = useCallback((field: SortField) => {
+  const handleSort = useCallback((field: string) => {
     if (sortField === field) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
       setSortOrder("asc");
     }
-  }, [sortField, sortOrder]);
+  }, [sortField, sortOrder, setSortField, setSortOrder]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -197,21 +185,24 @@ export default function SubmissionsManagement() {
   }, []);
 
   const handleSubmissionUpdate = useCallback((updatedSubmission: Submission) => {
-    // Update submission di state lokal
-    setSubmissions(prev => 
-      prev.map(sub => 
-        sub.id === updatedSubmission.id ? updatedSubmission : sub
-      )
-    );
-    
     // Update selected submission jika masih dipilih
     if (selectedDetailSubmission?.id === updatedSubmission.id) {
       setSelectedDetailSubmission(updatedSubmission);
     }
     
-    // Refresh data untuk update statistik
-    fetchSubmissions();
-  }, [selectedDetailSubmission, fetchSubmissions]);
+    // Refresh data dari server untuk update real-time
+    const params = {
+      page: currentPage,
+      limit,
+      search: debouncedSearchTerm,
+      sortBy: sortField,
+      sortOrder,
+      stats: true,
+      ...(statusFilter && { status: statusFilter }),
+    };
+    
+    fetchSubmissions(params);
+  }, [selectedDetailSubmission, fetchSubmissions, currentPage, limit, debouncedSearchTerm, sortField, sortOrder, statusFilter]);
 
   const handleDelete = (id: string) => {
     setConfirmModal({
@@ -276,7 +267,7 @@ export default function SubmissionsManagement() {
     }
   };
 
-  const getSortIcon = (field: SortField) => {
+  const getSortIcon = (field: string) => {
     if (sortField !== field) return <ChevronUpDownIcon className="w-4 h-4 text-gray-400" />;
     return sortOrder === "asc"
       ? <ChevronUpIcon className="w-4 h-4 text-blue-500" />
@@ -351,7 +342,7 @@ export default function SubmissionsManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {submissions.map((s) => (
+              {submissions.map((s: any) => (
                 <tr key={s.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{s.vendor_name}</div>
@@ -426,10 +417,10 @@ export default function SubmissionsManagement() {
       
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card><div className="p-4"><h3 className="text-lg font-semibold">Total</h3><p className="text-2xl font-bold text-blue-600">{statistics.total}</p></div></Card>
-        <Card><div className="p-4"><h3 className="text-lg font-semibold">Pending</h3><p className="text-2xl font-bold text-yellow-600">{statistics.pending}</p></div></Card>
-        <Card><div className="p-4"><h3 className="text-lg font-semibold">Approved</h3><p className="text-2xl font-bold text-green-600">{statistics.approved}</p></div></Card>
-        <Card><div className="p-4"><h3 className="text-lg font-semibold">Rejected</h3><p className="text-2xl font-bold text-red-600">{statistics.rejected}</p></div></Card>
+        <Card><div className="p-4"><h3 className="text-lg font-semibold">Total</h3><p className="text-2xl font-bold text-blue-600">{statistics?.total || 0}</p></div></Card>
+        <Card><div className="p-4"><h3 className="text-lg font-semibold">Pending</h3><p className="text-2xl font-bold text-yellow-600">{statistics?.pending || 0}</p></div></Card>
+        <Card><div className="p-4"><h3 className="text-lg font-semibold">Approved</h3><p className="text-2xl font-bold text-green-600">{statistics?.approved || 0}</p></div></Card>
+        <Card><div className="p-4"><h3 className="text-lg font-semibold">Rejected</h3><p className="text-2xl font-bold text-red-600">{statistics?.rejected || 0}</p></div></Card>
       </div>
 
       {/* Header */}
@@ -437,7 +428,7 @@ export default function SubmissionsManagement() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center space-x-4">
             <h2 className="text-xl font-semibold text-gray-900">Kelola Submissions</h2>
-            <span className="text-sm text-gray-500">({statistics.total} submissions)</span>
+            <span className="text-sm text-gray-500">({statistics?.total || 0} submissions)</span>
           </div>
           
           <div className="flex items-center space-x-2">
@@ -490,11 +481,11 @@ export default function SubmissionsManagement() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Menampilkan {((currentPage - 1) * limit) + 1} - {Math.min(currentPage * limit, statistics.total)} dari {statistics.total} submission
+            Menampilkan {((currentPage - 1) * limit) + 1} - {Math.min(currentPage * limit, statistics?.total || 0)} dari {statistics?.total || 0} submission
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              onClick={() => setCurrentPage((p: number) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -502,7 +493,7 @@ export default function SubmissionsManagement() {
             </button>
             <span className="text-sm text-gray-700">Halaman {currentPage} dari {totalPages}</span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              onClick={() => setCurrentPage((p: number) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >

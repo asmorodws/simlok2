@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { notifyAdminNewVendor } from "@/server/events";
 
 // Validation schema for vendor registration
 const vendorRegistrationSchema = z.object({
@@ -172,6 +173,9 @@ export async function POST(req: NextRequest) {
         verified_at: true,
       }
     });
+
+    // Notify admin about new vendor registration
+    await notifyAdminNewVendor(newUser.id);
 
     // Log successful registration (for audit purposes)
     console.log(`New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);

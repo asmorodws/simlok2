@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import NotificationDropdown from "@/components/header/NotificationDropdown";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 
 import {
   HomeIcon,
@@ -140,7 +140,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
             <Bars3Icon className="h-6 w-6" />
           </button>
           <div className="text-xl font-semibold">{titlePage}</div>
-          <NotificationDropdown /> 
+          <NotificationsBell /> 
         </header>
 
         {/* Content area */}
