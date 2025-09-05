@@ -67,10 +67,18 @@ export async function GET(request: NextRequest) {
 
     const readStatusMap = new Map(readStatusList.map(r => [r.notification_id, r]));
 
-    // Map notifications with read status
+    // Map notifications with read status and proper field naming
     const notifications = notificationList.map(notification => ({
-      ...notification,
-      read_at: readStatusMap.get(notification.id)?.read_at || null,
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      scope: notification.scope,
+      vendorId: notification.vendor_id,
+      createdAt: notification.created_at.toISOString(), // Convert to ISO string
+      isRead: readStatusMap.has(notification.id),
+      readAt: readStatusMap.get(notification.id)?.read_at?.toISOString() || null,
     }));
 
     // Count unread notifications

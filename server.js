@@ -32,13 +32,27 @@ app.prepare().then(() => {
       origin: process.env.NEXTAUTH_URL || 'http://localhost:3000',
       methods: ['GET', 'POST'],
     },
+    transports: ['websocket', 'polling'], // Support both transports
   });
 
-  // Setup Redis adapter
-  const pubClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  const subClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-  
-  io.adapter(createAdapter(pubClient, subClient));
+  // Setup Redis adapter with error handling
+  try {
+    const pubClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    const subClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    
+    pubClient.on('error', (err) => {
+      console.warn('Redis pub client error (Socket.IO will work without Redis):', err.message);
+    });
+    
+    subClient.on('error', (err) => {
+      console.warn('Redis sub client error (Socket.IO will work without Redis):', err.message);
+    });
+    
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log('Redis adapter initialized for Socket.IO');
+  } catch (error) {
+    console.warn('Redis adapter failed to initialize, Socket.IO will work in memory mode:', error.message);
+  }
 
   // Store io instance globally for use in API routes
   global.__socket_io = io;
