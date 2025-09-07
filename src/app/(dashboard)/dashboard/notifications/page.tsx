@@ -9,11 +9,13 @@ import {
   CheckIcon,
   CheckCircleIcon,
   ClockIcon,
-  DocumentTextIcon,
+  DocumentPlusIcon,
   UserPlusIcon,
-  FunnelIcon,
+  ShieldCheckIcon,
   MagnifyingGlassIcon,
-  XMarkIcon
+  InboxIcon,
+  XMarkIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import AdminSubmissionDetailModal from '@/components/admin/AdminSubmissionDetailModal';
@@ -194,50 +196,14 @@ export default function NotificationsPage() {
         return <XMarkIcon className={`${iconClass} text-red-600`} />;
       case 'submission_pending':
         return <ClockIcon className={`${iconClass} text-amber-600`} />;
+      case 'status_change':
+        return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
       case 'new_submission':
-        return <DocumentTextIcon className={`${iconClass} text-blue-600`} />;
+        return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
       case 'user_registered':
         return <UserPlusIcon className={`${iconClass} text-purple-600`} />;
       default:
         return <BellIcon className={`${iconClass} text-gray-600`} />;
-    }
-  };
-
-  const getNotificationTypeLabel = (type: string) => {
-    switch (type) {
-      case 'submission_approved':
-        return 'Disetujui';
-      case 'submission_rejected':
-        return 'Ditolak';
-      case 'submission_pending':
-        return 'Menunggu';
-      case 'new_submission':
-        return 'Pengajuan Baru';
-      case 'user_registered':
-        return 'User Baru';
-      default:
-        return 'Notifikasi';
-    }
-  };
-
-  const getNotificationBgColor = (type: string, isRead: boolean) => {
-    if (isRead) {
-      return 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700';
-    }
-
-    switch (type) {
-      case 'submission_approved':
-        return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700 border-l-4 border-l-green-500';
-      case 'submission_rejected':
-        return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700 border-l-4 border-l-red-500';
-      case 'submission_pending':
-        return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500';
-      case 'new_submission':
-        return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 border-l-4 border-l-blue-500';
-      case 'user_registered':
-        return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700 border-l-4 border-l-purple-500';
-      default:
-        return 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 border-l-4 border-l-gray-500';
     }
   };
 
@@ -376,6 +342,11 @@ export default function NotificationsPage() {
     }
   };
 
+  // Add truncate function
+  const truncateText = (text: string, maxLength: number = 100) => {
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
   // Filter notifications
   const filteredNotifications = Array.isArray(notifications) ? notifications
     .filter((notification: Notification) => {
@@ -392,8 +363,10 @@ export default function NotificationsPage() {
   if (status === 'loading') {
     return (
       <SidebarLayout title="Notifikasi" titlePage="Memuat...">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="max-w-5xl mx-auto px-3 md:px-6">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
         </div>
       </SidebarLayout>
     );
@@ -402,167 +375,230 @@ export default function NotificationsPage() {
   return (
     <RoleGate allowedRoles={["ADMIN", "VENDOR"]}>
       <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
-        <div className="space-y-6">
-          {/* Header Stats */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
+        <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between rounded-xl border bg-white dark:bg-gray-800 p-3 md:p-4 shadow-sm">
+            <div className="flex items-center space-x-3">
+              <div className="relative">
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <BellIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <BellIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {session?.user?.role === 'ADMIN' ? 'Notifikasi Admin' : 'Notifikasi Vendor'}
-                  </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {loading ? 'Memuat...' : unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}
-                  </p>
+                {unreadCount > 0 && (
+                  <div className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-semibold px-1.5">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h1 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+                  {session?.user?.role === 'ADMIN' ? 'Notifikasi' : 'Notifikasi'}
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {loading ? 'Memuat...' : unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}
+                </p>
+              </div>
+            </div>
+            
+            {unreadCount > 0 && !loading && (
+              <Button
+                onClick={markAllAsRead}
+                variant="outline"
+                size="sm"
+                className="flex items-center space-x-2 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                aria-label="Tandai semua notifikasi sebagai dibaca"
+              >
+                <CheckIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Tandai semua dibaca</span>
+                <span className="sm:hidden">Tandai semua</span>
+              </Button>
+            )}
+          </div>
+
+          {/* Toolbar */}
+          <div className="rounded-xl border bg-white dark:bg-gray-800 p-3 md:p-4 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+              {/* Search */}
+              <div className="md:col-span-7">
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Cari notifikasi…"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder:text-gray-500"
+                    aria-label="Cari notifikasi"
+                  />
                 </div>
               </div>
-              
-              {unreadCount > 0 && !loading && (
-                <Button
-                  onClick={markAllAsRead}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center space-x-2"
-                >
-                  <CheckIcon className="w-4 h-4" />
-                  <span>Tandai Semua Dibaca</span>
-                </Button>
-              )}
+
+              {/* Filters */}
+              <div className="md:col-span-5 flex gap-2 md:justify-end">
+                {/* Read State Filter */}
+                <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 p-1">
+                  {(['all', 'unread', 'read'] as const).map((filterOption) => (
+                    <button
+                      key={filterOption}
+                      onClick={() => setFilter(filterOption)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                        filter === filterOption
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
+                    >
+                      {filterOption === 'all' && 'Semua'}
+                      {filterOption === 'unread' && 'Belum Dibaca'}
+                      {filterOption === 'read' && 'Sudah Dibaca'}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
-        {/* Filters and Search */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0 sm:space-x-4">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Cari notifikasi..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-            </div>
-
-            {/* Filter */}
-            <div className="flex items-center space-x-2">
-              <FunnelIcon className="w-4 h-4 text-gray-400" />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'read')}
-                className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Semua ({Array.isArray(notifications) ? notifications.length : 0})</option>
-                <option value="unread">Belum Dibaca ({unreadCount})</option>
-                <option value="read">Sudah Dibaca ({Array.isArray(notifications) ? notifications.length - unreadCount : 0})</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Notifications List */}
-        <div className="space-y-3">
-          {filteredNotifications.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-              <BellIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {searchTerm ? 'Tidak ada hasil' : 'Belum ada notifikasi'}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                {searchTerm 
-                  ? `Tidak ditemukan notifikasi yang cocok dengan "${searchTerm}"`
-                  : 'Notifikasi akan muncul di sini ketika ada aktivitas baru'
-                }
-              </p>
-            </div>
-          ) : (
-            filteredNotifications.map((notification: any) => (
-              <div
-                key={notification.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border transition-all duration-200 hover:shadow-md ${
-                  getNotificationBgColor(notification.type, notification.isRead)
-                } ${hasSubmissionData(notification) ? 'cursor-pointer hover:scale-[1.002]' : ''}`}
-                onClick={() => {
-                  if (hasSubmissionData(notification)) {
-                    handleViewDetail(notification);
+          {/* Notifications List */}
+          <div className="rounded-xl border bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+            {filteredNotifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 px-6">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                  <InboxIcon className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  {searchTerm ? 'Tidak ada hasil' : 'Tidak ada notifikasi'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
+                  {searchTerm 
+                    ? `Tidak ditemukan notifikasi yang cocok dengan "${searchTerm}"`
+                    : 'Anda akan melihat notifikasi baru di sini ketika ada aktivitas'
                   }
-                }}
-              >
-                <div className="p-4">
-                  <div className="flex items-start space-x-4">
-                    {/* Icon */}
-                    <div className="flex-shrink-0 relative">
-                      <div className="w-12 h-12 bg-white dark:bg-gray-700 rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-gray-600">
+                </p>
+                {!searchTerm && (
+                  <Button
+                    onClick={() => window.location.href = '/dashboard'}
+                    variant="outline"
+                    size="sm"
+                    className="mt-4"
+                  >
+                    Kembali ke Dashboard
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {filteredNotifications.map((notification: any) => {
+                  const isUnread = !notification.isRead;
+                  const fullTimestamp = new Date(notification.createdAt).toLocaleString('id-ID');
+                  
+                  return (
+                    <div
+                      key={notification.id}
+                      className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 focus-within:ring-2 focus-within:ring-blue-500/30 ${
+                        isUnread 
+                          ? 'bg-blue-50/50 dark:bg-blue-900/10 border-l-2 border-blue-500/50' 
+                          : ''
+                      } ${
+                        hasSubmissionData(notification) ? 'cursor-pointer' : ''
+                      }`}
+                      onClick={() => {
+                        if (hasSubmissionData(notification)) {
+                          handleViewDetail(notification);
+                        }
+                      }}
+                      role="listitem"
+                    >
+                      {/* Unread indicator dot */}
+                      {isUnread && (
+                        <div className="absolute left-2 top-2.5 h-2 w-2 rounded-full bg-blue-600"></div>
+                      )}
+
+                      {/* Icon */}
+                      <div className="shrink-0 h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center ml-2">
                         {getNotificationIcon(notification.type)}
                       </div>
-                      {!notification.isRead && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full ring-2 ring-white dark:ring-gray-800"></div>
-                      )}
-                    </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-2">
-                          {/* Type and Time */}
-                          <div className="flex items-center space-x-3">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                              {getNotificationTypeLabel(notification.type)}
-                            </span>
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {formatTimeAgo(notification.createdAt)}
-                            </span>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <h3 
+                              className={`text-sm md:text-base leading-tight ${
+                                isUnread 
+                                  ? 'font-semibold text-gray-900 dark:text-white' 
+                                  : 'font-medium text-gray-800 dark:text-gray-200'
+                              }`}
+                              style={{ 
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {truncateText(notification.title, 80)}
+                            </h3>
+                            <p 
+                              className="mt-0.5 text-xs md:text-sm text-gray-600 dark:text-gray-400 leading-relaxed"
+                              style={{ 
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
+                              {truncateText(notification.message, 120)}
+                            </p>
                           </div>
                           
-                          {/* Title */}
-                          <h3 className="text-base font-medium text-gray-900 dark:text-white leading-snug">
-                            {notification.title}
-                          </h3>
-                          
-                          {/* Message */}
-                          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                            {notification.message}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center justify-end mt-4 pt-3 border-t border-gray-100 dark:border-gray-600">
-                        {!notification.isRead && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markAsRead(notification.id);
-                            }}
-                            className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                          <span 
+                            className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-3"
+                            title={fullTimestamp}
                           >
-                            <CheckIcon className="w-4 h-4 mr-1" />
-                            Tandai dibaca
-                          </button>
+                            {formatTimeAgo(notification.createdAt)}
+                          </span>
+                        </div>
+
+                        {/* Actions */}
+                        {hasSubmissionData(notification) && (
+                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-600 flex items-center justify-between">
+                            <button className="inline-flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors">
+                              Lihat detail
+                              <ArrowRightIcon className="w-3 h-3 ml-1" />
+                            </button>
+                            
+                            {isUnread && (
+                              <button
+                                onClick={async (e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  await markAsRead(notification.id);
+                                }}
+                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                aria-label="Tandai sebagai dibaca"
+                              >
+                                <CheckIcon className="w-3 h-3" />
+                                <span className="ml-1 hidden sm:inline">Tandai dibaca</span>
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-            ))
-          )}
-        </div>
+            )}
 
-        {/* Footer */}
-        {filteredNotifications.length > 0 && (
-          <div className="text-center py-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Menampilkan {filteredNotifications.length} dari {Array.isArray(notifications) ? notifications.length : 0} notifikasi
-            </p>
+            {/* Footer */}
+            {filteredNotifications.length > 0 && (
+              <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 p-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                <span>
+                  Menampilkan {filteredNotifications.length} dari {Array.isArray(notifications) ? notifications.length : 0} notifikasi
+                </span>
+                {/* Future: Load more functionality */}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
       {/* Modals */}
       {selectedSubmission && session?.user?.role === 'ADMIN' && (

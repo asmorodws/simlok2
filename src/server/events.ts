@@ -208,14 +208,34 @@ export async function notifyVendorStatusChange(
       REJECTED: 'Ditolak'
     }[status];
 
+    // Truncate job description if too long
+    // const truncateText = (text: string, maxLength: number = 50) => {
+    //   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+    // };
+
+    // const truncatedJobDescription = truncateText(submission.job_description);
+
+    // Create more informative title and message with submission ID
+    const title = status === 'APPROVED' 
+      ? `Pengajuan Disetujui` 
+      : status === 'REJECTED' 
+        ? `Pengajuan Ditolak`
+        : `Pengajuan ${statusText}`;
+
+    const message = status === 'APPROVED'
+      ? `Selamat! Pengajuan Simlok Anda telah disetujui.`
+      : status === 'REJECTED'
+        ? `Pengajuan Simlok Anda ditolak. Silakan periksa keterangan pada pengajuan.`
+        : `Status pengajuan Simlok Anda berubah menjadi ${statusText.toLowerCase()}.`;
+
     // Create notification record
     const notification = await prisma.notification.create({
       data: {
         scope: 'vendor',
         vendor_id: vendorId,
         type: 'status_change',
-        title: 'Status Pengajuan Berubah',
-        message: `Pengajuan "${submission.job_description}" ${statusText.toLowerCase()}`,
+        title: title,
+        message: message,
         data: JSON.stringify({
           submissionId,
           status,

@@ -61,7 +61,7 @@ export default function NotificationsBell() {
       }
 
       console.log('Loading notifications with params:', params.toString());
-      console.log('🚀 Using endpoint: /api/v1/notifications (Build: 2025-09-06-v3)');
+      console.log('Using endpoint: /api/v1/notifications (Build: 2025-09-06-v3)');
 
       const response = await fetch(`/api/v1/notifications?${params}`);
       if (response.ok) {
@@ -99,12 +99,16 @@ export default function NotificationsBell() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors"
+        className={`relative p-2 rounded-lg transition-all duration-200 ${
+          isOpen 
+            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' 
+            : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+        }`}
         aria-label="Notifications"
       >
         <BellIcon className="h-6 w-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-semibold px-1.5">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
