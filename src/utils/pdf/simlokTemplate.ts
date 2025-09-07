@@ -65,6 +65,11 @@ export interface SubmissionPDFData {
     worker_name: string;
     worker_photo?: string | null;
   }>;
+  // Support database field name
+  worker_list?: Array<{
+    worker_name: string;
+    worker_photo?: string | null;
+  }>;
 }
 
 export type SIMLOKOptions = {
@@ -392,29 +397,447 @@ lines.forEach((line: string, idx: number) => {
   k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 20);
 
   // Right side - Head title and name (below location/date)
-  const jabatanSigner = s.signer_position || "[Jabatan Penandatangan]";
-  const namaSigner = s.signer_name || "[Nama Penandatangan]";
+  const jabatanSigner = s.signer_position || "Head Or Security Region I";
+  const namaSigner = s.signer_name || "Julianto Santoso";
   
   k.text(jabatanSigner, A4.w - 230, signatureY - 50);
   k.text(namaSigner, A4.w - 230, signatureY - 110, { bold: true });
 
-  // Bottom section - Nama pekerja dari daftar pekerja terpisah
-  const bottomY = signatureY - 140;
-
-  // Right side - Worker names from WorkerList table
-  if (s.workerList && s.workerList.length > 0) {
-    k.text("Nama pekerja:", A4.w - 200, bottomY);
-    s.workerList.forEach((pekerja, index) => {
-      k.text(`${index + 1}. ${pekerja.worker_name}`, A4.w - 190, bottomY - 20 - (index * 15));
+  // Add second page with worker photos if available
+  // Handle both workerList (interface) and worker_list (database)
+  const workerData = s.workerList || (s as any).worker_list;
+  console.log('=== WORKER DATA DEBUG ===');
+  if (workerData && workerData.length > 0) {
+    console.log(`Found ${workerData.length} workers`);
+    workerData.forEach((worker: any, index: number) => {
+      console.log(`Worker ${index + 1}: ${worker.worker_name}, Photo: ${worker.worker_photo ? 'YES' : 'NO'}`);
+      if (worker.worker_photo) {
+        console.log(`  Photo type: ${typeof worker.worker_photo}, Length: ${worker.worker_photo.length}`);
+        console.log(`  Preview: ${worker.worker_photo.substring(0, 50)}...`);
+      }
     });
-  } else if (s.worker_names && s.worker_names.trim().length > 0) {
-    // Fallback ke worker_names lama jika workerList kosong
-    k.text("Nama pekerja:", A4.w - 200, bottomY);
-    const workerNames = s.worker_names.split('\n').map(name => name.trim()).filter(name => name);
-    workerNames.forEach((name, index) => {
-      k.text(`${index + 1}. ${name}`, A4.w - 190, bottomY - 20 - (index * 15));
-    });
+    await addWorkerPhotosPage(k, workerData);
+  } else {
+    console.log('No worker data found');
   }
 
   return k.doc.save();
+}
+
+/**
+ * Load and embed photo from file path or base64
+ */
+async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): Promise<PDFImage | null> {
+  if (!photoPath) {
+    console.log('No photo path provided');
+    return null;
+  }
+
+  console.log('Loading worker photo...');
+  console.log('Photo starts with "data:":', photoPath.startsWith('data:'));
+  console.log('Photo preview:', photoPath.substring(0, 100) + '...');
+
+  try {
+    // Check if it's a base64 string (could be with or without data: prefix)
+    if (photoPath.startsWith('data:image/') || photoPath.startsWith('data:') || photoPath.match(/^[A-Za-z0-9+/=]+$/)) {
+      console.log('Processing base64 image');
+      let base64Data: string | undefined;
+      let imageFormat = 'jpeg'; // default
+      
+      if (photoPath.startsWith('data:image/')) {
+        // Standard data URL format: data:image/jpeg;base64,/9j/4AAQ...
+        const base64Parts = photoPath.split(',');
+        if (base64Parts.length > 1) {
+          base64Data = base64Parts[1];
+          // Extract format from mime type
+          if (photoPath.includes('image/png')) {
+            imageFormat = 'png';
+          } else if (photoPath.includes('image/jpeg') || photoPath.includes('image/jpg')) {
+            imageFormat = 'jpeg';
+          }
+        } else {
+          throw new Error('Invalid data URL format');
+        }
+      } else if (photoPath.startsWith('data:')) {
+        // Generic data format
+        const base64Parts = photoPath.split(',');
+        base64Data = base64Parts.length > 1 ? base64Parts[1] : photoPath.replace('data:', '');
+      } else {
+        // Pure base64 string
+        base64Data = photoPath;
+      }
+      
+      console.log('Base64 data length:', base64Data?.length || 0);
+      console.log('Image format detected:', imageFormat);
+      
+      if (base64Data) {
+        let photoBytes: Buffer;
+        
+        if (typeof window !== 'undefined') {
+          // Client-side: use Uint8Array for better browser compatibility
+          const binaryString = atob(base64Data);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          photoBytes = Buffer.from(bytes);
+        } else {
+          // Server-side: use Buffer directly
+          photoBytes = Buffer.from(base64Data, 'base64');
+        }
+        
+        if (imageFormat === 'png' || photoPath.includes('image/png')) {
+          console.log('Embedding PNG image');
+          return await pdfDoc.embedPng(photoBytes);
+        } else {
+          console.log('Embedding JPG image');
+          return await pdfDoc.embedJpg(photoBytes);
+        }
+      }
+    } else {
+      // Handle file path - could be API path or direct file path
+      console.log('Processing file path photo');
+      let fullPath: string;
+      
+      if (photoPath.startsWith('/api/files/')) {
+        // API endpoint path - convert to actual file path
+        // /api/files/userId/folder/filename -> /uploads/userId/folder/filename
+        fullPath = photoPath.replace('/api/files/', '/uploads/');
+        console.log('Converted API path to file path:', fullPath);
+      } else {
+        // Regular file path
+        fullPath = photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`;
+      }
+      
+      console.log('Full photo path:', fullPath);
+      
+      if (typeof window !== 'undefined') {
+        // Client-side: use fetch - try both API endpoint and file path
+        console.log('Client-side photo loading');
+        
+        // First try the API endpoint
+        if (photoPath.startsWith('/api/files/')) {
+          console.log('Trying API endpoint first');
+          const apiResponse = await fetch(photoPath);
+          console.log('API fetch response status:', apiResponse.status, apiResponse.ok);
+          if (apiResponse.ok) {
+            const photoBytes = await apiResponse.arrayBuffer();
+            const uint8Array = new Uint8Array(photoBytes);
+            
+            if (fullPath.toLowerCase().includes('.png')) {
+              return await pdfDoc.embedPng(uint8Array);
+            } else {
+              return await pdfDoc.embedJpg(uint8Array);
+            }
+          }
+        }
+        
+        // Fallback to direct file path
+        console.log('Trying direct file path');
+        const response = await fetch(fullPath);
+        console.log('File fetch response status:', response.status, response.ok);
+        if (response.ok) {
+          const photoBytes = await response.arrayBuffer();
+          const uint8Array = new Uint8Array(photoBytes);
+          
+          // Try to determine format from file extension or content
+          if (fullPath.toLowerCase().includes('.png')) {
+            return await pdfDoc.embedPng(uint8Array);
+          } else {
+            return await pdfDoc.embedJpg(uint8Array);
+          }
+        }
+      } else {
+        // Server-side: use file system
+        console.log('Server-side photo loading');
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        // Simplified path resolution - no more fallbacks
+        let photoFilePath: string;
+        
+        if (photoPath.startsWith('/api/files/')) {
+          // Parse API path: /api/files/userId/category/filename
+          const apiParts = photoPath.split('/');
+          if (apiParts.length >= 5) {
+            const userId = apiParts[3];
+            const category = apiParts[4];
+            const filename = apiParts.slice(5).join('/');
+            
+            // Validate required components
+            if (!userId || !category || !filename) {
+              throw new Error('Invalid API path components');
+            }
+            
+            // Map category to actual folder name (from fileManager.ts)
+            const categoryFolders: Record<string, string> = {
+              sika: 'dokumen-sika',
+              simja: 'dokumen-simja',
+              id_card: 'id-card',
+              other: 'lainnya',
+              'worker-photo': 'foto-pekerja' // New category for worker photos
+            };
+            
+            const folderName = categoryFolders[category] || category;
+            
+            photoFilePath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+            console.log('Resolved photo file path:', photoFilePath);
+          } else {
+            throw new Error('Invalid API path format');
+          }
+        } else {
+          // Regular file path
+          photoFilePath = path.join(process.cwd(), 'public', fullPath);
+        }
+        
+        if (fs.existsSync(photoFilePath)) {
+          console.log('Photo file exists, reading...');
+          const fileBuffer = fs.readFileSync(photoFilePath);
+          
+          if (photoFilePath.toLowerCase().includes('.png')) {
+            console.log('Embedding PNG image from file');
+            return await pdfDoc.embedPng(fileBuffer);
+          } else {
+            console.log('Embedding JPG image from file');
+            return await pdfDoc.embedJpg(fileBuffer);
+          }
+        } else {
+          console.log('Photo file not found:', photoFilePath);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load worker photo:', photoPath, error);
+  }
+  
+  return null;
+}
+
+/**
+ * Add second page with worker photos
+ */
+async function addWorkerPhotosPage(
+  k: PDFKit, 
+  workerList: Array<{ worker_name: string; worker_photo?: string | null }>
+) {
+  // Only proceed if there are workers
+  if (!workerList || workerList.length === 0) {
+    return;
+  }
+
+  // Add new page
+  k.addPage();
+  
+  // Load and add logo to the second page as well
+  const logoImage = await loadLogo(k.doc);
+  if (logoImage) {
+    const logoWidth = 120;
+    const logoHeight = 40;
+    const logoX = A4.w - logoWidth - 40; // 40 pixels from right edge
+    const logoY = A4.h - 60; // 60 pixels from top
+    
+    k.page.drawImage(logoImage, {
+      x: logoX,
+      y: logoY,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  }
+  
+  // // Add header
+  // k.center("DAFTAR PEKERJA", A4.h - 100, {
+  //   size: 16,
+  //   bold: true,
+  //   color: rgb(0, 0, 0),
+  // });
+  
+  // Add line under header
+  // const headerY = A4.h - 40;
+  // const lineY = headerY - 65;
+  // const lineStartX = 190;
+  // const lineEndX = A4.w - 190;
+  // k.page.drawLine({
+  //   start: { x: lineStartX, y: lineY },
+  //   end: { x: lineEndX, y: lineY },
+  //   thickness: 1,
+  //   color: rgb(0, 0, 0),
+  // });
+  
+  // Add header
+  k.text("Lampiran", MARGIN, A4.h - 100, {
+    size: 16,
+    bold: true,
+    color: rgb(0, 0, 0),
+  });
+
+
+  // Calculate grid layout
+  const photosPerRow = 3;
+  const photoWidth = 120;
+  const photoHeight = 160;
+  const marginHorizontal = (A4.w - (photosPerRow * photoWidth)) / (photosPerRow + 1);
+  const marginVertical = 30;
+  
+  let currentRow = 0;
+  let currentCol = 0;
+  const startY = A4.h - 130;
+
+  // Process each worker
+  for (let i = 0; i < workerList.length; i++) {
+    const worker = workerList[i];
+    if (!worker) continue; // Skip if worker is undefined
+    
+    // Calculate position
+    const x = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
+    const y = startY - (currentRow * (photoHeight + marginVertical + 40)); // 40 extra for name
+
+    // Check if we need a new page
+    if (y - photoHeight < MARGIN + 60) {
+      k.addPage();
+      
+      // Add logo to the new page
+      const logoImage = await loadLogo(k.doc);
+      if (logoImage) {
+        const logoWidth = 120;
+        const logoHeight = 40;
+        const logoX = A4.w - logoWidth - 40; // 40 pixels from right edge
+        const logoY = A4.h - 60; // 60 pixels from top
+        
+        k.page.drawImage(logoImage, {
+          x: logoX,
+          y: logoY,
+          width: logoWidth,
+          height: logoHeight,
+        });
+      }
+      
+      currentRow = 0;
+      currentCol = 0;
+      const newY = startY - (currentRow * (photoHeight + marginVertical + 40));
+      // Recalculate x for new page
+      const newX = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
+      
+      // Draw on new page
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, newX, newY, photoWidth, photoHeight);
+    } else {
+      // Draw on current page
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, x, y, photoWidth, photoHeight);
+    }
+
+    // Move to next position
+    currentCol++;
+    if (currentCol >= photosPerRow) {
+      currentCol = 0;
+      currentRow++;
+    }
+  }
+}
+
+/**
+ * Draw individual worker card with photo and name
+ */
+async function drawWorkerCard(
+  page: any,
+  doc: PDFDocument,
+  font: PDFFont,
+  boldFont: PDFFont,
+  worker: { worker_name: string; worker_photo?: string | null },
+  x: number,
+  y: number,
+  photoWidth: number,
+  photoHeight: number
+) {
+  // Draw photo frame
+  page.drawRectangle({
+    x: x,
+    y: y - photoHeight,
+    width: photoWidth,
+    height: photoHeight,
+    borderColor: rgb(0.8, 0.8, 0.8),
+    borderWidth: 1,
+    color: rgb(0.98, 0.98, 0.98),
+  });
+
+  // Load and draw photo if available
+  if (worker.worker_photo) {
+    console.log('Worker has photo:', worker.worker_name, worker.worker_photo);
+    const photoImage = await loadWorkerPhoto(doc, worker.worker_photo);
+    if (photoImage) {
+      console.log('Photo loaded successfully for:', worker.worker_name);
+      // Calculate dimensions to maintain aspect ratio
+      const imgDims = photoImage.scale(1);
+      const imgAspectRatio = imgDims.width / imgDims.height;
+      const frameAspectRatio = photoWidth / photoHeight;
+      
+      let drawWidth = photoWidth - 10; // 5px padding on each side
+      let drawHeight = photoHeight - 10;
+      let drawX = x + 5;
+      let drawY = y - photoHeight + 5;
+      
+      // Adjust dimensions to fit within frame while maintaining aspect ratio
+      if (imgAspectRatio > frameAspectRatio) {
+        // Image is wider, fit to width
+        drawHeight = drawWidth / imgAspectRatio;
+        drawY = y - (photoHeight + drawHeight) / 2;
+      } else {
+        // Image is taller, fit to height
+        drawWidth = drawHeight * imgAspectRatio;
+        drawX = x + (photoWidth - drawWidth) / 2;
+      }
+      
+      page.drawImage(photoImage, {
+        x: drawX,
+        y: drawY,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    } else {
+      console.log('Photo not loaded for:', worker.worker_name);
+      // Draw placeholder text if photo couldn't be loaded
+      page.drawText("Foto tidak", { 
+        x: x + 35, 
+        y: y - photoHeight/2 + 10, 
+        size: 10, 
+        font: font,
+        color: rgb(0.6, 0.6, 0.6) 
+      });
+      page.drawText("tersedia", { 
+        x: x + 35, 
+        y: y - photoHeight/2 - 5, 
+        size: 10, 
+        font: font,
+        color: rgb(0.6, 0.6, 0.6) 
+      });
+    }
+  } else {
+    console.log('Worker has no photo:', worker.worker_name);
+    // Draw placeholder for no photo
+    page.drawText("Tidak ada", { 
+      x: x + 35, 
+      y: y - photoHeight/2 + 10, 
+      size: 10, 
+      font: font,
+      color: rgb(0.6, 0.6, 0.6) 
+    });
+    page.drawText("foto", { 
+      x: x + 45, 
+      y: y - photoHeight/2 - 5, 
+      size: 10, 
+      font: font,
+      color: rgb(0.6, 0.6, 0.6) 
+    });
+  }
+
+  // Draw worker name below photo
+  const nameY = y - photoHeight - 15;
+  const textWidth = boldFont.widthOfTextAtSize(worker.worker_name, 10);
+  const nameX = x + (photoWidth - textWidth) / 2; // Center the name
+  
+  page.drawText(worker.worker_name, { 
+    x: nameX, 
+    y: nameY, 
+    size: 10, 
+    font: boldFont,
+    color: rgb(0, 0, 0)
+  });
 }

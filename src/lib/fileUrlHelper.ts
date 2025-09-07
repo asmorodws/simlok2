@@ -38,7 +38,6 @@ export class FileUrlHelper {
     if (fieldName) {
       if (fieldName.includes('sika')) return 'sika';
       if (fieldName.includes('simja')) return 'simja';
-      if (fieldName.includes('id_card') || fieldName.includes('id-card')) return 'id_card';
     }
     
     if (filename) {
@@ -60,7 +59,7 @@ export class FileUrlHelper {
     // Remove timestamp and random string prefix if present
     // Format: CATEGORY_timestamp_random_originalname.ext
     const parts = filename.split('_');
-    if (parts.length >= 4 && parts[0]?.match(/^(SIKA|SIMJA|ID-CARD|DOC)$/i)) {
+    if (parts.length >= 4 && parts[0]?.match(/^(SIKA|SIMJA|DOC)$/i)) {
       // Remove first 3 parts (category, timestamp, random)
       return parts.slice(3).join('_');
     }

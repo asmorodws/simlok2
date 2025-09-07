@@ -539,11 +539,11 @@ export default function SubmissionsManagement() {
                         </td>
                         <td className="p-3 align-top">
                           {getStatusBadge(s.approval_status)}
-                          {s.simlok_number && (
+                          {/* {s.simlok_number && (
                             <div className="text-xs text-gray-500 mt-1">
                               SIMLOK: {s.simlok_number}
                             </div>
-                          )}
+                          )} */}
                         </td>
                         <td className="p-3 align-top">
                           <div className="text-xs text-gray-500 whitespace-nowrap">{formatDate(s.created_at)}</div>

@@ -165,9 +165,7 @@ export default function SubmissionDetailModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 p-6 flex-shrink-0">
             <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <BuildingOfficeIcon className="h-8 w-8 text-blue-500" />
-              </div>
+
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
                 <p className="text-sm text-gray-500 mt-1">
@@ -277,7 +275,7 @@ export default function SubmissionDetailModal({
                   />
                 </div>
 
-                {submission.other_notes && (
+                {/* {submission.other_notes && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
                     <InfoCard
                       label="Lain-lain"
@@ -288,7 +286,7 @@ export default function SubmissionDetailModal({
                       }
                     />
                   </div>
-                )}
+                )} */}
               </DetailSection>
 
               {/* Daftar Pekerja */}
@@ -365,11 +363,11 @@ export default function SubmissionDetailModal({
                 title="Dokumen Upload" 
                 icon={<DocumentIcon className="h-5 w-5 text-red-500" />}
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {submission.sika_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
                       <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-8 w-8 text-red-500" />
+                        <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">Dokumen SIKA</p>
                           <p className="text-sm text-gray-500">File tersedia</p>
@@ -379,17 +377,18 @@ export default function SubmissionDetailModal({
                         variant="outline"
                         size="sm"
                         onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                        className="flex items-center space-x-2"
                       >
-                        <EyeIcon className="w-4 h-4 mr-2" />
-                        Lihat
+                        <EyeIcon className="w-4 h-4" />
+                        <span>Lihat</span>
                       </Button>
                     </div>
                   )}
                   
                   {submission.simja_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
                       <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-8 w-8 text-blue-500" />
+                        <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">Dokumen SIMJA</p>
                           <p className="text-sm text-gray-500">File tersedia</p>
@@ -399,9 +398,10 @@ export default function SubmissionDetailModal({
                         variant="outline"
                         size="sm"
                         onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                        className="flex items-center space-x-2"
                       >
-                        <EyeIcon className="w-4 h-4 mr-2" />
-                        Lihat
+                        <EyeIcon className="w-4 h-4" />
+                        <span>Lihat</span>
                       </Button>
                     </div>
                   )}
@@ -416,7 +416,7 @@ export default function SubmissionDetailModal({
               </DetailSection>
 
               {/* Informasi Penanda Tangan */}
-              {(submission.signer_position || submission.signer_name) && (
+              {/* {(submission.signer_position || submission.signer_name) && (
                 <DetailSection 
                   title="Informasi Penanda Tangan" 
                   icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
@@ -432,7 +432,7 @@ export default function SubmissionDetailModal({
                     />
                   </div>
                 </DetailSection>
-              )}
+              )} */}
 
               {/* Status & Approval */}
               <DetailSection 
@@ -446,7 +446,7 @@ export default function SubmissionDetailModal({
                     <PendingIcon className="h-5 w-5 text-orange-500" />
                   )
                 }
-                badge={getStatusBadge(submission.approval_status)}
+                
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <InfoCard
@@ -527,7 +527,7 @@ export default function SubmissionDetailModal({
                     onClick={handleDownloadPdf}
                   >
                     <DocumentIcon className="w-4 h-4 mr-2" />
-                    Download PDF
+                    Lihat PDF
                   </Button>
                 )}
                 

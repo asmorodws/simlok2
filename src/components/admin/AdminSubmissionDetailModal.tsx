@@ -677,54 +677,50 @@ export default function AdminSubmissionDetailModal({
                       title="Dokumen Upload" 
                       icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Dokumen SIKA */}
                         {submission.sika_document_upload && (
-                          <div className="border border-blue-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <DocumentIcon className="h-5 w-5 text-blue-500" />
-                                <div>
-                                  <h4 className="font-medium text-gray-900">Dokumen SIKA</h4>
-                                  <p className="text-xs text-gray-500">Surat Izin Kerja Aman</p>
-                                </div>
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                                <p className="text-sm text-gray-500">File tersedia</p>
                               </div>
                             </div>
                             <button
                               onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                              <EyeIcon className="h-4 w-4 mr-2" />
-                              Preview Dokumen
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
                             </button>
                           </div>
                         )}
 
                         {/* Dokumen SIMJA */}
                         {submission.simja_document_upload && (
-                          <div className="border border-green-200 rounded-lg p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-2">
-                                <DocumentIcon className="h-5 w-5 text-green-500" />
-                                <div>
-                                  <h4 className="font-medium text-gray-900">Dokumen SIMJA</h4>
-                                  <p className="text-xs text-gray-500">Surat Izin Masuk Area</p>
-                                </div>
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                                <p className="text-sm text-gray-500">File tersedia</p>
                               </div>
                             </div>
                             <button
                               onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
-                              className="w-full flex items-center justify-center px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                             >
-                              <EyeIcon className="h-4 w-4 mr-2" />
-                              Preview Dokumen
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
                             </button>
                           </div>
                         )}
 
                         {/* Message if no documents */}
                         {!submission.sika_document_upload && !submission.simja_document_upload && (
-                          <div className="md:col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                          <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                             <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                             <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
                             <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>

@@ -177,15 +177,14 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
 
           {/* Footer */}
           <div className="flex justify-between items-center p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-            <div className="text-sm text-gray-500">
+            {/* <div className="text-sm text-gray-500">
               {dateFrom || dateTo ? (
                 <>Filter: {dateFrom || '...'} s/d {dateTo || '...'}</>
               ) : (
                 'Export semua data'
               )}
-            </div>
+            </div> */}
             
-            <div className="flex items-center space-x-3">
               <Button
                 onClick={resetForm}
                 variant="outline"
@@ -214,7 +213,6 @@ export default function ExportModal({ isOpen, onClose }: ExportModalProps) {
                   </>
                 )}
               </Button>
-            </div>
           </div>
         </div>
       </div>

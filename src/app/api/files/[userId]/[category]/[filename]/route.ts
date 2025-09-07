@@ -29,8 +29,8 @@ export async function GET(
     const categoryFolders = {
       sika: 'dokumen-sika',
       simja: 'dokumen-simja',
-      id_card: 'id-card',
-      other: 'lainnya'
+      other: 'lainnya',
+      'worker-photo': 'foto-pekerja'
     };
 
     const folderName = categoryFolders[category as keyof typeof categoryFolders];

@@ -10,7 +10,7 @@ export interface FileInfo {
   url: string;
   size: number;
   type: string;
-  category: 'sika' | 'simja' | 'id_card' | 'other';
+  category: 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo';
 }
 
 export class FileManager {
@@ -30,18 +30,19 @@ export class FileManager {
       sika: join(userBaseDir, 'dokumen-sika'),
       simja: join(userBaseDir, 'dokumen-simja'),
       idCard: join(userBaseDir, 'id-card'),
-      other: join(userBaseDir, 'lainnya')
+      other: join(userBaseDir, 'lainnya'),
+      workerPhoto: join(userBaseDir, 'foto-pekerja')
     };
   }
 
   /**
    * Determine file category based on field name or file content
    */
-  private getFileCategory(fieldName?: string, fileName?: string): 'sika' | 'simja' | 'id_card' | 'other' {
+  private getFileCategory(fieldName?: string, fileName?: string): 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo' {
     if (fieldName) {
       if (fieldName.includes('sika')) return 'sika';
       if (fieldName.includes('simja')) return 'simja';
-      if (fieldName.includes('id_card') || fieldName.includes('id-card')) return 'id_card';
+      if (fieldName.includes('worker') || fieldName.includes('pekerja')) return 'worker-photo';
     }
     
     if (fileName) {
@@ -49,6 +50,7 @@ export class FileManager {
       if (lowerName.includes('sika')) return 'sika';
       if (lowerName.includes('simja')) return 'simja';
       if (lowerName.includes('ktp') || lowerName.includes('id') || lowerName.includes('identitas')) return 'id_card';
+      if (lowerName.includes('worker') || lowerName.includes('pekerja') || lowerName.includes('foto')) return 'worker-photo';
     }
     
     return 'other';
@@ -72,8 +74,8 @@ export class FileManager {
     const categoryPrefix = {
       sika: 'SIKA',
       simja: 'SIMJA', 
-      id_card: 'ID-Card',
-      other: 'Doc'
+      other: 'Doc',
+      'worker-photo': 'Worker'
     }[category] || 'Doc';
 
     return `${categoryPrefix}_${timestamp}_${randomString}_${cleanOriginalName}.${extension}`;
@@ -90,6 +92,54 @@ export class FileManager {
         await mkdir(folder, { recursive: true });
       }
     }
+  }
+
+  /**
+   * Save worker photo with worker's name as filename
+   */
+  async saveWorkerPhoto(
+    fileBuffer: Buffer,
+    originalName: string,
+    userId: string,
+    workerName: string
+  ): Promise<FileInfo> {
+    // Clean worker name for filename
+    const cleanWorkerName = workerName
+      .replace(/[^a-zA-Z0-9\-_\s]/g, '') // Remove special chars except space
+      .replace(/\s+/g, '_') // Replace spaces with underscore
+      .substring(0, 50); // Limit length
+
+    // Get file extension
+    const extension = originalName.split('.').pop()?.toLowerCase() || 'jpg';
+    
+    // Generate filename with worker name
+    const timestamp = Date.now();
+    const newFileName = `${cleanWorkerName}_${timestamp}.${extension}`;
+    
+    // Create directories
+    await this.createDirectories(userId);
+    
+    // Get worker photo folder
+    const folders = this.getUserFolderStructure(userId);
+    const targetFolder = folders.workerPhoto;
+
+    // Save file
+    const filePath = join(targetFolder, newFileName);
+    const { writeFile } = await import('fs/promises');
+    await writeFile(filePath, fileBuffer);
+
+    // Get file stats
+    const stats = await stat(filePath);
+
+    return {
+      originalName,
+      newName: newFileName,
+      path: filePath,
+      url: `/api/files/${userId}/worker-photo/${newFileName}`,
+      size: stats.size,
+      type: this.getFileType(originalName),
+      category: 'worker-photo'
+    };
   }
 
   /**
@@ -114,8 +164,13 @@ export class FileManager {
       sika: folders.sika,
       simja: folders.simja,
       id_card: folders.idCard,
-      other: folders.other
+      other: folders.other,
+      'worker-photo': folders.workerPhoto
     }[category];
+
+    if (!targetFolder) {
+      throw new Error(`Invalid category: ${category}`);
+    }
 
     // Save file
     const filePath = join(targetFolder, newFileName);
@@ -143,7 +198,7 @@ export class FileManager {
     userId: string,
     oldFileName: string,
     newName: string,
-    category?: 'sika' | 'simja' | 'id_card' | 'other'
+    category?: 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo'
   ): Promise<FileInfo | null> {
     try {
       const folders = this.getUserFolderStructure(userId);
@@ -156,7 +211,8 @@ export class FileManager {
         sika: folders.sika,
         simja: folders.simja,
         id_card: folders.idCard,
-        other: folders.other
+        other: folders.other,
+        'worker-photo': folders.workerPhoto
       })) {
         const testPath = join(folder, oldFileName);
         if (existsSync(testPath)) {
@@ -171,7 +227,7 @@ export class FileManager {
       }
 
       // Determine new category (use provided or keep current)
-      const targetCategory = category || currentCategory as 'sika' | 'simja' | 'id_card' | 'other';
+      const targetCategory = category || currentCategory as 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo';
       
       // Generate new filename
       const extension = oldFileName.split('.').pop()?.toLowerCase() || '';
@@ -186,8 +242,13 @@ export class FileManager {
         sika: folders.sika,
         simja: folders.simja,
         id_card: folders.idCard,
-        other: folders.other
+        other: folders.other,
+        'worker-photo': folders.workerPhoto
       }[targetCategory];
+
+      if (!targetFolder) {
+        throw new Error(`Invalid target category: ${targetCategory}`);
+      }
 
       const newFilePath = join(targetFolder, newFileName);
 
@@ -225,7 +286,8 @@ export class FileManager {
         sika: folders.sika,
         simja: folders.simja,
         id_card: folders.idCard,
-        other: folders.other
+        other: folders.other,
+        'worker-photo': folders.workerPhoto
       })) {
         const filePath = join(folder, fileName);
         if (existsSync(filePath)) {
@@ -250,14 +312,16 @@ export class FileManager {
       sika: [],
       simja: [],
       id_card: [],
-      other: []
+      other: [],
+      'worker-photo': []
     };
 
     for (const [category, folder] of Object.entries({
       sika: folders.sika,
       simja: folders.simja,
       id_card: folders.idCard,
-      other: folders.other
+      other: folders.other,
+      'worker-photo': folders.workerPhoto
     })) {
       try {
         if (existsSync(folder)) {
@@ -275,7 +339,7 @@ export class FileManager {
                 url: `/api/files/${userId}/${category}/${fileName}`,
                 size: stats.size,
                 type: this.getFileType(fileName),
-                category: category as 'sika' | 'simja' | 'id_card' | 'other'
+                category: category as 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo'
               });
             }
           }
@@ -343,8 +407,14 @@ export class FileManager {
             sika: folders.sika,
             simja: folders.simja,
             id_card: folders.idCard,
-            other: folders.other
+            other: folders.other,
+            'worker-photo': folders.workerPhoto
           }[category];
+
+          if (!targetFolder) {
+            errors.push(`Invalid category ${category} for file ${fileName}`);
+            continue;
+          }
 
           // Generate new organized filename
           const newFileName = this.generateFileName(fileName, category, userId);
