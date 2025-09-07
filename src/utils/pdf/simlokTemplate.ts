@@ -264,6 +264,20 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 
   const s = submissionData;
 
+  // Set PDF metadata with SIMLOK information
+  const simlokNumber = s.simlok_number ? `${s.simlok_number}` : "SIMLOK";
+  const simlokTitle = `SIMLOK NO-${simlokNumber}`;
+  const currentDate = new Date();
+  
+  k.doc.setTitle(simlokTitle);
+  k.doc.setSubject("Surat Izin Masuk Lokasi PT PERTAMINA (PERSERO)");
+  k.doc.setAuthor("PT PERTAMINA (PERSERO)");
+  k.doc.setKeywords(["SIMLOK", "Pertamina", "Izin Masuk", simlokNumber, s.vendor_name]);
+  k.doc.setProducer("SIMLOK System");
+  k.doc.setCreator("SIMLOK PDF Generator");
+  k.doc.setCreationDate(currentDate);
+  k.doc.setModificationDate(currentDate);
+
   // Set initial styling
   k.fs = 12;
   k.lineGap = LINE_GAP_DEFAULT;

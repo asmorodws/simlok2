@@ -11,6 +11,8 @@ import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { notificationService } from '../data/notificationService';
 import { useNotificationsStore } from '@/store/notifications';
 import { NotificationItem } from './NotificationItem';
+import UserVerificationModal from '@/components/admin/UserVerificationModal';
+import { UserData } from '@/types/user';
 import type { NotificationsPanelProps, NotificationItem as NotificationItemType } from '../types';
 
 export function NotificationsPanel({ 
@@ -26,6 +28,14 @@ export function NotificationsPanel({
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  
+  // Modal states
+  const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
+
+  // Debug state changes
+  useEffect(() => {
+    console.log('🔄 Modal state changed:', { selectedVendorUser: selectedVendorUser?.id });
+  }, [selectedVendorUser]);
 
   const fetchNotifications = useCallback(async (cursor?: string) => {
     if (!session?.user) return;
@@ -98,8 +108,31 @@ export function NotificationsPanel({
       fetchNotifications(nextCursor);
     }
   }, [nextCursor, isLoading, fetchNotifications]);
+  
+  // Function to fetch vendor user data
+  const fetchVendorData = useCallback(async (vendorId: string) => {
+    try {
+      console.log('🔍 Fetching vendor data for ID:', vendorId);
+      const response = await fetch(`/api/admin/users/${vendorId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch vendor details');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Vendor user data fetched:', data);
+      
+      setSelectedVendorUser(data.user);
+      console.log('🚀 Opening user verification modal for vendorId:', vendorId);
+    } catch (err) {
+      console.error('❌ Error fetching vendor details:', err);
+      alert('Gagal memuat detail vendor');
+    }
+  }, []);
 
   const handleNotificationClick = useCallback((notification: NotificationItemType) => {
+    console.log('🖱️ CLICKED NOTIFICATION:', notification.type, notification.title);
+    
     // Mark as read if not already read
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
@@ -109,28 +142,38 @@ export function NotificationsPanel({
     if (notification.data) {
       try {
         const data = JSON.parse(notification.data);
+        console.log('📊 NOTIFICATION DATA:', data);
+        
         // Handle different notification types
         switch (notification.type) {
           case 'new_submission':
-            // Navigate to submission details
+            console.log('🏃 Navigating to submission:', data.submissionId);
             window.location.href = `/dashboard/submissions/${data.submissionId}`;
             break;
           case 'new_vendor':
-            // Navigate to vendor details
-            window.location.href = `/dashboard/vendors/${data.vendorId}`;
+            console.log('👤 OPENING VENDOR MODAL - vendorId:', data.vendorId);
+            if (data.vendorId) {
+              // Fetch vendor user data
+              fetchVendorData(data.vendorId);
+            } else {
+              console.error('❌ NO VENDOR ID FOUND');
+            }
             break;
           case 'status_change':
-            // Navigate to submission details
+            console.log('🔄 Navigating to submission for status change:', data.submissionId);
             window.location.href = `/dashboard/submissions/${data.submissionId}`;
             break;
           default:
-            console.log('Unknown notification type:', notification.type);
+            console.log('❓ Unknown notification type:', notification.type);
         }
       } catch (error) {
-        console.error('Failed to parse notification data:', error);
+        console.error('❌ PARSE ERROR:', error);
+        console.log('📋 RAW DATA:', notification.data);
       }
+    } else {
+      console.log('⚠️ NO DATA FOUND');
     }
-  }, [handleMarkAsRead]);
+  }, [handleMarkAsRead, fetchVendorData]);
 
   // Fetch notifications when panel opens
   useEffect(() => {
@@ -153,32 +196,41 @@ export function NotificationsPanel({
       
       {/* Panel */}
       <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-lg z-50 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Notifications
-          </h2>
-          <div className="flex items-center gap-2">
-            {unreadNotifications.length > 0 && (
-              <button
-                onClick={handleMarkAllAsRead}
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                title="Mark all as read"
-              >
-                <CheckIcon className="w-4 h-4" />
-                Mark all read
-              </button>
-            )}
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">
+          Notifications
+        </h2>
+        <div className="flex items-center gap-2">
+          {/* Test Button */}
+          <button
+            onClick={() => {
+              console.log('🧪 TEST BUTTON CLICKED');
+              fetchVendorData('cmeg7fce10003silbg30j9em8');
+            }}
+            className="text-xs bg-red-500 text-white px-2 py-1 rounded"
+          >
+            Test Modal
+          </button>
+          
+          {unreadNotifications.length > 0 && (
             <button
-              onClick={onClose}
-              className="p-1 text-gray-400 hover:text-gray-600"
+              onClick={handleMarkAllAsRead}
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              title="Mark all as read"
             >
-              <XMarkIcon className="w-5 h-5" />
+              <CheckIcon className="w-4 h-4" />
+              Mark all read
             </button>
-          </div>
+          )}
+          <button
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-gray-600"
+          >
+            <XMarkIcon className="w-5 h-5" />
+          </button>
         </div>
-
-        {/* Content */}
+      </div>        {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {isLoading && (!notifications || notifications.length === 0) ? (
             <div className="p-4 text-center text-gray-500">
@@ -214,6 +266,24 @@ export function NotificationsPanel({
           )}
         </div>
       </div>
+
+      {/* User Verification Modal */}
+      {selectedVendorUser && (
+        <UserVerificationModal
+          isOpen={!!selectedVendorUser}
+          onClose={() => {
+            console.log('🚪 Closing vendor user modal');
+            setSelectedVendorUser(null);
+          }}
+          user={selectedVendorUser}
+          onUserUpdate={(updatedUser) => {
+            setSelectedVendorUser(updatedUser);
+          }}
+          onUserRemove={() => {
+            setSelectedVendorUser(null);
+          }}
+        />
+      )}
     </>
   );
 }

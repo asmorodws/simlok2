@@ -20,6 +20,8 @@ import {
 import Button from '@/components/ui/button/Button';
 import AdminSubmissionDetailModal from '@/components/admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
+import UserVerificationModal from '@/components/admin/UserVerificationModal';
+import { UserData } from '@/types/user';
 
 // Interface untuk notification
 interface Notification {
@@ -81,6 +83,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -200,8 +203,12 @@ export default function NotificationsPage() {
         return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
       case 'new_submission':
         return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
+      case 'new_vendor':
+        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
+      case 'vendor_verified':
+        return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
       case 'user_registered':
-        return <UserPlusIcon className={`${iconClass} text-purple-600`} />;
+        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
       default:
         return <BellIcon className={`${iconClass} text-gray-600`} />;
     }
@@ -246,24 +253,133 @@ export default function NotificationsPage() {
     return submissionKeywords.some(keyword => text.includes(keyword));
   };
 
+  const hasVendorData = (notification: Notification) => {
+    console.log('🔍 Checking hasVendorData for:', notification);
+    
+    // Cek berdasarkan type notification
+    const vendorTypes = [
+      'new_vendor',
+      'vendor_verified',
+      'vendor_registered'
+    ];
+    
+    if (vendorTypes.includes(notification.type)) {
+      console.log('✅ Found vendor type:', notification.type);
+      return true;
+    }
+    
+    // Cek di dalam data
+    if (notification.data) {
+      let parsedData;
+      if (typeof notification.data === 'string') {
+        try {
+          parsedData = JSON.parse(notification.data);
+          console.log('📊 Parsed vendor data:', parsedData);
+        } catch {
+          const hasVendorId = notification.data.includes('vendorId');
+          console.log('🔤 String contains vendorId:', hasVendorId);
+          return hasVendorId;
+        }
+      } else {
+        parsedData = notification.data;
+        console.log('📊 Direct vendor data:', parsedData);
+      }
+      
+      if (parsedData && parsedData.vendorId) {
+        console.log('🎯 Found vendorId in data:', parsedData.vendorId);
+        return true;
+      }
+    }
+    
+    // Cek di message atau title
+    const vendorKeywords = ['vendor', 'perusahaan', 'pendaftaran vendor'];
+    const text = `${notification.title} ${notification.message}`.toLowerCase();
+    const hasKeyword = vendorKeywords.some(keyword => text.includes(keyword));
+    
+    console.log('🔍 Text search result:', hasKeyword, 'for text:', text);
+    
+    return hasKeyword;
+  };
+
   const handleViewDetail = async (notification: Notification) => {
     console.log('🔍 handleViewDetail called with notification:', notification);
+    console.log('🔍 notification.type:', notification.type);
+    console.log('🔍 notification.data:', notification.data);
     
+    // Mark as read when viewing
+    if (!notification.isRead) {
+      await markAsRead(notification.id);
+    }
+
+    // Check if it's a vendor notification
+    const isVendorNotification = hasVendorData(notification);
+    console.log('👤 Is vendor notification:', isVendorNotification);
+    
+    if (isVendorNotification) {
+      console.log('📋 Processing vendor notification.data:', notification.data);
+      
+      let vendorId = '';
+      
+      // Parse vendor ID from notification data
+      if (notification.data) {
+        let parsedData;
+        if (typeof notification.data === 'string') {
+          try {
+            parsedData = JSON.parse(notification.data);
+            console.log('✅ Parsed vendor data:', parsedData);
+          } catch {
+            // Jika tidak bisa parse JSON, coba extract dari string
+            const match = notification.data.match(/vendorId[:\s]*([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) vendorId = match[1];
+            console.log('🔤 String match result for vendor:', match);
+          }
+        } else {
+          parsedData = notification.data;
+          console.log('📊 Direct vendor data:', parsedData);
+        }
+        
+        if (parsedData && parsedData.vendorId) {
+          vendorId = parsedData.vendorId;
+          console.log('🎯 Found vendorId in parsedData:', vendorId);
+        }
+      }
+
+      if (vendorId) {
+        // Fetch vendor user data
+        try {
+          const response = await fetch(`/api/admin/users/${vendorId}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch vendor details');
+          }
+          
+          const data = await response.json();
+          console.log('✅ Vendor user data fetched:', data);
+          
+          setSelectedVendorUser(data.user);
+          
+          console.log('🚀 Opening user verification modal for vendorId:', vendorId);
+        } catch (err) {
+          console.error('❌ Error fetching vendor details:', err);
+          alert('Gagal memuat detail vendor');
+        }
+      } else {
+        console.warn('⚠️ No vendor ID found in notification');
+      }
+      return;
+    }
+
+    // Handle submission notifications
     if (!hasSubmissionData(notification)) {
       console.log('❌ No submission data found');
       return;
     }
     
     try {
-      // Mark as read when viewing
-      if (!notification.isRead) {
-        await markAsRead(notification.id);
-      }
-
       // Extract submission ID from notification data
       let submissionId = '';
       
-      console.log('📋 Processing notification.data:', notification.data);
+      console.log('📋 Processing submission notification.data:', notification.data);
       
       // Parse dari data JSON jika ada
       if (notification.data) {
@@ -271,16 +387,16 @@ export default function NotificationsPage() {
         if (typeof notification.data === 'string') {
           try {
             parsedData = JSON.parse(notification.data);
-            console.log('✅ Parsed data:', parsedData);
+            console.log('✅ Parsed submission data:', parsedData);
           } catch {
             // Jika tidak bisa parse JSON, coba extract dari string
             const match = notification.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
             if (match && match[1]) submissionId = match[1];
-            console.log('🔤 String match result:', match);
+            console.log('🔤 String match result for submission:', match);
           }
         } else {
           parsedData = notification.data;
-          console.log('📊 Direct data:', parsedData);
+          console.log('📊 Direct submission data:', parsedData);
         }
         
         if (parsedData && parsedData.submissionId) {
@@ -345,6 +461,16 @@ export default function NotificationsPage() {
   // Add truncate function
   const truncateText = (text: string, maxLength: number = 100) => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  // Handle vendor user updates
+  const handleUserUpdate = (updatedUser: UserData) => {
+    setSelectedVendorUser(updatedUser);
+  };
+
+  // Handle vendor user removal
+  const handleUserRemove = () => {
+    setSelectedVendorUser(null);
   };
 
   // Filter notifications
@@ -498,11 +624,17 @@ export default function NotificationsPage() {
                           ? 'bg-blue-50/50 dark:bg-blue-900/10 border-l-2 border-blue-500/50' 
                           : ''
                       } ${
-                        hasSubmissionData(notification) ? 'cursor-pointer' : ''
+                        hasSubmissionData(notification) || hasVendorData(notification) ? 'cursor-pointer' : ''
                       }`}
                       onClick={() => {
-                        if (hasSubmissionData(notification)) {
+                        console.log('🖱️ Notification clicked:', notification);
+                        console.log('📋 hasSubmissionData:', hasSubmissionData(notification));
+                        console.log('👤 hasVendorData:', hasVendorData(notification));
+                        
+                        if (hasSubmissionData(notification) || hasVendorData(notification)) {
                           handleViewDetail(notification);
+                        } else {
+                          console.log('❌ No action taken - neither submission nor vendor data found');
                         }
                       }}
                       role="listitem"
@@ -558,10 +690,10 @@ export default function NotificationsPage() {
                         </div>
 
                         {/* Actions */}
-                        {hasSubmissionData(notification) && (
+                        {(hasSubmissionData(notification) || hasVendorData(notification)) && (
                           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-600 flex items-center justify-between">
                             <button className="inline-flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors">
-                              Lihat detail
+                              {hasVendorData(notification) ? 'Lihat detail' : 'Lihat detail'}
                               <ArrowRightIcon className="w-3 h-3 ml-1" />
                             </button>
                             
@@ -614,6 +746,17 @@ export default function NotificationsPage() {
           submission={selectedSubmission}
           isOpen={!!selectedSubmission}
           onClose={() => setSelectedSubmission(null)}
+        />
+      )}
+
+      {/* User Verification Modal */}
+      {selectedVendorUser && (
+        <UserVerificationModal
+          isOpen={!!selectedVendorUser}
+          onClose={() => setSelectedVendorUser(null)}
+          user={selectedVendorUser}
+          onUserUpdate={handleUserUpdate}
+          onUserRemove={handleUserRemove}
         />
       )}
       </SidebarLayout>

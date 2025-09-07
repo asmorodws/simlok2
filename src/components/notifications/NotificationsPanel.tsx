@@ -16,6 +16,9 @@ import {
 import Button from '../ui/button/Button';
 import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
+import UserVerificationModal from '../admin/UserVerificationModal';
+import { UserData } from '@/types/user';
+
 import { useNotificationsStore, type Notification } from '../../store/notifications';
 
 interface NotificationsPanelProps {
@@ -55,6 +58,9 @@ export default function NotificationsPanel({
   
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // State for vendor verification modal
+  const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
 
   // Close panel when clicking outside
   useEffect(() => {
@@ -76,6 +82,12 @@ export default function NotificationsPanel({
   const handleViewDetail = async (notification: Notification) => {
     try {
       console.log('handleViewDetail called with notification:', notification);
+      
+      // Handle vendor notifications
+      if (notification.type === 'user_registered' || notification.type === 'new_vendor') {
+        await handleVendorDetail(notification);
+        return;
+      }
       
       // Parse data dari notification untuk mendapatkan submission ID
       let submissionId = null;
@@ -135,6 +147,55 @@ export default function NotificationsPanel({
     }
   };
 
+  const handleVendorDetail = async (notification: Notification) => {
+    try {
+      console.log('handleVendorDetail called with notification:', notification);
+      
+      let vendorId = null;
+      
+      if (notification.data) {
+        try {
+          const parsedData = typeof notification.data === 'string' 
+            ? JSON.parse(notification.data) 
+            : notification.data;
+          vendorId = parsedData.vendorId || parsedData.userId || parsedData.user_id;
+          console.log('Extracted vendorId from data:', vendorId);
+        } catch (e) {
+          console.error('Error parsing notification data:', e);
+          console.log('Raw notification.data:', notification.data);
+        }
+      }
+
+      if (!vendorId) {
+        console.warn('No vendor ID found in notification:', notification);
+        return;
+      }
+
+      console.log('🔍 Fetching vendor data for ID:', vendorId);
+      const response = await fetch(`/api/admin/users/${vendorId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch vendor details');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Vendor user data fetched:', data);
+      
+      setSelectedVendorUser(data.user);
+      console.log('🚀 Opening user verification modal for vendorId:', vendorId);
+
+      // Mark notification as read
+      if (!notification.isRead) {
+        console.log('Marking notification as read:', notification.id);
+        await markAsRead(notification.id);
+      }
+
+    } catch (err) {
+      console.error('❌ Error fetching vendor details:', err);
+      alert('Gagal memuat detail vendor');
+    }
+  };
+
   const handleCloseDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedSubmission(null);
@@ -178,7 +239,8 @@ export default function NotificationsPanel({
       case 'new_submission':
         return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
       case 'user_registered':
-        return <UserPlusIcon className={`${iconClass} text-purple-600`} />;
+      case 'new_vendor':
+        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
       default:
         return <BellIcon className={`${iconClass} text-gray-500`} />;
     }
@@ -236,6 +298,7 @@ export default function NotificationsPanel({
           action: 'Lihat detail'
         };
       case 'user_registered':
+      case 'new_vendor':
         return {
           title: 'Vendor Baru Terdaftar',
           message: truncateText(message.replace('User baru terdaftar', 'Vendor baru mendaftar dan perlu verifikasi')),
@@ -252,6 +315,11 @@ export default function NotificationsPanel({
 
   const hasSubmissionData = (notification: Notification) => {
     console.log('hasSubmissionData check for:', notification);
+    
+    // Check if this is a vendor notification
+    if (notification.type === 'user_registered' || notification.type === 'new_vendor') {
+      return true;
+    }
     
     // Check if notification contains submission data that can be viewed
     const hasSubmissionType = notification.type.includes('submission') || notification.type === 'status_change';
@@ -469,7 +537,7 @@ export default function NotificationsPanel({
               <span className="text-gray-500 dark:text-gray-400">
                 {Math.min(notifications.length, 10)} dari {notifications.length}
               </span>
-              {notifications.length > 10 && (
+              {notifications.length && (
                 <a
                   href="/dashboard/notifications"
                   className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
@@ -503,6 +571,24 @@ export default function NotificationsPanel({
             />
           )}
         </>
+      )}
+
+      {/* User Verification Modal for Vendor Details */}
+      {selectedVendorUser && (
+        <UserVerificationModal
+          isOpen={!!selectedVendorUser}
+          onClose={() => {
+            console.log('🚪 Closing vendor user modal');
+            setSelectedVendorUser(null);
+          }}
+          user={selectedVendorUser}
+          onUserUpdate={(updatedUser) => {
+            setSelectedVendorUser(updatedUser);
+          }}
+          onUserRemove={() => {
+            setSelectedVendorUser(null);
+          }}
+        />
       )}
     </>
   );

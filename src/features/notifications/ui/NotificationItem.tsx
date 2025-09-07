@@ -5,7 +5,16 @@
  */
 
 import { formatDistanceToNow } from 'date-fns';
-import { CheckIcon, ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { 
+  CheckIcon, 
+  ExclamationTriangleIcon, 
+  InformationCircleIcon,
+  UserPlusIcon,
+  DocumentPlusIcon,
+  ArrowRightIcon,
+  BuildingOffice2Icon,
+  UserIcon
+} from '@heroicons/react/24/outline';
 import type { NotificationItemProps } from '../types';
 
 export function NotificationItem({ 
@@ -16,8 +25,9 @@ export function NotificationItem({
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'new_submission':
+        return <DocumentPlusIcon className="w-5 h-5 text-blue-600" />;
       case 'new_vendor':
-        return <InformationCircleIcon className="w-5 h-5 text-blue-600" />;
+        return <UserPlusIcon className="w-5 h-5 text-green-600" />;
       case 'status_change':
         return <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600" />;
       default:
@@ -25,7 +35,46 @@ export function NotificationItem({
     }
   };
 
+  const parseNotificationData = () => {
+    try {
+      return notification.data ? JSON.parse(notification.data) : null;
+    } catch (error) {
+      console.error('Error parsing notification data:', error);
+      return null;
+    }
+  };
+
+  const getNotificationDetails = () => {
+    const data = parseNotificationData();
+    
+    switch (notification.type) {
+      case 'new_vendor':
+        if (data) {
+          return {
+            vendorName: data.vendorName || '',
+            officerName: data.officerName || '',
+            email: data.email || '',
+            hasDetails: true
+          };
+        }
+        break;
+      case 'new_submission':
+        if (data) {
+          return {
+            vendorName: data.vendorName || '',
+            officerName: data.officerName || '',
+            submissionId: data.submissionId || '',
+            hasDetails: true
+          };
+        }
+        break;
+    }
+    
+    return { hasDetails: false };
+  };
+
   const handleClick = () => {
+    console.log('🖱️ NotificationItem CLICKED:', notification.type, notification.title);
     onClick?.(notification);
   };
 
@@ -33,6 +82,8 @@ export function NotificationItem({
     e.stopPropagation();
     onMarkAsRead(notification.id);
   };
+
+  const details = getNotificationDetails();
 
   return (
     <div
@@ -72,6 +123,62 @@ export function NotificationItem({
           }`}>
             {notification.message}
           </p>
+
+          {/* Enhanced Details Section */}
+          {details.hasDetails && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              {notification.type === 'new_vendor' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <BuildingOffice2Icon className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium text-gray-700">Vendor:</span>
+                    <span className="text-gray-900">{details.vendorName || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <UserIcon className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium text-gray-700">Petugas:</span>
+                    <span className="text-gray-900">{details.officerName || 'N/A'}</span>
+                  </div>
+                  {details.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <InformationCircleIcon className="w-4 h-4 text-gray-500" />
+                      <span className="font-medium text-gray-700">Email:</span>
+                      <span className="text-gray-900">{details.email}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {notification.type === 'new_submission' && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <BuildingOffice2Icon className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium text-gray-700">Vendor:</span>
+                    <span className="text-gray-900">{details.vendorName || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <UserIcon className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium text-gray-700">Petugas:</span>
+                    <span className="text-gray-900">{details.officerName || 'N/A'}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="mt-3 pt-2 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <button className="inline-flex items-center text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
+                    {notification.type === 'new_vendor' ? 'Lihat detail' : 'Lihat detail'}
+                    <ArrowRightIcon className="w-3 h-3 ml-1" />
+                  </button>
+                  
+                  <span className="text-xs text-gray-500">
+                    Klik untuk melihat detail lengkap
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
           
           <p className="text-xs text-gray-500 mt-2">
             {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
