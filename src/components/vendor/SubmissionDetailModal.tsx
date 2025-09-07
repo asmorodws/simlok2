@@ -519,11 +519,7 @@ export default function SubmissionDetailModal({
 
             {/* Footer Actions */}
             <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
-              <div className="text-sm text-gray-500">
-                ID Pengajuan: <span className="font-mono font-medium">{submission.id}</span>
-              </div>
-              
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 justify-between w-full">
                 {submission.approval_status === 'APPROVED' && submission.simlok_number && (
                   <Button
                     variant="primary"
