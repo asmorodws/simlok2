@@ -3,8 +3,11 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
+// Temporarily disable Socket.IO until server is properly configured
+const SOCKET_ENABLED = process.env.NODE_ENV === 'development' && false; // Disabled for now
+
 export const initSocket = () => {
-  if (!socket) {
+  if (!socket && SOCKET_ENABLED) {
     socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
       path: '/api/socket',
       addTrailingSlash: false,
@@ -24,11 +27,16 @@ export const useSocket = () => {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
+    if (!SOCKET_ENABLED) {
+      return;
+    }
+
     if (!socketRef.current) {
       socketRef.current = initSocket();
     }
 
     const currentSocket = socketRef.current;
+    if (!currentSocket) return;
 
     const handleConnect = () => {
       console.log('Connected to socket server');
@@ -62,6 +70,7 @@ export const useSocket = () => {
     currentSocket.on('reconnect_error', handleReconnectError);
 
     return () => {
+      if (!currentSocket) return;
       currentSocket.off('connect', handleConnect);
       currentSocket.off('disconnect', handleDisconnect);
       currentSocket.off('error', handleError);
@@ -71,5 +80,5 @@ export const useSocket = () => {
     };
   }, []);
 
-  return socketRef.current;
+  return SOCKET_ENABLED ? socketRef.current : null;
 };

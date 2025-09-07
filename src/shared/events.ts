@@ -19,8 +19,10 @@ export const VendorSubmissionStatusChangedEvent = z.object({
 
 export const NotificationNewEvent = z.object({
   id: z.string(),
+  type: z.string(),
   title: z.string(),
   message: z.string(),
+  data: z.string().nullable().optional(),
   scope: z.enum(['admin', 'vendor']),
   vendorId: z.string().optional(),
   createdAt: z.string(),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/singletons';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 import { notifyVendorStatusChange } from '@/server/events';
 
@@ -200,7 +200,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     console.log('PUT /api/submissions/[id] - Request body keys:', Object.keys(body));
 
-    let updateData: any = {};
+    const updateData: any = {};
     let statusChanged = false;
     let newStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | undefined;
 

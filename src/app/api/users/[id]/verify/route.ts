@@ -1,6 +1,6 @@
 // app/api/users/[id]/verify/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/singletons";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 

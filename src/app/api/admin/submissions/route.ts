@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/singletons';
 
 // GET /api/admin/submissions - Get all submissions for admin dashboard
 export async function GET(request: NextRequest) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const vendorName = searchParams.get('vendor');
     const skip = (page - 1) * limit;
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     // Filter by status if provided
     if (status) {

@@ -1,20 +1,12 @@
-import { prisma } from '@/lib/prisma';
-import { 
-  emitAdminNewSubmission,
-  emitAdminNewVendor,
-  emitVendorSubmissionStatusChanged,
-  emitNotificationNew,
-  emitNotificationUnreadCount,
-  emitStatsUpdate
-} from './socket';
-import type { 
+import { prisma } from '@/lib/singletons';
+import { eventsPublisher } from './eventsPublisher';
+import { notificationsPublisher } from './notificationsPublisher';
+import type {
   AdminNewSubmissionEvent,
   AdminNewVendorEvent,
   VendorSubmissionStatusChangedEvent,
   NotificationNewEvent
-} from '../shared/events';
-
-// Helper to count unread notifications
+} from '../shared/events';// Helper to count unread notifications
 async function getUnreadCount(scope: 'admin' | 'vendor', vendorId?: string): Promise<number> {
   if (scope === 'admin') {
     return await prisma.notification.count({
@@ -77,29 +69,36 @@ export async function notifyAdminNewSubmission(submissionId: string) {
 
     const notificationEvent: NotificationNewEvent = {
       id: notification.id,
+      type: notification.type,
       title: notification.title,
       message: notification.message,
+      data: notification.data,
       scope: 'admin',
       createdAt: notification.created_at.toISOString()
     };
 
-    emitAdminNewSubmission(submissionEvent);
-    emitNotificationNew('admin', undefined, notificationEvent);
+    eventsPublisher.adminNewSubmission(submissionEvent);
+    eventsPublisher.notificationNew(notificationEvent);
+    
+    // Publish to real-time subscribers via Redis
+    await notificationsPublisher.publishNotification(notificationEvent);
 
     // Update unread count
     const unreadCount = await getUnreadCount('admin');
-    emitNotificationUnreadCount('admin', undefined, {
-      scope: 'admin',
+    const unreadCountEvent = {
+      scope: 'admin' as const,
       unreadCount: unreadCount,
       count: unreadCount
-    });
+    };
+    eventsPublisher.notificationUnreadCount(unreadCountEvent);
+    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
 
     // Update stats
     const totalPending = await prisma.submission.count({
       where: { approval_status: 'PENDING' }
     });
 
-    emitStatsUpdate('admin', undefined, {
+    eventsPublisher.statsUpdate({
       scope: 'admin',
       changes: {
         pendingSubmissions: totalPending,
@@ -147,29 +146,36 @@ export async function notifyAdminNewVendor(vendorId: string) {
 
     const notificationEvent: NotificationNewEvent = {
       id: notification.id,
+      type: notification.type,
       title: notification.title,
       message: notification.message,
+      data: notification.data,
       scope: 'admin',
       createdAt: notification.created_at.toISOString()
     };
 
-    emitAdminNewVendor(vendorEvent);
-    emitNotificationNew('admin', undefined, notificationEvent);
+    eventsPublisher.adminNewVendor(vendorEvent);
+    eventsPublisher.notificationNew(notificationEvent);
+    
+    // Publish to real-time subscribers via Redis
+    await notificationsPublisher.publishNotification(notificationEvent);
 
     // Update unread count
     const unreadCount = await getUnreadCount('admin');
-    emitNotificationUnreadCount('admin', undefined, {
-      scope: 'admin',
+    const unreadCountEvent = {
+      scope: 'admin' as const,
       unreadCount: unreadCount,
       count: unreadCount
-    });
+    };
+    eventsPublisher.notificationUnreadCount(unreadCountEvent);
+    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
 
     // Update stats
     const totalVendors = await prisma.user.count({
       where: { role: 'VENDOR' }
     });
 
-    emitStatsUpdate('admin', undefined, {
+    eventsPublisher.statsUpdate({
       scope: 'admin',
       changes: {
         totalVendors
@@ -227,26 +233,31 @@ export async function notifyVendorStatusChange(
 
     const notificationEvent: NotificationNewEvent = {
       id: notification.id,
+      type: notification.type,
       title: notification.title,
       message: notification.message,
+      data: notification.data,
       scope: 'vendor',
       vendorId,
       createdAt: notification.created_at.toISOString()
     };
 
-    emitVendorSubmissionStatusChanged(vendorId, statusEvent);
-    emitNotificationNew('vendor', vendorId, notificationEvent);
+  eventsPublisher.vendorSubmissionStatusChanged(vendorId, statusEvent);
+  eventsPublisher.notificationNew(notificationEvent);
+  
+  // Publish to real-time subscribers via Redis
+  await notificationsPublisher.publishNotification(notificationEvent);
 
-    // Update unread count
-    const unreadCount = await getUnreadCount('vendor', vendorId);
-    emitNotificationUnreadCount('vendor', vendorId, {
-      scope: 'vendor',
-      vendorId,
-      unreadCount: unreadCount,
-      count: unreadCount
-    });
-
-    // Update vendor stats
+  // Update unread count
+  const unreadCount = await getUnreadCount('vendor', vendorId);
+  const unreadCountEvent = {
+    scope: 'vendor' as const,
+    vendorId,
+    unreadCount: unreadCount,
+    count: unreadCount
+  };
+  eventsPublisher.notificationUnreadCount(unreadCountEvent);
+  await notificationsPublisher.publishUnreadCount(unreadCountEvent);    // Update vendor stats
     const vendorSubmissions = await prisma.submission.findMany({
       where: { user_id: vendorId }
     });
@@ -258,7 +269,7 @@ export async function notifyVendorStatusChange(
       rejectedSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'REJECTED').length
     };
 
-    emitStatsUpdate('vendor', vendorId, {
+    eventsPublisher.statsUpdate({
       scope: 'vendor',
       vendorId,
       changes: stats

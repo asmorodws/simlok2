@@ -43,9 +43,12 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { updateStats } = useStatsStore();
   const { addSubmission, updateSubmission, addVendor } = useListsStore();
 
+  // Disable Socket.IO in favor of Server-Sent Events
+  const SOCKET_ENABLED = false;
+
   useEffect(() => {
-    if (!session?.user) {
-      // Clean up socket if user logs out
+    if (!session?.user || !SOCKET_ENABLED) {
+      // Clean up socket if user logs out or Socket.IO is disabled
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -61,8 +64,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current = io({
         path: '/api/socket',
         transports: ['websocket', 'polling'],
-        timeout: 20000,
+        timeout: 10000,
         forceNew: true,
+        autoConnect: true,
       });
 
       const socket = socketRef.current;
@@ -88,17 +92,29 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
       socket.on('connect_error', (error) => {
         console.error('Socket connection error:', error);
+        isConnectedRef.current = false;
+        // Don't retry if connection fails multiple times
+        if (error.message.includes('timeout')) {
+          console.log('Socket connection timeout - disabling auto-reconnect');
+          socket.disconnect();
+        }
       });
 
       // Event listeners
       socket.on(EVENT_NAMES.ADMIN_NEW_SUBMISSION, (payload: AdminNewSubmissionEvent) => {
         console.log('New submission event:', payload);
-        // This will be handled by the notification event
+        // Refresh submissions list or trigger refetch
+        if (session.user.role === 'ADMIN') {
+          updateStats({ totalSubmissions: 'increment', pendingSubmissions: 'increment' });
+        }
       });
 
       socket.on(EVENT_NAMES.ADMIN_NEW_VENDOR, (payload: AdminNewVendorEvent) => {
         console.log('New vendor event:', payload);
-        // This will be handled by the notification event
+        // Refresh vendors list or trigger refetch
+        if (session.user.role === 'ADMIN') {
+          updateStats({ totalVendors: 'increment' });
+        }
       });
 
       socket.on(EVENT_NAMES.VENDOR_SUBMISSION_STATUS_CHANGED, (payload: VendorSubmissionStatusChangedEvent) => {
@@ -111,8 +127,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       });
 
       socket.on(EVENT_NAMES.NOTIFICATION_NEW, (payload: NotificationNewEvent) => {
-        console.log('New notification:', payload);
+        console.log('🔔 New notification received via Socket.IO:', payload);
         
+        // Add notification to store (it will show as unread by default)
         addNotification({
           id: payload.id,
           type: 'notification',
@@ -122,6 +139,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           createdAt: payload.createdAt,
           isRead: false
         });
+        
+        // Note: addNotification already increments unreadCount
+        console.log('✅ Notification added to store');
       });
 
       socket.on(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, (payload: NotificationUnreadCountEvent) => {

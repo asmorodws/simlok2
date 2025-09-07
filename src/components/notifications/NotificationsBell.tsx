@@ -4,12 +4,29 @@ import { useState, useEffect } from 'react';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
 import { useNotificationsStore } from '../../store/notifications';
+import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
 import NotificationsPanel from './NotificationsPanel';
 
 export default function NotificationsBell() {
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
-  const { unreadCount } = useNotificationsStore();
+  const { 
+    items: notifications,
+    unreadCount,
+    setItems,
+    setUnreadCount,
+    setCursor,
+    setHasMore
+  } = useNotificationsStore();
+
+  // Enable real-time notifications via SSE
+  const { isConnected } = useRealTimeNotifications();
+
+  console.log('NotificationsBell - Current store state (v3-SSE):', { 
+    notifications: notifications?.length, 
+    unreadCount,
+    isConnected
+  });
 
   // Load initial notifications and unread count
   useEffect(() => {
@@ -17,6 +34,16 @@ export default function NotificationsBell() {
       loadNotifications();
     }
   }, [session]);
+
+  // Sync unread count with store items changes
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const calculatedUnreadCount = notifications.filter(n => !n.isRead).length;
+      if (calculatedUnreadCount !== unreadCount) {
+        setUnreadCount(calculatedUnreadCount);
+      }
+    }
+  }, [notifications, unreadCount, setUnreadCount]);
 
   const loadNotifications = async () => {
     if (!session?.user) return;
@@ -28,24 +55,32 @@ export default function NotificationsBell() {
         limit: '10'
       });
 
-      // Only add vendorId for vendor scope
-      if (scope === 'vendor') {
+      // Add vendorId only for vendor scope
+      if (scope === 'vendor' && session.user.id) {
         params.append('vendorId', session.user.id);
       }
 
       console.log('Loading notifications with params:', params.toString());
+      console.log('🚀 Using endpoint: /api/v1/notifications (Build: 2025-09-06-v3)');
 
-      const response = await fetch(`/api/notifications?${params}`);
+      const response = await fetch(`/api/v1/notifications?${params}`);
       if (response.ok) {
-        const data = await response.json();
-        console.log('Notifications loaded:', data);
+        const result = await response.json();
+        console.log('Notifications loaded:', result);
         
-        const { setItems, setUnreadCount, setCursor, setHasMore } = useNotificationsStore.getState();
+        // Extract notifications from nested data structure
+        const notifications = Array.isArray(result.data?.data) ? result.data.data : [];
+        console.log('NotificationsBell - About to setItems with:', notifications);
+        setItems(notifications);
         
-        setItems(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-        setCursor(data.cursor);
-        setHasMore(data.hasMore);
+        // Count unread notifications
+        const unreadCount = notifications.filter((n: any) => !n.isRead).length;
+        console.log('NotificationsBell - Setting unreadCount to:', unreadCount);
+        console.log('NotificationsBell - All notifications:', notifications.map((n: any) => ({ id: n.id, isRead: n.isRead, title: n.title })));
+        setUnreadCount(unreadCount);
+        
+        setCursor(result.data?.pagination?.nextCursor);
+        setHasMore(result.data?.pagination?.hasMore || false);
       } else {
         console.error('Failed to load notifications:', response.status, response.statusText);
         const errorData = await response.json();

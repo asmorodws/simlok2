@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/singletons';
 import { SubmissionData } from '@/types/submission';
 import { notifyAdminNewSubmission } from '@/server/events';
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const includeStats = searchParams.get('stats') === 'true';
     const skip = (page - 1) * limit;
 
-    let whereClause: any = {};
+    const whereClause: any = {};
 
     // Filter by role
     if (session.user.role === 'VENDOR') {

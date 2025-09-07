@@ -1,13 +1,6 @@
-// src/lib/prisma.ts
-import { PrismaClient } from "@prisma/client";
+/**
+ * Legacy Prisma Client - Deprecated
+ * Use prisma from @/lib/singletons instead
+ */
 
-declare global {
-  var prisma: PrismaClient | undefined;
-}
-export const prisma =
-  global.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query"] : [],
-  });
-
-if (process.env.NODE_ENV === "development") global.prisma = prisma;
+export { prisma } from './singletons';

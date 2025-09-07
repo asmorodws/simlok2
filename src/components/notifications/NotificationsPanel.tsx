@@ -9,8 +9,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   DocumentTextIcon,
-  UserPlusIcon,
-  EyeIcon
+  UserPlusIcon
 } from '@heroicons/react/24/outline';
 import Button from '../ui/button/Button';
 import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
@@ -31,10 +30,29 @@ export default function NotificationsPanel({
     markAsRead, 
     markAllAsRead 
   } = useNotificationsStore();
+
+  // Debug: log notifications data
+  console.log('NotificationsPanel - notifications:', notifications);
+  console.log('NotificationsPanel - notifications length:', notifications?.length);
+  console.log('NotificationsPanel - unreadCount:', unreadCount);
+  
+  // Debug each notification
+  if (notifications && notifications.length > 0) {
+    notifications.slice(0, 3).forEach((notif, index) => {
+      console.log(`🔔 Notification ${index}:`, {
+        id: notif.id,
+        type: notif.type,
+        title: notif.title,
+        message: notif.message,
+        data: notif.data,
+        isRead: notif.isRead,
+        createdAt: notif.createdAt
+      });
+    });
+  }
   
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [loadingSubmissionId, setLoadingSubmissionId] = useState<string | null>(null);
 
   // Close panel when clicking outside
   useEffect(() => {
@@ -55,15 +73,22 @@ export default function NotificationsPanel({
 
   const handleViewDetail = async (notification: Notification) => {
     try {
+      console.log('🔍 handleViewDetail called with notification:', notification);
+      
       // Parse data dari notification untuk mendapatkan submission ID
       let submissionId = null;
       
       if (notification.data) {
         try {
-          const parsedData = JSON.parse(notification.data);
+          // Check if data is already an object or needs parsing
+          const parsedData = typeof notification.data === 'string' 
+            ? JSON.parse(notification.data) 
+            : notification.data;
           submissionId = parsedData.submissionId || parsedData.submission_id;
+          console.log('📋 Extracted submissionId from data:', submissionId);
         } catch (e) {
           console.error('Error parsing notification data:', e);
+          console.log('Raw notification.data:', notification.data);
         }
       }
 
@@ -75,14 +100,15 @@ export default function NotificationsPanel({
         const titleMatch = notification.title.match(idPattern);
         
         submissionId = messageMatch?.[1] || titleMatch?.[1];
+        console.log('📋 Extracted submissionId from text:', submissionId);
       }
 
       if (!submissionId) {
-        console.warn('No submission ID found in notification');
+        console.warn('No submission ID found in notification:', notification);
         return;
       }
 
-      setLoadingSubmissionId(submissionId);
+      console.log('🚀 Fetching submission details for ID:', submissionId);
 
       // Fetch detail submission
       const response = await fetch(`/api/submissions/${submissionId}`);
@@ -91,18 +117,19 @@ export default function NotificationsPanel({
       }
 
       const submissionData = await response.json();
+      console.log('✅ Submission data fetched:', submissionData);
+      
       setSelectedSubmission(submissionData);
       setIsDetailModalOpen(true);
 
       // Mark notification as read
       if (!notification.isRead) {
-        markAsRead(notification.id);
+        console.log('📖 Marking notification as read:', notification.id);
+        await markAsRead(notification.id);
       }
 
     } catch (error) {
-      console.error('Error viewing submission detail:', error);
-    } finally {
-      setLoadingSubmissionId(null);
+      console.error('❌ Error viewing submission detail:', error);
     }
   };
 
@@ -188,11 +215,36 @@ export default function NotificationsPanel({
   };
 
   const hasSubmissionData = (notification: Notification) => {
+    console.log('🔍 hasSubmissionData check for:', notification);
+    
     // Check if notification contains submission data that can be viewed
-    return notification.type.includes('submission') || 
-           (notification.data && notification.data.includes('submissionId')) ||
-           notification.message.includes('ID') ||
-           notification.title.includes('ID');
+    const hasSubmissionType = notification.type.includes('submission');
+    
+    let hasSubmissionId = false;
+    if (notification.data) {
+      if (typeof notification.data === 'string') {
+        hasSubmissionId = notification.data.includes('submissionId');
+      } else if (typeof notification.data === 'object') {
+        hasSubmissionId = notification.data.submissionId || notification.data.submission_id;
+      }
+    }
+    
+    const hasIdInMessage = notification.message.includes('ID');
+    const hasIdInTitle = notification.title.includes('ID');
+    
+    const result = hasSubmissionType || hasSubmissionId || hasIdInMessage || hasIdInTitle;
+    
+    console.log('📋 hasSubmissionData result:', {
+      notification: notification.id,
+      type: notification.type,
+      hasSubmissionType,
+      hasSubmissionId,
+      hasIdInMessage,
+      hasIdInTitle,
+      result
+    });
+    
+    return result;
   };
 
   if (!notifications) return null;
@@ -254,7 +306,7 @@ export default function NotificationsPanel({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {!notifications || notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
                 <BellIcon className="w-8 h-8 text-gray-400" />
@@ -268,15 +320,18 @@ export default function NotificationsPanel({
             </div>
           ) : (
             <div className="p-3">
-              {notifications.slice(0, 5).map((notification, index) => (
+              {Array.isArray(notifications) && notifications.slice(0, 5).map((notification, index) => (
                 <div
-                  key={notification.id}
+                  key={`notification-${notification.id}-${notification.createdAt}`}
                   className={`group relative rounded-lg transition-all duration-200 hover:shadow-sm ${
                     getNotificationBgColor(notification.type, notification.isRead)
                   } ${index > 0 ? 'mt-2' : ''} ${
                     hasSubmissionData(notification) ? 'cursor-pointer hover:scale-[1.01]' : ''
                   }`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ Notification clicked:', notification);
                     if (hasSubmissionData(notification)) {
                       handleViewDetail(notification);
                     }
@@ -321,30 +376,14 @@ export default function NotificationsPanel({
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-600">
-                          <div className="flex items-center space-x-2">
-                            {hasSubmissionData(notification) && (
-                              <button className="inline-flex items-center text-xs text-blue-600 hover:text-blue-700 font-medium group-hover:underline">
-                                {loadingSubmissionId === notification.id ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent mr-1"></div>
-                                    Memuat...
-                                  </>
-                                ) : (
-                                  <>
-                                    <EyeIcon className="w-3 h-3 mr-1" />
-                                    Lihat Detail
-                                  </>
-                                )}
-                              </button>
-                            )}
-                          </div>
-
+                        <div className="flex items-center justify-end mt-3 pt-2 border-t border-gray-100 dark:border-gray-600">
                           {!notification.isRead && (
                             <button
-                              onClick={(e) => {
+                              onClick={async (e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
-                                markAsRead(notification.id);
+                                console.log('📖 Mark as read button clicked for:', notification.id);
+                                await markAsRead(notification.id);
                               }}
                               className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                             >

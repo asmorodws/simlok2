@@ -11,7 +11,6 @@ import {
   ClockIcon,
   DocumentTextIcon,
   UserPlusIcon,
-  EyeIcon,
   FunnelIcon,
   MagnifyingGlassIcon,
   XMarkIcon
@@ -80,7 +79,6 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [loadingSubmissionId, setLoadingSubmissionId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -92,13 +90,14 @@ export default function NotificationsPage() {
       setLoading(true);
       try {
         const scope = session.user.role === 'ADMIN' ? 'admin' : 'vendor';
-        const response = await fetch(`/api/notifications?scope=${scope}&limit=50`);
+        const response = await fetch(`/api/v1/notifications?scope=${scope}&limit=50`);
         
         if (response.ok) {
           const data = await response.json();
-          console.log('📋 Notifications API response:', data);
-          console.log('📅 First notification createdAt:', data.notifications?.[0]?.createdAt);
-          setNotifications(data.notifications || []);
+          console.log('📋 Notifications API v1 response:', data);
+          console.log('📅 First notification createdAt:', data.data?.data?.[0]?.createdAt);
+          // API v1 returns nested structure: {success: true, data: {data: [...], pagination: {...}}}
+          setNotifications(data.data?.data || []);
         }
       } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -112,16 +111,16 @@ export default function NotificationsPage() {
     }
   }, [session?.user?.id, session?.user?.role, status]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  // Safely calculate unread count
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0;
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch('/api/notifications/mark-read', {
+      const response = await fetch(`/api/v1/notifications/${notificationId}/read`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ notificationId }),
       });
 
       if (response.ok) {
@@ -136,11 +135,13 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
+      const scope = session?.user?.role === 'ADMIN' ? 'admin' : 'vendor';
+      const response = await fetch('/api/v1/notifications/read-all', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ scope }),
       });
 
       if (response.ok) {
@@ -286,8 +287,6 @@ export default function NotificationsPage() {
       console.log('❌ No submission data found');
       return;
     }
-
-    setLoadingSubmissionId(notification.id);
     
     try {
       // Mark as read when viewing
@@ -374,13 +373,11 @@ export default function NotificationsPage() {
     } catch (error) {
       console.error('💥 Error handling notification detail:', error);
       alert('Terjadi kesalahan saat memuat detail');
-    } finally {
-      setLoadingSubmissionId(null);
     }
   };
 
   // Filter notifications
-  const filteredNotifications = notifications
+  const filteredNotifications = Array.isArray(notifications) ? notifications
     .filter((notification: Notification) => {
       if (filter === 'unread') return !notification.isRead;
       if (filter === 'read') return notification.isRead;
@@ -390,7 +387,7 @@ export default function NotificationsPage() {
       if (!searchTerm) return true;
       return notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
              notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    }) : [];
 
   if (status === 'loading') {
     return (
@@ -460,9 +457,9 @@ export default function NotificationsPage() {
                 onChange={(e) => setFilter(e.target.value as 'all' | 'unread' | 'read')}
                 className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">Semua ({notifications.length})</option>
+                <option value="all">Semua ({Array.isArray(notifications) ? notifications.length : 0})</option>
                 <option value="unread">Belum Dibaca ({unreadCount})</option>
-                <option value="read">Sudah Dibaca ({notifications.length - unreadCount})</option>
+                <option value="read">Sudah Dibaca ({Array.isArray(notifications) ? notifications.length - unreadCount : 0})</option>
               </select>
             </div>
           </div>
@@ -535,29 +532,7 @@ export default function NotificationsPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 dark:border-gray-600">
-                        <div className="flex items-center space-x-3">
-                          {hasSubmissionData(notification) && (
-                            <button 
-                              onClick={() => handleViewDetail(notification)}
-                              className="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline"
-                              disabled={loadingSubmissionId === notification.id}
-                            >
-                              {loadingSubmissionId === notification.id ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
-                                  Memuat...
-                                </>
-                              ) : (
-                                <>
-                                  <EyeIcon className="w-4 h-4 mr-2" />
-                                  Lihat Detail
-                                </>
-                              )}
-                            </button>
-                          )}
-                        </div>
-
+                      <div className="flex items-center justify-end mt-4 pt-3 border-t border-gray-100 dark:border-gray-600">
                         {!notification.isRead && (
                           <button
                             onClick={(e) => {
@@ -583,7 +558,7 @@ export default function NotificationsPage() {
         {filteredNotifications.length > 0 && (
           <div className="text-center py-6">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Menampilkan {filteredNotifications.length} dari {notifications.length} notifikasi
+              Menampilkan {filteredNotifications.length} dari {Array.isArray(notifications) ? notifications.length : 0} notifikasi
             </p>
           </div>
         )}
