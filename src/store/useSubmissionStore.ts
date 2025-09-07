@@ -23,6 +23,13 @@ interface SubmissionStore {
     approved: number;
     rejected: number;
   } | null;
+  allSubmissionsStats: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  } | null;
+  filteredTotal: number;
   
   // Search and filters
   searchTerm: string;
@@ -41,10 +48,13 @@ interface SubmissionStore {
   setCurrentPage: (page: number | ((prev: number) => number)) => void;
   setTotalPages: (pages: number) => void;
   setStatistics: (stats: any) => void;
+  setAllSubmissionsStats: (stats: any) => void;
   
   // Fetch functions
   fetchSubmissions: (params?: any) => Promise<void>;
   fetchVendorSubmissions: (params?: any) => Promise<void>;
+  fetchVendorStats: () => Promise<void>;
+  fetchAdminStats: () => Promise<void>;
   fetchLatestSubmissions: () => Promise<void>;
   
   // CRUD operations
@@ -57,6 +67,8 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   loading: false,
   error: null,
   statistics: null,
+  allSubmissionsStats: null,
+  filteredTotal: 0,
   
   searchTerm: '',
   sortField: 'created_at',
@@ -79,6 +91,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   },
   setTotalPages: (totalPages) => set({ totalPages }),
   setStatistics: (statistics) => set({ statistics }),
+  setAllSubmissionsStats: (allSubmissionsStats) => set({ allSubmissionsStats }),
   
   fetchSubmissions: async (params = {}) => {
     try {
@@ -99,16 +112,36 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
       }
       
       const data = await response.json();
+      console.log('Admin submissions API response:', data); // Debug log
       set({ 
         submissions: data.submissions || [],
         totalPages: data.pagination?.pages || 1,
+        filteredTotal: data.pagination?.total || 0,
         loading: false 
       });
     } catch (error) {
+      console.error('Error fetching submissions:', error); // Debug log
       set({ 
         error: error instanceof Error ? error.message : 'Failed to fetch submissions',
         loading: false 
       });
+    }
+  },
+
+  fetchAdminStats: async () => {
+    try {
+      // Fetch statistics without any filters
+      const response = await fetch('/api/admin/submissions/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch admin stats');
+      }
+      
+      const data = await response.json();
+      set({ 
+        allSubmissionsStats: data.statistics || null
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
     }
   },
   
@@ -134,6 +167,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
       set({ 
         submissions: data.submissions || [],
         totalPages: data.pagination?.pages || 1,
+        filteredTotal: data.pagination?.total || 0,
         loading: false 
       });
     } catch (error) {
@@ -141,6 +175,23 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
         error: error instanceof Error ? error.message : 'Failed to fetch submissions',
         loading: false 
       });
+    }
+  },
+
+  fetchVendorStats: async () => {
+    try {
+      // Fetch statistics without any filters
+      const response = await fetch('/api/vendor/submissions/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch vendor stats');
+      }
+      
+      const data = await response.json();
+      set({ 
+        allSubmissionsStats: data.statistics || null
+      });
+    } catch (error) {
+      console.error('Error fetching vendor stats:', error);
     }
   },
   

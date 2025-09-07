@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
     const vendorName = searchParams.get('vendor');
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const skip = (page - 1) * limit;
 
     const whereClause: any = {};
@@ -31,8 +34,32 @@ export async function GET(request: NextRequest) {
       whereClause.approval_status = status;
     }
 
-    // Filter by vendor name if provided
-    if (vendorName) {
+    // Filter by search term (vendor name, job description, or officer name)
+    if (search) {
+      whereClause.OR = [
+        {
+          vendor_name: {
+            contains: search,
+            mode: 'insensitive'
+          }
+        },
+        {
+          job_description: {
+            contains: search,
+            mode: 'insensitive'
+          }
+        },
+        {
+          officer_name: {
+            contains: search,
+            mode: 'insensitive'
+          }
+        }
+      ];
+    }
+
+    // Filter by vendor name if provided (legacy support)
+    if (vendorName && !search) {
       whereClause.vendor_name = {
         contains: vendorName,
         mode: 'insensitive'
@@ -59,7 +86,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        orderBy: { created_at: 'desc' },
+        orderBy: { [sortBy]: sortOrder },
         skip,
         take: limit,
       }),
