@@ -8,12 +8,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { notificationService } from '../data/notificationService';
+import { notificationService } from '../notificationService';
 import { useNotificationsStore } from '@/store/notifications';
 import { NotificationItem } from './NotificationItem';
 import UserVerificationModal from '@/components/admin/UserVerificationModal';
 import { UserData } from '@/types/user';
-import type { NotificationsPanelProps, NotificationItem as NotificationItemType } from '../types';
+import type { NotificationsPanelProps, NotificationItemType } from '../types';
 
 export function NotificationsPanel({ 
   isOpen, 

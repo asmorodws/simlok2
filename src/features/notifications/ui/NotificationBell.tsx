@@ -27,7 +27,7 @@ export function NotificationBell({
     lg: 'w-8 h-8',
   };
 
-  const iconClass = `${sizeClasses[size]} ${className}`;
+  const iconClass = `${sizeClasses[size as keyof typeof sizeClasses]} ${className}`;
 
   // Load initial unread count
   useEffect(() => {
