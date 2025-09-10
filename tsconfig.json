@@ -28,7 +28,6 @@
       "@/utils/*": ["./src/utils/*"],
       "@/server/*": ["./src/server/*"]
     },
-    // Strict type checking
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "exactOptionalPropertyTypes": true,
