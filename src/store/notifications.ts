@@ -21,6 +21,7 @@ interface NotificationsState {
 interface NotificationsActions {
   setItems: (items: Notification[]) => void;
   addItem: (item: Notification) => void;
+  removeNotifications: (submissionId: string) => void;
   setUnreadCount: (count: number) => void;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: (scope?: string, vendorId?: string) => Promise<void>;
@@ -49,6 +50,59 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
     items: [item, ...state.items],
     unreadCount: item.isRead ? state.unreadCount : state.unreadCount + 1,
   })),
+
+  removeNotifications: (submissionId) => set((state) => {
+    // Filter out notifications that reference the deleted submission
+    const filteredItems = state.items.filter(item => {
+      // Check if notification data contains the submission ID
+      if (item.data) {
+        try {
+          const data = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+          if (data.submissionId === submissionId || data.submission_id === submissionId) {
+            return false; // Remove this notification
+          }
+        } catch (e) {
+          // If parsing fails, check message/title
+        }
+      }
+      
+      // Check message and title for submission ID
+      const hasIdInMessage = item.message.includes(submissionId);
+      const hasIdInTitle = item.title.includes(submissionId);
+      
+      return !hasIdInMessage && !hasIdInTitle; // Keep if ID not found
+    });
+    
+    // Calculate how many unread notifications were removed
+    const removedUnreadCount = state.items.filter(item => {
+      if (item.isRead) return false; // Skip already read notifications
+      
+      // Check if this notification references the deleted submission
+      if (item.data) {
+        try {
+          const data = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+          if (data.submissionId === submissionId || data.submission_id === submissionId) {
+            return true; // This unread notification will be removed
+          }
+        } catch (e) {
+          // If parsing fails, check message/title
+        }
+      }
+      
+      const hasIdInMessage = item.message.includes(submissionId);
+      const hasIdInTitle = item.title.includes(submissionId);
+      
+      return hasIdInMessage || hasIdInTitle; // Count if ID found
+    }).length;
+    
+    console.log(`Removing ${state.items.length - filteredItems.length} notifications for submission ${submissionId}`);
+    console.log(`Reducing unread count by ${removedUnreadCount}`);
+    
+    return {
+      items: filteredItems,
+      unreadCount: Math.max(0, state.unreadCount - removedUnreadCount),
+    };
+  }),
 
   setUnreadCount: (count) => set({ unreadCount: count }),
 

@@ -12,7 +12,7 @@ interface SSEMessage {
 export function useRealTimeNotifications() {
   const { data: session } = useSession();
   const eventSourceRef = useRef<EventSource | null>(null);
-  const { addItem, setUnreadCount } = useNotificationsStore();
+  const { addItem, setUnreadCount, removeNotifications } = useNotificationsStore();
 
   useEffect(() => {
     if (!session?.user) {
@@ -79,6 +79,13 @@ export function useRealTimeNotifications() {
             }
             break;
 
+          case 'notification:removed':
+            if (message.data?.submissionId) {
+              console.log('Notification removal via SSE for submission:', message.data.submissionId);
+              removeNotifications(message.data.submissionId);
+            }
+            break;
+
           case 'stats:update':
             console.log('Stats update via SSE:', message.data);
             // You can emit this to stats store if needed
@@ -116,7 +123,7 @@ export function useRealTimeNotifications() {
         eventSourceRef.current = null;
       }
     };
-  }, [session, addItem, setUnreadCount]);
+  }, [session, addItem, setUnreadCount, removeNotifications]);
 
   return {
     isConnected: typeof window !== 'undefined' && eventSourceRef.current?.readyState === EventSource.OPEN,

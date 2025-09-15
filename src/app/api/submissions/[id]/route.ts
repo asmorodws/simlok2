@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 import { notifyVendorStatusChange } from '@/server/events';
+import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
@@ -409,6 +410,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         error: 'Invalid role. Only admins, verifiers, and vendors can delete submissions.' 
       }, { status: 403 });
     }
+
+    // Clean up related notifications before deleting submission
+    await cleanupSubmissionNotifications(id);
 
     // Delete the submission
     await prisma.submission.delete({

@@ -69,6 +69,35 @@ export class NotificationsPublisher {
       console.error('❌ Error publishing stats update:', error);
     }
   }
+
+  /**
+   * Publish notification removal to all subscribers
+   */
+  async publishNotificationRemoval(removal: { submissionId: string; timestamp: string }) {
+    try {
+      // Publish to both admin and vendor channels since notifications can affect both
+      const channels = ['notifications:admin'];
+      
+      // Also publish to all vendor channels (we could make this more specific later)
+      // For now, we'll just publish to admin and let clients handle filtering
+      
+      const message = JSON.stringify({
+        type: 'notification:removed',
+        data: removal
+      });
+
+      for (const channelName of channels) {
+        await redisPub.publish(channelName, message);
+      }
+      
+      // Also publish to a general notification channel that all clients can subscribe to
+      await redisPub.publish('notifications:all', message);
+      
+      console.log(`🗑️ Published notification removal for submission ${removal.submissionId}`);
+    } catch (error) {
+      console.error('❌ Error publishing notification removal:', error);
+    }
+  }
 }
 
 // Export singleton instance

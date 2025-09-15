@@ -92,9 +92,42 @@ async function getNotifications(req: NextRequest) {
     take: query.limit + 1, // Get one extra to check if there are more
   });
 
+  // Filter out notifications that reference non-existent submissions
+  const validNotifications = [];
+  for (const notification of notifications) {
+    let isValid = true;
+    
+    // Check if notification data contains a submissionId
+    if (notification.data) {
+      try {
+        const data = JSON.parse(notification.data);
+        if (data.submissionId) {
+          // Verify that the submission still exists
+          const submissionExists = await prisma.submission.findUnique({
+            where: { id: data.submissionId },
+            select: { id: true }
+          });
+          
+          if (!submissionExists) {
+            isValid = false;
+            // Optionally clean up this orphaned notification
+            console.log(`Found orphaned notification ${notification.id} for deleted submission ${data.submissionId}`);
+          }
+        }
+      } catch (error) {
+        // If data parsing fails, keep the notification (might not be submission-related)
+        console.warn(`Failed to parse notification data for notification ${notification.id}:`, error);
+      }
+    }
+    
+    if (isValid) {
+      validNotifications.push(notification);
+    }
+  }
+
   // Check if there are more notifications
-  const hasMore = notifications.length > query.limit;
-  const notificationsList = hasMore ? notifications.slice(0, -1) : notifications;
+  const hasMore = validNotifications.length > query.limit;
+  const notificationsList = hasMore ? validNotifications.slice(0, -1) : validNotifications;
   const nextCursor = hasMore ? notificationsList[notificationsList.length - 1]?.id : null;
 
   // Format response

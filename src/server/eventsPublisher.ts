@@ -108,6 +108,13 @@ class EventsPublisher {
   }
 
   /**
+   * Emit notification removal (broadcast to all clients)
+   */
+  notificationRemoved(payload: { submissionId: string; timestamp: string }) {
+    this.broadcast(EVENT_NAMES.NOTIFICATION_REMOVED, payload);
+  }
+
+  /**
    * Emit to all connected clients (use sparingly)
    */
   broadcast(event: string, payload: any) {
