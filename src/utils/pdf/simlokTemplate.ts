@@ -7,6 +7,7 @@ import {
   type RGB,
   type PDFImage,
 } from "pdf-lib";
+import * as QRCode from 'qrcode';
 
 /**
  * Load logo image for PDF generation
@@ -41,10 +42,36 @@ async function loadLogo(pdfDoc: PDFDocument): Promise<PDFImage | null> {
   return null;
 }
 
+/**
+ * Generate QR code image for PDF
+ */
+async function generateQRImage(pdfDoc: PDFDocument, qrString: string): Promise<PDFImage | null> {
+  try {
+    // Generate QR code as PNG buffer
+    const qrBuffer = await QRCode.toBuffer(qrString, {
+      type: 'png',
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      }
+    });
+    
+    // Embed QR code image into PDF
+    return await pdfDoc.embedPng(qrBuffer);
+  } catch (error) {
+    console.warn('Failed to generate QR code image:', error);
+    return null;
+  }
+}
+
 /** Struktur data mengikuti placeholder di template kamu */
 export interface SubmissionPDFData {
   simlok_number?: string | null;
   simlok_date?: string | Date | null | undefined;
+  implementation_start_date?: string | Date | null | undefined;
+  implementation_end_date?: string | Date | null | undefined;
   vendor_name: string;
   simja_number?: string | null;
   simja_date?: string | Date | null | undefined;
@@ -60,6 +87,7 @@ export interface SubmissionPDFData {
   content?: string | null;
   signer_position?: string | null;
   signer_name?: string | null;
+  qrcode?: string | null;  // QR code string for PDF
   // Tambahkan untuk daftar pekerja dari tabel terpisah
   workerList?: Array<{
     worker_name: string;
@@ -414,8 +442,33 @@ lines.forEach((line: string, idx: number) => {
   const jabatanSigner = s.signer_position || "Head Or Security Region I";
   const namaSigner = s.signer_name || "Julianto Santoso";
   
-  k.text(jabatanSigner, A4.w - 230, signatureY - 50);
-  k.text(namaSigner, A4.w - 230, signatureY - 110, { bold: true });
+  // Calculate precise positions for perfect centering
+  const jabatanY = signatureY - 50;
+  const namaY = signatureY - 180;
+  
+  // Draw jabatan
+  k.text(jabatanSigner, A4.w - 230, jabatanY);
+  
+  // Add QR code if available - positioned with simple pixel values for easy maintenance
+  if (s.qrcode) {
+    const qrImage = await generateQRImage(k.doc, s.qrcode);
+    if (qrImage) {
+      const qrSize = 100;
+      const qrX = 385; // Fixed X position from left edge
+      const qrY = signatureY - 160; // Fixed Y position: between jabatan (-50) and nama (-180)
+      
+      // Draw QR code at fixed pixel position
+      page.drawImage(qrImage, {
+        x: qrX,
+        y: qrY,
+        width: qrSize,
+        height: qrSize,
+      });
+    }
+  }
+  
+  // Draw nama
+  k.text(namaSigner, A4.w - 230, namaY, { bold: true });
 
   // Add second page with worker photos if available
   // Handle both workerList (interface) and worker_list (database)

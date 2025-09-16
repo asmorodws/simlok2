@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
 import { notifyVendorStatusChange } from '@/server/events';
+import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
+import { generateQrString } from '@/lib/qr-security';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
@@ -243,6 +245,22 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           updateData.signer_position = body.jabatan_signer;
           updateData.signer_name = body.nama_signer;
           
+          // Add implementation date range if provided
+          if (body.implementation_start_date) {
+            updateData.implementation_start_date = new Date(body.implementation_start_date);
+          }
+          if (body.implementation_end_date) {
+            updateData.implementation_end_date = new Date(body.implementation_end_date);
+          }
+          
+          // Generate secure QR code with implementation dates
+          const qrString = generateQrString({
+            id: id,
+            implementation_start_date: body.implementation_start_date ? new Date(body.implementation_start_date) : null,
+            implementation_end_date: body.implementation_end_date ? new Date(body.implementation_end_date) : null,
+          });
+          updateData.qrcode = qrString;
+          
           // Verify the user exists before setting approved_by
           const adminUser = await prisma.user.findUnique({
             where: { id: session.user.id }
@@ -253,8 +271,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           } else {
             console.log('PUT /api/submissions/[id] - Admin user not found:', session.user.id);
             return NextResponse.json({ 
-              error: 'Admin user not found. Please login again.' 
-            }, { status: 400 });
+              error: 'Your session is no longer valid. Please log out and log back in to continue.',
+              code: 'INVALID_SESSION'
+            }, { status: 401 });
           }
         }
       } else {
@@ -409,6 +428,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         error: 'Invalid role. Only admins, verifiers, and vendors can delete submissions.' 
       }, { status: 403 });
     }
+
+    // Clean up related notifications before deleting submission
+    await cleanupSubmissionNotifications(id);
 
     // Delete the submission
     await prisma.submission.delete({

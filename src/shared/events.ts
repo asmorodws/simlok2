@@ -48,6 +48,11 @@ export const StatsUpdateEvent = z.object({
   changes: z.record(z.string(), z.union([z.number(), z.string()])),
 });
 
+export const NotificationRemovedEvent = z.object({
+  submissionId: z.string(),
+  timestamp: z.string(),
+});
+
 // Event types
 export type AdminNewSubmissionEvent = z.infer<typeof AdminNewSubmissionEvent>;
 export type AdminNewVendorEvent = z.infer<typeof AdminNewVendorEvent>;
@@ -55,6 +60,7 @@ export type VendorSubmissionStatusChangedEvent = z.infer<typeof VendorSubmission
 export type NotificationNewEvent = z.infer<typeof NotificationNewEvent>;
 export type NotificationUnreadCountEvent = z.infer<typeof NotificationUnreadCountEvent>;
 export type StatsUpdateEvent = z.infer<typeof StatsUpdateEvent>;
+export type NotificationRemovedEvent = z.infer<typeof NotificationRemovedEvent>;
 
 // Event names
 export const EVENT_NAMES = {
@@ -63,6 +69,7 @@ export const EVENT_NAMES = {
   VENDOR_SUBMISSION_STATUS_CHANGED: 'vendor:submission_status_changed',
   NOTIFICATION_NEW: 'notification:new',
   NOTIFICATION_UNREAD_COUNT: 'notification:unread_count',
+  NOTIFICATION_REMOVED: 'notification:removed',
   STATS_UPDATE: 'stats:update',
 } as const;
 

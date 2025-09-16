@@ -299,3 +299,26 @@ export async function notifyVendorStatusChange(
     console.error('Error notifying vendor status change:', error);
   }
 }
+
+export async function notifyNotificationsRemoved(submissionId: string) {
+  try {
+    console.log(`Broadcasting notification removal for submission: ${submissionId}`);
+
+    // Create event for notification removal
+    const notificationRemovalEvent = {
+      submissionId,
+      timestamp: new Date().toISOString()
+    };
+
+    // Emit to Socket.io clients
+    eventsPublisher.notificationRemoved(notificationRemovalEvent);
+    
+    // Publish to real-time subscribers via Redis
+    await notificationsPublisher.publishNotificationRemoval(notificationRemovalEvent);
+
+    console.log(`✅ Broadcasted notification removal for submission: ${submissionId}`);
+
+  } catch (error) {
+    console.error('Error broadcasting notification removal:', error);
+  }
+}

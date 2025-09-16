@@ -138,7 +138,6 @@ async function main() {
 
   // Create sample submissions
   console.log("📋 Membuat sample submissions...");
-  const admin = createdUsers["admin@example.com"];
   const vendorUsers = Object.values(createdUsers).filter((user: any) => user.role === 'VENDOR');
 
   const submissionTemplates = [
@@ -208,7 +207,6 @@ async function main() {
     },
   ];
 
-  const statuses = ['PENDING', 'APPROVED', 'REJECTED'];
   const currentDate = new Date();
   
   // Create multiple submissions for each vendor
@@ -228,7 +226,7 @@ async function main() {
         continue;
       }
       
-      const status = statuses[submissionCount % 3];
+      const status = 'PENDING'; // Semua submission pending
       
       // Create date variations
       const createdDate = new Date(currentDate);
@@ -254,51 +252,12 @@ async function main() {
         simja_date: submissionCount % 2 === 0 ? new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000) : null,
         sika_number: submissionCount % 3 === 0 ? `SIKA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
         sika_date: submissionCount % 3 === 0 ? new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000) : null,
+        implementation_start_date: null,
+        implementation_end_date: null,
       };
 
-      // Add approval data for approved/rejected submissions
-      if (status === 'APPROVED') {
-        submissionData.approved_by = admin.id;
-        submissionData.simlok_number = `SIMLOK/2024/${String(submissionCount + 1).padStart(3, '0')}`;
-        submissionData.simlok_date = new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000);
-        submissionData.notes = 'Pengajuan disetujui dengan catatan mengikuti prosedur K3 dan laporan harian';
-        // Admin mengisi implementation, other_notes, dan content saat approve
-        submissionData.implementation = `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')} s/d 2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
-        const otherNotesOptions = [
-          'Koordinasi dengan supervisor produksi',
-          'Bekerja di luar jam operasional kantor',
-          'Memerlukan izin kerja tinggi',
-          'Pekerjaan malam hari untuk minimal downtime',
-          'Pekerjaan shift malam',
-          'Memerlukan koordinasi dengan penghuni gedung',
-          'Pekerjaan sebelum jam operasional mall',
-          'Koordinasi dengan traffic management'
-        ];
-        submissionData.other_notes = otherNotesOptions[submissionCount % otherNotesOptions.length];
-        
-        // Admin mengisi content saat approve
-        const contentOptions = [
-          'Pemeliharaan rutin mesin produksi untuk memastikan kinerja optimal',
-          'Pemasangan sistem CCTV dan alarm keamanan di seluruh area kantor',
-          'Perbaikan struktur gudang dan peningkatan kapasitas penyimpanan',
-          'Update sistem dan maintenance server untuk performa optimal',
-          'Layanan kebersihan harian untuk seluruh area perkantoran',
-          'Pengecatan ulang eksterior dan interior gedung perkantoran',
-          'Pemasangan sistem AC central untuk seluruh area mall',
-          'Perbaikan dan penambalan jalan akses menuju area industri'
-        ];
-        submissionData.content = contentOptions[submissionCount % contentOptions.length];
-      } else if (status === 'REJECTED') {
-        submissionData.approved_by = admin.id;
-        const rejectionReasons = [
-          'Dokumen SIMJA belum lengkap, mohon dilengkapi terlebih dahulu',
-          'Sertifikat pelatihan K3 sudah expired, mohon diperbaharui',
-          'Jadwal pelaksanaan bertabrakan dengan kegiatan lain',
-          'Spesifikasi alat kerja tidak sesuai standar, mohon disesuaikan',
-          'Jumlah pekerja kurang memadai untuk scope pekerjaan ini'
-        ];
-        submissionData.notes = rejectionReasons[submissionCount % rejectionReasons.length];
-      }
+      // Semua submission pending - tidak ada approval data
+      // Admin akan mengisi data saat approve melalui UI
 
       const createdSubmission = await prisma.submission.create({
         data: submissionData,
@@ -379,24 +338,7 @@ async function main() {
       },
     });
 
-    // Create vendor notification for status changes (for approved/rejected submissions)
-    if (submission.approval_status !== 'PENDING') {
-      await prisma.notification.create({
-        data: {
-          scope: 'vendor',
-          vendor_id: submission.user_id,
-          type: 'status_change',
-          title: 'Status Pengajuan Diperbarui',
-          message: `Pengajuan Anda "${submission.job_description}" telah ${submission.approval_status === 'APPROVED' ? 'disetujui' : 'ditolak'}`,
-          data: JSON.stringify({
-            submissionId: submission.id,
-            newStatus: submission.approval_status,
-            jobDescription: submission.job_description,
-          }),
-          created_at: new Date(submission.created_at.getTime() + Math.random() * 2 * 24 * 60 * 60 * 1000), // 1-2 hari setelah submission
-        },
-      });
-    }
+    // Tidak ada status change notifications karena semua pending
   }
 
   console.log("   ✓ Sample notifications berhasil dibuat");

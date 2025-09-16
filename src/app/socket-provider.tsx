@@ -13,7 +13,8 @@ import type {
   VendorSubmissionStatusChangedEvent,
   NotificationNewEvent,
   NotificationUnreadCountEvent,
-  StatsUpdateEvent
+  StatsUpdateEvent,
+  NotificationRemovedEvent
 } from '../shared/events';
 
 interface SocketContextType {
@@ -39,7 +40,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
   const isConnectedRef = useRef(false);
   
-  const { addItem: addNotification, setUnreadCount } = useNotificationsStore();
+  const { addItem: addNotification, setUnreadCount, removeNotifications } = useNotificationsStore();
   const { updateStats } = useStatsStore();
   const { addSubmission, updateSubmission, addVendor } = useListsStore();
 
@@ -153,12 +154,21 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         console.log('Stats update:', payload);
         updateStats(payload.changes as Record<string, number | string>);
       });
+
+      socket.on(EVENT_NAMES.NOTIFICATION_REMOVED, (payload: NotificationRemovedEvent) => {
+        console.log('🗑️ Notification removal event received:', payload);
+        
+        // Remove notifications related to the deleted submission
+        removeNotifications(payload.submissionId);
+        
+        console.log('✅ Notifications removed from store for submission:', payload.submissionId);
+      });
     }
 
     return () => {
       // Don't disconnect on unmount, keep connection alive for the app
     };
-  }, [session, addNotification, setUnreadCount, updateStats, addSubmission, updateSubmission, addVendor]);
+  }, [session, addNotification, setUnreadCount, removeNotifications, updateStats, addSubmission, updateSubmission, addVendor]);
 
   return (
     <SocketContext.Provider value={{ 

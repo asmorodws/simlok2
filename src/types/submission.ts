@@ -23,6 +23,8 @@ export interface SubmissionApprovalData {
   notes?: string;
   simlok_number?: string;
   simlok_date?: string;
+  implementation_start_date?: string;
+  implementation_end_date?: string;
 }
 
 export interface WorkerList {

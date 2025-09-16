@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
@@ -18,6 +16,7 @@ import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import UserVerificationModal from '../admin/UserVerificationModal';
 import { UserData } from '@/types/user';
+import { useToast } from '@/hooks/useToast';
 
 import { useNotificationsStore, type Notification } from '../../store/notifications';
 
@@ -35,6 +34,7 @@ export default function NotificationsPanel({
     markAsRead, 
     markAllAsRead 
   } = useNotificationsStore();
+  const { showError, showWarning } = useToast();
 
   // Debug: log notifications data
   console.log('NotificationsPanel - notifications:', notifications);
@@ -126,8 +126,25 @@ export default function NotificationsPanel({
 
       // Fetch detail submission
       const response = await fetch(`/api/submissions/${submissionId}`);
+      
+      if (response.status === 404) {
+        // Submission tidak ditemukan (mungkin sudah dihapus)
+        console.warn('Submission not found:', submissionId);
+        showWarning(
+          'Pengajuan Tidak Ditemukan',
+          'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
+        );
+        
+        // Mark notification as read karena sudah dicoba akses
+        if (!notification.isRead) {
+          console.log('Marking notification as read (submission not found):', notification.id);
+          await markAsRead(notification.id);
+        }
+        return;
+      }
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch submission details');
+        throw new Error(`Failed to fetch submission details: ${response.status}`);
       }
 
       const submissionData = await response.json();
@@ -144,6 +161,26 @@ export default function NotificationsPanel({
 
     } catch (error) {
       console.error('Error viewing submission detail:', error);
+      
+      // Tampilkan pesan error yang user-friendly
+      if (error instanceof Error) {
+        if (error.message.includes('404')) {
+          showWarning(
+            'Pengajuan Tidak Ditemukan',
+            'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
+          );
+        } else {
+          showError(
+            'Gagal Memuat Detail',
+            'Terjadi kesalahan saat memuat detail pengajuan. Silakan coba lagi.'
+          );
+        }
+      } else {
+        showError(
+          'Gagal Memuat Detail',
+          'Terjadi kesalahan saat memuat detail pengajuan. Silakan coba lagi.'
+        );
+      }
     }
   };
 
@@ -174,8 +211,23 @@ export default function NotificationsPanel({
       console.log('🔍 Fetching vendor data for ID:', vendorId);
       const response = await fetch(`/api/admin/users/${vendorId}`);
       
+      if (response.status === 404) {
+        console.warn('User not found:', vendorId);
+        showWarning(
+          'Data Vendor Tidak Ditemukan',
+          'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
+        );
+        
+        // Mark notification as read karena sudah dicoba akses
+        if (!notification.isRead) {
+          console.log('Marking notification as read (user not found):', notification.id);
+          await markAsRead(notification.id);
+        }
+        return;
+      }
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch vendor details');
+        throw new Error(`Failed to fetch vendor details: ${response.status}`);
       }
       
       const data = await response.json();
@@ -192,7 +244,26 @@ export default function NotificationsPanel({
 
     } catch (err) {
       console.error('❌ Error fetching vendor details:', err);
-      alert('Gagal memuat detail vendor');
+      
+      // Tampilkan pesan error yang user-friendly
+      if (err instanceof Error) {
+        if (err.message.includes('404')) {
+          showWarning(
+            'Data Vendor Tidak Ditemukan',
+            'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
+          );
+        } else {
+          showError(
+            'Gagal Memuat Detail Vendor',
+            'Gagal memuat detail vendor. Silakan coba lagi.'
+          );
+        }
+      } else {
+        showError(
+          'Gagal Memuat Detail Vendor',
+          'Gagal memuat detail vendor. Silakan coba lagi.'
+        );
+      }
     }
   };
 

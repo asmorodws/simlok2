@@ -1,12 +1,12 @@
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import DashboardMainContent from "@/components/dashboard/DashboardMainContent";
+import VerifierDashboard from "@/components/dashboard/VerifierDashboard";
 
 export default function VerifierPage() {
   return (
     <RoleGate allowedRoles={["VERIFIER"]}>
       <SidebarLayout title="Verifier Panel" titlePage="Dashboard">
-        <DashboardMainContent />
+        <VerifierDashboard />
       </SidebarLayout>
     </RoleGate>
   );

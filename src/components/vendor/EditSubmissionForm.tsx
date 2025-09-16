@@ -11,7 +11,7 @@ import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import FileUpload from '@/components/form/FileUpload';
 import Alert from '@/components/ui/alert/Alert';
-import LoadingSpinner from '@/components/ui/loading/LoadingSpinner';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
 
 // Define Worker interface for dynamic inputs
