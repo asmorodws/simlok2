@@ -31,6 +31,8 @@ interface Submission {
   sika_date?: string | null;
   simlok_number?: string;
   simlok_date?: string | null;
+  implementation_start_date?: string | null;
+  implementation_end_date?: string | null;
   worker_names: string;
   content: string;
   notes?: string;
@@ -162,8 +164,8 @@ export default function AdminSubmissionDetailModal({
 
         // Reset template fields
         setTemplateFields({
-          tanggal_dari: '',
-          tanggal_sampai: '',
+          tanggal_dari: submission.implementation_start_date ? formatDateForInput(submission.implementation_start_date) : '',
+          tanggal_sampai: submission.implementation_end_date ? formatDateForInput(submission.implementation_end_date) : '',
           tanggal_simlok: submission?.simlok_date || '',
         });
 
@@ -388,6 +390,14 @@ export default function AdminSubmissionDetailModal({
       // Hanya tambahkan tanggal jika di-approve (nomor akan auto-generate)
       if (approvalForm.status === 'APPROVED') {
         requestBody.tanggal_simlok = approvalForm.tanggal_simlok;
+        
+        // Tambahkan tanggal pelaksanaan dari - sampai
+        if (templateFields.tanggal_dari) {
+          requestBody.implementation_start_date = templateFields.tanggal_dari;
+        }
+        if (templateFields.tanggal_sampai) {
+          requestBody.implementation_end_date = templateFields.tanggal_sampai;
+        }
       }
 
       const response = await fetch(`/api/submissions/${submission.id}`, {
@@ -396,8 +406,16 @@ export default function AdminSubmissionDetailModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
-      });      if (!response.ok) {
-        throw new Error('Failed to update submission');
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (errorData.code === 'INVALID_SESSION') {
+          throw new Error('Your session has expired. Please refresh the page and log in again.');
+        }
+        
+        throw new Error(errorData.error || 'Failed to update submission');
       }
 
       const updatedSubmission = await response.json();
@@ -652,6 +670,20 @@ export default function AdminSubmissionDetailModal({
                             icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                           />
                         )}
+                        {submission.approval_status === 'APPROVED' && submission.implementation_start_date && (
+                          <InfoCard
+                            label="Tanggal Mulai Pelaksanaan"
+                            value={formatDate(submission.implementation_start_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                        {submission.approval_status === 'APPROVED' && submission.implementation_end_date && (
+                          <InfoCard
+                            label="Tanggal Selesai Pelaksanaan"
+                            value={formatDate(submission.implementation_end_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
                       </div>
                     </DetailSection>
 
@@ -820,55 +852,54 @@ export default function AdminSubmissionDetailModal({
                           {/* Fields khusus untuk APPROVED */}
                           {approvalForm.status === 'APPROVED' && (
                             <>
-                              {/* Pelaksanaan - Admin mengisi */}
-                              <div className="space-y-3">
-                                <label className="block text-sm font-medium text-gray-700">
-                                  Pelaksanaan <span className="text-red-500">*</span>
-                                  <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
-                                </label>
+                              {/* Tanggal Pelaksanaan - Admin mengisi */}
+                          <div className="space-y-4">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Tanggal Pelaksanaan <span className="text-red-500">*</span>
+                              <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
+                            </label>
 
-                            {/* Template Helper untuk Pelaksanaan */}
-                            <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-
-                              <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-xs text-blue-700 mb-1">Tanggal Dari:</label>
-                                  <DatePicker
-                                    value={templateFields.tanggal_dari}
-                                    onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_dari: value }))}
-                                    placeholder="Pilih tanggal mulai"
-                                    className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs text-blue-700 mb-1">Tanggal Sampai:</label>
-                                  <DatePicker
-                                    value={templateFields.tanggal_sampai}
-                                    onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_sampai: value }))}
-                                    placeholder="Pilih tanggal selesai"
-                                    className="w-full px-2 py-1 text-xs border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  />
-                                </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-2">Tanggal Mulai:</label>
+                                <DatePicker
+                                  value={templateFields.tanggal_dari}
+                                  onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_dari: value }))}
+                                  placeholder="Pilih tanggal mulai"
+                                  className="w-full"
+                                />
                               </div>
-
+                              <div>
+                                <label className="block text-sm text-gray-600 mb-2">Tanggal Selesai:</label>
+                                <DatePicker
+                                  value={templateFields.tanggal_sampai}
+                                  onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_sampai: value }))}
+                                  placeholder="Pilih tanggal selesai"
+                                  className="w-full"
+                                />
+                              </div>
                             </div>
 
-                            <textarea
-                              value={approvalForm.pelaksanaan}
-                              onChange={(e) => {
-                                setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }));
-                                clearFieldError('pelaksanaan');
-                              }}
-                              rows={3}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${validationErrors.pelaksanaan
-                                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500 shake'
-                                  : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
-                                }`}
-                              placeholder="Contoh: Terhitung mulai tanggal 15 Januari 2024 sampai 20 Januari 2024. Termasuk hari Sabtu, Minggu dan hari libur lainnya."
-                            />
-                            {validationErrors.pelaksanaan && (
-                              <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.pelaksanaan}</p>
-                            )}
+                            {/* Keterangan Pelaksanaan */}
+                            <div>
+                              <label className="block text-sm text-gray-600 mb-2">Keterangan Pelaksanaan:</label>
+                              <textarea
+                                value={approvalForm.pelaksanaan}
+                                onChange={(e) => {
+                                  setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }));
+                                  clearFieldError('pelaksanaan');
+                                }}
+                                rows={3}
+                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${validationErrors.pelaksanaan
+                                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500 shake'
+                                    : 'border-gray-300 focus:ring-blue-500 focus:border-transparent'
+                                  }`}
+                                placeholder="Contoh: Terhitung mulai tanggal 15 Januari 2024 sampai 20 Januari 2024. Termasuk hari Sabtu, Minggu dan hari libur lainnya."
+                              />
+                              {validationErrors.pelaksanaan && (
+                                <p className="mt-1 text-sm text-red-600 animate-pulse">{validationErrors.pelaksanaan}</p>
+                              )}
+                            </div>
                           </div>
  {/* Jabatan Signer - Admin mengisi */}
                           <div>

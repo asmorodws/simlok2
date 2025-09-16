@@ -48,6 +48,11 @@ export default function NotificationsBell() {
   const loadNotifications = async () => {
     if (!session?.user) return;
 
+    // Skip notifications for verifier role
+    if (session.user.role === 'VERIFIER') {
+      return;
+    }
+
     try {
       const scope = session.user.role === 'ADMIN' ? 'admin' : 'vendor';
       const params = new URLSearchParams({
@@ -92,6 +97,11 @@ export default function NotificationsBell() {
   };
 
   if (!session?.user) {
+    return null;
+  }
+
+  // Hide notification bell for verifiers as they don't receive notifications
+  if (session.user.role === 'VERIFIER') {
     return null;
   }
 

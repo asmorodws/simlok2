@@ -7,43 +7,40 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/* ----------  USER  ---------- */
+/// ----------  USER  ----------
 model User {
-  id            String   @id @default(cuid())
-  role          Role     @default(VENDOR)
-  officer_name  String
-  profile_photo String?
-  email         String   @unique
-  password      String   // hashed password (Credentials / JWT)
-  address       String?
-  phone_number  String?
-  vendor_name   String?  // hanya untuk role VENDOR, kosong untuk ADMIN dan VERIFIER
-  created_at    DateTime @default(now())
-  verified_at   DateTime?
-  verified_by   String?
-
-  /* JWT refresh-token rotation */
-  refreshTokens RefreshToken[]
-
-  /* NextAuth legacy (optional) */
-  sessions Session[]
-  accounts Account[]
-  
-  /* Submissions */
-  submissions   Submission[]
-  approvedSubmissions Submission[] @relation("ApprovedSubmissions")
+  id                  String         @id @default(cuid())
+  email               String         @unique
+  password            String
+  role                Role           @default(VENDOR)
+  address             String?
+  created_at          DateTime       @default(now())
+  profile_photo       String?
+  officer_name        String
+  vendor_name         String?
+  phone_number        String?
+  verified_at         DateTime?
+  verified_by         String?
+  accounts            Account[]
+  refreshTokens       RefreshToken[]
+  sessions            Session[]
+  submissions         Submission[]
+  approvedSubmissions Submission[]   @relation("ApprovedSubmissions")
+  qrScans             QrScan[]       @relation("QrScannedBy")
 }
 
-/* ----------  REFRESH TOKEN  ---------- */
+/// ----------  REFRESH TOKEN  ----------
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
   userId    String
   expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "RefreshToken_userId_fkey")
 }
 
-/* ----------  NEXTAUTH LEGACY (bisa dihapus jika tidak dipakai)  ---------- */
+/// ----------  NEXTAUTH LEGACY (bisa dihapus jika tidak dipakai)  ----------
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -57,10 +54,10 @@ model Account {
   scope             String?
   id_token          String? @db.LongText
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
 }
 
 model Session {
@@ -69,6 +66,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Session_userId_fkey")
 }
 
 model VerificationToken {
@@ -79,94 +78,114 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-/* ----------  SUBMISSION  ---------- */
+/// ----------  SUBMISSION  ----------
 model Submission {
-  id                    String   @id @default(cuid())
-  approval_status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
-  approved_by           String?
-  vendor_name           String
-  based_on              String
-  officer_name          String
-  job_description       String
-  work_location         String
-  implementation        String?  @db.Text
-  working_hours         String
-  other_notes           String?  @db.Text
-  work_facilities       String
-  simja_number          String?
-  simja_date            DateTime?
-  sika_number           String?
-  sika_date             DateTime?
-  simlok_number         String?
-  simlok_date           DateTime?
-  worker_names          String   @db.Text
-  content               String?  @db.Text
-  notes                 String?  @db.Text
-  signer_position       String?  
-  signer_name           String?  
-  sika_document_upload  String?
-  simja_document_upload String?
-  qrcode                String?
-  created_at            DateTime @default(now())
+  id                        String       @id @default(cuid())
+  approval_status           String       @default("PENDING")
+  approved_by               String?
+  vendor_name               String
+  based_on                  String
+  officer_name              String
+  job_description           String
+  work_location             String
+  implementation            String?      @db.Text
+  working_hours             String
+  other_notes               String?      @db.Text
+  work_facilities           String
+  simja_number              String?
+  simja_date                DateTime?
+  sika_number               String?
+  sika_date                 DateTime?
+  simlok_number             String?
+  simlok_date               DateTime?
+  implementation_start_date DateTime?
+  implementation_end_date   DateTime?
+  worker_names              String       @db.Text
+  content                   String?      @db.Text
+  notes                     String?      @db.Text
+  signer_position           String?
+  signer_name               String?
+  sika_document_upload      String?
+  simja_document_upload     String?
+  qrcode                    String?      @db.LongText
+  created_at                DateTime     @default(now())
   
   // Relations
-  user_id               String
-  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id                   String
+  user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   
-  approved_by_user      User?    @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
+  approved_by_user          User?        @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
   
   // Relasi ke daftar pekerja
-  worker_list           WorkerList[]
+  worker_list               WorkerList[]
+  
+  // Relasi ke QR scan tracking
+  qrScans                   QrScan[]     @relation("SubmissionQrScans")
+  
+  // Performance indexes
+  @@index([approval_status])
+  @@index([created_at])
+  @@index([user_id, approval_status])
 }
 
-/* ----------  WORKER LIST  ---------- */
+/// ----------  WORKER LIST  ----------
 model WorkerList {
-  id            String   @id @default(cuid())
+  id            String     @id @default(cuid())
   worker_name   String
   worker_photo  String?
   submission_id String
-  created_at    DateTime @default(now())
-  
-  // Relations
+  created_at    DateTime   @default(now())
   submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
-  
+
   @@index([submission_id])
 }
 
-/* ----------  NOTIFICATION  ---------- */
+/// ----------  NOTIFICATION  ----------
 model Notification {
-  id         String   @id @default(cuid())
+  id         String             @id @default(cuid())
   scope      NotificationScope
   vendor_id  String?
   type       String
   title      String
-  message    String   @db.Text
-  data       String?  @db.LongText // JSON data
-  created_at DateTime @default(now())
-  
-  // Relations
+  message    String             @db.Text
+  data       String?            @db.LongText
+  created_at DateTime           @default(now())
   reads      NotificationRead[]
-  
+
   @@index([scope, vendor_id, created_at])
 }
 
 model NotificationRead {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   notification_id String
   user_id         String?
   vendor_id       String?
-  read_at         DateTime @default(now())
-  
-  // Relations
+  read_at         DateTime     @default(now())
   notification    Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
-  
+
   @@unique([notification_id, user_id])
   @@unique([notification_id, vendor_id])
   @@index([user_id])
   @@index([vendor_id])
 }
 
-/* ----------  ENUM  ---------- */
+/// ----------  QR SCAN TRACKING  ----------
+model QrScan {
+  id            String     @id @default(cuid())
+  submission_id String
+  scanned_by    String
+  scanned_at    DateTime   @default(now())
+  scanner_name  String?    // Optional: name of the person who scanned
+  notes         String?    // Optional: additional notes about the scan
+  submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)
+  user          User       @relation("QrScannedBy", fields: [scanned_by], references: [id], onDelete: Cascade)
+
+  @@index([submission_id])
+  @@index([scanned_by])
+  @@index([scanned_at])
+}
+
+/// ----------  ENUM  ----------
 enum Role {
   VENDOR
   VERIFIER

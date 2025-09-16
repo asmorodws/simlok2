@@ -24,6 +24,11 @@ export function useRealTimeNotifications() {
       return;
     }
 
+    // Skip real-time notifications for verifiers
+    if (session.user.role === 'VERIFIER') {
+      return;
+    }
+
     // Don't create multiple connections
     if (eventSourceRef.current) {
       return;
