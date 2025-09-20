@@ -238,13 +238,13 @@ export default function VendorDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-semibold text-gray-900">
               Selamat datang di dashboard vendor, {session?.user.officer_name ?? session?.user.name ?? "Vendor"}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-gray-600 mt-1">
               {session?.user.vendor_name && `${session.user.vendor_name} - `}
               Kelola pengajuan SIMLOK Anda
             </p>
@@ -265,13 +265,13 @@ export default function VendorDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Disetujui</p>
-              <p className="text-3xl font-bold text-green-600 dark:text-green-400 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Disetujui</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">
                 {statsLoading ? '...' : vendorStats?.totalApproved || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-500/20 rounded-lg flex items-center justify-center">
-              <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <CheckCircleIcon className="w-6 h-6 text-green-600" />
             </div>
           </div>
         </Card>
@@ -279,13 +279,13 @@ export default function VendorDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu</p>
-              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Menunggu</p>
+              <p className="text-3xl font-bold text-orange-600 mt-2">
                 {statsLoading ? '...' : vendorStats?.totalPending || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center">
-              <ClockIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <ClockIcon className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </Card>
@@ -293,13 +293,13 @@ export default function VendorDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Ditolak</p>
-              <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Ditolak</p>
+              <p className="text-3xl font-bold text-red-600 mt-2">
                 {statsLoading ? '...' : vendorStats?.totalRejected || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center">
-              <XCircleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <XCircleIcon className="w-6 h-6 text-red-600" />
             </div>
           </div>
         </Card>
@@ -308,37 +308,37 @@ export default function VendorDashboard() {
       {/* Recent Submissions Table */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pengajuan Terbaru</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Pengajuan Terbaru</h3>
           <Link href="/vendor/submissions" className="text-sm text-blue-600 hover:text-blue-500">
             Lihat Semua
           </Link>
         </div>
         
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Pekerjaan
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lokasi Kerja
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   No. SIMLOK
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tanggal
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aksi
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-gray-200">
               {submissionsLoading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
@@ -353,7 +353,7 @@ export default function VendorDashboard() {
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     <div className="text-center">
                       <ClockIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">Belum ada pengajuan</h3>
+                      <h3 className="text-sm font-medium text-gray-900">Belum ada pengajuan</h3>
                       <p className="text-sm text-gray-500 mt-1">
                         Mulai dengan membuat pengajuan SIMLOK pertama Anda
                       </p>
@@ -368,13 +368,13 @@ export default function VendorDashboard() {
                 </tr>
               ) : (
                 submissions.slice(0, 5).map((submission: any) => (
-                  <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                  <tr key={submission.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 text-sm text-gray-900">
                       <div className="max-w-xs truncate" title={submission.job_description}>
                         {submission.job_description}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-4 py-4 text-sm text-gray-600">
                       <div className="max-w-xs truncate" title={submission.work_location}>
                         {submission.work_location}
                       </div>
@@ -382,10 +382,10 @@ export default function VendorDashboard() {
                     <td className="px-4 py-4">
                       {getStatusBadge(submission.approval_status)}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-4 py-4 text-sm text-gray-600">
                       {submission.simlok_number || '-'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-4 py-4 text-sm text-gray-500">
                       {formatDate(submission.created_at)}
                     </td>
                     <td className="px-4 py-4">
@@ -434,7 +434,7 @@ export default function VendorDashboard() {
 
         {/* Quick Actions Footer */}
         {/* {!loading && submissions.length > 0 && (
-          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="mt-6 pt-4 border-t border-gray-200">
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/vendor/submissions/create">
                 <Button variant="primary" size="sm" className="w-full sm:w-auto">

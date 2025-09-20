@@ -170,9 +170,9 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
 
   const getRoleBadge = useCallback((role: Role) => {
     const colors = {
-      [Role.VENDOR]: "bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400",
-      [Role.VERIFIER]: "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-400",
-      [Role.ADMIN]: "bg-purple-100 text-purple-800 dark:bg-purple-500/20 dark:text-purple-400"
+      [Role.VENDOR]: "bg-green-100 text-green-800",
+      [Role.VERIFIER]: "bg-blue-100 text-blue-800",
+      [Role.ADMIN]: "bg-purple-100 text-purple-800"
     };
     
     return (
@@ -185,13 +185,13 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
   const getVerificationStatus = useCallback((verified_at?: string | Date | null) => {
     if (verified_at) {
       return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-500/20 dark:text-green-400">
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
           Terverifikasi
         </span>
       );
     }
     return (
-      <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning-100 text-warning-800 dark:bg-warning-500/20 dark:text-warning-400">
+      <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning-100 text-warning-800">
         Menunggu Verifikasi
       </span>
     );

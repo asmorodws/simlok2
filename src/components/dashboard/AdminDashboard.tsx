@@ -139,11 +139,11 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h1 className="text-2xl font-semibold text-gray-900">
           Selamat datang di dashboard admin, {session?.user.officer_name ?? session?.user.name ?? "Admin"}
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
+        <p className="text-gray-600 mt-1">
           Kelola sistem dan monitor aktivitas pengguna
         </p>
       </div>
@@ -153,13 +153,13 @@ export default function AdminDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Vendor</p>
-              <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Vendor</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
                 {statsLoading ? '...' : adminStats?.totalVendors || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <UserGroupIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <UserGroupIcon className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </Card>
@@ -167,13 +167,13 @@ export default function AdminDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Vendor</p>
-              <p className="text-3xl font-bold text-orange-600 dark:text-orange-400 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Menunggu Verifikasi Vendor</p>
+              <p className="text-3xl font-bold text-orange-600 mt-2">
                 {statsLoading ? '...' : adminStats?.pendingVerificationVendors || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-orange-100 dark:bg-orange-500/20 rounded-lg flex items-center justify-center">
-              <ClockIcon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+              <ClockIcon className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </Card>
@@ -181,13 +181,13 @@ export default function AdminDashboard() {
         <Card className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Menunggu Verifikasi Pengajuan SIMLOK</p>
-              <p className="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
+              <p className="text-sm font-medium text-gray-600">Total Menunggu Verifikasi Pengajuan SIMLOK</p>
+              <p className="text-3xl font-bold text-red-600 mt-2">
                 {statsLoading ? '...' : adminStats?.pendingVerificationSubmissions || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-500/20 rounded-lg flex items-center justify-center">
-              <ClipboardDocumentCheckIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <ClipboardDocumentCheckIcon className="w-6 h-6 text-red-600" />
             </div>
           </div>
         </Card>
@@ -198,31 +198,31 @@ export default function AdminDashboard() {
         {/* Latest Submissions Table */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pengajuan Terbaru</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Pengajuan Terbaru</h3>
             <Link href="/admin/submissions" className="text-sm text-blue-600 hover:text-blue-500">
               Lihat Semua
             </Link>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pekerjaan
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tanggal
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 {submissionsLoading ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
@@ -237,17 +237,17 @@ export default function AdminDashboard() {
                   </tr>
                 ) : (
                   submissions.slice(0, 5).map((submission: any) => (
-                    <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                    <tr key={submission.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-4 text-sm text-gray-900">
                         {submission.vendor_name}
                       </td>
-                      <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300 truncate max-w-xs">
+                      <td className="px-3 py-4 text-sm text-gray-600 truncate max-w-xs">
                         {submission.job_description}
                       </td>
                       <td className="px-3 py-4">
                         {getStatusBadge(submission.approval_status)}
                       </td>
-                      <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-3 py-4 text-sm text-gray-500">
                         {formatDate(submission.created_at)}
                       </td>
                     </tr>
@@ -261,31 +261,31 @@ export default function AdminDashboard() {
         {/* Pending Vendors Table */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Vendor Yang Perlu Di Verifikasi</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Vendor Yang Perlu Di Verifikasi</h3>
             <Link href="/admin/users?filter=pending" className="text-sm text-blue-600 hover:text-blue-500">
               Lihat Semua
             </Link>
           </div>
           
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Nama
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tanggal Daftar
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Aksi
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 {usersLoading ? (
                   <tr>
                     <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
@@ -300,21 +300,21 @@ export default function AdminDashboard() {
                   </tr>
                 ) : (
                   pendingUsers.slice(0, 5).map((vendor: any) => (
-                    <tr key={vendor.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr key={vendor.id} className="hover:bg-gray-50">
                       <td className="px-3 py-4">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-sm font-medium text-gray-900">
                             {vendor.officer_name}
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-gray-500">
                             {vendor.vendor_name}
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-4 text-sm text-gray-600 dark:text-gray-300">
+                      <td className="px-3 py-4 text-sm text-gray-600">
                         {vendor.email}
                       </td>
-                      <td className="px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-3 py-4 text-sm text-gray-500">
                         {formatDate(vendor.created_at)}
                       </td>
                       <td className="px-3 py-4">

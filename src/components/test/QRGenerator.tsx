@@ -105,12 +105,12 @@ export default function QRGenerator({ data = 'cmeg7fce10003silbg30j9em8' }: QRGe
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+    <div className="bg-white shadow rounded-lg">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg leading-6 font-medium text-gray-900">
           QR Code Generator
         </h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-sm text-gray-500">
           Buat QR code untuk test scanner
         </p>
       </div>
@@ -118,21 +118,21 @@ export default function QRGenerator({ data = 'cmeg7fce10003silbg30j9em8' }: QRGe
       <div className="p-6">
         {/* Input Section */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Data QR Code
           </label>
           <textarea
             value={qrText}
             onChange={(e) => setQrText(e.target.value)}
             placeholder="Masukkan teks atau data untuk QR code..."
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900 resize-none"
             rows={3}
           />
         </div>
 
         {/* Sample Data */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Data Contoh
           </label>
           <div className="grid grid-cols-1 gap-2">
@@ -181,11 +181,11 @@ export default function QRGenerator({ data = 'cmeg7fce10003silbg30j9em8' }: QRGe
 
         {/* Generated QR String Info */}
         {generatedQrString && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <label className="block text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <label className="block text-sm font-medium text-blue-800 mb-1">
               Generated Secure QR String:
             </label>
-            <code className="text-xs text-blue-700 dark:text-blue-300 break-all block bg-white dark:bg-gray-800 p-2 rounded border">
+            <code className="text-xs text-blue-700 break-all block bg-white p-2 rounded border">
               {generatedQrString}
             </code>
           </div>
@@ -195,7 +195,7 @@ export default function QRGenerator({ data = 'cmeg7fce10003silbg30j9em8' }: QRGe
         <div className="text-center">
           <canvas
             ref={canvasRef}
-            className="mx-auto border border-gray-200 dark:border-gray-600 rounded"
+            className="mx-auto border border-gray-200 rounded"
             style={{ display: qrCodeUrl ? 'block' : 'none' }}
           />
           
@@ -208,7 +208,7 @@ export default function QRGenerator({ data = 'cmeg7fce10003silbg30j9em8' }: QRGe
           )}
           
           {!qrCodeUrl && (
-            <div className="py-8 text-gray-500 dark:text-gray-400">
+            <div className="py-8 text-gray-500">
               QR code akan muncul di sini setelah generate
             </div>
           )}

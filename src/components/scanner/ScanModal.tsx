@@ -1,0 +1,194 @@
+'use client';
+
+import React from 'react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import Button from '@/components/ui/button/Button';
+
+interface ScanResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  message?: string;
+  scanned_at?: string;
+  scanned_by?: string;
+  scan_id?: string;
+}
+
+interface ScanModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  result: ScanResult;
+}
+
+const ScanModal: React.FC<ScanModalProps> = ({
+  isOpen,
+  onClose,
+  result
+}) => {
+  if (!isOpen) return null;
+
+  // Debug logging
+  console.log('=== SCAN MODAL DEBUG ===');
+  console.log('result:', result);
+  console.log('result.data:', result.data);
+  console.log('result.data?.submission:', result.data?.submission);
+
+  const submission = result.data?.submission;
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 md:p-8"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white  rounded-lg  shadow-xl h-full w-full md:h-auto md:max-w-2xl md:min-w-[600px] md:max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 md:p-6 h-full flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-xl font-semibold">
+              {result.success ? 'Scan Berhasil' : 'Scan Gagal'}
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-1"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Status Icon & Message */}
+            <div className="text-center mb-6">
+              {result.success ? (
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-3" />
+              ) : (
+                <XCircleIcon className="h-16 w-16 text-red-500 mx-auto mb-3" />
+              )}
+              
+              <p className="text-lg font-medium mb-2">
+                {result.success ? 'Barcode/QR Code Valid' : 'Barcode/QR Code Tidak Valid'}
+              </p>
+              
+              {result.message && (
+                <p className="text-gray-600">{result.message}</p>
+              )}
+              
+              {result.error && (
+                <p className="text-red-600">{result.error}</p>
+              )}
+            </div>
+
+            {/* Submission Details */}
+            {result.success && submission && (
+              <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
+                <h3 className="font-semibold mb-4 text-lg">Detail SIMLOK</h3>
+                <div className="space-y-4 md:space-y-3">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Nomor SIMLOK:</span>
+                      <p className="font-medium">{submission.number || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Status:</span>
+                      <p className="font-medium capitalize">
+                        {submission.status === 'approved' ? 'Disetujui' : 
+                         submission.status === 'pending' ? 'Menunggu' : 
+                         submission.status === 'rejected' ? 'Ditolak' : 
+                         submission.status}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Vendor:</span>
+                    <p className="font-medium">{submission.vendor?.name || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Pekerjaan:</span>
+                    <p className="font-medium">{submission.title || submission.task || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Lokasi:</span>
+                    <p className="font-medium">{submission.location || '-'}</p>
+                  </div>
+                  {submission.workers && submission.workers.length > 0 && (
+                    <div>
+                      <span className="text-sm text-gray-600">Pekerja:</span>
+                      <div className="mt-1">
+                        {submission.workers.map((worker: any, index: number) => (
+                          <p key={index} className="font-medium text-sm">
+                            • {worker.name}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(submission.implementation_start_date || submission.implementation_end_date) && (
+                    <div>
+                      <span className="text-sm text-gray-600">Periode Pelaksanaan:</span>
+                      <p className="font-medium">
+                        {submission.implementation_start_date ? 
+                          new Date(submission.implementation_start_date).toLocaleDateString('id-ID') : 
+                          '-'} 
+                        {submission.implementation_end_date && 
+                          ` s/d ${new Date(submission.implementation_end_date).toLocaleDateString('id-ID')}`}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Scan Information */}
+            {result.success && (result.scanned_at || result.scanned_by) && (
+              <div className="bg-blue-50 rounded-lg p-4 mb-6">
+                <h3 className="font-semibold mb-3 text-blue-900">Informasi Scan</h3>
+                <div className="space-y-2">
+                  {result.scanned_by && (
+                    <div>
+                      <span className="text-sm text-blue-700">Discan oleh:</span>
+                      <p className="font-medium text-blue-900">{result.scanned_by}</p>
+                    </div>
+                  )}
+                  {result.scanned_at && (
+                    <div>
+                      <span className="text-sm text-blue-700">Waktu scan:</span>
+                      <p className="font-medium text-blue-900">
+                        {new Date(result.scanned_at).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                  )}
+                  {result.scan_id && (
+                    <div>
+                      <span className="text-sm text-blue-700">ID Scan:</span>
+                      <p className="font-medium text-blue-900 font-mono text-sm">{result.scan_id}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Extra padding for better scrolling on mobile */}
+            <div className="pb-4 md:pb-6"></div>
+          </div>
+
+          {/* Actions - Fixed at bottom */}
+          <div className="flex gap-3 shrink-0 pt-4 md:pt-6 border-t border-gray-200 md:px-2">
+            <Button 
+              onClick={onClose}
+              variant={result.success ? "primary" : "outline"}
+              className="flex-1 md:py-3 md:text-base md:font-medium"
+            >
+              {result.success ? 'Selesai' : 'Tutup'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ScanModal;

@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useToast } from '@/hooks/useToast';
 import Button from '../ui/button/Button';
-import QRCodeScanner from '../scanner/QRCodeScanner';
+import CameraQRScanner from '../scanner/CameraQRScanner';
 
 interface SubmissionData {
   id: string;
@@ -121,21 +121,21 @@ export default function SubmissionsList() {
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             Disetujui
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircleIcon className="w-3 h-3 mr-1" />
             Ditolak
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <ClockIcon className="w-3 h-3 mr-1" />
             Pending
           </span>
@@ -163,10 +163,10 @@ export default function SubmissionsList() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-gray-900">
             Daftar SIMLOK
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             Total: {pagination.total.toLocaleString()} submissions
           </p>
         </div>
@@ -191,11 +191,11 @@ export default function SubmissionsList() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+      <div className="bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Pencarian
             </label>
             <div className="relative">
@@ -206,7 +206,7 @@ export default function SubmissionsList() {
                 type="text"
                 value={filters.search}
                 onChange={(e) => handleFilterChange({ search: e.target.value })}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Cari nomor SIMLOK, vendor, atau deskripsi..."
               />
             </div>
@@ -214,13 +214,13 @@ export default function SubmissionsList() {
 
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange({ status: e.target.value as FilterOptions['status'] })}
-              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="ALL">Semua Status</option>
               <option value="PENDING">Pending</option>
@@ -231,13 +231,13 @@ export default function SubmissionsList() {
 
           {/* Date Range Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Periode
             </label>
             <select
               value={filters.dateRange}
               onChange={(e) => handleFilterChange({ dateRange: e.target.value as FilterOptions['dateRange'] })}
-              className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="ALL">Semua Periode</option>
               <option value="TODAY">Hari Ini</option>
@@ -249,7 +249,7 @@ export default function SubmissionsList() {
       </div>
 
       {/* Submissions List */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+      <div className="bg-white shadow rounded-lg">
         {loading && pagination.offset === 0 ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -257,68 +257,68 @@ export default function SubmissionsList() {
         ) : submissions.length === 0 ? (
           <div className="text-center py-12">
             <FunnelIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+            <h3 className="mt-2 text-sm font-medium text-gray-900">
               Tidak ada submissions
             </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-gray-500">
               Tidak ada submissions yang sesuai dengan filter yang dipilih.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SIMLOK
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Vendor
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pekerjaan
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tanggal
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Aksi
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {submissions.map((submission) => (
-                  <tr key={submission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={submission.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div className="text-sm font-medium text-gray-900">
                           {submission.simlok_number || 'Belum ada nomor'}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-sm text-gray-500">
                           {submission.officer_name}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
+                      <div className="text-sm text-gray-900">
                         {submission.vendor_name}
                       </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-sm text-gray-500">
                         {submission.work_location}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                      <div className="text-sm text-gray-900 max-w-xs truncate">
                         {submission.job_description}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(submission.approval_status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(submission.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -340,7 +340,7 @@ export default function SubmissionsList() {
 
         {/* Load More */}
         {pagination.hasMore && submissions.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4 border-t border-gray-200">
             <Button
               onClick={loadMore}
               disabled={loading}
@@ -355,7 +355,7 @@ export default function SubmissionsList() {
 
       {/* QR Code Scanner */}
       {scannerOpen && (
-        <QRCodeScanner
+        <CameraQRScanner
           isOpen={scannerOpen}
           onClose={() => setScannerOpen(false)}
           onScan={handleScanResult}

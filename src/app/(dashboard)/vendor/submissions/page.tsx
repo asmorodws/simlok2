@@ -1,7 +1,13 @@
+import { Metadata } from "next";
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import RoleGate from '@/components/security/RoleGate';
+
+export const metadata: Metadata = {
+  title: "Daftar Pengajuan - SIMLOK",
+  description: "Halaman untuk melihat dan mengelola daftar pengajuan vendor",
+};
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import VendorSubmissionsContent from '@/components/vendor/VendorSubmissionsContent';
 import VerificationGuard from '@/components/security/VerificationGuard';

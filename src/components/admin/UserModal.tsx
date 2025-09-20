@@ -148,20 +148,20 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
       <div className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
         <Card className="shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-brand-100 dark:bg-brand-500/20 rounded-full flex items-center justify-center mr-4">
+              <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mr-4">
                 {mode === "add" ? (
-                  <UserPlusIcon className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                  <UserPlusIcon className="w-6 h-6 text-brand-600" />
                 ) : (
-                  <PencilIcon className="w-6 h-6 text-brand-600 dark:text-brand-400" />
+                  <PencilIcon className="w-6 h-6 text-brand-600" />
                 )}
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-semibold text-gray-900">
                   {mode === "add" ? "Tambah User Baru" : "Edit User"}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-500">
                   {mode === "add" 
                     ? "Buat akun user baru dengan informasi lengkap" 
                     : "Ubah informasi user yang sudah ada"
@@ -171,7 +171,7 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <XMarkIcon className="w-5 h-5 text-gray-500" />
             </button>
@@ -181,11 +181,11 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
           <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
             {/* Error Message */}
             {error && (
-              <Card className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 mb-6">
+              <Card className="bg-red-50 border border-red-200 mb-6">
                 <div className="p-4">
                   <div className="flex items-start">
                     <div className="w-5 h-5 text-red-400 mt-0.5 mr-3">⚠️</div>
-                    <div className="text-sm text-red-800 dark:text-red-300">{error}</div>
+                    <div className="text-sm text-red-800">{error}</div>
                   </div>
                 </div>
               </Card>
@@ -194,12 +194,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Personal Information Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
                   <UserIcon className="w-5 h-5 mr-2 text-gray-500" />
                   Informasi Personal
                 </h3>
                 
-                <Card className="bg-gray-50 dark:bg-gray-800/50">
+                <Card className="bg-gray-50">
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Nama Petugas */}
@@ -259,10 +259,9 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           required
                           value={formData.role}
                           onChange={(e) => handleInputChange("role", e.target.value)}
-                          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg 
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg 
                                    focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 
-                                   bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                   transition-colors duration-200"
+                                   bg-white text-gray-900                                   transition-colors duration-200"
                         >
                           <option value={Role.VENDOR}>Vendor</option>
                           <option value={Role.VERIFIER}>Verifier</option>
@@ -282,10 +281,9 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                         value={formData.alamat}
                         onChange={(e) => handleInputChange("alamat", e.target.value)}
                         placeholder="Masukkan alamat lengkap termasuk kode pos"
-                        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg 
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg 
                                  focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 
-                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                 transition-colors duration-200 resize-none"
+                                 bg-white text-gray-900                                 transition-colors duration-200 resize-none"
                       />
                     </div>
                   </div>
@@ -294,12 +292,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
 
               {/* Account Information Section */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
                   <ShieldCheckIcon className="w-5 h-5 mr-2 text-gray-500" />
                   Informasi Akun
                 </h3>
                 
-                <Card className="bg-gray-50 dark:bg-gray-800/50">
+                <Card className="bg-gray-50">
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Password */}
@@ -320,7 +318,7 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           className="w-full"
                         />
                         {mode === "edit" && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-gray-500 mt-1">
                             Biarkan kosong untuk mempertahankan password yang ada
                           </p>
                         )}
@@ -356,7 +354,7 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                             onChange={(e) => handleInputChange("verified_at", e.target.value)}
                             className="w-full"
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          <p className="text-xs text-gray-500 mt-1">
                             Kosongkan jika user belum diverifikasi
                           </p>
                         </div>
@@ -368,15 +366,15 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
 
               {/* Role-specific Information */}
               {formData.role === Role.VENDOR && (
-                <Card className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20">
+                <Card className="bg-blue-50 border border-blue-200">
                   <div className="p-4">
                     <div className="flex items-start">
                       <BuildingOfficeIcon className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
                       <div className="text-sm">
-                        <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">
+                        <p className="font-medium text-blue-800 mb-1">
                           Informasi Vendor
                         </p>
-                        <p className="text-blue-700 dark:text-blue-400">
+                        <p className="text-blue-700">
                           User dengan role Vendor akan memiliki akses untuk mengelola produk, 
                           submission, dan dapat mengisi nama vendor sebagai identitas perusahaan.
                         </p>
@@ -389,7 +387,7 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end space-x-3 p-6 border-t border-gray-200">
             <Button
               type="button"
               onClick={onClose}

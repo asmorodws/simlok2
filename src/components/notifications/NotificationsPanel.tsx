@@ -434,16 +434,16 @@ export default function NotificationsPanel({
 
       {/* Floating Panel */}
       <div 
-        className="absolute right-0 top-12 w-[min(420px,90vw)] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 max-h-[70vh] flex flex-col overflow-hidden"
+        className="absolute right-0 top-12 w-[min(420px,90vw)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-label="Panel notifikasi"
       >
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gray-50/50 dark:bg-gray-800/50">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0 bg-gray-50/50">
           <div className="flex items-center space-x-3">
             <div className="relative">
-              <BellIcon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <BellIcon className="w-5 h-5 text-gray-700" />
               {unreadCount > 0 && (
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   <span className="text-[10px] font-semibold">{unreadCount > 9 ? '9+' : unreadCount}</span>
@@ -451,11 +451,11 @@ export default function NotificationsPanel({
               )}
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-gray-900">
                 Notifikasi
               </h3>
               {unreadCount > 0 && (
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500">
                   {unreadCount} belum dibaca
                 </p>
               )}
@@ -476,7 +476,7 @@ export default function NotificationsPanel({
             )}
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+              className="p-1.5 hover:bg-gray-200:bg-gray-700 rounded-md transition-colors"
               aria-label="Tutup panel"
             >
               <XMarkIcon className="w-4 h-4 text-gray-500 hover:text-gray-700" />
@@ -488,18 +488,18 @@ export default function NotificationsPanel({
         <div className="flex-1 overflow-y-auto" role="list" aria-label="Daftar notifikasi">
           {!notifications || notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <InboxIcon className="w-8 h-8 text-gray-400" />
               </div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 mb-2">
                 Tidak ada notifikasi
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center leading-relaxed">
+              <p className="text-xs text-gray-500 text-center leading-relaxed">
                 Anda akan melihat notifikasi baru di sini ketika ada aktivitas
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            <div className="divide-y divide-gray-100">
               {Array.isArray(notifications) && notifications.slice(0, 10).map((notification) => {
                 const enhancedInfo = getEnhancedMessage(notification);
                 const isUnread = !notification.isRead;
@@ -509,10 +509,10 @@ export default function NotificationsPanel({
                   <div
                     key={`notification-${notification.id}-${notification.createdAt}`}
                     role="listitem"
-                    className={`group relative transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                    className={`group relative transition-all duration-200 hover:bg-gray-50:bg-gray-800/50 ${
                       isUnread 
-                        ? 'bg-blue-50/50 dark:bg-blue-900/10' 
-                        : 'bg-white dark:bg-gray-800'
+                        ? 'bg-blue-50/50' 
+                        : 'bg-white'
                     } ${
                       hasSubmissionData(notification) ? 'cursor-pointer' : ''
                     }`}
@@ -533,7 +533,7 @@ export default function NotificationsPanel({
                       <div className="flex items-start space-x-3">
                         {/* Icon */}
                         <div className="flex-shrink-0">
-                          <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
                             {getNotificationIcon(notification.type)}
                           </div>
                         </div>
@@ -545,15 +545,15 @@ export default function NotificationsPanel({
                             <h4 
                               className={`text-sm leading-tight ${
                                 isUnread 
-                                  ? 'font-semibold text-gray-900 dark:text-white' 
-                                  : 'font-medium text-gray-800 dark:text-gray-200'
+                                  ? 'font-semibold text-gray-900' 
+                                  : 'font-medium text-gray-800'
                               }`}
                               style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
                               {enhancedInfo.title}
                             </h4>
                             <span 
-                              className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2"
+                              className="text-[11px] text-gray-500 whitespace-nowrap ml-2"
                               title={fullTimestamp}
                             >
                               {formatTimeAgo(notification.createdAt)}
@@ -562,7 +562,7 @@ export default function NotificationsPanel({
                           
                           {/* Message */}
                           <p 
-                            className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-2"
+                            className="text-xs text-gray-600 leading-relaxed mb-2"
                             style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                           >
                             {enhancedInfo.message}
@@ -571,7 +571,7 @@ export default function NotificationsPanel({
                           {/* Actions */}
                           <div className="flex items-center justify-between">
                             {hasSubmissionData(notification) && (
-                              <button className="inline-flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors">
+                              <button className="inline-flex items-center text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
                                 {enhancedInfo.action}
                               </button>
                             )}
@@ -583,7 +583,7 @@ export default function NotificationsPanel({
                                   e.stopPropagation();
                                   await markAsRead(notification.id);
                                 }}
-                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50:bg-blue-900/20 transition-colors"
                                 aria-label="Tandai sebagai dibaca"
                               >
                                 <CheckIcon className="w-3 h-3 mr-1" />
@@ -603,9 +603,9 @@ export default function NotificationsPanel({
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex-shrink-0 bg-gray-50/30 dark:bg-gray-800/30">
+          <div className="border-t border-gray-200 p-3 flex-shrink-0 bg-gray-50/30">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500 dark:text-gray-400">
+              <span className="text-gray-500">
                 {Math.min(notifications.length, 10)} dari {notifications.length}
               </span>
               {notifications.length && (

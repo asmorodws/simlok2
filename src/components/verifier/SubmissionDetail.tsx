@@ -149,21 +149,21 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
     switch (status) {
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
             <CheckCircleIcon className="w-4 h-4 mr-2" />
             Disetujui
           </span>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
             <XCircleIcon className="w-4 h-4 mr-2" />
             Ditolak
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
             <ClockIcon className="w-4 h-4 mr-2" />
             Menunggu Verifikasi
           </span>
@@ -196,10 +196,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
             Kembali
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-gray-900">
               {submission.simlok_number || `SIMLOK ${submission.id.slice(-8)}`}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Dibuat: {formatDate(submission.created_at)}
             </p>
           </div>
@@ -232,8 +232,8 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Basic Information */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">
               Informasi Umum
             </h2>
             
@@ -241,10 +241,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
               <div className="flex items-start space-x-3">
                 <BuildingOfficeIcon className="w-5 h-5 text-gray-400 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-500">
                     Nama Vendor
                   </p>
-                  <p className="text-sm text-gray-900 dark:text-white">
+                  <p className="text-sm text-gray-900">
                     {submission.vendor_name}
                   </p>
                 </div>
@@ -253,10 +253,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
               <div className="flex items-start space-x-3">
                 <UserIcon className="w-5 h-5 text-gray-400 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-500">
                     Petugas
                   </p>
-                  <p className="text-sm text-gray-900 dark:text-white">
+                  <p className="text-sm text-gray-900">
                     {submission.officer_name}
                   </p>
                 </div>
@@ -265,10 +265,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
               <div className="flex items-start space-x-3">
                 <MapPinIcon className="w-5 h-5 text-gray-400 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-500">
                     Lokasi Kerja
                   </p>
-                  <p className="text-sm text-gray-900 dark:text-white">
+                  <p className="text-sm text-gray-900">
                     {submission.work_location}
                   </p>
                 </div>
@@ -277,10 +277,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
               <div className="flex items-start space-x-3">
                 <CalendarIcon className="w-5 h-5 text-gray-400 mt-1" />
                 <div>
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-500">
                     Pelaksanaan
                   </p>
-                  <p className="text-sm text-gray-900 dark:text-white">
+                  <p className="text-sm text-gray-900">
                     {submission.implementation || 'Tidak ditentukan'}
                   </p>
                 </div>
@@ -289,27 +289,27 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
           </div>
 
           {/* Job Description */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
               <DocumentTextIcon className="w-5 h-5 mr-2" />
               Deskripsi Pekerjaan
             </h2>
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">
               {submission.job_description}
             </p>
           </div>
 
           {/* Workers List */}
           {submission.worker_list && submission.worker_list.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                 <UserIcon className="w-5 h-5 mr-2" />
                 Daftar Pekerja ({submission.worker_list.length})
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {submission.worker_list.map((worker) => (
-                  <div key={worker.id} className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                  <div key={worker.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
                     {worker.worker_photo ? (
                       <Image
                         src={worker.worker_photo}
@@ -319,12 +319,12 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
                         className="rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                         <PhotoIcon className="w-5 h-5 text-gray-400" />
                       </div>
                     )}
                     <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <p className="text-sm font-medium text-gray-900">
                         {worker.worker_name}
                       </p>
                     </div>
@@ -334,11 +334,11 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
             </div>
           )}          {/* Rejection Reason */}
           {submission.approval_status === 'REJECTED' && submission.rejection_reason && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-              <h2 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <h2 className="text-lg font-medium text-red-800 mb-2">
                 Alasan Penolakan
               </h2>
-              <p className="text-sm text-red-700 dark:text-red-300">
+              <p className="text-sm text-red-700">
                 {submission.rejection_reason}
               </p>
             </div>
@@ -349,8 +349,8 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
         <div className="space-y-6">
           {/* Actions */}
           {submission.approval_status === 'PENDING' && (
-            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Aksi Verifikasi
               </h3>
               
@@ -374,7 +374,7 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
                   onClick={handleReject}
                   disabled={loading}
                   variant="outline"
-                  className="w-full border-red-300 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:hover:bg-red-900/20"
+                  className="w-full border-red-300 text-red-700 hover:bg-red-50"
                 >
                   <XCircleIcon className="w-4 h-4 mr-2" />
                   Tolak SIMLOK
@@ -384,8 +384,8 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
           )}
 
           {/* Status History */}
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
               Riwayat Status
             </h3>
             
@@ -393,10 +393,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
               <div className="flex items-start space-x-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <p className="text-sm font-medium text-gray-900">
                     Submission Dibuat
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-gray-500">
                     {formatDate(submission.created_at)}
                   </p>
                 </div>
@@ -408,10 +408,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
                     submission.approval_status === 'APPROVED' ? 'bg-green-500' : 'bg-red-500'
                   }`}></div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="text-sm font-medium text-gray-900">
                       {submission.approval_status === 'APPROVED' ? 'Disetujui' : 'Ditolak'}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {formatDate(submission.created_at)}
                     </p>
                   </div>
@@ -422,27 +422,27 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
 
           {/* SIMLOK Info */}
           {submission.approval_status === 'APPROVED' && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-green-800 dark:text-green-200 mb-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-green-800 mb-4">
                 Informasi SIMLOK
               </h3>
               
               <div className="space-y-2">
                 <div>
-                  <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                  <p className="text-sm font-medium text-green-700">
                     Nomor SIMLOK
                   </p>
-                  <p className="text-sm text-green-600 dark:text-green-400">
+                  <p className="text-sm text-green-600">
                     {submission.simlok_number || 'Sedang diproses'}
                   </p>
                 </div>
                 
                 {submission.simlok_date && (
                   <div>
-                    <p className="text-sm font-medium text-green-700 dark:text-green-300">
+                    <p className="text-sm font-medium text-green-700">
                       Tanggal SIMLOK
                     </p>
-                    <p className="text-sm text-green-600 dark:text-green-400">
+                    <p className="text-sm text-green-600">
                       {new Date(submission.simlok_date).toLocaleDateString('id-ID')}
                     </p>
                   </div>
@@ -478,10 +478,10 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowQRCode(false)}></div>
             
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
                 <div className="text-center">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
                     QR Code SIMLOK
                   </h3>
                   
@@ -510,7 +510,7 @@ export default function SubmissionDetail({ submission }: SubmissionDetailProps) 
                     {submission.qrcode}
                   </p>
                   
-                  <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                  <p className="mt-4 text-sm text-gray-500">
                     {submission.simlok_number}
                   </p>
                   

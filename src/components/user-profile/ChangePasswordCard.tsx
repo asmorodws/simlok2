@@ -1,0 +1,184 @@
+"use client";
+import React, { useState } from "react";
+import { useModal } from "@/hooks/useModal";
+import { Modal } from "@/components/ui/modal";
+import Button from "@/components/ui/button/Button";
+import Input from "@/components/form/input/InputField";
+import Label from "@/components/form/Label";
+
+export default function ChangePasswordCard() {
+  const { isOpen, openModal, closeModal } = useModal();
+  const [passwords, setPasswords] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [errors, setErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswords((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    // Clear error when user starts typing
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
+
+  const validatePasswords = () => {
+    let isValid = true;
+    const newErrors = {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    };
+
+    if (!passwords.currentPassword) {
+      newErrors.currentPassword = "Password saat ini wajib diisi";
+      isValid = false;
+    }
+
+    if (!passwords.newPassword) {
+      newErrors.newPassword = "Password baru wajib diisi";
+      isValid = false;
+    } else if (passwords.newPassword.length < 8) {
+      newErrors.newPassword = "Password minimal 8 karakter";
+      isValid = false;
+    }
+
+    if (!passwords.confirmPassword) {
+      newErrors.confirmPassword = "Silakan konfirmasi password baru Anda";
+      isValid = false;
+    } else if (passwords.newPassword !== passwords.confirmPassword) {
+      newErrors.confirmPassword = "Password tidak cocok";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSave = async () => {
+    if (validatePasswords()) {
+      try {
+        const response = await fetch("/api/user/change-password", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            currentPassword: passwords.currentPassword,
+            newPassword: passwords.newPassword,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(error);
+        }
+
+        // Reset form and close modal on success
+        closeModal();
+        setPasswords({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+        
+        // Show success message
+        alert("Password berhasil diubah");
+      } catch (error) {
+        console.error("Error changing password:", error);
+        setErrors((prev) => ({
+          ...prev,
+          currentPassword: error instanceof Error ? error.message : "Gagal mengubah password",
+        }));
+      }
+    }
+  };
+
+  return (
+    <div className="p-5 border border-gray-200 rounded-2xl lg:p-6">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h4 className="text-lg font-semibold text-gray-800 lg:mb-2">
+            Pengaturan Password
+          </h4>
+          <p className="text-sm text-gray-500">
+            Ubah password Anda untuk menjaga keamanan akun
+          </p>
+        </div>
+
+        <button
+          onClick={openModal}
+          className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-800 lg:inline-flex lg:w-auto"
+        >
+          Ubah Password
+        </button>
+      </div>
+
+      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[500px] m-4">
+        <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white p-4 lg:p-8">
+          <div className="pr-14">
+            <h4 className="mb-2 text-2xl font-semibold text-gray-800">
+              Ubah Password
+            </h4>
+            <p className="mb-6 text-sm text-gray-500">
+              Silakan masukkan password saat ini dan pilih password baru.
+            </p>
+          </div>
+          <form className="flex flex-col gap-5">
+            <div>
+              <Label>Password Saat Ini</Label>
+              <Input
+                type="password"
+                name="currentPassword"
+                value={passwords.currentPassword}
+                onChange={handleChange}
+                error={errors.currentPassword}
+              />
+            </div>
+
+            <div>
+              <Label>Password Baru</Label>
+              <Input
+                type="password"
+                name="newPassword"
+                value={passwords.newPassword}
+                onChange={handleChange}
+                error={errors.newPassword}
+              />
+            </div>
+
+            <div>
+              <Label>Konfirmasi Password Baru</Label>
+              <Input
+                type="password"
+                name="confirmPassword"
+                value={passwords.confirmPassword}
+                onChange={handleChange}
+                error={errors.confirmPassword}
+              />
+            </div>
+
+            <div className="flex items-center gap-3 mt-6 lg:justify-end">
+              <Button size="sm" variant="outline" onClick={closeModal}>
+                Batal
+              </Button>
+              <Button size="sm" onClick={handleSave}>
+                Perbarui Password
+              </Button>
+            </div>
+          </form>
+        </div>
+      </Modal>
+    </div>
+  );
+}

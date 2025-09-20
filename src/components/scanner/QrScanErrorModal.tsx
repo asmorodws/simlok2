@@ -6,7 +6,8 @@ import { X, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 interface QrScanErrorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  errorMessage: string;
+  error: string;
+  message?: string | undefined;
   errorType?: 'invalid' | 'expired' | 'network' | 'unknown';
   onRetry?: () => void;
 }
@@ -14,7 +15,8 @@ interface QrScanErrorModalProps {
 const QrScanErrorModal: React.FC<QrScanErrorModalProps> = ({
   isOpen,
   onClose,
-  errorMessage,
+  error: errorMessage,
+  message,
   errorType = 'unknown',
   onRetry
 }) => {
@@ -91,7 +93,7 @@ const QrScanErrorModal: React.FC<QrScanErrorModalProps> = ({
         <div className="p-6 space-y-4">
           {/* Error Description */}
           <div className="text-center">
-            <p className="text-gray-600 mb-2">{getErrorDescription()}</p>
+            <p className="text-gray-600 mb-2">{message || getErrorDescription()}</p>
             {errorMessage && (
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-3">
                 <p className="text-sm text-gray-700 font-mono">{errorMessage}</p>

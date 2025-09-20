@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
   QrCodeIcon, 
@@ -49,7 +49,11 @@ interface ScanHistoryProps {
   className?: string;
 }
 
-export default function ScanHistory({ submissionId, className = '' }: ScanHistoryProps) {
+interface ScanHistoryRef {
+  closeDetailModal: () => void;
+}
+
+const ScanHistory = forwardRef<ScanHistoryRef, ScanHistoryProps>(function ScanHistory({ submissionId, className = '' }, ref) {
   const { data: session } = useSession();
   const [scans, setScans] = useState<ScanHistoryItem[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
@@ -61,6 +65,13 @@ export default function ScanHistory({ submissionId, className = '' }: ScanHistor
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedScan, setSelectedScan] = useState<ScanHistoryItem | null>(null);
+
+  // Expose methods to parent component via ref
+  useImperativeHandle(ref, () => ({
+    closeDetailModal: () => {
+      setSelectedScan(null);
+    }
+  }));
 
   // Fetch scan history
   const fetchScanHistory = async (offset = 0) => {
@@ -460,4 +471,6 @@ export default function ScanHistory({ submissionId, className = '' }: ScanHistor
       )}
     </div>
   );
-}
+});
+
+export default ScanHistory;

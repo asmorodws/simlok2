@@ -27,17 +27,17 @@ export function generateSimpleQrData(submission: {
   // Use only submission ID and expiration
   const expiration = Date.now() + (24 * 60 * 60 * 1000); // 24 hours from now
   
-  // Create a short signature using only essential data
+  // Create a signature using only essential data
   const signatureData = `${submission.id}|${expiration}|${QR_SALT}`;
   const fullHash = crypto.createHash('sha256').update(signatureData).digest('hex');
   
-  // Use only first 6 characters of hash for even shorter QR
-  const shortSignature = fullHash.substring(0, 6);
+  // Use first 32 characters of hash for improved security
+  const signature = fullHash.substring(0, 32);
 
   return {
     i: submission.id,    // shortened key names for smaller JSON
     e: expiration,
-    s: shortSignature
+    s: signature
   };
 }
 
@@ -55,7 +55,7 @@ export function verifySimpleQrData(qrData: SimpleQrData): boolean {
     // Verify signature
     const signatureData = `${qrData.i}|${qrData.e}|${QR_SALT}`;
     const expectedHash = crypto.createHash('sha256').update(signatureData).digest('hex');
-    const expectedSignature = expectedHash.substring(0, 6);
+    const expectedSignature = expectedHash.substring(0, 32);
 
     if (expectedSignature !== qrData.s) {
       console.error('QR signature verification failed');

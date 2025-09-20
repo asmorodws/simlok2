@@ -16,10 +16,18 @@ interface Submission {
   status: string;
 }
 
+interface ScanResult {
+  success: boolean;
+  data?: any;
+  error?: string;
+  message?: string;
+}
+
 interface QrScanResultModalProps {
   isOpen: boolean;
   onClose: () => void;
-  submission: Submission | null;
+  result: ScanResult;
+  submission?: Submission | null;
   scanTime?: string | undefined;
   scannedBy?: string | undefined;
   scanId?: string | undefined;
@@ -29,13 +37,17 @@ interface QrScanResultModalProps {
 const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
   isOpen,
   onClose,
+  result,
   submission,
   scanTime,
   scannedBy,
   scanId,
   onScanAnother
 }) => {
-  if (!isOpen || !submission) return null;
+  // Extract submission from result if not provided directly
+  const submissionData = submission || result.data?.submission;
+  
+  if (!isOpen || !result.success || !submissionData) return null;
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Tidak ditentukan';
@@ -119,46 +131,46 @@ const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
           {/* Submission Number */}
           <div className="text-center">
             <div className="text-sm text-gray-600">Nomor Permohonan</div>
-            <div className="text-xl font-bold text-gray-900">{submission.number}</div>
+            <div className="text-xl font-bold text-gray-900">{submissionData.number}</div>
           </div>
 
           {/* Status */}
           <div className="flex justify-center">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(submission.status)}`}>
-              {getStatusText(submission.status)}
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(submissionData.status)}`}>
+              {getStatusText(submissionData.status)}
             </span>
           </div>
 
           {/* Title */}
           <div>
             <div className="text-sm font-medium text-gray-700 mb-1">Judul Pekerjaan</div>
-            <div className="text-gray-900">{submission.title}</div>
+            <div className="text-gray-900">{submissionData.title}</div>
           </div>
 
           {/* Task */}
           <div>
             <div className="text-sm font-medium text-gray-700 mb-1">Uraian Pekerjaan</div>
-            <div className="text-gray-900 text-sm">{submission.task}</div>
+            <div className="text-gray-900 text-sm">{submissionData.task}</div>
           </div>
 
           {/* Vendor */}
-          {submission.vendor && (
+          {submissionData.vendor && (
             <div className="flex items-start space-x-2">
               <User className="h-4 w-4 text-gray-500 mt-1" />
               <div>
                 <div className="text-sm font-medium text-gray-700">Vendor</div>
-                <div className="text-gray-900">{submission.vendor.name}</div>
+                <div className="text-gray-900">{submissionData.vendor.name}</div>
               </div>
             </div>
           )}
 
           {/* Location */}
-          {submission.location && (
+          {submissionData.location && (
             <div className="flex items-start space-x-2">
               <MapPin className="h-4 w-4 text-gray-500 mt-1" />
               <div>
                 <div className="text-sm font-medium text-gray-700">Lokasi</div>
-                <div className="text-gray-900">{submission.location}</div>
+                <div className="text-gray-900">{submissionData.location}</div>
               </div>
             </div>
           )}
@@ -169,17 +181,17 @@ const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
             <div>
               <div className="text-sm font-medium text-gray-700">Periode Pelaksanaan</div>
               <div className="text-gray-900 text-sm">
-                {formatDate(submission.implementation_start_date || null)} - {formatDate(submission.implementation_end_date || null)}
+                {formatDate(submissionData.implementation_start_date || null)} - {formatDate(submissionData.implementation_end_date || null)}
               </div>
             </div>
           </div>
 
           {/* Workers */}
-          {submission.workers && submission.workers.length > 0 && (
+          {submissionData.workers && submissionData.workers.length > 0 && (
             <div>
               <div className="text-sm font-medium text-gray-700 mb-1">Pekerja</div>
               <div className="space-y-1">
-                {submission.workers.map((worker, index) => (
+                {submissionData.workers.map((worker: any, index: number) => (
                   <div key={index} className="text-sm text-gray-900 bg-gray-50 px-2 py-1 rounded">
                     {worker.name}
                   </div>

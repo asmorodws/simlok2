@@ -86,7 +86,7 @@ export default function AdminSubmissionDetailModal({
     pelaksanaan: '',
     lain_lain: '',
     content: '',
-    jabatan_signer: 'Hend Or Secunty Region I',
+    jabatan_signer: 'Head Of Security Region I',
     nama_signer: 'Julianto Santoso'
   });
 
@@ -158,7 +158,7 @@ export default function AdminSubmissionDetailModal({
           pelaksanaan: submission.implementation || '',
           lain_lain: submission.other_notes || '',
           content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
-          jabatan_signer: submission.signer_position || 'Hend Or Secunty Region I',
+          jabatan_signer: submission.signer_position || 'Head Of Security Region I',
           nama_signer: submission.signer_name || 'Julianto Santoso'
         });
 
@@ -555,6 +555,68 @@ export default function AdminSubmissionDetailModal({
                         />
                       </div>
                     </DetailSection>
+ {/* Nomor Dokumen */}
+                    <DetailSection 
+                      title="Informasi Dokumen" 
+                      icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {submission.simja_number && (
+                          <InfoCard
+                            label="Nomor SIMJA"
+                            value={submission.simja_number}
+                          />
+                        )}
+                        {submission.simja_date && (
+                          <InfoCard
+                            label="Tanggal SIMJA"
+                            value={formatDate(submission.simja_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                        {submission.sika_number && (
+                          <InfoCard
+                            label="Nomor SIKA"
+                            value={submission.sika_number}
+                          />
+                        )}
+                        {submission.sika_date && (
+                          <InfoCard
+                            label="Tanggal SIKA"
+                            value={formatDate(submission.sika_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                        {/* Nomor SIMLOK - hanya muncul jika sudah APPROVED */}
+                        {submission.approval_status === 'APPROVED' && submission.simlok_number && (
+                          <InfoCard
+                            label="Nomor SIMLOK"
+                            value={submission.simlok_number}
+                          />
+                        )}
+                        {submission.approval_status === 'APPROVED' && submission.simlok_date && (
+                          <InfoCard
+                            label="Tanggal SIMLOK"
+                            value={formatDate(submission.simlok_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                        {submission.approval_status === 'APPROVED' && submission.implementation_start_date && (
+                          <InfoCard
+                            label="Tanggal Mulai Pelaksanaan"
+                            value={formatDate(submission.implementation_start_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                        {submission.approval_status === 'APPROVED' && submission.implementation_end_date && (
+                          <InfoCard
+                            label="Tanggal Selesai Pelaksanaan"
+                            value={formatDate(submission.implementation_end_date)}
+                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                          />
+                        )}
+                      </div>
+                    </DetailSection>
 
                     {/* Detail Pekerjaan */}
                     <DetailSection 
@@ -624,68 +686,7 @@ export default function AdminSubmissionDetailModal({
                       />
                     </DetailSection>
 
-                    {/* Nomor Dokumen */}
-                    <DetailSection 
-                      title="Informasi Dokumen" 
-                      icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {submission.simja_number && (
-                          <InfoCard
-                            label="Nomor SIMJA"
-                            value={submission.simja_number}
-                          />
-                        )}
-                        {submission.simja_date && (
-                          <InfoCard
-                            label="Tanggal SIMJA"
-                            value={formatDate(submission.simja_date)}
-                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                          />
-                        )}
-                        {submission.sika_number && (
-                          <InfoCard
-                            label="Nomor SIKA"
-                            value={submission.sika_number}
-                          />
-                        )}
-                        {submission.sika_date && (
-                          <InfoCard
-                            label="Tanggal SIKA"
-                            value={formatDate(submission.sika_date)}
-                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                          />
-                        )}
-                        {/* Nomor SIMLOK - hanya muncul jika sudah APPROVED */}
-                        {submission.approval_status === 'APPROVED' && submission.simlok_number && (
-                          <InfoCard
-                            label="Nomor SIMLOK"
-                            value={submission.simlok_number}
-                          />
-                        )}
-                        {submission.approval_status === 'APPROVED' && submission.simlok_date && (
-                          <InfoCard
-                            label="Tanggal SIMLOK"
-                            value={formatDate(submission.simlok_date)}
-                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                          />
-                        )}
-                        {submission.approval_status === 'APPROVED' && submission.implementation_start_date && (
-                          <InfoCard
-                            label="Tanggal Mulai Pelaksanaan"
-                            value={formatDate(submission.implementation_start_date)}
-                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                          />
-                        )}
-                        {submission.approval_status === 'APPROVED' && submission.implementation_end_date && (
-                          <InfoCard
-                            label="Tanggal Selesai Pelaksanaan"
-                            value={formatDate(submission.implementation_end_date)}
-                            icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                          />
-                        )}
-                      </div>
-                    </DetailSection>
+                   
 
                     {/* Informasi Penandatangan */}
                     <DetailSection 

@@ -8,8 +8,8 @@ export function ActivityList({
     <ul className="space-y-3">
       {items.map((act) => (
         <li key={act.id} className="text-sm">
-          <p className="text-slate-900 dark:text-white">{act.txt}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-300">{act.time}</p>
+          <p className="text-slate-900">{act.txt}</p>
+          <p className="text-xs text-slate-500">{act.time}</p>
         </li>
       ))}
     </ul>

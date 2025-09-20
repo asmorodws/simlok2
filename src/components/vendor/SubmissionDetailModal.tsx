@@ -117,25 +117,25 @@ export default function SubmissionDetailModal({
     switch (status) {
       case 'PENDING':
         return (
-          <span className={`${baseClasses} bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100`}>
+          <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>
             Menunggu
           </span>
         );
       case 'APPROVED':
         return (
-          <span className={`${baseClasses} bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100`}>
+          <span className={`${baseClasses} bg-green-100 text-green-800`}>
             Disetujui
           </span>
         );
       case 'REJECTED':
         return (
-          <span className={`${baseClasses} bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100`}>
+          <span className={`${baseClasses} bg-red-100 text-red-800`}>
             Ditolak
           </span>
         );
       default:
         return (
-          <span className={`${baseClasses} bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100`}>
+          <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
             {status}
           </span>
         );
@@ -246,6 +246,54 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
+                {/* Informasi Dokumen */}
+              <DetailSection 
+                title="Informasi Dokumen" 
+                icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {submission.simja_number && (
+                    <InfoCard
+                      label="Nomor SIMJA"
+                      value={submission.simja_number}
+                    />
+                  )}
+                  {submission.simja_date && (
+                    <InfoCard
+                      label="Tanggal SIMJA"
+                      value={formatDate(submission.simja_date)}
+                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                  )}
+                  {submission.sika_number && (
+                    <InfoCard
+                      label="Nomor SIKA"
+                      value={submission.sika_number}
+                    />
+                  )}
+                  {submission.sika_date && (
+                    <InfoCard
+                      label="Tanggal SIKA"
+                      value={formatDate(submission.sika_date)}
+                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                  )}
+                  {submission.approval_status === 'APPROVED' && submission.simlok_number && (
+                    <InfoCard
+                      label="Nomor SIMLOK"
+                      value={submission.simlok_number}
+                    />
+                  )}
+                  {submission.approval_status === 'APPROVED' && submission.simlok_date && (
+                    <InfoCard
+                      label="Tanggal SIMLOK"
+                      value={formatDate(submission.simlok_date)}
+                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                  )}
+                </div>
+              </DetailSection>
+
               {/* Informasi Pekerjaan */}
               <DetailSection 
                 title="Informasi Pekerjaan" 
@@ -308,54 +356,6 @@ export default function SubmissionDetailModal({
                     <p>Belum ada data pekerja</p>
                   </div>
                 )}
-              </DetailSection>
-
-              {/* Informasi Dokumen */}
-              <DetailSection 
-                title="Informasi Dokumen & Sertifikat" 
-                icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {submission.simja_number && (
-                    <InfoCard
-                      label="Nomor SIMJA"
-                      value={submission.simja_number}
-                    />
-                  )}
-                  {submission.simja_date && (
-                    <InfoCard
-                      label="Tanggal SIMJA"
-                      value={formatDate(submission.simja_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                  {submission.sika_number && (
-                    <InfoCard
-                      label="Nomor SIKA"
-                      value={submission.sika_number}
-                    />
-                  )}
-                  {submission.sika_date && (
-                    <InfoCard
-                      label="Tanggal SIKA"
-                      value={formatDate(submission.sika_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                  {submission.approval_status === 'APPROVED' && submission.simlok_number && (
-                    <InfoCard
-                      label="Nomor SIMLOK"
-                      value={submission.simlok_number}
-                    />
-                  )}
-                  {submission.approval_status === 'APPROVED' && submission.simlok_date && (
-                    <InfoCard
-                      label="Tanggal SIMLOK"
-                      value={formatDate(submission.simlok_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                </div>
               </DetailSection>
 
               {/* Upload Dokumen */}
