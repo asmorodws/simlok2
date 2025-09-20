@@ -30,6 +30,9 @@ export async function POST(request: NextRequest) {
     console.log('Received qrString:', qrString);
     console.log('qrString length:', qrString?.length);
     console.log('scanner_type:', scanner_type);
+    console.log('session.user:', session.user);
+    console.log('session.user.id:', session.user.id);
+    console.log('session.user.role:', session.user.role);
     console.log('====================');
 
     if (!qrString) {
@@ -111,48 +114,137 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Record the scan in database
-    const scanRecord = await prisma.qrScan.create({
-      data: {
+    // DEBUG: Check user session and database
+    console.log('=== USER SESSION DEBUG ===');
+    console.log('session.user:', JSON.stringify(session.user, null, 2));
+    console.log('session.user.id:', session.user.id);
+    
+    // Check if this user exists in database
+    const userExists = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, role: true, officer_name: true }
+    });
+    console.log('userExists in DB:', userExists);
+    
+    if (!userExists) {
+      console.log('ERROR: User not found in database');
+      return NextResponse.json({ 
+        success: false,
+        message: 'User session is invalid. Please login again.' 
+      }, { status: 401 });
+    }
+
+    // Check if this verifier has already scanned this QR code/barcode
+    console.log('=== CHECKING FOR DUPLICATE SCAN ===');
+    console.log('submission_id:', qrPayload.id);
+    console.log('scanned_by:', session.user.id);
+    
+    const existingQrScan = await prisma.qrScan.findFirst({
+      where: {
         submission_id: qrPayload.id,
         scanned_by: session.user.id,
-        scanner_name: session.user.officer_name,
-        notes: scanNotes || `Scanned via ${scanner_type || 'scanner'} at: ${scanLocation || 'Unknown location'}`,
       },
       include: {
         user: {
           select: {
-            id: true,
             officer_name: true,
-            email: true,
-            role: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
-    // Return verification result with submission data in the format expected by the modal
-    return NextResponse.json({
-      success: true,
-      message: 'QR code/barcode verified successfully',
-      scan_id: scanRecord.id,
-      scanned_at: scanRecord.scanned_at,
-      scanned_by: scanRecord.user.officer_name,
-      data: {
-        submission: {
-          id: submission.id,
-          number: submission.simlok_number,
-          title: submission.job_description,
-          task: submission.implementation || 'No task description',
-          workers: submission.worker_list.map(worker => ({ name: worker.worker_name })),
-          vendor: submission.vendor_name ? { name: submission.vendor_name } : undefined,
-          location: submission.work_location || undefined,
-          implementation_start_date: submission.implementation_start_date?.toISOString(),
-          implementation_end_date: submission.implementation_end_date?.toISOString(),
-          status: submission.approval_status.toLowerCase(),
+    console.log('existingQrScan found:', !!existingQrScan);
+
+    if (existingQrScan) {
+      console.log('=== DUPLICATE SCAN DETECTED ===');
+      const scanDate = new Date(existingQrScan.scanned_at);
+      const formattedDate = scanDate.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+
+      return NextResponse.json({ 
+        success: false, 
+        error: 'duplicate_scan',
+        message: `QR Code ini sudah pernah Anda scan sebelumnya pada ${formattedDate}`,
+        previousScan: {
+          scanDate: existingQrScan.scanned_at,
+          scanId: existingQrScan.id,
+          scannerName: existingQrScan.user.officer_name,
         }
+      }, { status: 409 });
+    }
+
+    console.log('=== NO DUPLICATE FOUND, PROCEEDING TO CREATE SCAN RECORD ===');
+
+    console.log('User verified for scan record creation:', userExists);
+
+    // Record the scan in database
+    try {
+      const scanRecord = await prisma.qrScan.create({
+        data: {
+          submission_id: qrPayload.id,
+          scanned_by: session.user.id,
+          scanner_name: userExists.officer_name || session.user.officer_name,
+          notes: scanNotes || `Scanned via ${scanner_type || 'scanner'} at: ${scanLocation || 'Unknown location'}`,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              officer_name: true,
+              email: true,
+              role: true,
+            }
+          }
+        }
+      });
+
+      console.log('=== SCAN RECORD CREATED SUCCESSFULLY ===');
+      console.log('scanRecord.id:', scanRecord.id);
+
+      // Return verification result with submission data in the format expected by the modal
+      return NextResponse.json({
+        success: true,
+        message: 'QR code/barcode verified successfully',
+        scan_id: scanRecord.id,
+        scanned_at: scanRecord.scanned_at,
+        scanned_by: scanRecord.user.officer_name,
+        data: {
+          submission: {
+            id: submission.id,
+            number: submission.simlok_number,
+            title: submission.job_description,
+            task: submission.implementation || 'No task description',
+            workers: submission.worker_list.map(worker => ({ name: worker.worker_name })),
+            vendor: submission.vendor_name ? { name: submission.vendor_name } : undefined,
+            location: submission.work_location || undefined,
+            implementation_start_date: submission.implementation_start_date?.toISOString(),
+            implementation_end_date: submission.implementation_end_date?.toISOString(),
+            status: submission.approval_status.toLowerCase(),
+          }
+        }
+      });
+
+    } catch (createError: any) {
+      console.error('Error creating scan record:', createError);
+      
+      // Check if it's a unique constraint violation (in case of race condition)
+      if (createError?.code === 'P2002') {
+        console.log('=== UNIQUE CONSTRAINT VIOLATION DETECTED ===');
+        return NextResponse.json({ 
+          success: false, 
+          error: 'duplicate_scan',
+          message: 'QR Code ini sudah pernah Anda scan sebelumnya (race condition detected)'
+        }, { status: 409 });
       }
-    });
+      
+      throw createError; // Re-throw if it's not a constraint violation
+    }
 
   } catch (error) {
     console.error('QR/Barcode verification error:', error);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { NotFoundException } from '@zxing/library';
 import {
@@ -39,14 +39,22 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef<boolean>(false); // Track if scanning is active
+  const scanIdRef = useRef<number>(0); // Unique ID for each scan session
+
+  const resetScannerState = useCallback(() => {
+    console.log('=== RESETTING SCANNER STATE ===');
+    setScanResult(null);
+    setIsModalOpen(false);
+    setError(null);
+    scanningRef.current = false;
+    // Don't reset scanIdRef here as we want it to keep incrementing
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
       console.log('=== SCANNER OPENED ===');
       // Reset previous scan results when opening scanner
-      setScanResult(null);
-      setIsModalOpen(false);
-      setError(null);
+      resetScannerState();
       initializeScanner();
     } else {
       console.log('=== SCANNER CLOSED ===');
@@ -57,12 +65,14 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
       console.log('=== SCANNER CLEANUP ===');
       stopScanner();
     };
-  }, [isOpen]);
+  }, [isOpen, resetScannerState]);
 
   const initializeScanner = async () => {
     try {
       console.log('=== INITIALIZING SCANNER ===');
       setError(null);
+      setScanResult(null); // Clear any previous scan results
+      setIsModalOpen(false); // Ensure modal is closed
       scanningRef.current = false; // Reset scanning state
       
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -95,19 +105,41 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
   };
 
   const startScanning = async () => {
-    if (!codeReaderRef.current || !videoRef.current) {
-      console.error('Scanner not initialized');
+    if (!videoRef.current) {
+      console.error('Video element not available');
       return;
     }
 
     try {
-      console.log('=== STARTING SCAN PROCESS ===');
+      // Increment scan ID for this session
+      scanIdRef.current += 1;
+      const currentScanId = scanIdRef.current;
+      
+      console.log(`=== STARTING SCAN PROCESS (ID: ${currentScanId}) ===`);
+      
+      // Reset any previous scan result before starting new scan
+      setScanResult(null);
+      setIsModalOpen(false);
+      
+      // Always create a fresh code reader instance to avoid state issues
+      if (codeReaderRef.current) {
+        codeReaderRef.current = null;
+      }
+      codeReaderRef.current = new BrowserMultiFormatReader();
+      console.log('Fresh BrowserMultiFormatReader created');
+      
       scanningRef.current = true; // Mark scanning as active
       
       codeReaderRef.current.decodeFromVideoDevice(
         undefined,
         videoRef.current,
         (result, error) => {
+          // Check if this is still the current scan session
+          if (scanIdRef.current !== currentScanId) {
+            console.log(`Ignoring result from old scan session (${currentScanId} vs ${scanIdRef.current})`);
+            return;
+          }
+          
           // Check if scanning is still active before processing
           if (!scanningRef.current) {
             console.log('Scanning stopped, ignoring result');
@@ -115,7 +147,7 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
           }
 
           if (result) {
-            console.log('=== SCAN SUCCESS ===');
+            console.log(`=== SCAN SUCCESS (ID: ${currentScanId}) ===`);
             console.log('Scanned text:', result.getText());
             scanningRef.current = false; // Stop scanning immediately
             handleScanSuccess(result.getText());
@@ -200,9 +232,13 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
     scanningRef.current = false; // Stop scanning process
     
     if (codeReaderRef.current) {
-      // Note: BrowserMultiFormatReader doesn't have reset method
-      // We just stop the camera instead
-      console.log('Code reader stopping');
+      try {
+        // Create a new instance to completely reset the scanner
+        codeReaderRef.current = null;
+        console.log('Code reader cleared');
+      } catch (error) {
+        console.log('Error clearing code reader:', error);
+      }
     }
     
     stopCamera();
@@ -221,6 +257,17 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
     setIsModalOpen(false);
     setScanResult(null);
     setError(null);
+    
+    // Restart scanning after modal closes if scanner is still open
+    if (isOpen && videoRef.current) {
+      console.log('=== RESTARTING SCANNER AFTER MODAL CLOSE ===');
+      // Add delay to ensure state is properly reset and avoid race conditions
+      setTimeout(() => {
+        setIsScanning(true);
+        scanningRef.current = false; // Reset scanning state
+        startScanning();
+      }, 300); // Increased delay for more stability
+    }
   };
 
   console.log('=== RENDER STATE ===');

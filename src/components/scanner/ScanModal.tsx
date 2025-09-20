@@ -13,6 +13,11 @@ interface ScanResult {
   scanned_at?: string;
   scanned_by?: string;
   scan_id?: string;
+  previousScan?: {
+    scanDate: string | Date;
+    scanId: string;
+    scannerName: string;
+  };
 }
 
 interface ScanModalProps {
@@ -70,15 +75,36 @@ const ScanModal: React.FC<ScanModalProps> = ({
               )}
               
               <p className="text-lg font-medium mb-2">
-                {result.success ? 'Barcode/QR Code Valid' : 'Barcode/QR Code Tidak Valid'}
+                {result.success ? 'Barcode/QR Code Valid' : 
+                 result.error === 'duplicate_scan' ? 'QR Code Sudah Pernah Discan' :
+                 'Barcode/QR Code Tidak Valid'}
               </p>
               
               {result.message && (
-                <p className="text-gray-600">{result.message}</p>
+                <p className="text-gray-600 text-sm md:text-base">{result.message}</p>
               )}
               
-              {result.error && (
-                <p className="text-red-600">{result.error}</p>
+              {/* Show previous scan info for duplicate error */}
+              {/* {result.error === 'duplicate_scan' && result.previousScan && (
+                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-left max-w-md mx-auto">
+                  <h4 className="text-sm font-medium text-yellow-800 mb-2">Informasi Scan Sebelumnya:</h4>
+                  <div className="text-xs text-yellow-700 space-y-1">
+                    <p><span className="font-medium">Scanner:</span> {result.previousScan.scannerName}</p>
+                    <p><span className="font-medium">Scan ID:</span> {result.previousScan.scanId}</p>
+                    <p><span className="font-medium">Waktu:</span> {new Date(result.previousScan.scanDate).toLocaleDateString('id-ID', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}</p>
+                  </div>
+                </div>
+              )} */}
+              
+              {result.error && result.error !== 'duplicate_scan' && (
+                <p className="text-red-600 text-sm md:text-base">{result.error}</p>
               )}
             </div>
 
@@ -143,7 +169,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
             )}
 
             {/* Scan Information */}
-            {result.success && (result.scanned_at || result.scanned_by) && (
+            {/* {result.success && (result.scanned_at || result.scanned_by) && (
               <div className="bg-blue-50 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold mb-3 text-blue-900">Informasi Scan</h3>
                 <div className="space-y-2">
@@ -169,7 +195,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
                   )}
                 </div>
               </div>
-            )}
+            )} */}
             
             {/* Extra padding for better scrolling on mobile */}
             <div className="pb-4 md:pb-6"></div>

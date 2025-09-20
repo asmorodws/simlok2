@@ -14,6 +14,9 @@ async function cleanDatabase() {
     await prisma.notification.deleteMany({});
     console.log("   ✓ Semua data notifications dihapus");
     
+    await prisma.qrScan.deleteMany({});
+    console.log("   ✓ Semua data QR scans dihapus");
+    
     await prisma.workerList.deleteMany({});
     console.log("   ✓ Semua data worker list dihapus");
     

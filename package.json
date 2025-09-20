@@ -10,8 +10,8 @@
     "start:server": "NODE_ENV=production node server.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "seed": "tsx prisma/seed.ts",
-    "seed:new": "tsx prisma/new-seed.ts",
+    "seed": "npx prisma migrate reset && tsx prisma/seed.ts",
+    "seed:new": "npx prisma migrate reset && tsx prisma/new-seed.ts",
     "analyze": "cross-env ANALYZE=true next build"
   },
   "prisma": {
