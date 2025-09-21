@@ -625,7 +625,7 @@ export default function NotificationsPanel({
       {/* Modal Detail Submission */}
       {selectedSubmission && (
         <>
-          {session?.user?.role === 'ADMIN' ? (
+          {session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' ? (
             <AdminSubmissionDetailModal
               submission={selectedSubmission}
               isOpen={isDetailModalOpen}

@@ -16,8 +16,10 @@ interface UsersTableProps {
   onEdit: (user: UserData) => void;
   onDelete: (user: UserData) => void;
   onView: (user: UserData) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
   refreshTrigger: number;
+  filterByRole?: Role | null;
+  filterByVerification?: boolean | null;
 }
 
 type SortField = keyof UserData;
@@ -40,7 +42,14 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }: UsersTableProps) {
+export default function UsersTable({ 
+  onEdit, 
+  onDelete, 
+  onView, 
+  refreshTrigger,
+  filterByRole,
+  filterByVerification
+}: UsersTableProps) {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -72,13 +81,36 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
       setLoading(true);
       setError("");
       
+      // Bangun parameter URL untuk API
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: limit.toString(),
-        search: debouncedSearchTerm,
         sortBy: sortField,
         sortOrder: sortOrder,
-        ...(roleFilter && { role: roleFilter }),
+      });
+      
+      // Tambahkan search term jika tidak kosong
+      if (debouncedSearchTerm) {
+        params.append("search", debouncedSearchTerm);
+      }
+      
+      // Tambahkan role filter jika tidak kosong
+      if (roleFilter) {
+        params.append("role", roleFilter);
+      }
+      
+      // Tambahkan verification status filter jika tidak "all"
+      if (verificationFilter !== "all") {
+        params.append("verificationStatus", verificationFilter);
+      }
+
+      console.log("Fetching users with params:", {
+        page: currentPage,
+        limit,
+        search: debouncedSearchTerm,
+        sortBy: sortField,
+        sortOrder,
+        role: roleFilter || "(not set)",
         verificationStatus: verificationFilter
       });
 
@@ -95,6 +127,12 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
       }
 
       const data = await response.json();
+      console.log("API response:", {
+        totalUsers: data.pagination.total,
+        usersCount: data.users.length,
+        firstUser: data.users[0]
+      });
+      
       setUsers(data.users);
       setTotalPages(data.pagination.totalPages);
       setTotalUsers(data.pagination.total);
@@ -111,6 +149,38 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
     fetchUsers();
   }, [fetchUsers, refreshTrigger]);
 
+  // Effect untuk menangani perubahan props filterByVerification dan filterByRole
+  useEffect(() => {
+    console.log("Filter props changed:", { filterByRole, filterByVerification });
+    
+    // Atur filter role dari props
+    if (filterByRole !== undefined && filterByRole !== null) {
+      console.log("Setting role filter to:", filterByRole);
+      setRoleFilter(filterByRole);
+    } else {
+      console.log("Clearing role filter");
+      setRoleFilter("");
+    }
+    
+    // Atur filter verifikasi dari props
+    if (filterByVerification !== undefined && filterByVerification !== null) {
+      // Jika filterByVerification adalah true, set ke "pending"
+      // Jika filterByVerification adalah false, set ke "verified"
+      const newVerificationFilter = filterByVerification === true ? "pending" : "verified";
+      console.log("Setting verification filter to:", newVerificationFilter);
+      setVerificationFilter(newVerificationFilter);
+    } else {
+      console.log("Setting verification filter to all");
+      setVerificationFilter("all");
+    }
+
+    // Reset ke halaman 1 setiap kali filter berubah dari props
+    setCurrentPage(1);
+    
+    // Tidak perlu memanggil fetchUsers() di sini karena perubahan state di atas
+    // akan memicu useEffect yang memantau dependensi fetchUsers
+  }, [filterByRole, filterByVerification]);
+
   // Kembalikan fokus ke search input setelah data reload
   useEffect(() => {
     if (!loading && isInputFocused && searchInputRef.current) {
@@ -118,10 +188,27 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
     }
   }, [loading, isInputFocused]);
 
-  // Reset ke halaman 1 saat search term berubah
-  useEffect(() => {
+  // Reset semua filter dan kembali ke halaman 1
+  const resetFilters = useCallback(() => {
+    setSearchTerm("");
+    setRoleFilter("");
+    setVerificationFilter("all");
     setCurrentPage(1);
-  }, [debouncedSearchTerm, roleFilter, sortField, sortOrder]);
+    setSortField("created_at");
+    setSortOrder("desc");
+  }, []);
+  
+  // Effect untuk memberikan kejelasan UI dengan log
+  useEffect(() => {
+    console.log("Current filter state:", {
+      searchTerm: debouncedSearchTerm,
+      roleFilter,
+      verificationFilter,
+      currentPage,
+      sortField,
+      sortOrder
+    });
+  }, [debouncedSearchTerm, roleFilter, verificationFilter, currentPage, sortField, sortOrder]);
 
   const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
@@ -132,13 +219,14 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
     }
   }, [sortField, sortOrder]);
 
+  // Reset ke halaman 1 saat search term berubah
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, roleFilter, sortField, sortOrder]);
+
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setIsInputFocused(true);
-  }, []);
-
-  const handleRoleFilterChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRoleFilter(e.target.value as Role | "");
   }, []);
 
   const paginationInfo = useMemo(() => ({
@@ -169,10 +257,11 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
   }, []);
 
   const getRoleBadge = useCallback((role: Role) => {
-    const colors = {
+    const colors: Record<Role, string> = {
       [Role.VENDOR]: "bg-green-100 text-green-800",
       [Role.VERIFIER]: "bg-blue-100 text-blue-800",
-      [Role.ADMIN]: "bg-purple-100 text-purple-800"
+      [Role.ADMIN]: "bg-purple-100 text-purple-800",
+      [Role.SUPER_ADMIN]: "bg-red-100 text-red-800"
     };
     
     return (
@@ -380,23 +469,46 @@ export default function UsersTable({ onEdit, onDelete, onView, refreshTrigger }:
         
         <select
           value={roleFilter}
-          onChange={handleRoleFilterChange}
+          onChange={(e) => {
+            console.log("Role dropdown changed to:", e.target.value);
+            const newValue = e.target.value as Role | "";
+            setRoleFilter(newValue);
+            // Reset ke halaman 1 saat filter berubah
+            setCurrentPage(1);
+          }}
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="">Semua Role</option>
           <option value={Role.VENDOR}>Vendor</option>
           <option value={Role.VERIFIER}>Verifier</option>
+          <option value={Role.ADMIN}>Admin</option>
+          <option value={Role.SUPER_ADMIN}>Super Admin</option>
         </select>
 
         <select
           value={verificationFilter}
-          onChange={(e) => setVerificationFilter(e.target.value as "all" | "pending" | "verified")}
+          onChange={(e) => {
+            console.log("Verification dropdown changed to:", e.target.value);
+            const newValue = e.target.value as "all" | "pending" | "verified";
+            setVerificationFilter(newValue);
+            // Reset ke halaman 1 saat filter berubah
+            setCurrentPage(1);
+          }}
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
         >
           <option value="all">Semua Status</option>
           <option value="pending">Belum Verifikasi</option>
           <option value="verified">Sudah Verifikasi</option>
         </select>
+        
+        <Button
+          onClick={resetFilters}
+          variant="outline"
+          size="sm"
+          className="px-3 py-2"
+        >
+          Reset Filter
+        </Button>
       </div>
 
       {/* Tabel dengan loading overlay */}

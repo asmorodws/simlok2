@@ -34,6 +34,10 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
   };
 
   const menu = {
+    SUPER_ADMIN: [
+      { label: "Dashboard", href: "/super-admin", icon: HomeIcon },
+      { label: "User Management", href: "/super-admin/users", icon: UsersIcon },
+    ],
     ADMIN: [
       { label: "Dashboard", href: "/admin", icon: HomeIcon },
       { label: "Users", href: "/admin/users", icon: UsersIcon },

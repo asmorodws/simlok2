@@ -1,0 +1,24 @@
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  if (!session) redirect("/login");
+
+  const { role } = session.user;
+
+  // Redirect to appropriate role-specific dashboard
+  if (role === "SUPER_ADMIN") {
+    redirect("/super-admin");
+  } else if (role === "ADMIN") {
+    redirect("/admin");
+  } else if (role === "VENDOR") {
+    redirect("/vendor");
+  } else if (role === "VERIFIER") {
+    redirect("/verifier");
+  }
+
+  // Fallback
+  redirect("/login");
+}

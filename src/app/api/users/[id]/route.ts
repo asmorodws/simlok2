@@ -8,15 +8,13 @@ import { z } from "zod";
 
 // Schema validasi untuk update user
 const updateUserSchema = z.object({
-  nama_petugas: z.string().min(1, "Nama petugas wajib diisi").optional(),
+  officer_name: z.string().min(1, "Nama petugas wajib diisi").optional(),
   email: z.string().email("Email tidak valid").optional(),
   password: z.string().min(6, "Password minimal 6 karakter").optional(),
-  role: z.nativeEnum(Role).refine((val) => val === Role.VENDOR || val === Role.VERIFIER, {
-    message: "Role harus VENDOR atau VERIFIER"
-  }).optional(),
-  alamat: z.string().optional(),
-  no_telp: z.string().optional(),
-  nama_vendor: z.string().optional(),
+  role: z.nativeEnum(Role).optional(),
+  address: z.string().optional(),
+  phone_number: z.string().optional(),
+  vendor_name: z.string().optional(),
   verified_at: z.string().datetime().optional(),
 });
 
@@ -28,10 +26,10 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah admin
-    if (!session || session.user.role !== Role.ADMIN) {
+    // Cek apakah user adalah super admin
+    if (!session || session.user.role !== Role.SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Akses ditolak. Hanya admin yang dapat mengakses endpoint ini." },
+        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
       );
     }
@@ -39,10 +37,7 @@ export async function GET(
     const resolvedParams = await params;
     const user = await prisma.user.findUnique({
       where: { 
-        id: resolvedParams.id,
-        role: {
-          in: [Role.VENDOR, Role.VERIFIER]
-        }
+        id: resolvedParams.id
       },
       select: {
         id: true,
@@ -77,7 +72,7 @@ export async function GET(
   }
 }
 
-// PUT - Update user
+  // PUT - Update user
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -85,10 +80,10 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah admin
-    if (!session || session.user.role !== Role.ADMIN) {
+    // Cek apakah user adalah super admin
+    if (!session || session.user.role !== Role.SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Akses ditolak. Hanya admin yang dapat mengakses endpoint ini." },
+        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
       );
     }
@@ -107,14 +102,9 @@ export async function PUT(
     // Cek apakah user existe
     const existingUser = await prisma.user.findUnique({
       where: { 
-        id: resolvedParams.id,
-        role: {
-          in: [Role.VENDOR, Role.VERIFIER]
-        }
+        id: resolvedParams.id
       }
-    });
-
-    if (!existingUser) {
+    });    if (!existingUser) {
       return NextResponse.json(
         { error: "User tidak ditemukan" },
         { status: 404 }
@@ -128,9 +118,9 @@ export async function PUT(
       updateData.password = await bcrypt.hash(updateData.password, 10);
     }
 
-    // Handle nama_vendor berdasarkan role
+    // Handle vendor_name berdasarkan role
     if (updateData.role === Role.VERIFIER || updateData.role === Role.ADMIN) {
-      updateData.nama_vendor = null;
+      updateData.vendor_name = null;
     }
 
     // Parse verified_at jika ada
@@ -181,7 +171,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Hapus user
+  // DELETE - Hapus user
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -189,10 +179,10 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah admin
-    if (!session || session.user.role !== Role.ADMIN) {
+    // Cek apakah user adalah super admin
+    if (!session || session.user.role !== Role.SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Akses ditolak. Hanya admin yang dapat mengakses endpoint ini." },
+        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
       );
     }
@@ -202,14 +192,9 @@ export async function DELETE(
     // Cek apakah user existe
     const existingUser = await prisma.user.findUnique({
       where: { 
-        id: resolvedParams.id,
-        role: {
-          in: [Role.VENDOR, Role.VERIFIER]
-        }
+        id: resolvedParams.id
       }
-    });
-
-    if (!existingUser) {
+    });    if (!existingUser) {
       return NextResponse.json(
         { error: "User tidak ditemukan" },
         { status: 404 }

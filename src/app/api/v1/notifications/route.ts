@@ -28,11 +28,11 @@ async function getNotifications(req: NextRequest) {
   if (authError) return authError;
 
   // Validate permissions
-  if (query.scope === 'admin' && session.user.role !== 'ADMIN') {
+  if (query.scope === 'admin' && session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
     return apiError('Access denied', 403);
   }
 
-  if (query.scope === 'vendor' && session.user.role !== 'VENDOR') {
+  if (query.scope === 'vendor' && session.user.role !== 'VENDOR' && session.user.role !== 'SUPER_ADMIN') {
     return apiError('Access denied', 403);
   }
 

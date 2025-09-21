@@ -50,6 +50,18 @@ async function main() {
   
   const users = [
     {
+      officer_name: "Super Admin",
+      email: "superadmin@example.com",
+      password: "superadmin123",
+      role: Role.SUPER_ADMIN,
+      profile_photo: null,
+      address: "Jl. Super Admin No. 1, Jakarta",
+      phone_number: "081234567888",
+      vendor_name: null, // kosong untuk super admin
+      verified_at: new Date(), // super admin sudah terverifikasi
+      verified_by: "SYSTEM",
+    },
+    {
       officer_name: "Admin Utama",
       email: "admin@example.com",
       password: "admin123",
@@ -59,7 +71,7 @@ async function main() {
       phone_number: "081234567890",
       vendor_name: null, // kosong untuk admin
       verified_at: new Date(), // admin sudah terverifikasi
-      verified_by: "SYSTEM",
+      verified_by: "SUPER_ADMIN",
     },
     {
       officer_name: "Verifier Utama",
@@ -71,7 +83,7 @@ async function main() {
       phone_number: "081234567891",
       vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
     },
     {
       officer_name: "Verifier Kedua",
@@ -587,6 +599,7 @@ async function main() {
   
   console.log("\n✅ Seeding selesai dengan sukses!");
   console.log("\n🔑 Login Credentials:");
+  console.log("Super Admin: superadmin@example.com / superadmin123");
   console.log("Admin: admin@example.com / admin123");
   console.log("Verifier 1: verifier@example.com / verifier123");
   console.log("Verifier 2: verifier2@example.com / verifier123");

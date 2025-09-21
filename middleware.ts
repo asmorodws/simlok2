@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const roleHierarchy = {
+  SUPER_ADMIN: 4,
   ADMIN: 3,
   VERIFIER: 2,
   VENDOR: 1,
@@ -13,6 +14,7 @@ type Role = keyof typeof roleHierarchy;
 
 // mapping route prefix -> minimum role
 const protectedRoutes: { prefix: string; minRole: Role }[] = [
+  { prefix: "/super-admin", minRole: "SUPER_ADMIN" },
   { prefix: "/admin", minRole: "ADMIN" },
   { prefix: "/verifier", minRole: "VERIFIER" },
   { prefix: "/vendor", minRole: "VENDOR" },
@@ -60,8 +62,8 @@ export async function middleware(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // Check if user is verified (except for admin)
-  if (userRole !== "ADMIN" && !verified_at) {
+  // Check if user is verified (except for admin and super admin)
+  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN" && !verified_at) {
     console.log('Middleware - User not verified, redirecting to verification-pending');
     const url = req.nextUrl.clone();
     url.pathname = "/verification-pending";
@@ -77,5 +79,5 @@ export async function middleware(req: NextRequest) {
 
 // apply to all routes; tune matcher as needed
 export const config = {
-  matcher: ["/admin/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
+  matcher: ["/super-admin/:path*", "/admin/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
 };

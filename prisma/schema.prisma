@@ -190,6 +190,7 @@ enum Role {
   VENDOR
   VERIFIER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum NotificationScope {

@@ -6,14 +6,11 @@ import { Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-// Schema validasi untuk user
 const userSchema = z.object({
   officer_name: z.string().min(1, "Nama petugas wajib diisi"),
   email: z.string().email("Email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter").optional(),
-  role: z.nativeEnum(Role).refine((val) => val === Role.VENDOR || val === Role.VERIFIER, {
-    message: "Role harus VENDOR atau VERIFIER"
-  }),
+  role: z.nativeEnum(Role),
   address: z.string().optional(),
   phone_number: z.string().optional(),
   vendor_name: z.string().optional(),
@@ -24,14 +21,15 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah admin
-    if (!session || session.user.role !== Role.ADMIN) {
+    // Cek apakah user adalah super admin
+    if (!session || session.user.role !== Role.SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Akses ditolak. Hanya admin yang dapat mengakses endpoint ini." },
+        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
       );
     }
 
+    // Get search params
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -41,27 +39,39 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get("role") || "";
     const verificationStatus = searchParams.get("verificationStatus") || ""; // "pending", "verified", "all"
 
+    console.log("API received params:", { 
+      page, 
+      limit, 
+      search, 
+      sortBy, 
+      sortOrder, 
+      role, 
+      verificationStatus 
+    });
+
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
-      role: {
-        in: [Role.VENDOR, Role.VERIFIER]
-      }
-    };
+    const where: any = {};
 
     // Filter by role if specified
-    if (role && (role === Role.VENDOR || role === Role.VERIFIER)) {
+    if (role && (role === Role.VENDOR || role === Role.VERIFIER || role === Role.ADMIN)) {
       where.role = role;
     }
 
     // Filter by verification status
     if (verificationStatus === "pending") {
       where.verified_at = null;
+      console.log("Filtering for pending verification (verified_at is null)");
     } else if (verificationStatus === "verified") {
       where.verified_at = { not: null };
+      console.log("Filtering for verified users (verified_at is not null)");
+    } else {
+      console.log("No verification filter applied (showing all)");
     }
     // "all" shows both pending and verified
+
+    console.log("Final query where clause:", JSON.stringify(where, null, 2));
 
     // Search functionality
     if (search) {
@@ -123,10 +133,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah admin
-    if (!session || session.user.role !== Role.ADMIN) {
+    // Cek apakah user adalah super admin
+    if (!session || session.user.role !== Role.SUPER_ADMIN) {
       return NextResponse.json(
-        { error: "Akses ditolak. Hanya admin yang dapat mengakses endpoint ini." },
+        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
       );
     }

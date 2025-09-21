@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only ADMIN can access this endpoint
-    if (session.user.role !== 'ADMIN') {
+    // Only ADMIN or SUPER_ADMIN can access this endpoint
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

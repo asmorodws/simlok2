@@ -54,7 +54,7 @@ export default function NotificationsBell() {
     }
 
     try {
-      const scope = session.user.role === 'ADMIN' ? 'admin' : 'vendor';
+      const scope = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
       const params = new URLSearchParams({
         scope,
         limit: '10'

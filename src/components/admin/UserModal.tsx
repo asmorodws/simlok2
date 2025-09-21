@@ -90,7 +90,17 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
     setError("");
 
     try {
-      const submitData: any = { ...formData };
+      // Konversi nama bidang dari format form ke format API
+      const submitData: any = {
+        officer_name: formData.nama_petugas,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+        address: formData.alamat,
+        phone_number: formData.no_telp,
+        vendor_name: formData.nama_vendor,
+        verified_at: formData.verified_at
+      };
       
       // Remove empty password for edit mode
       if (mode === "edit" && !submitData.password) {
@@ -104,10 +114,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
         delete submitData.verified_at;
       }
 
-      // Remove nama_vendor if role is not VENDOR
+      // Remove vendor_name if role is not VENDOR
       if (submitData.role !== Role.VENDOR) {
-        submitData.nama_vendor = "";
+        submitData.vendor_name = "";
       }
+
+      console.log("Mengirim data ke API:", submitData);
 
       const url = mode === "add" ? "/api/users" : `/api/users/${user?.id}`;
       const method = mode === "add" ? "POST" : "PUT";
@@ -266,6 +278,7 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           <option value={Role.VENDOR}>Vendor</option>
                           <option value={Role.VERIFIER}>Verifier</option>
                           <option value={Role.ADMIN}>Admin</option>
+                          <option value={Role.SUPER_ADMIN}>Super Admin</option>
                         </select>
                       </div>
                     </div>
