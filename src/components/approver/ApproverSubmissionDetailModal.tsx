@@ -271,10 +271,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Detail & Approval Pengajuan</h2>
             {submission && (
@@ -294,7 +294,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 flex-shrink-0">
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('details')}
@@ -333,7 +333,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-6">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -446,7 +446,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   {/* Final Status Information */}
                   {submission.final_status !== 'PENDING_APPROVAL' && (
                     <div className="bg-gray-50 rounded-lg p-6">
-                      <h4 className="text-base font-semibold text-gray-900 mb-4">Status Final</h4>
+                      <h4 className="text-base font-semibold text-gray-900 mb-4">Status</h4>
                       <div className="space-y-2">
                         <div className="flex items-center">
                           <span className="text-sm text-gray-600 mr-2">Status:</span>
@@ -862,10 +862,17 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200">
-          <div>
-            {/* Tampilkan tombol PDF jika sudah di-approve dan ada simlok_number */}
-            {submission?.final_status === 'APPROVED' && submission?.simlok_number && (
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 flex-shrink-0 bg-white">
+          <div className="flex items-center space-x-3">
+            {/* Debug info untuk development */}
+            {/* {submission && (
+              <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                Status: {submission.final_status} | SIMLOK: {submission.simlok_number || 'Belum ada'}
+              </div>
+            )} */}
+            
+            {/* Tampilkan tombol PDF - approver bisa lihat di semua status */}
+            {submission && (
               <Button onClick={handleViewPdf} variant="primary" size="sm">
                 <DocumentTextIcon className="w-4 h-4 mr-2" />
                 Lihat PDF SIMLOK

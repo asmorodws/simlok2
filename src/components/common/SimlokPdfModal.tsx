@@ -88,7 +88,13 @@ export default function SimlokPdfModal({
         });
 
         if (!res.ok) {
-          throw new Error(`Gagal memuat PDF (${res.status})`);
+          // Try to get error details from response
+          try {
+            const errorData = await res.json();
+            throw new Error(errorData.error || `Gagal memuat PDF (${res.status})`);
+          } catch (jsonError) {
+            throw new Error(`Gagal memuat PDF (${res.status})`);
+          }
         }
 
         // Gunakan blob -> object URL agar:

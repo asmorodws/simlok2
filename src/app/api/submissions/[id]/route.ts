@@ -118,20 +118,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // Helper function to generate PDF
 async function generatePDF(submission: any) {
   try {
-    // Only allow PDF generation for APPROVED submissions
-    if (submission.approval_status !== 'APPROVED') {
-      return NextResponse.json({ error: 'PDF only available for approved submissions' }, { status: 400 });
+    console.log('PDF Generation Debug:', {
+      submissionId: submission.id,
+      approval_status: submission.approval_status,
+      final_status: submission.final_status,
+      simlok_number: submission.simlok_number,
+      has_simlok_number: !!submission.simlok_number
+    });
+
+    // Allow PDF generation for any submission
+    // If no simlok_number, use a placeholder or generate temporary one
+    let pdfData = { ...submission };
+    
+    if (!submission.simlok_number) {
+      console.log('PDF Generation: Using placeholder simlok_number');
+      // Create a temporary/placeholder SIMLOK number for PDF preview
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      pdfData.simlok_number = `[DRAFT]/XX/${month}/${year}`;
+      pdfData.simlok_date = now;
     }
 
-    // Generate PDF using the template
-    const pdfBytes = await generateSIMLOKPDF(submission as SubmissionPDFData);
+    // Generate PDF using the template with potentially modified data
+    const pdfBytes = await generateSIMLOKPDF(pdfData as SubmissionPDFData);
+
+    // Generate filename based on simlok_number (including placeholder)
+    const filename = pdfData.simlok_number ? 
+      `SIMLOK_${pdfData.simlok_number.replace(/[\[\]/\\]/g, '_')}.pdf` :
+      `SIMLOK_PREVIEW_${submission.id}.pdf`;
 
     // Return PDF response
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="SIMLOK_${submission.simlok_number?.replace(/\//g, '_')}.pdf"`,
+        'Content-Disposition': `inline; filename="${filename}"`,
       },
     });
 

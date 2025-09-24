@@ -178,18 +178,83 @@ class PDFKit {
   fs = 12;
   lineGap = LINE_GAP_DEFAULT;
   leftLabelWidth = LEFT_LABEL_WIDTH_DEFAULT;
+  pageCount = 0;
+  submissionData?: SubmissionPDFData;
 
   async init() {
     this.doc = await PDFDocument.create();
     this.page = this.doc.addPage([A4.w, A4.h]);
     this.font = await this.doc.embedFont(StandardFonts.Helvetica);
     this.bold = await this.doc.embedFont(StandardFonts.HelveticaBold);
+    this.pageCount = 1;
   }
 
-  addPage() {
+  async addPage() {
     this.page = this.doc.addPage([A4.w, A4.h]);
+    this.pageCount++;
     this.x = MARGIN;
-    this.y = A4.h - MARGIN;
+    
+    // Add header to pages 2 and beyond
+    if (this.pageCount > 1 && this.submissionData) {
+      await this.addHeader();
+      this.y = A4.h - 140; // Start content below header
+    } else {
+      this.y = A4.h - MARGIN;
+    }
+  }
+
+  async addHeader() {
+    if (!this.submissionData) return;
+    
+    // Add logo - await untuk memastikan logo ter-load
+    const logoImage = await loadLogo(this.doc);
+    if (logoImage) {
+      const logoWidth = 120;
+      const logoHeight = 40;
+      const logoX = A4.w - logoWidth - 40;
+      const logoY = A4.h - 60;
+      
+      this.page.drawImage(logoImage, {
+        x: logoX,
+        y: logoY,
+        width: logoWidth,
+        height: logoHeight,
+      });
+    }
+    
+    // Add header dengan nomor SIMLOK
+    const simlokNumber = this.submissionData.simlok_number || "[DRAFT]/XX/09/2025";
+    this.text(`Lampiran Simlok No. ${simlokNumber}`, MARGIN, A4.h - 80, {
+      size: 12,
+      bold: true,
+      color: rgb(0, 0, 0),
+    });
+
+    // Add nama vendor di bawah lampiran
+    this.text("Nama petugas ", MARGIN, A4.h - 100, {
+      size: 11,
+      bold: false,
+      color: rgb(0, 0, 0),
+    });
+
+    // Hitung lebar text "Nama petugas " untuk positioning nama vendor
+    const namaPetugasWidth = this.measure("Nama petugas ", { size: 11, bold: false });
+    this.text(this.submissionData.vendor_name, MARGIN + namaPetugasWidth, A4.h - 100, {
+      size: 11,
+      bold: true,
+      color: rgb(0, 0, 0),
+    });
+
+    // // Add separator line
+    // const lineY = A4.h - 120;
+    // const lineStartX = MARGIN;
+    // const lineEndX = A4.w - MARGIN;
+    // this.page.drawLine({
+    //   start: { x: lineStartX, y: lineY },
+    //   end: { x: lineEndX, y: lineY },
+    //   thickness: 0.5,
+    //   color: rgb(0.7, 0.7, 0.7),
+    // });
   }
 
   measure(text: string, opts?: { size?: number; bold?: boolean }) {
@@ -219,7 +284,7 @@ class PDFKit {
     this.text(t, cx, y, o);
   }
 
-  wrap(
+  async wrap(
     t: string,
     x: number,
     maxW: number,
@@ -240,28 +305,28 @@ class PDFKit {
     }
     if (line) lines.push(line);
     for (const ln of lines) {
-      this.pageBreak();
+      await this.pageBreak();
       this.text(ln, x, this.y, { size, bold: o?.bold ?? false });
       this.y -= this.lineGap;
     }
   }
 
-  pageBreak(min = 60) {
-    if (this.y < MARGIN + min) this.addPage();
+  async pageBreak(min = 60) {
+    if (this.y < MARGIN + min) await this.addPage();
   }
 
   /**
    * Baris bernomor dengan label di kiri, titik dua di kolom tengah,
    * dan value yang dibungkus di kolom kanan.
    */
-  numberedRow(
+  async numberedRow(
     no: number,
     label: string,
     rawValue?: string | null,
     opts?: { valueBold?: boolean }
   ) {
     const value = (rawValue ?? "").toString();
-    this.pageBreak();
+    await this.pageBreak();
 
     // Label kiri (bold)
     const left = `${no}. ${label}`;
@@ -274,7 +339,7 @@ class PDFKit {
     // Value di kolom kanan (wrap)
     const rightX = this.x + this.leftLabelWidth + 4;
     const rightW = A4.w - MARGIN - rightX;
-    this.wrap(normalizeInline(value) || "-", rightX, rightW, {
+    await this.wrap(normalizeInline(value) || "-", rightX, rightW, {
       bold: !!opts?.valueBold,
     });
   }
@@ -283,6 +348,9 @@ class PDFKit {
 export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Promise<Uint8Array> {
   const k = new PDFKit();
   await k.init();
+  
+  // Store submission data for header generation
+  k.submissionData = submissionData;
   
   const { page } = k;
   const { width, height } = page.getSize();
@@ -359,22 +427,22 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   // Move to content area and add numbered items
   k.y = height - 190;
 
-  k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
+  await k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
   // Format berdasarkan (SIMJA info)
   const berdasarkan = s.simja_number
     ? `${normalizeInline(s.simja_number)} Tgl. ${fmtDateID(s.simja_date)}`
     : "";
   
-  k.numberedRow(2, "Berdasarkan", berdasarkan);
-  k.numberedRow(3, "Pekerjaan", s.job_description);
-  k.numberedRow(4, "Lokasi Kerja", s.work_location);
-  k.numberedRow(5, "Pelaksanaan", normalizeInline(s.implementation || ""));
-  k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
+  await k.numberedRow(2, "Berdasarkan", berdasarkan);
+  await k.numberedRow(3, "Pekerjaan", s.job_description);
+  await k.numberedRow(4, "Lokasi Kerja", s.work_location);
+  await k.numberedRow(5, "Pelaksanaan", normalizeInline(s.implementation || ""));
+  await k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
   
   // Special handling for "Lain-lain" to show as bulleted list
   if (s.other_notes && s.other_notes.trim().length > 0) {
-    k.pageBreak();
+    await k.pageBreak();
     
     // Label kiri (bold)
     const left = "7. Lain-lain";
@@ -389,32 +457,33 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 const rightX = k.x + k.leftLabelWidth + 4;
 const rightW = A4.w - MARGIN - rightX;
 
-lines.forEach((line: string, idx: number) => {
+for (let idx = 0; idx < lines.length; idx++) {
+  const line = lines[idx];
   const isFirst = idx === 0;
   const isLast  = idx === lines.length - 2;
 
   if (isFirst) {
-    k.wrap(` ${line}`, rightX, rightW);
+    await k.wrap(` ${line}`, rightX, rightW);
   } else {
     // newline (spasi vertikal) sebelum baris terakhir
     if (isLast) k.y -= k.lineGap;
 
-    k.pageBreak();
-    k.wrap(` ${line}`, rightX, rightW);
+    await k.pageBreak();
+    await k.wrap(` ${line}`, rightX, rightW);
   }
-});
+}
 
   } else {
-    k.numberedRow(7, "Lain-lain", "");
+    await k.numberedRow(7, "Lain-lain", "");
   }
   
-  k.numberedRow(8, "Sarana Kerja", s.work_facilities);
+  await k.numberedRow(8, "Sarana Kerja", s.work_facilities);
 
   // Add content paragraph if available
   k.y -= 10;
   if (s.content && s.content.trim().length > 0) {
-    k.pageBreak();
-    k.wrap(normalizeInline(s.content), 50, A4.w - 2 * MARGIN);
+    await k.pageBreak();
+    await k.wrap(normalizeInline(s.content), 50, A4.w - 2 * MARGIN);
     k.y -= 10;
   }
 
@@ -483,7 +552,7 @@ lines.forEach((line: string, idx: number) => {
         console.log(`  Preview: ${worker.worker_photo.substring(0, 50)}...`);
       }
     });
-    await addWorkerPhotosPage(k, workerData, s);
+    await addWorkerPhotosPage(k, workerData);
   } else {
     console.log('No worker data found');
   }
@@ -685,32 +754,15 @@ async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): 
  */
 async function addWorkerPhotosPage(
   k: PDFKit, 
-  workerList: Array<{ worker_name: string; worker_photo?: string | null }>,
-  submissionData: SubmissionPDFData
+  workerList: Array<{ worker_name: string; worker_photo?: string | null }>
 ) {
   // Only proceed if there are workers
   if (!workerList || workerList.length === 0) {
     return;
   }
 
-  // Add new page
-  k.addPage();
-  
-  // Load and add logo to the second page as well
-  const logoImage = await loadLogo(k.doc);
-  if (logoImage) {
-    const logoWidth = 120;
-    const logoHeight = 40;
-    const logoX = A4.w - logoWidth - 40; // 40 pixels from right edge
-    const logoY = A4.h - 60; // 60 pixels from top
-    
-    k.page.drawImage(logoImage, {
-      x: logoX,
-      y: logoY,
-      width: logoWidth,
-      height: logoHeight,
-    });
-  }
+  // Add new page - header akan otomatis ditambahkan
+  await k.addPage();
   
   // // Add header
   // k.center("DAFTAR PEKERJA", A4.h - 100, {
@@ -731,40 +783,27 @@ async function addWorkerPhotosPage(
   //   color: rgb(0, 0, 0),
   // });
   
-  // Add header dengan nomor SIMLOK
-  const simlokNumber = submissionData.simlok_number || "-";
-  k.text(`Lampiran Simlok No. ${simlokNumber}`, MARGIN, A4.h - 100, {
-    size: 16,
-    bold: true,
-    color: rgb(0, 0, 0),
-  });
-
-  // Add nama vendor di bawah lampiran
-  k.text("Nama petugas ", MARGIN, A4.h - 130, {
-    size: 12,
-    bold: false,
-    color: rgb(0, 0, 0),
-  });
-
-  // Hitung lebar text "Nama petugas " untuk positioning nama vendor
-  const namaPetugasWidth = k.measure("Nama petugas ", { size: 12, bold: false });
-  k.text(submissionData.vendor_name, MARGIN + namaPetugasWidth, A4.h - 130, {
-    size: 12,
-    bold: true,
-    color: rgb(0, 0, 0),
-  });
+  // Header akan otomatis ditambahkan oleh k.addPage() karena ini halaman kedua
 
 
-  // Calculate grid layout
+  // Calculate grid layout optimized for 3x3 photos
   const photosPerRow = 3;
-  const photoWidth = 120;
-  const photoHeight = 160;
+  const photoWidth = 130;  // Optimized for better fit
+  const photoHeight = 170; // Optimized for better fit
   const marginHorizontal = (A4.w - (photosPerRow * photoWidth)) / (photosPerRow + 1);
-  const marginVertical = 30;
+  const marginVertical = 12; // Reduced vertical margin
+  const nameSpacing = 20; // Space for worker name below photo
   
   let currentRow = 0;
   let currentCol = 0;
-  const startY = A4.h - 160; // Adjusted to make room for vendor name
+  const startY = A4.h - 140; // Optimized start position to fit header
+
+  console.log(`=== WORKER LAYOUT DEBUG ===`);
+  console.log(`Total workers: ${workerList.length}`);
+  console.log(`Photos per row: ${photosPerRow}`);
+  console.log(`Photo dimensions: ${photoWidth}x${photoHeight}`);
+  console.log(`Margins - H: ${marginHorizontal}, V: ${marginVertical}`);
+  console.log(`Start Y: ${startY}`);
 
   // Process each worker
   for (let i = 0; i < workerList.length; i++) {
@@ -773,31 +812,29 @@ async function addWorkerPhotosPage(
     
     // Calculate position
     const x = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
-    const y = startY - (currentRow * (photoHeight + marginVertical + 40)); // 40 extra for name
+    const y = startY - (currentRow * (photoHeight + marginVertical + nameSpacing)); // Use nameSpacing constant
 
-    // Check if we need a new page
-    if (y - photoHeight < MARGIN + 60) {
-      k.addPage();
-      
-      // Add logo to the new page
-      const logoImage = await loadLogo(k.doc);
-      if (logoImage) {
-        const logoWidth = 120;
-        const logoHeight = 40;
-        const logoX = A4.w - logoWidth - 40; // 40 pixels from right edge
-        const logoY = A4.h - 60; // 60 pixels from top
-        
-        k.page.drawImage(logoImage, {
-          x: logoX,
-          y: logoY,
-          width: logoWidth,
-          height: logoHeight,
-        });
-      }
+    console.log(`Worker ${i+1} (${worker.worker_name}): Row ${currentRow}, Col ${currentCol}, Position (${Math.round(x)}, ${Math.round(y)})`);
+
+    // Check if we need a new page (optimized for 3x3 grid)
+    const bottomY = y - photoHeight;
+    const pageLimit = MARGIN + 30;
+    console.log(`  Bottom Y: ${Math.round(bottomY)}, Page limit: ${pageLimit}, Need new page: ${bottomY < pageLimit}`);
+    
+    // Check if we need a new page - either by space limit or by 3x3 grid limit (max 9 per page)
+    const workersOnCurrentPage = (currentRow * photosPerRow) + currentCol;
+    const needNewPageBySpace = bottomY < pageLimit;
+    const needNewPageByGrid = workersOnCurrentPage >= 9; // 3x3 = 9 workers max per page
+    
+    console.log(`  Workers on page: ${workersOnCurrentPage}, Need new page by grid: ${needNewPageByGrid}`);
+    
+    if (needNewPageBySpace || needNewPageByGrid) {
+      console.log(`  Adding new page for worker ${i+1}`);
+      await k.addPage(); // Header akan otomatis ditambahkan oleh addPage()
       
       currentRow = 0;
       currentCol = 0;
-      const newY = startY - (currentRow * (photoHeight + marginVertical + 40));
+      const newY = startY - (currentRow * (photoHeight + marginVertical + nameSpacing));
       // Recalculate x for new page
       const newX = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
       
@@ -879,14 +916,14 @@ async function drawWorkerCard(
       console.log('Photo not loaded for:', worker.worker_name);
       // Draw placeholder text if photo couldn't be loaded
       page.drawText("Foto tidak", { 
-        x: x + 35, 
+        x: x + photoWidth/2 - 25, 
         y: y - photoHeight/2 + 10, 
         size: 10, 
         font: font,
         color: rgb(0.6, 0.6, 0.6) 
       });
       page.drawText("tersedia", { 
-        x: x + 35, 
+        x: x + photoWidth/2 - 20, 
         y: y - photoHeight/2 - 5, 
         size: 10, 
         font: font,
@@ -897,14 +934,14 @@ async function drawWorkerCard(
     console.log('Worker has no photo:', worker.worker_name);
     // Draw placeholder for no photo
     page.drawText("Tidak ada", { 
-      x: x + 35, 
+      x: x + photoWidth/2 - 25, 
       y: y - photoHeight/2 + 10, 
       size: 10, 
       font: font,
       color: rgb(0.6, 0.6, 0.6) 
     });
     page.drawText("foto", { 
-      x: x + 45, 
+      x: x + photoWidth/2 - 10, 
       y: y - photoHeight/2 - 5, 
       size: 10, 
       font: font,
@@ -912,15 +949,26 @@ async function drawWorkerCard(
     });
   }
 
-  // Draw worker name below photo
-  const nameY = y - photoHeight - 15;
-  const textWidth = boldFont.widthOfTextAtSize(worker.worker_name, 10);
+  // Draw worker name below photo with reduced spacing
+  const nameY = y - photoHeight - 15; // Reduced from 15 to 8
+  const maxNameWidth = photoWidth - 4; // Leave 2px margin on each side
+  let displayName = worker.worker_name;
+  let textWidth = boldFont.widthOfTextAtSize(displayName, 9);
+  
+  // Truncate name if too long to fit in photo width
+  if (textWidth > maxNameWidth) {
+    while (textWidth > maxNameWidth && displayName.length > 0) {
+      displayName = displayName.substring(0, displayName.length - 4) + '...';
+      textWidth = boldFont.widthOfTextAtSize(displayName, 9);
+    }
+  }
+  
   const nameX = x + (photoWidth - textWidth) / 2; // Center the name
   
-  page.drawText(worker.worker_name, { 
+  page.drawText(displayName, { 
     x: nameX, 
     y: nameY, 
-    size: 10, 
+    size: 9, // Reduced font size from 10 to 9
     font: boldFont,
     color: rgb(0, 0, 0)
   });

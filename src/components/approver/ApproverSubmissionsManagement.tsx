@@ -300,7 +300,7 @@ export default function ApproverSubmissionsManagement() {
       case 'MEETS_REQUIREMENTS':
         return <Badge variant="success">Memenuhi Syarat</Badge>;
       case 'NOT_MEETS_REQUIREMENTS':
-        return <Badge variant="warning">Tidak Memenuhi Syarat</Badge>;
+        return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
     }
@@ -466,7 +466,7 @@ export default function ApproverSubmissionsManagement() {
                   Status Review
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status Final
+                  Status
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reviewer
@@ -491,11 +491,7 @@ export default function ApproverSubmissionsManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <UserGroupIcon className="h-5 w-5 text-blue-600" />
-                        </div>
-                      </div>
+                      
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {submission.vendor_name}

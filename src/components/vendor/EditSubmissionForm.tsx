@@ -701,7 +701,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                               alt={`Foto ${worker.nama_pekerja || 'pekerja'}`}
                               className="w-full h-50 object-cover rounded-lg border-2 border-gray-300"
                             />
-                            <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
                               <Button
                                 type="button"
                                 variant="outline"

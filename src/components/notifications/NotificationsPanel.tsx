@@ -14,6 +14,8 @@ import {
 import Button from '../ui/button/Button';
 import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
+import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from '../reviewer/ReviewerSubmissionDetailModal';
 import UserVerificationModal from '../admin/UserVerificationModal';
 import { UserData } from '@/types/user';
 import { useToast } from '@/hooks/useToast';
@@ -57,6 +59,7 @@ export default function NotificationsPanel({
   }
   
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   // State for vendor verification modal
@@ -124,8 +127,18 @@ export default function NotificationsPanel({
 
       console.log('Fetching submission details for ID:', submissionId);
 
+      // Determine API endpoint based on user role
+      let apiEndpoint = `/api/submissions/${submissionId}`;
+      if (session?.user?.role === 'APPROVER') {
+        apiEndpoint = `/api/approver/simloks/${submissionId}`;
+      } else if (session?.user?.role === 'REVIEWER') {
+        apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
+      } else if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
+        apiEndpoint = `/api/admin/submissions/${submissionId}`;
+      }
+
       // Fetch detail submission
-      const response = await fetch(`/api/submissions/${submissionId}`);
+      const response = await fetch(apiEndpoint);
       
       if (response.status === 404) {
         // Submission tidak ditemukan (mungkin sudah dihapus)
@@ -147,10 +160,14 @@ export default function NotificationsPanel({
         throw new Error(`Failed to fetch submission details: ${response.status}`);
       }
 
-      const submissionData = await response.json();
-      console.log('Submission data fetched:', submissionData);
+      const responseData = await response.json();
+      console.log('Submission data fetched:', responseData);
+      
+      // Handle different response structures based on role
+      const submissionData = responseData.submission || responseData;
       
       setSelectedSubmission(submissionData);
+      setSelectedSubmissionId(submissionId);
       setIsDetailModalOpen(true);
 
       // Mark notification as read
@@ -270,6 +287,7 @@ export default function NotificationsPanel({
   const handleCloseDetailModal = () => {
     setIsDetailModalOpen(false);
     setSelectedSubmission(null);
+    setSelectedSubmissionId(null);
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -623,9 +641,33 @@ export default function NotificationsPanel({
       </div>
 
       {/* Modal Detail Submission */}
-      {selectedSubmission && (
+      {selectedSubmission && selectedSubmissionId && (
         <>
-          {session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN' ? (
+          {session?.user?.role === 'APPROVER' && (
+            <ApproverSubmissionDetailModal
+              isOpen={isDetailModalOpen}
+              onClose={handleCloseDetailModal}
+              submissionId={selectedSubmissionId}
+              onApprovalSubmitted={() => {
+                // Refresh or handle approval completion
+                handleCloseDetailModal();
+              }}
+            />
+          )}
+          
+          {session?.user?.role === 'REVIEWER' && (
+            <ReviewerSubmissionDetailModal
+              isOpen={isDetailModalOpen}
+              onClose={handleCloseDetailModal}
+              submissionId={selectedSubmissionId}
+              onReviewSubmitted={() => {
+                // Refresh or handle review completion
+                handleCloseDetailModal();
+              }}
+            />
+          )}
+          
+          {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
             <AdminSubmissionDetailModal
               submission={selectedSubmission}
               isOpen={isDetailModalOpen}
@@ -634,7 +676,9 @@ export default function NotificationsPanel({
                 setSelectedSubmission(updatedSubmission);
               }}
             />
-          ) : (
+          )}
+          
+          {session?.user?.role === 'VENDOR' && (
             <SubmissionDetailModal
               submission={selectedSubmission}
               isOpen={isDetailModalOpen}
