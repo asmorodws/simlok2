@@ -33,6 +33,7 @@ interface Submission {
   working_hours: string;
   other_notes?: string | null;
   work_facilities: string;
+  worker_count?: number | null;
   simja_number?: string | null;
   simja_date?: Date | null;
   sika_number?: string | null;
@@ -117,6 +118,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     jam_kerja: '',
     lain_lain: '',
     sarana_kerja: '',
+    jumlah_pekerja: 0,
     nomor_simja: '',
     tanggal_simja: '',
     nomor_sika: '',
@@ -140,6 +142,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         jam_kerja: submission.working_hours || '',
         lain_lain: submission.other_notes || '',
         sarana_kerja: submission.work_facilities || '',
+        jumlah_pekerja: submission.worker_count || 0,
         nomor_simja: submission.simja_number || '',
         tanggal_simja: submission.simja_date ? (() => {
           const date = new Date(submission.simja_date);
@@ -184,10 +187,10 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value
     }));
   };
 
@@ -263,7 +266,8 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     ];
 
     for (const field of requiredFields) {
-      if (!formData[field as keyof typeof formData] || formData[field as keyof typeof formData].trim() === '') {
+      const value = formData[field as keyof typeof formData];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
         setAlert({
           variant: 'error',
           title: 'Error!',
@@ -314,6 +318,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         working_hours: formData.jam_kerja,
         other_notes: formData.lain_lain,
         work_facilities: formData.sarana_kerja,
+        worker_count: formData.jumlah_pekerja,
         simja_number: formData.nomor_simja,
         simja_date: formData.tanggal_simja ? new Date(formData.tanggal_simja) : null,
         sika_number: formData.nomor_sika,
@@ -614,6 +619,37 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                     placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
                     required
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="jumlah_pekerja">Jumlah Pekerja</Label>
+                  <Input
+                    id="jumlah_pekerja"
+                    name="jumlah_pekerja"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.jumlah_pekerja || ''}
+                    onChange={handleChange}
+                    placeholder="Masukkan jumlah pekerja"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Jumlah total pekerja yang akan bekerja di lokasi ini
+                  </p>
+                </div>
+
+                <div className="flex items-end">
+                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg w-full">
+                    <div className="font-medium mb-1">Info:</div>
+                    <div>Pekerja yang diinput: {workers.length}</div>
+                    <div>Jumlah pekerja: {formData.jumlah_pekerja || 0}</div>
+                    {formData.jumlah_pekerja && workers.length !== Number(formData.jumlah_pekerja) && (
+                      <div className="text-orange-600 mt-1">
+                        ⚠️ Jumlah tidak sesuai dengan daftar pekerja
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

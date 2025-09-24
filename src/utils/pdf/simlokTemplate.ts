@@ -483,7 +483,7 @@ lines.forEach((line: string, idx: number) => {
         console.log(`  Preview: ${worker.worker_photo.substring(0, 50)}...`);
       }
     });
-    await addWorkerPhotosPage(k, workerData);
+    await addWorkerPhotosPage(k, workerData, s);
   } else {
     console.log('No worker data found');
   }
@@ -685,7 +685,8 @@ async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): 
  */
 async function addWorkerPhotosPage(
   k: PDFKit, 
-  workerList: Array<{ worker_name: string; worker_photo?: string | null }>
+  workerList: Array<{ worker_name: string; worker_photo?: string | null }>,
+  submissionData: SubmissionPDFData
 ) {
   // Only proceed if there are workers
   if (!workerList || workerList.length === 0) {
@@ -730,9 +731,25 @@ async function addWorkerPhotosPage(
   //   color: rgb(0, 0, 0),
   // });
   
-  // Add header
-  k.text("Lampiran", MARGIN, A4.h - 100, {
+  // Add header dengan nomor SIMLOK
+  const simlokNumber = submissionData.simlok_number || "-";
+  k.text(`Lampiran Simlok No. ${simlokNumber}`, MARGIN, A4.h - 100, {
     size: 16,
+    bold: true,
+    color: rgb(0, 0, 0),
+  });
+
+  // Add nama vendor di bawah lampiran
+  k.text("Nama petugas ", MARGIN, A4.h - 130, {
+    size: 12,
+    bold: false,
+    color: rgb(0, 0, 0),
+  });
+
+  // Hitung lebar text "Nama petugas " untuk positioning nama vendor
+  const namaPetugasWidth = k.measure("Nama petugas ", { size: 12, bold: false });
+  k.text(submissionData.vendor_name, MARGIN + namaPetugasWidth, A4.h - 130, {
+    size: 12,
     bold: true,
     color: rgb(0, 0, 0),
   });
@@ -747,7 +764,7 @@ async function addWorkerPhotosPage(
   
   let currentRow = 0;
   let currentCol = 0;
-  const startY = A4.h - 130;
+  const startY = A4.h - 160; // Adjusted to make room for vendor name
 
   // Process each worker
   for (let i = 0; i < workerList.length; i++) {

@@ -14,6 +14,7 @@ import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import DatePicker from '@/components/form/DatePicker';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 
 interface WorkerPhoto {
   id: string;
@@ -33,10 +34,13 @@ interface SubmissionDetail {
   working_hours: string;
   other_notes: string;
   work_facilities: string;
+  worker_count: number | null;
   simja_number: string;
   simja_date: string | null;
   sika_number: string;
   sika_date: string | null;
+  simlok_number: string | null;
+  simlok_date: string | null;
   implementation_start_date: string | null;
   implementation_end_date: string | null;
   worker_names: string;
@@ -88,7 +92,12 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workers' | 'review'>('details');
   const [isEditing, setIsEditing] = useState(false);
-  const [deletingWorker, setDeletingWorker] = useState<string | null>(null);
+  const [isEditingWorkers, setIsEditingWorkers] = useState(false);
+  const [hasWorkerChanges, setHasWorkerChanges] = useState(false);
+  const [workersToDelete, setWorkersToDelete] = useState<string[]>([]);
+  const [originalWorkerList, setOriginalWorkerList] = useState<WorkerPhoto[]>([]);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  // Removed unused deletingWorker state since we now use deferred deletion
   const { showSuccess, showError } = useToast();
 
   // Form state for editing
@@ -101,6 +110,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     working_hours: '',
     other_notes: '',
     work_facilities: '',
+    worker_count: 0,
     simja_number: '',
     simja_date: '',
     sika_number: '',
@@ -149,6 +159,25 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       const data = await response.json();
       setSubmission(data.submission);
       
+      // Save original worker list for cancel functionality only if not in edit mode
+      if (!isEditingWorkers) {
+        setOriginalWorkerList(data.submission.worker_list || []);
+      }
+      
+      // Debug log untuk melihat data submission
+      console.log('Submission data received:', data.submission);
+      console.log('Worker list:', data.submission.worker_list);
+      if (data.submission.worker_list) {
+        data.submission.worker_list.forEach((worker: WorkerPhoto, index: number) => {
+          console.log(`Worker ${index + 1}:`, {
+            name: worker.worker_name,
+            photo: worker.worker_photo,
+            hasPhoto: !!worker.worker_photo,
+            photoLength: worker.worker_photo ? worker.worker_photo.length : 0
+          });
+        });
+      }
+      
       // Initialize form data
       const sub = data.submission;
       setFormData({
@@ -160,6 +189,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         working_hours: sub.working_hours || '',
         other_notes: sub.other_notes || '',
         work_facilities: sub.work_facilities || '',
+        worker_count: sub.worker_count || 0,
         simja_number: sub.simja_number || '',
         simja_date: (sub.simja_date ? new Date(sub.simja_date).toISOString().split('T')[0] : '') as string,
         sika_number: sub.sika_number || '',
@@ -234,6 +264,18 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   }, [isOpen, submissionId]);
 
+  // Reset editing modes when modal closes or tab changes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsEditing(false);
+      setIsEditingWorkers(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setIsEditingWorkers(false);
+  }, [activeTab]);
+
   // Template pelaksanaan
   useEffect(() => {
     if (templateFields.tanggal_dari && templateFields.tanggal_sampai) {
@@ -289,6 +331,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   }, [approvalForm.tanggal_simlok, submission?.simja_number, submission?.simja_date, submission?.sika_number, submission?.sika_date, submission?.signer_position, approvalForm.jabatan_signer]);
 
+  const handleViewPdf = () => {
+    setIsPdfModalOpen(true);
+  };
+
   const handleSaveChanges = async () => {
     try {
       setSaving(true);
@@ -333,7 +379,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   };
 
-  const handleSubmitReview = async () => {
+  // Combined handler untuk review dan save approval template
+  const handleSubmitReviewAndSave = async () => {
     if (!reviewData.review_status) {
       showError('Error', 'Pilih status review terlebih dahulu');
       return;
@@ -347,7 +394,32 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/reviewer/simloks/${submissionId}/review`, {
+      // 1. Save approval template data first
+      const requestBody = {
+        ...formData,
+        other_notes: approvalForm.keterangan,
+        content: approvalForm.content,
+        signer_position: approvalForm.jabatan_signer,
+        signer_name: approvalForm.nama_signer,
+        implementation: approvalForm.pelaksanaan,
+        ...(templateFields.tanggal_dari && { implementation_start_date: templateFields.tanggal_dari }),
+        ...(templateFields.tanggal_sampai && { implementation_end_date: templateFields.tanggal_sampai }),
+      };
+
+      const saveResponse = await fetch(`/api/reviewer/simloks/${submissionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error('Gagal menyimpan template approval');
+      }
+
+      // 2. Submit review
+      const reviewResponse = await fetch(`/api/reviewer/simloks/${submissionId}/review`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -355,58 +427,132 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         body: JSON.stringify(reviewData),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!reviewResponse.ok) {
+        const errorData = await reviewResponse.json();
         throw new Error(errorData.error || 'Failed to submit review');
       }
 
-      const data = await response.json();
+      const data = await reviewResponse.json();
       setSubmission(data.submission);
-      showSuccess('Berhasil', 'Review berhasil dikirim');
+      showSuccess('Berhasil', 'Review berhasil dikirim dan template approval tersimpan');
       onReviewSubmitted();
       
     } catch (err: any) {
-      console.error('Error submitting review:', err);
+      console.error('Error submitting review and saving template:', err);
       showError('Error', err.message || 'Gagal mengirim review');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteWorker = async (workerId: string) => {
+  const handleDeleteWorker = (workerId: string) => {
     if (!submission || !window.confirm('Apakah Anda yakin ingin menghapus foto pekerja ini?')) {
       return;
     }
 
-    try {
-      setDeletingWorker(workerId);
+    // Remove the worker from the local state only
+    setSubmission(prevSubmission => {
+      if (!prevSubmission) return null;
+      return {
+        ...prevSubmission,
+        worker_list: prevSubmission.worker_list.filter(worker => worker.id !== workerId)
+      };
+    });
 
-      const response = await fetch(`/api/reviewer/simloks/${submissionId}/workers/${workerId}`, {
-        method: 'DELETE',
-      });
+    // Add to deletion list
+    setWorkersToDelete(prev => [...prev, workerId]);
+    
+    // Mark that there are changes
+    setHasWorkerChanges(true);
+    
+    showSuccess('Berhasil', 'Foto pekerja akan dihapus setelah menyimpan perubahan');
+  };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete worker photo');
+  const deleteWorkersFromDatabase = async () => {
+    if (workersToDelete.length === 0) return;
+
+    for (const workerId of workersToDelete) {
+      try {
+        const response = await fetch(`/api/reviewer/simloks/${submissionId}/workers/${workerId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to delete worker photo');
+        }
+      } catch (err) {
+        console.error('Error deleting worker:', err);
+        throw err;
       }
+    }
+  };
 
-      // Remove the worker from the local state
-      setSubmission(prevSubmission => {
-        if (!prevSubmission) return null;
-        return {
-          ...prevSubmission,
-          worker_list: prevSubmission.worker_list.filter(worker => worker.id !== workerId)
-        };
-      });
+  const handleSaveWorkerChanges = async () => {
+    if (!hasWorkerChanges && workersToDelete.length === 0) {
+      setIsEditingWorkers(false);
+      return;
+    }
 
-      showSuccess('Berhasil', 'Foto pekerja berhasil dihapus');
+    try {
+      setSaving(true);
+      
+      // Delete workers from database first
+      await deleteWorkersFromDatabase();
+      
+      // Call the regular save changes function for other worker data updates
+      if (hasWorkerChanges) {
+        await handleSaveChanges();
+      }
+      
+      // Reset states
+      setHasWorkerChanges(false);
+      setIsEditingWorkers(false);
+      setWorkersToDelete([]);
+      setOriginalWorkerList([]);
       
     } catch (err: any) {
-      console.error('Error deleting worker:', err);
-      showError('Error', err.message || 'Gagal menghapus foto pekerja');
+      console.error('Error saving worker changes:', err);
+      showError('Error', err.message || 'Gagal menyimpan perubahan data pekerja');
     } finally {
-      setDeletingWorker(null);
+      setSaving(false);
     }
+  };
+
+  const handleCancelWorkerEdit = () => {
+    if (hasWorkerChanges || workersToDelete.length > 0) {
+      const confirmed = window.confirm('Ada perubahan yang belum disimpan. Apakah Anda yakin ingin membatalkan?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    
+    // Restore original worker list if we have it
+    if (originalWorkerList.length > 0 && submission) {
+      setSubmission(prev => {
+        if (prev) {
+          return {
+            ...prev,
+            worker_list: [...originalWorkerList]
+          };
+        }
+        return prev;
+      });
+    }
+    
+    // Reset all states
+    setIsEditingWorkers(false);
+    setHasWorkerChanges(false);
+    setWorkersToDelete([]);
+    setOriginalWorkerList([]);
+  };
+
+  const handleEditWorkerMode = () => {
+    // Save original worker list for cancel functionality
+    if (submission?.worker_list) {
+      setOriginalWorkerList([...submission.worker_list]);
+    }
+    setIsEditingWorkers(true);
   };
 
   const canEdit = submission && submission.final_status === 'PENDING_APPROVAL';
@@ -626,7 +772,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           <p className="text-gray-900 py-2 whitespace-pre-line">{submission.job_description}</p>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Lokasi Kerja <span className="text-red-500">*</span>
@@ -657,6 +803,24 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             />
                           ) : (
                             <p className="text-gray-900 py-2">{submission.working_hours}</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jumlah Pekerja
+                          </label>
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={formData.worker_count || ''}
+                              onChange={(e) => setFormData({ ...formData, worker_count: parseInt(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Jumlah pekerja"
+                            />
+                          ) : (
+                            <p className="text-gray-900 py-2">{submission.worker_count || 0} orang</p>
                           )}
                         </div>
                       </div>
@@ -776,82 +940,6 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       </div>
                     </div>
                   </div>
-
-                  {/* Daftar Pekerja */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-base font-semibold text-gray-900">Data Pekerja</h4>
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        {submission.worker_list.length} foto
-                      </span>
-                    </div>
-
-                    {/* Display worker photos with names */}
-                    {submission.worker_list.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {submission.worker_list.map((worker) => (
-                            <div
-                              key={worker.id}
-                              className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm relative group"
-                            >
-                              {/* Photo Section */}
-                              <div className="relative p-3">
-                                <img
-                                  src={worker.worker_photo}
-                                  alt={`Foto ${worker.worker_name}`}
-                                  className="w-full h-32 rounded-lg object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgODBDMTA4LjI4NCA4MCA5Ni41NjggODggOTYuNTY4IDEwMEM5Ni41NjggMTEyIDEwOC4yODQgMTIwIDEwMCAxMjBDOTEuNzE2IDEyMCA4My40MzIgMTEyIDgzLjQzMiAxMDBDODMuNDMyIDg4IDkxLjcxNiA4MCA5Ni41NjggODBIMTAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTQwIDEzNkMxNDAgMTI2LjMyIDEzMi4wOTEgMTE4IDEyMiAxMThaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=';
-                                  }}
-                                />
-                                
-                                {/* Delete Button - Only show if can edit and not already being deleted */}
-                                {canEdit && (
-                                  <button
-                                    onClick={() => handleDeleteWorker(worker.id)}
-                                    disabled={deletingWorker === worker.id}
-                                    className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                                    title="Hapus foto pekerja"
-                                  >
-                                    {deletingWorker === worker.id ? (
-                                      <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin"></div>
-                                    ) : (
-                                      <TrashIcon className="w-3 h-3" />
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Name Section */}
-                              <div className="px-3 pb-3">
-                                <div className="text-center">
-                                  <p className="text-sm font-medium text-gray-900 truncate">
-                                    {worker.worker_name}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Upload: {new Date(worker.created_at).toLocaleDateString('id-ID', {
-                                      day: '2-digit',
-                                      month: 'short'
-                                    })}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                        <h3 className="text-sm font-medium text-gray-900 mb-1">Belum ada foto pekerja</h3>
-                        <p className="text-xs text-gray-500">
-                          Foto pekerja akan ditampilkan setelah vendor mengupload
-                        </p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               )}
 
@@ -862,11 +950,168 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <h3 className="text-lg font-medium text-gray-900">Data Pekerja</h3>
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        {submission.worker_list.length} orang
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          {submission.worker_count || 0} total
+                        </span>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          {submission.worker_list.length} foto
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Edit/Cancel Buttons */}
+                    {canEdit && (
+                      <div className="flex items-center space-x-2">
+                        {!isEditingWorkers ? (
+                          <Button
+                            onClick={handleEditWorkerMode}
+                            variant="outline"
+                            size="sm"
+                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                          >
+                            <PencilIcon className="h-4 w-4 mr-1" />
+                            Edit Data Pekerja
+                          </Button>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              onClick={handleCancelWorkerEdit}
+                              variant="outline"
+                              size="sm"
+                              disabled={saving}
+                            >
+                              Batal
+                            </Button>
+                            <Button
+                              onClick={handleSaveWorkerChanges}
+                              variant="primary"
+                              size="sm"
+                              disabled={saving}
+                              className={hasWorkerChanges ? 'bg-orange-600 hover:bg-orange-700' : ''}
+                            >
+                              {saving ? 'Menyimpan...' : hasWorkerChanges ? 'Simpan Perubahan' : 'Selesai Edit'}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input Jumlah Pekerja */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 mr-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Jumlah Total Pekerja
+                        </label>
+                        <p className="text-xs text-gray-500 mb-2">
+                          Masukkan jumlah total pekerja yang akan dipekerjakan untuk proyek ini
+                        </p>
+                        {isEditingWorkers ? (
+                          <input
+                            type="number"
+                            min="0"
+                            max="9999"
+                            value={formData.worker_count || ''}
+                            onChange={(e) => {
+                              const inputValue = e.target.value;
+                              if (inputValue === '') {
+                                setFormData({ ...formData, worker_count: 0 });
+                                setHasWorkerChanges(true);
+                                return;
+                              }
+                              const value = Math.max(0, parseInt(inputValue) || 0);
+                              setFormData({ ...formData, worker_count: value });
+                              setHasWorkerChanges(true);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Masukkan jumlah pekerja (0-9999)"
+                          />
+                        ) : (
+                          <div className="px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900">
+                            {submission.worker_count || 0} orang
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0">
+                        <div className="text-sm text-gray-600">
+                          <div>Foto terupload: <span className="font-medium text-blue-600">{submission.worker_list.length}</span></div>
+                          {(formData.worker_count || submission.worker_count) && (formData.worker_count || submission.worker_count) !== submission.worker_list.length && (
+                            <div className={`mt-1 font-medium ${
+                              (formData.worker_count || submission.worker_count || 0) > submission.worker_list.length 
+                                ? 'text-orange-600' 
+                                : 'text-red-600'
+                            }`}>
+                              {(formData.worker_count || submission.worker_count || 0) > submission.worker_list.length 
+                                ? `Kurang ${(formData.worker_count || submission.worker_count || 0) - submission.worker_list.length} foto`
+                                : `Kelebihan ${submission.worker_list.length - (formData.worker_count || submission.worker_count || 0)} foto`
+                              }
+                            </div>
+                          )}
+                          {(formData.worker_count || submission.worker_count) === submission.worker_list.length && (
+                            <div className="text-green-600 mt-1 font-medium">
+                              ✓ Jumlah sudah sesuai
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Info jika jumlah tidak sesuai */}
+                  {submission.worker_count && submission.worker_count !== submission.worker_list.length && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-orange-800">Informasi Penting</h3>
+                          <p className="text-sm text-orange-700 mt-1">
+                            Jumlah pekerja yang diajukan adalah <strong>{submission.worker_count} orang</strong>, 
+                            tetapi foto yang diupload hanya <strong>{submission.worker_list.length} foto</strong>. 
+                            {submission.worker_count > submission.worker_list.length 
+                              ? ' Mungkin ada pekerja yang belum mengupload foto.'
+                              : ' Ada lebih banyak foto dari yang diajukan.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Edit Mode Info */}
+                  {canEdit && isEditingWorkers && (
+                    <div className={`${hasWorkerChanges ? 'bg-orange-50 border-orange-200' : 'bg-blue-50 border-blue-200'} border rounded-lg p-4 mb-6`}>
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          {hasWorkerChanges ? (
+                            <svg className="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <h3 className={`text-sm font-medium ${hasWorkerChanges ? 'text-orange-800' : 'text-blue-800'}`}>
+                            {hasWorkerChanges ? 'Ada Perubahan Belum Disimpan' : 'Mode Edit Aktif'}
+                          </h3>
+                          <p className={`text-sm ${hasWorkerChanges ? 'text-orange-700' : 'text-blue-700'} mt-1`}>
+                            {hasWorkerChanges 
+                              ? 'Anda telah melakukan perubahan data pekerja. Jangan lupa untuk menyimpan perubahan.'
+                              : 'Sekarang Anda dapat menghapus foto pekerja. Hover pada foto untuk melihat tombol hapus.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {submission.worker_list.length === 0 ? (
                     <div className="text-center py-16">
@@ -886,30 +1131,38 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           {/* Photo Section */}
                           <div className="relative p-4 pb-2">
                             <div className="relative">
-                              <img
-                                src={worker.worker_photo}
-                                alt={`Foto ${worker.worker_name}`}
-                                className="w-full h-48 rounded-lg object-cover shadow-sm"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgODBDMTA4LjI4NCA4MCA5Ni41NjggODggOTYuNTY4IDEwMEM5Ni41NjggMTEyIDEwOC4yODQgMTIwIDEwMCAxMjBDOTEuNzE2IDEyMCA4My40MzIgMTEyIDgzLjQzMiAxMDBDODMuNDMyIDg4IDkxLjcxNiA4MCA5Ni41NjggODBIMTAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTQwIDEzNkMxNDAgMTI2LjMyIDEzMi4wOTEgMTE4IDEyMiAxMThaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=';
-                                }}
-                              />
-                              <div className="absolute inset-0 rounded-lg bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200"></div>
+                              {worker.worker_photo ? (
+                                <img
+                                  src={worker.worker_photo.startsWith('/') ? worker.worker_photo : `/${worker.worker_photo}`}
+                                  alt={`Foto ${worker.worker_name}`}
+                                  className="w-full h-48 rounded-lg object-cover shadow-sm"
+                                  onLoad={() => console.log('Worker tab - Image loaded successfully for:', worker.worker_name)}
+                                  onError={(e) => {
+                                    console.log('Worker tab - Image load error for worker:', worker.worker_name, 'URL:', worker.worker_photo);
+                                    console.log('Worker tab - Full processed URL:', worker.worker_photo.startsWith('/') ? worker.worker_photo : `/${worker.worker_photo}`);
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgODBDMTA4LjI4NCA4MCA5Ni41NjggODggOTYuNTY4IDEwMEM5Ni41NjggMTEyIDEwOC4yODQgMTIwIDEwMCAxMjBDOTEuNzE2IDEyMCA4My40MzIgMTEyIDgzLjQzMiAxMDBDODMuNDMyIDg4IDkxLjcxNiA4MCA5Ni41NjggODBIMTAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTQwIDEzNkMxNDAgMTI2LjMyIDEzMi4wOTEgMTE4IDEyMiAxMThaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-48 rounded-lg bg-gray-200 flex items-center justify-center shadow-sm">
+                                  <div className="text-center text-gray-500">
+                                    <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-sm">Tidak ada foto</p>
+                                  </div>
+                                </div>
+                              )}
                               
-                              {/* Delete Button - Only show if can edit */}
-                              {canEdit && (
+                              {/* Delete Button - Only show if can edit and in editing mode */}
+                              {canEdit && isEditingWorkers && (
                                 <button
                                   onClick={() => handleDeleteWorker(worker.id)}
-                                  disabled={deletingWorker === worker.id}
-                                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                                  className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-lg"
                                   title="Hapus foto pekerja"
                                 >
-                                  {deletingWorker === worker.id ? (
-                                    <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-                                  ) : (
-                                    <TrashIcon className="w-4 h-4" />
-                                  )}
+                                  <TrashIcon className="w-4 h-4" />
                                 </button>
                               )}
                             </div>
@@ -940,115 +1193,174 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
               {/* Review Tab */}
               {activeTab === 'review' && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Review Pengajuan</h3>
+                <div className="space-y-8">
+                  {/* Header Section */}
+                  <div className="border-b border-gray-200 pb-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Review Pengajuan</h3>
+                    <p className="text-gray-600">
+                      Berikan penilaian dan catatan untuk pengajuan SIMLOK ini
+                    </p>
+                  </div>
                     
-                    {submission.review_status !== 'PENDING_REVIEW' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <CheckCircleIcon className="h-5 w-5 text-blue-600" />
-                          <span className="font-medium text-blue-900">Review Sudah Diberikan</span>
+                  {/* Review Status Display */}
+                  {submission.review_status !== 'PENDING_REVIEW' && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-8">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                            <CheckCircleIcon className="h-6 w-6 text-blue-600" />
+                          </div>
                         </div>
-                        <div className="text-sm text-blue-700">
-                          <p>Status: {getStatusBadge(submission.review_status)}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <h4 className="text-lg font-semibold text-gray-900">Review Selesai</h4>
+                            {getStatusBadge(submission.review_status)}
+                          </div>
                           {submission.review_note && (
-                            <p className="mt-2">Catatan: {submission.review_note}</p>
+                            <div className="bg-white rounded-lg p-4 border border-blue-100">
+                              <h5 className="font-medium text-gray-900 mb-2">Catatan Review</h5>
+                              <p className="text-gray-700 whitespace-pre-line leading-relaxed">{submission.review_note}</p>
+                            </div>
                           )}
-                          {submission.reviewed_by_user && (
-                            <p className="mt-1">
-                              Oleh: {submission.reviewed_by_user.officer_name} pada{' '}
-                              {new Date(submission.reviewed_at).toLocaleDateString('id-ID')}
-                            </p>
-                          )}
+                          <div className="mt-3 text-sm text-gray-500">
+                            Direview pada: {submission.reviewed_at ? formatDate(submission.reviewed_at) : '-'}
+                            {submission.reviewed_by_user && (
+                              <span> oleh {submission.reviewed_by_user.officer_name}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {canEdit && (
-                      <div className="space-y-4">
+                  {/* Review Form */}
+                  {canEdit && (
+                    <div className="bg-white border border-gray-200 rounded-xl p-6">
+                      <div className="space-y-6">
+                        {/* Status Selection */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Status Review
-                          </label>
-                          <div className="space-y-2">
-                            <label className="flex items-center">
-                              <input
-                                type="radio"
-                                name="review_status"
-                                value="MEETS_REQUIREMENTS"
-                                checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
-                                onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
-                                className="mr-3"
-                              />
-                              <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
-                              <span className="text-green-600 font-medium">Memenuhi Syarat</span>
-                            </label>
-                            <label className="flex items-center">
-                              <input
-                                type="radio"
-                                name="review_status"
-                                value="NOT_MEETS_REQUIREMENTS"
-                                checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
-                                onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
-                                className="mr-3"
-                              />
-                              <XCircleIcon className="h-5 w-5 text-red-600 mr-2" />
-                              <span className="text-red-600 font-medium">Tidak Memenuhi Syarat</span>
-                            </label>
+                          <h4 className="text-lg font-semibold text-gray-900 mb-4">Hasil Review</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div 
+                              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                                reviewData.review_status === 'MEETS_REQUIREMENTS' 
+                                  ? 'border-green-500 bg-green-50' 
+                                  : 'border-gray-200 hover:border-green-300 bg-white'
+                              }`}
+                              onClick={() => setReviewData({ ...reviewData, review_status: 'MEETS_REQUIREMENTS' })}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <input
+                                  type="radio"
+                                  name="review_status"
+                                  value="MEETS_REQUIREMENTS"
+                                  checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
+                                  onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                                  className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                                    <span className="text-green-700 font-semibold">Memenuhi Syarat</span>
+                                  </div>
+                                  <p className="text-sm text-green-600 mt-1">Pengajuan telah sesuai dengan persyaratan</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div 
+                              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                                reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' 
+                                  ? 'border-red-500 bg-red-50' 
+                                  : 'border-gray-200 hover:border-red-300 bg-white'
+                              }`}
+                              onClick={() => setReviewData({ ...reviewData, review_status: 'NOT_MEETS_REQUIREMENTS' })}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <input
+                                  type="radio"
+                                  name="review_status"
+                                  value="NOT_MEETS_REQUIREMENTS"
+                                  checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
+                                  onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                                  className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <XCircleIcon className="h-5 w-5 text-red-600" />
+                                    <span className="text-red-700 font-semibold">Tidak Memenuhi Syarat</span>
+                                  </div>
+                                  <p className="text-sm text-red-600 mt-1">Pengajuan perlu perbaikan atau penyesuaian</p>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
+                        {/* Catatan Review */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Catatan Review <span className="text-red-500">*</span>
-                          </label>
-                          <textarea
-                            value={reviewData.review_note}
-                            onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
-                            rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Jelaskan alasan review Anda..."
-                            required
-                          />
+                          <h5 className="text-base font-semibold text-gray-900 mb-3">Catatan Review</h5>
+                          <div className="space-y-4">
+                            {/* Catatan untuk Approver */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Catatan untuk Approver <span className="text-red-500">*</span>
+                              </label>
+                              <p className="text-xs text-gray-500 mb-2">
+                                Catatan ini akan dibaca oleh Approver untuk membantu proses persetujuan
+                              </p>
+                              <textarea
+                                value={reviewData.review_note}
+                                onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
+                                rows={3}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Berikan penjelasan detail mengenai hasil review untuk membantu Approver dalam pengambilan keputusan..."
+                                required
+                              />
+                            </div>
+                            
+                            {/* Informasi Tambahan */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0">
+                                  <svg className="h-5 w-5 text-blue-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <h6 className="text-sm font-medium text-blue-800 mb-1">Catatan Penting</h6>
+                                  <p className="text-sm text-blue-700">
+                                    Catatan review akan diteruskan kepada Approver untuk membantu pengambilan keputusan final. 
+                                    Pastikan catatan yang diberikan jelas dan objektif.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
                           {reviewData.review_status && !reviewData.review_note.trim() && (
-                            <p className="text-red-500 text-sm mt-1">Catatan review wajib diisi</p>
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-red-600 text-sm font-medium">Catatan untuk Approver wajib diisi</p>
+                            </div>
                           )}
                         </div>
 
-                        <Button
-                          onClick={handleSubmitReview}
-                          variant="primary"
-                          disabled={!reviewData.review_status || !reviewData.review_note.trim() || saving}
-                          className="w-full"
-                        >
-                          {saving ? 'Mengirim Review...' : 'Kirim Review'}
-                        </Button>
+                        {/* Submit Button - Removed from here, will be at the bottom */}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Proses Approval Form - Untuk persiapan data approval */}
-                    <div className="border-t border-gray-200 pt-6">
+                  {/* Persiapan Approval Form - Hanya untuk yang bisa edit */}
+                  {canEdit && (
+                    <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-6 mt-8">
                       <div className="mb-6">
-                        <h4 className="text-lg font-medium text-gray-900 mb-2">Persiapan Data Approval</h4>
-                        <p className="text-sm text-gray-600">
-                          Isi form berikut untuk mempersiapkan data yang diperlukan saat proses approval oleh admin.
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Persiapan Template Approval</h3>
+                        <p className="text-gray-600 text-sm">
+                          Lengkapi data berikut untuk mempersiapkan template approval. Data ini akan membantu admin saat melakukan approval final.
                         </p>
                       </div>
 
                       <div className="space-y-6">
-                        {/* Tanggal SIMLOK */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Tanggal SIMLOK
-                          </label>
-                          <DatePicker
-                            value={approvalForm.tanggal_simlok}
-                            onChange={(value) => setApprovalForm(prev => ({ ...prev, tanggal_simlok: value }))}
-                            placeholder="Pilih tanggal SIMLOK"
-                          />
-                        </div>
-
                         {/* Tanggal Pelaksanaan */}
                         <div className="space-y-4">
                           <label className="block text-sm font-medium text-gray-700">
@@ -1056,7 +1368,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
                           </label>
 
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm text-gray-600 mb-2">Tanggal Mulai:</label>
                               <DatePicker
@@ -1166,18 +1478,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           />
                         </div>
 
-                        {/* Save Button */}
-                        <div className="pt-4">
-                          <Button
-                            onClick={handleSaveChanges}
-                            disabled={saving}
-                            variant="secondary"
-                            size="md"
-                            className="w-full"
-                          >
-                            {saving ? 'Menyimpan...' : 'Simpan Persiapan Approval'}
-                          </Button>
-                        </div>
+                        {/* Save Button - Removed from here, will be combined at the bottom */}
 
                         {/* Info Box */}
                         <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
@@ -1189,24 +1490,53 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           </ul>
                         </div>
                       </div>
-                    </div>
 
-                    {!canEdit && submission.final_status !== 'PENDING_APPROVAL' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex">
-                          <div className="flex-shrink-0">
-                            <XCircleIcon className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <div className="ml-3">
-                            <h3 className="text-sm font-medium text-blue-800">Info</h3>
-                            <div className="mt-2 text-sm text-blue-700">
-                              <p>Review tidak dapat diubah karena pengajuan sudah difinalisasi oleh approver.</p>
+                      {/* Combined Submit Button */}
+                      <div className="mt-8 pt-6 border-t border-gray-200">
+                        <Button
+                          onClick={handleSubmitReviewAndSave}
+                          variant="primary"
+                          disabled={!reviewData.review_status || !reviewData.review_note.trim() || saving}
+                          className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold py-3 text-base transition-all duration-200"
+                        >
+                          {saving ? (
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                              Mengirim Review & Menyimpan Template...
                             </div>
+                          ) : (
+                            'Kirim Review & Simpan Template Approval'
+                          )}
+                        </Button>
+                        
+                        <p className="text-xs text-gray-500 mt-3 text-center">
+                          Tombol ini akan mengirim review dan menyimpan template approval sekaligus
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Information for Non-Editable Status */}
+                  {!canEdit && submission.final_status !== 'PENDING_APPROVAL' && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg className="h-5 w-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
                           </div>
                         </div>
+                        <div>
+                          <h4 className="text-base font-semibold text-gray-900 mb-1">Informasi</h4>
+                          <p className="text-gray-600">
+                            Pengajuan ini sudah difinalisasi dan tidak dapat direview ulang. 
+                            Status saat ini: {getStatusBadge(submission.final_status)}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -1214,12 +1544,30 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200">
+          <div>
+            {/* Tampilkan tombol PDF setelah submission sudah di-review dan ada simlok_number */}
+            {submission?.review_status !== 'PENDING_REVIEW' && submission?.simlok_number && (
+              <Button onClick={handleViewPdf} variant="primary" size="sm">
+                <DocumentTextIcon className="w-4 h-4 mr-2" />
+                Lihat PDF SIMLOK
+              </Button>
+            )}
+          </div>
           <Button onClick={onClose} variant="outline">
             Tutup
           </Button>
         </div>
       </div>
+
+      {/* PDF Modal */}
+      <SimlokPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        submissionId={submissionId}
+        submissionName={submission?.vendor_name || ''}
+        nomorSimlok={submission?.simlok_number || ''}
+      />
     </div>
   );
 };

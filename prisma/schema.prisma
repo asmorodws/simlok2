@@ -102,6 +102,7 @@ model Submission {
   simlok_date               DateTime?
   implementation_start_date DateTime?
   implementation_end_date   DateTime?
+  worker_count              Int?         // Jumlah pekerja
   worker_names              String       @db.Text
   content                   String?      @db.Text
   notes                     String?      @db.Text

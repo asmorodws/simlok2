@@ -12,7 +12,8 @@ import {
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
-import WorkersList from '@/components/common/WorkersList';
+import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 
 interface SubmissionDetail {
   id: string;
@@ -28,6 +29,7 @@ interface SubmissionDetail {
   working_hours: string;
   other_notes?: string;
   work_facilities: string;
+  worker_count: number | null;
   simja_number?: string;
   simja_date?: string | null;
   sika_number?: string;
@@ -90,6 +92,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workers' | 'approval'>('details');
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const { showSuccess, showError } = useToast();
 
   // Function to generate auto SIMLOK number - mengikuti sistem admin yang sudah ada
@@ -123,7 +126,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   // Approval form state
   const [approvalData, setApprovalData] = useState({
     final_status: '' as 'APPROVED' | 'REJECTED' | '',
-    final_note: '',
     simlok_number: '',
     simlok_date: ''
   });
@@ -145,7 +147,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       // Initialize approval data
       setApprovalData({
         final_status: data.submission.final_status === 'PENDING_APPROVAL' ? '' : data.submission.final_status,
-        final_note: data.submission.final_note || '',
         simlok_number: data.submission.simlok_number || '',
         simlok_date: (data.submission.simlok_date 
           ? new Date(data.submission.simlok_date).toISOString().split('T')[0] 
@@ -176,14 +177,13 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     }
   }, [isOpen, submissionId]);
 
+  const handleViewPdf = () => {
+    setIsPdfModalOpen(true);
+  };
+
   const handleSubmitApproval = async () => {
     if (!approvalData.final_status) {
       showError('Error', 'Pilih status persetujuan terlebih dahulu');
-      return;
-    }
-
-    if (approvalData.final_status === 'REJECTED' && !approvalData.final_note.trim()) {
-      showError('Error', 'Catatan penolakan wajib diisi');
       return;
     }
 
@@ -202,7 +202,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         },
         body: JSON.stringify({
           final_status: approvalData.final_status,
-          final_note: approvalData.final_note.trim() || undefined,
           simlok_number: approvalData.final_status === 'APPROVED' ? approvalData.simlok_number.trim() : undefined,
           simlok_date: approvalData.final_status === 'APPROVED' && approvalData.simlok_date ? approvalData.simlok_date : undefined,
         }),
@@ -485,22 +484,111 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
               {/* Workers Tab */}
               {activeTab === 'workers' && (
                 <div className="space-y-6">
+                  {/* Header */}
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Data Pekerja</h3>
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                      {submission.worker_list.length} orang
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="text-lg font-medium text-gray-900">Data Pekerja</h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          {submission.worker_count || 0} total
+                        </span>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                          {submission.worker_list.length} foto
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <WorkersList
-                    submissionId={submissionId}
-                    context="approver"
-                    fallbackWorkers={submission.worker_names}
-                    layout="grid"
-                    showPhotos={true}
-                    verificationMode={false}
-                    className="mt-4"
-                  />
+                  {/* Info jika jumlah tidak sesuai */}
+                  {submission.worker_count && submission.worker_count !== submission.worker_list.length && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-orange-800">Informasi Penting</h3>
+                          <p className="text-sm text-orange-700 mt-1">
+                            Jumlah pekerja yang diajukan adalah <strong>{submission.worker_count} orang</strong>, 
+                            tetapi foto yang diupload hanya <strong>{submission.worker_list.length} foto</strong>. 
+                            {submission.worker_count > submission.worker_list.length 
+                              ? ' Mungkin ada pekerja yang belum mengupload foto.'
+                              : ' Ada lebih banyak foto dari yang diajukan.'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {submission.worker_list.length === 0 ? (
+                    <div className="text-center py-16">
+                      <UserGroupIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada foto pekerja</h3>
+                      <p className="text-gray-500 max-w-md mx-auto">
+                        Foto pekerja akan ditampilkan di sini setelah vendor mengupload data pekerja.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {submission.worker_list.map((worker) => (
+                        <div
+                          key={worker.id}
+                          className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-all duration-200 overflow-hidden shadow-sm hover:shadow-md group"
+                        >
+                          {/* Photo Section */}
+                          <div className="relative p-4 pb-2">
+                            <div className="relative">
+                              {worker.worker_photo ? (
+                                <img
+                                  src={worker.worker_photo ? fileUrlHelper.convertLegacyUrl(worker.worker_photo, `foto_pekerja_${worker.id}`) : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgODBDMTA4LjI4NCA4MCA5Ni41NjggODggOTYuNTY4IDEwMEM5Ni41NjggMTEyIDEwOC4yODQgMTIwIDEwMCAxMjBDOTEuNzE2IDEyMCA4My40MzIgMTEyIDgzLjQzMiAxMDBDODMuNDMyIDg4IDkxLjcxNiA4MCA5Ni41NjggODBIMTAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTQwIDEzNkMxNDAgMTI2LjMyIDEzMi4wOTEgMTE4IDEyMiAxMThaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo='}
+                                  alt={`Foto ${worker.worker_name}`}
+                                  className="w-full h-48 rounded-lg object-cover shadow-sm"
+                                  onLoad={() => console.log('Approver tab - Image loaded successfully for:', worker.worker_name)}
+                                  onError={(e) => {
+                                    console.log('Approver tab - Image load error for worker:', worker.worker_name, 'URL:', worker.worker_photo);
+                                    if (worker.worker_photo) {
+                                      console.log('Approver tab - Processed URL:', fileUrlHelper.convertLegacyUrl(worker.worker_photo, `foto_pekerja_${worker.id}`));
+                                    }
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMDAgODBDMTA4LjI4NCA4MCA5Ni41NjggODggOTYuNTY4IDEwMEM5Ni41NjggMTEyIDEwOC4yODQgMTIwIDEwMCAxMjBDOTEuNzE2IDEyMCA4My40MzIgMTEyIDgzLjQzMiAxMDBDODMuNDMyIDg4IDkxLjcxNiA4MCA5Ni41NjggODBIMTAwWiIgZmlsbD0iIzlDQTNBRiIvPgo8cGF0aCBkPSJNMTQwIDEzNkMxNDAgMTI2LjMyIDEzMi4wOTEgMTE4IDEyMiAxMThaIiBmaWxsPSIjOUNBM0FGIi8+Cjwvc3ZnPgo=';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-48 rounded-lg bg-gray-200 flex items-center justify-center shadow-sm">
+                                  <div className="text-center text-gray-500">
+                                    <svg className="w-12 h-12 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                                    </svg>
+                                    <p className="text-sm">Tidak ada foto</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Info Section */}
+                          <div className="px-4 pb-4">
+                            <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">
+                              {worker.worker_name}
+                            </h4>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>Upload:</span>
+                              <span>
+                                {new Date(worker.created_at).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -706,44 +794,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         </div>
                       )}
 
-                      {/* Notes Section */}
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center">
-                          <DocumentTextIcon className="h-4 w-4 text-gray-600 mr-2" />
-                          Catatan Approver
-                          {approvalData.final_status === 'REJECTED' && (
-                            <span className="text-red-500 ml-1">*</span>
-                          )}
-                        </label>
-                        <textarea
-                          value={approvalData.final_note}
-                          onChange={(e) => setApprovalData({ ...approvalData, final_note: e.target.value })}
-                          rows={4}
-                          className={`
-                            w-full px-4 py-3 border rounded-lg shadow-sm resize-none
-                            focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                            ${approvalData.final_status === 'REJECTED' 
-                              ? 'border-red-300 bg-red-50' 
-                              : 'border-gray-300 bg-white'
-                            }
-                          `}
-                          placeholder={
-                            approvalData.final_status === 'APPROVED' 
-                              ? "Tambahkan catatan persetujuan (opsional)" 
-                              : approvalData.final_status === 'REJECTED'
-                              ? "Jelaskan alasan penolakan dengan detail"
-                              : "Pilih status persetujuan terlebih dahulu"
-                          }
-                          required={approvalData.final_status === 'REJECTED'}
-                          disabled={!approvalData.final_status}
-                        />
-                        {approvalData.final_status === 'REJECTED' && !approvalData.final_note.trim() && (
-                          <div className="flex items-center mt-2 text-red-600 text-sm">
-                            <XCircleIcon className="h-4 w-4 mr-1" />
-                            Catatan penolakan wajib diisi
-                          </div>
-                        )}
-                      </div>
+
 
                       {/* Submit Button */}
                       <div className="flex justify-end pt-4 border-t border-gray-200">
@@ -751,7 +802,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                           onClick={handleSubmitApproval}
                           disabled={
                             !approvalData.final_status || 
-                            (approvalData.final_status === 'REJECTED' && !approvalData.final_note.trim()) ||
                             (approvalData.final_status === 'APPROVED' && !approvalData.simlok_number.trim()) ||
                             saving
                           }
@@ -812,12 +862,30 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200">
+          <div>
+            {/* Tampilkan tombol PDF jika sudah di-approve dan ada simlok_number */}
+            {submission?.final_status === 'APPROVED' && submission?.simlok_number && (
+              <Button onClick={handleViewPdf} variant="primary" size="sm">
+                <DocumentTextIcon className="w-4 h-4 mr-2" />
+                Lihat PDF SIMLOK
+              </Button>
+            )}
+          </div>
           <Button onClick={onClose} variant="outline">
             Tutup
           </Button>
         </div>
       </div>
+
+      {/* PDF Modal */}
+      <SimlokPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        submissionId={submissionId}
+        submissionName={submission?.vendor_name || ''}
+        nomorSimlok={submission?.simlok_number || ''}
+      />
     </div>
   );
 };

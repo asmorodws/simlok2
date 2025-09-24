@@ -55,6 +55,7 @@ export default function SubmissionForm() {
     work_location: '',
     working_hours: '',
     work_facilities: '',
+    worker_count: 0,
     simja_number: '',
     simja_date: '',
     sika_number: '',
@@ -73,10 +74,10 @@ export default function SubmissionForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value
     }));
   };
 
@@ -394,6 +395,42 @@ export default function SubmissionForm() {
                     placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
                     required
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Jumlah Pekerja */}
+            <div className="p-6 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerja</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <Label htmlFor="worker_count">Jumlah Pekerja</Label>
+                  <Input
+                    id="worker_count"
+                    name="worker_count"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={formData.worker_count || ''}
+                    onChange={handleChange}
+                    placeholder="Masukkan jumlah pekerja"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Jumlah total pekerja yang akan bekerja di lokasi ini
+                  </p>
+                </div>
+                <div className="flex items-end">
+                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                    <div className="font-medium mb-1">Info:</div>
+                    <div>Pekerja yang diinput: {workers.length}</div>
+                    <div>Jumlah pekerja: {formData.worker_count || 0}</div>
+                    {formData.worker_count && workers.length !== Number(formData.worker_count) && (
+                      <div className="text-orange-600 mt-1">
+                        ⚠️ Jumlah tidak sesuai dengan daftar pekerja
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

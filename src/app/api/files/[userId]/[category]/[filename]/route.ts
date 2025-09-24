@@ -20,8 +20,24 @@ export async function GET(
     const { userId, category, filename } = await params;
 
     // Check if user can access this file
-    // Users can only access their own files, unless they're admin
-    if (session.user.role !== 'ADMIN' && session.user.id !== userId) {
+    // Users can only access their own files, unless they're admin, reviewer, or approver
+    const canAccess = 
+      session.user.role === 'ADMIN' || 
+      session.user.role === 'REVIEWER' || 
+      session.user.role === 'APPROVER' ||
+      session.user.id === userId;
+
+    // Debug logging
+    console.log('File access check:', {
+      requestedUserId: userId,
+      sessionUserId: session.user.id,
+      userRole: session.user.role,
+      category,
+      filename,
+      canAccess
+    });
+      
+    if (!canAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

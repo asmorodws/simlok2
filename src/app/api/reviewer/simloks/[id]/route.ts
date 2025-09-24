@@ -15,6 +15,7 @@ const updateSubmissionSchema = z.object({
   working_hours: z.string().optional(),
   other_notes: z.string().optional(),
   work_facilities: z.string().optional(),
+  worker_count: z.number().optional(),
   simja_number: z.string().optional(),
   simja_date: z.string().optional(),
   sika_number: z.string().optional(),

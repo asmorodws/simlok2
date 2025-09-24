@@ -8,6 +8,7 @@ export interface SubmissionData {
   working_hours: string;
   other_notes?: string; // akan diisi oleh admin saat approve
   work_facilities: string;
+  worker_count?: number; // jumlah pekerja
   simja_number?: string;
   simja_date?: string;
   sika_number?: string;

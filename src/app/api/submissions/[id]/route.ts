@@ -289,8 +289,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Only allow vendor to update certain fields and only if submission is PENDING
       const allowedFields = [
         'vendor_name', 'based_on', 'officer_name', 'job_description', 
-        'work_location', 'working_hours', 'work_facilities', 'simja_number', 
-        'simja_date', 'sika_number', 'sika_date', 'worker_names',
+        'work_location', 'working_hours', 'work_facilities', 'worker_count',
+        'simja_number', 'simja_date', 'sika_number', 'sika_date', 'worker_names',
         'sika_document_upload', 'simja_document_upload'
       ];
 
