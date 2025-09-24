@@ -17,9 +17,10 @@ import {
 
 async function markAsRead(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const notificationId = params.id;
+  const { id } = await params;
+  const notificationId = id;
 
   // Check authentication
   const { session, error: authError } = await getAuthenticatedSession();
@@ -35,7 +36,7 @@ async function markAsRead(
   }
 
   // Check permissions
-  if (notification.scope === 'admin' && session.user.role !== 'ADMIN') {
+  if (notification.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
@@ -45,13 +46,21 @@ async function markAsRead(
     }
   }
 
+  if (notification.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    return apiError('Access denied', 403);
+  }
+
+  if (notification.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    return apiError('Access denied', 403);
+  }
+
   // Check if already read
   const existingRead = await prisma.notificationRead.findFirst({
     where: {
       notification_id: notificationId,
-      ...(notification.scope === 'admin' 
-        ? { user_id: session.user.id }
-        : { vendor_id: session.user.id }
+      ...(notification.scope === 'vendor' 
+        ? { vendor_id: session.user.id }
+        : { user_id: session.user.id } // For admin, reviewer, approver
       ),
     },
   });
@@ -64,9 +73,9 @@ async function markAsRead(
   await prisma.notificationRead.create({
     data: {
       notification_id: notificationId,
-      ...(notification.scope === 'admin' 
-        ? { user_id: session.user.id }
-        : { vendor_id: session.user.id }
+      ...(notification.scope === 'vendor' 
+        ? { vendor_id: session.user.id }
+        : { user_id: session.user.id } // For admin, reviewer, approver
       ),
     },
   });
@@ -80,9 +89,9 @@ async function markAsRead(
       scope: notification.scope,
       ...(notification.scope === 'vendor' ? { vendor_id: session.user.id } : {}),
       reads: {
-        none: notification.scope === 'admin' 
-          ? { user_id: session.user.id }
-          : { vendor_id: session.user.id },
+        none: notification.scope === 'vendor' 
+          ? { vendor_id: session.user.id }
+          : { user_id: session.user.id }, // For admin, reviewer, approver
       },
     },
   });

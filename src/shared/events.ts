@@ -23,27 +23,27 @@ export const NotificationNewEvent = z.object({
   title: z.string(),
   message: z.string(),
   data: z.string().nullable().optional(),
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional(),
   createdAt: z.string(),
 });
 
 export const NotificationUnreadCountEvent = z.object({
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional(),
   unreadCount: z.number(),
   count: z.number(), // Legacy field for backward compatibility
 });
 
 export const GetNotificationsSchema = z.object({
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional().nullable(),
   cursor: z.string().optional().nullable(),
   limit: z.number().int().positive().max(100).default(10).optional(),
 });
 
 export const StatsUpdateEvent = z.object({
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional(),
   changes: z.record(z.string(), z.union([z.number(), z.string()])),
 });
@@ -76,5 +76,7 @@ export const EVENT_NAMES = {
 // Room names
 export const ROOMS = {
   ADMIN: 'admin',
+  REVIEWER: 'reviewer',
+  APPROVER: 'approver',
   VENDOR: (vendorId: string) => `vendor:${vendorId}`,
 } as const;

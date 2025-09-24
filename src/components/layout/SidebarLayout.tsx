@@ -44,6 +44,14 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
       { label: "Submissions", href: "/admin/submissions", icon: ClipboardDocumentListIcon },
       // { label: "Settings", href: "/admin/settings", icon: CogIcon },
     ],
+    REVIEWER: [
+      { label: "Dashboard", href: "/reviewer", icon: HomeIcon },
+      { label: "Review Pengajuan", href: "/reviewer/submissions", icon: ClipboardDocumentListIcon },
+    ],
+    APPROVER: [
+      { label: "Dashboard", href: "/approver", icon: HomeIcon },
+      { label: "Persetujuan", href: "/approver/submissions", icon: ClipboardDocumentListIcon },
+    ],
     VENDOR: [
       { label: "Dashboard", href: "/vendor", icon: HomeIcon },
       { label: "Submissions", href: "/vendor/submissions", icon: ClipboardDocumentListIcon },

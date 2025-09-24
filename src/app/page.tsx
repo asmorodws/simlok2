@@ -19,6 +19,10 @@ export default async function Home() {
     redirect("/super-admin");
   } else if (role === "ADMIN") {
     redirect("/admin");
+  } else if (role === "APPROVER") {
+    redirect("/approver");
+  } else if (role === "REVIEWER") {
+    redirect("/reviewer");
   } else if (role === "VENDOR") {
     redirect("/vendor");
   } else if (role === "VERIFIER") {

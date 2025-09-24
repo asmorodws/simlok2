@@ -29,11 +29,19 @@ async function markAllAsRead(req: NextRequest) {
   if (authError) return authError;
 
   // Check permissions
-  if (body.scope === 'admin' && session.user.role !== 'ADMIN') {
+  if (body.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
   if (body.scope === 'vendor' && session.user.role !== 'VENDOR') {
+    return apiError('Access denied', 403);
+  }
+
+  if (body.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    return apiError('Access denied', 403);
+  }
+
+  if (body.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
@@ -48,9 +56,9 @@ async function markAllAsRead(req: NextRequest) {
       scope: body.scope,
       ...(body.scope === 'vendor' && vendorId ? { vendor_id: vendorId } : {}),
       reads: {
-        none: body.scope === 'admin' 
-          ? { user_id: session.user.id }
-          : { vendor_id: vendorId },
+        none: body.scope === 'vendor'
+          ? { vendor_id: vendorId }
+          : { user_id: session.user.id }, // For admin, reviewer, approver
       },
     },
     select: { id: true },
@@ -63,9 +71,9 @@ async function markAllAsRead(req: NextRequest) {
   // Mark all as read in bulk
   const readRecords = unreadNotifications.map(notification => ({
     notification_id: notification.id,
-    ...(body.scope === 'admin' 
-      ? { user_id: session.user.id }
-      : { vendor_id: vendorId }
+    ...(body.scope === 'vendor' 
+      ? { vendor_id: vendorId }
+      : { user_id: session.user.id } // For admin, reviewer, approver
     ),
   }));
 

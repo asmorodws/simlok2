@@ -26,6 +26,8 @@ model User {
   sessions            Session[]
   submissions         Submission[]
   approvedSubmissions Submission[]   @relation("ApprovedSubmissions")
+  reviewedSubmissions Submission[]   @relation("ReviewedSubmissions")
+  finalApprovedSubmissions Submission[] @relation("FinalApprovedSubmissions")
   qrScans             QrScan[]       @relation("QrScannedBy")
 }
 
@@ -110,11 +112,23 @@ model Submission {
   qrcode                    String?      @db.LongText
   created_at                DateTime     @default(now())
   
+  // New review/approval fields
+  review_status             ReviewStatus @default(PENDING_REVIEW)
+  review_note               String?      @db.Text
+  final_status              FinalStatus  @default(PENDING_APPROVAL)
+  final_note                String?      @db.Text
+  reviewed_by_id            String?
+  reviewed_at               DateTime?
+  approved_by_final_id      String?
+  approved_at               DateTime?
+  
   // Relations
   user_id                   String
   user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   
   approved_by_user          User?        @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
+  reviewed_by_user          User?        @relation("ReviewedSubmissions", fields: [reviewed_by_id], references: [id])
+  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id])
   
   // Relasi ke daftar pekerja
   worker_list               WorkerList[]
@@ -124,8 +138,12 @@ model Submission {
   
   // Performance indexes
   @@index([approval_status])
+  @@index([review_status])
+  @@index([final_status])
   @@index([created_at])
   @@index([user_id, approval_status])
+  @@index([reviewed_by_id])
+  @@index([approved_by_final_id])
 }
 
 /// ----------  WORKER LIST  ----------
@@ -191,9 +209,25 @@ enum Role {
   VERIFIER
   ADMIN
   SUPER_ADMIN
+  REVIEWER
+  APPROVER
+}
+
+enum ReviewStatus {
+  PENDING_REVIEW
+  MEETS_REQUIREMENTS
+  NOT_MEETS_REQUIREMENTS
+}
+
+enum FinalStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
 }
 
 enum NotificationScope {
   admin
   vendor
+  reviewer
+  approver
 }

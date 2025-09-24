@@ -62,12 +62,48 @@ async function main() {
       verified_by: "SYSTEM",
     },
     {
+      officer_name: "Super Admin",
+      email: "superadmin@example.com",
+      password: "super123",
+      role: Role.SUPER_ADMIN,
+      profile_photo: null,
+      address: "Jl. Super Admin No. 1, Jakarta",
+      phone_number: "081234567889",
+      vendor_name: null, // kosong untuk super admin
+      verified_at: new Date(), // super admin sudah terverifikasi
+      verified_by: "SYSTEM",
+    },
+    {
+      officer_name: "Reviewer Utama",
+      email: "reviewer@example.com",
+      password: "reviewer123",
+      role: Role.REVIEWER,
+      profile_photo: null,
+      address: "Jl. Reviewer No. 2, Jakarta",
+      phone_number: "081234567888",
+      vendor_name: null, // kosong untuk reviewer
+      verified_at: new Date(), // reviewer sudah terverifikasi
+      verified_by: "ADMIN",
+    },
+    {
+      officer_name: "Approver Utama",
+      email: "approver@example.com",
+      password: "approver123",
+      role: Role.APPROVER,
+      profile_photo: null,
+      address: "Jl. Approver No. 3, Jakarta",
+      phone_number: "081234567887",
+      vendor_name: null, // kosong untuk approver
+      verified_at: new Date(), // approver sudah terverifikasi
+      verified_by: "ADMIN",
+    },
+    {
       officer_name: "Verifier Utama",
       email: "verifier@example.com",
       password: "verifier123",
       role: Role.VERIFIER,
       profile_photo: null,
-      address: "Jl. Verifier No. 2, Jakarta",
+      address: "Jl. Verifier No. 4, Jakarta",
       phone_number: "081234567891",
       vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
@@ -79,7 +115,7 @@ async function main() {
       password: "vendor123",
       role: Role.VENDOR,
       profile_photo: null,
-      address: "Jl. Vendor A No. 3, Jakarta",
+      address: "Jl. Vendor A No. 5, Jakarta",
       phone_number: "081234567892",
       vendor_name: "PT. AHMAD VENDOR SERVICES",
       verified_at: new Date(),
@@ -91,7 +127,7 @@ async function main() {
       password: "vendor123",
       role: Role.VENDOR,
       profile_photo: null,
-      address: "Jl. Vendor B No. 4, Bandung",
+      address: "Jl. Vendor B No. 6, Bandung",
       phone_number: "081234567893",
       vendor_name: "PT. BUANA KONSTRUKSI",
       verified_at: new Date(),
@@ -103,7 +139,7 @@ async function main() {
       password: "vendor123",
       role: Role.VENDOR,
       profile_photo: null,
-      address: "Jl. Vendor C No. 5, Surabaya",
+      address: "Jl. Vendor C No. 7, Surabaya",
       phone_number: "081234567894",
       vendor_name: "CV. CIPTA MANDIRI",
       verified_at: null, // vendor belum terverifikasi

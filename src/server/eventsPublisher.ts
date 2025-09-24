@@ -41,6 +41,32 @@ class EventsPublisher {
   }
 
   /**
+   * Emit event to reviewer room
+   */
+  private emitToReviewer(event: string, payload: any) {
+    const io = this.getIO();
+    if (io) {
+      io.to(ROOMS.REVIEWER).emit(event, payload);
+      console.log(`[Events] Emitted ${event} to reviewer room:`, payload);
+    } else {
+      console.warn(`[Events] Socket.IO not available for event: ${event}`);
+    }
+  }
+
+  /**
+   * Emit event to approver room
+   */
+  private emitToApprover(event: string, payload: any) {
+    const io = this.getIO();
+    if (io) {
+      io.to(ROOMS.APPROVER).emit(event, payload);
+      console.log(`[Events] Emitted ${event} to approver room:`, payload);
+    } else {
+      console.warn(`[Events] Socket.IO not available for event: ${event}`);
+    }
+  }
+
+  /**
    * Emit event to specific vendor room
    */
   private emitToVendor(vendorId: string, event: string, payload: any) {
@@ -80,6 +106,10 @@ class EventsPublisher {
   notificationNew(payload: NotificationNewEvent) {
     if (payload.scope === 'admin') {
       this.emitToAdmin(EVENT_NAMES.NOTIFICATION_NEW, payload);
+    } else if (payload.scope === 'reviewer') {
+      this.emitToReviewer(EVENT_NAMES.NOTIFICATION_NEW, payload);
+    } else if (payload.scope === 'approver') {
+      this.emitToApprover(EVENT_NAMES.NOTIFICATION_NEW, payload);
     } else if (payload.scope === 'vendor' && payload.vendorId) {
       this.emitToVendor(payload.vendorId, EVENT_NAMES.NOTIFICATION_NEW, payload);
     }
@@ -91,6 +121,10 @@ class EventsPublisher {
   notificationUnreadCount(payload: NotificationUnreadCountEvent) {
     if (payload.scope === 'admin') {
       this.emitToAdmin(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
+    } else if (payload.scope === 'reviewer') {
+      this.emitToReviewer(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
+    } else if (payload.scope === 'approver') {
+      this.emitToApprover(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
     } else if (payload.scope === 'vendor' && payload.vendorId) {
       this.emitToVendor(payload.vendorId, EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
     }
@@ -102,6 +136,10 @@ class EventsPublisher {
   statsUpdate(payload: StatsUpdateEvent) {
     if (payload.scope === 'admin') {
       this.emitToAdmin(EVENT_NAMES.STATS_UPDATE, payload);
+    } else if (payload.scope === 'reviewer') {
+      this.emitToReviewer(EVENT_NAMES.STATS_UPDATE, payload);
+    } else if (payload.scope === 'approver') {
+      this.emitToApprover(EVENT_NAMES.STATS_UPDATE, payload);
     } else if (payload.scope === 'vendor' && payload.vendorId) {
       this.emitToVendor(payload.vendorId, EVENT_NAMES.STATS_UPDATE, payload);
     }

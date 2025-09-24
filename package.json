@@ -15,7 +15,7 @@
     "analyze": "cross-env ANALYZE=true next build"
   },
   "prisma": {
-    "seed": "tsx prisma/new-seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

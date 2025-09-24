@@ -28,11 +28,19 @@ async function getNotifications(req: NextRequest) {
   if (authError) return authError;
 
   // Validate permissions
-  if (query.scope === 'admin' && session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+  if (query.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
-  if (query.scope === 'vendor' && session.user.role !== 'VENDOR' && session.user.role !== 'SUPER_ADMIN') {
+  if (query.scope === 'vendor' && !['VENDOR', 'SUPER_ADMIN'].includes(session.user.role)) {
+    return apiError('Access denied', 403);
+  }
+
+  if (query.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    return apiError('Access denied', 403);
+  }
+
+  if (query.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
@@ -81,9 +89,9 @@ async function getNotifications(req: NextRequest) {
     where: whereClause,
     include: {
       reads: {
-        where: query.scope === 'admin' 
-          ? { user_id: session.user.id }
-          : { vendor_id: vendorId },
+        where: query.scope === 'vendor' 
+          ? { vendor_id: vendorId }
+          : { user_id: session.user.id }, // For admin, reviewer, approver
       },
     },
     orderBy: {

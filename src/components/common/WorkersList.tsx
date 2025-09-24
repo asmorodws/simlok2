@@ -27,6 +27,8 @@ interface WorkersListProps {
   maxDisplayCount?: number;
   verificationMode?: boolean;
   className?: string;
+  // Context for different API endpoints
+  context?: 'vendor' | 'reviewer' | 'admin' | 'approver';
 }
 
 export default function WorkersList({ 
@@ -37,6 +39,7 @@ export default function WorkersList({
   maxDisplayCount = 6,
   verificationMode = false,
   className = '',
+  context = 'vendor',
 }: WorkersListProps) {
   const [workers, setWorkers] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +56,25 @@ export default function WorkersList({
       }
 
       try {
-        const response = await fetch(`/api/submissions/${submissionId}/workers`);
+        // Choose the correct API endpoint based on context
+        let apiUrl = '';
+        switch (context) {
+          case 'approver':
+            apiUrl = `/api/approver/simloks/${submissionId}/workers`;
+            break;
+          case 'reviewer':
+            apiUrl = `/api/reviewer/simloks/${submissionId}/workers`;
+            break;
+          case 'admin':
+            apiUrl = `/api/admin/simloks/${submissionId}/workers`;
+            break;
+          case 'vendor':
+          default:
+            apiUrl = `/api/submissions/${submissionId}/workers`;
+            break;
+        }
+
+        const response = await fetch(apiUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch workers');
         }
@@ -80,7 +101,7 @@ export default function WorkersList({
     };
 
     fetchWorkers();
-  }, [submissionId, fallbackWorkers]);
+  }, [submissionId, fallbackWorkers, context]);
 
   const handleImageError = (workerId: string) => {
     setImageErrors(prev => new Set([...prev, workerId]));

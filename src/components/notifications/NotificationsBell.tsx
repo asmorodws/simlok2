@@ -54,7 +54,18 @@ export default function NotificationsBell() {
     }
 
     try {
-      const scope = session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
+      // Determine scope based on user role
+      let scope: string;
+      if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') {
+        scope = 'admin';
+      } else if (session.user.role === 'REVIEWER') {
+        scope = 'reviewer';
+      } else if (session.user.role === 'APPROVER') {
+        scope = 'approver';
+      } else {
+        scope = 'vendor';
+      }
+
       const params = new URLSearchParams({
         scope,
         limit: '10'

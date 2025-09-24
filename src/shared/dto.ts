@@ -34,13 +34,13 @@ export const PaginatedResponseSchema = z.object({
 
 // Notification schemas
 export const NotificationsQuerySchema = z.object({
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional().nullable(),
 }).merge(PaginationQuerySchema);
 
 export const NotificationSchema = z.object({
   id: z.string(),
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().nullable(),
   type: z.string(),
   title: z.string(),
@@ -55,7 +55,7 @@ export const MarkAsReadSchema = z.object({
 });
 
 export const MarkAllAsReadSchema = z.object({
-  scope: z.enum(['admin', 'vendor']),
+  scope: z.enum(['admin', 'vendor', 'reviewer', 'approver']),
   vendorId: z.string().optional().nullable(),
 });
 

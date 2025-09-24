@@ -20,10 +20,10 @@ export async function GET(
 
     const { id } = await params;
 
-    // Get submission - allow admin/verifier to access any submission, vendor only their own
+    // Get submission - allow admin/reviewer/approver to access any submission, vendor only their own
     let submission;
     
-    if (session.user.role === 'ADMIN' || session.user.role === 'VERIFIER') {
+    if (['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'APPROVER'].includes(session.user.role)) {
       submission = await prisma.submission.findUnique({
         where: { id: id }
       });

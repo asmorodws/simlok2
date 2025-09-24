@@ -7,11 +7,29 @@ import type {
   VendorSubmissionStatusChangedEvent,
   NotificationNewEvent
 } from '../shared/events';// Helper to count unread notifications
-async function getUnreadCount(scope: 'admin' | 'vendor', vendorId?: string): Promise<number> {
+async function getUnreadCount(scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId?: string): Promise<number> {
   if (scope === 'admin') {
     return await prisma.notification.count({
       where: {
         scope: 'admin',
+        reads: {
+          none: {}
+        }
+      }
+    });
+  } else if (scope === 'reviewer') {
+    return await prisma.notification.count({
+      where: {
+        scope: 'reviewer',
+        reads: {
+          none: {}
+        }
+      }
+    });
+  } else if (scope === 'approver') {
+    return await prisma.notification.count({
+      where: {
+        scope: 'approver',
         reads: {
           none: {}
         }
@@ -105,6 +123,9 @@ export async function notifyAdminNewSubmission(submissionId: string) {
         totalSubmissions: await prisma.submission.count()
       }
     });
+
+    // Also notify reviewers about new submission
+    await notifyReviewerNewSubmission(submissionId);
 
   } catch (error) {
     console.error('Error notifying admin new submission:', error);
@@ -320,5 +341,174 @@ export async function notifyNotificationsRemoved(submissionId: string) {
 
   } catch (error) {
     console.error('Error broadcasting notification removal:', error);
+  }
+}
+
+export async function notifyReviewerNewSubmission(submissionId: string) {
+  try {
+    // Get submission details
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { user: true }
+    });
+
+    if (!submission) {
+      throw new Error('Submission not found');
+    }
+
+    // Create notification record for reviewers
+    const notification = await prisma.notification.create({
+      data: {
+        scope: 'reviewer',
+        type: 'new_submission_review',
+        title: 'Pengajuan Simlok Baru untuk Review',
+        message: `Ada pengajuan baru dari ${submission.vendor_name} - ${submission.officer_name} yang perlu direview`,
+        data: JSON.stringify({
+          submissionId,
+          vendorName: submission.vendor_name,
+          officerName: submission.officer_name,
+          jobDescription: submission.job_description
+        })
+      }
+    });
+
+    // Create notification event
+    const notificationEvent: NotificationNewEvent = {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      scope: 'reviewer',
+      createdAt: notification.created_at.toISOString()
+    };
+
+    eventsPublisher.notificationNew(notificationEvent);
+    
+    // Publish to real-time subscribers via Redis
+    await notificationsPublisher.publishNotification(notificationEvent);
+
+    // Update unread count for reviewers
+    const unreadCount = await getUnreadCount('reviewer');
+    const unreadCountEvent = {
+      scope: 'reviewer' as const,
+      unreadCount: unreadCount,
+      count: unreadCount
+    };
+    eventsPublisher.notificationUnreadCount(unreadCountEvent);
+    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
+
+    // Update reviewer stats
+    const totalPendingReview = await prisma.submission.count({
+      where: { review_status: 'PENDING_REVIEW' }
+    });
+
+    eventsPublisher.statsUpdate({
+      scope: 'reviewer',
+      changes: {
+        pendingReview: totalPendingReview,
+        totalSubmissions: await prisma.submission.count()
+      }
+    });
+
+    console.log(`✅ Notified reviewers about new submission: ${submissionId}`);
+
+  } catch (error) {
+    console.error('Error notifying reviewer new submission:', error);
+  }
+}
+
+export async function notifyApproverReviewedSubmission(submissionId: string) {
+  try {
+    // Get submission details
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId },
+      include: { 
+        user: true,
+        reviewed_by_user: {
+          select: {
+            officer_name: true
+          }
+        }
+      }
+    });
+
+    if (!submission) {
+      throw new Error('Submission not found');
+    }
+
+    // Only notify approvers if the submission was approved by reviewer
+    if (submission.review_status !== 'MEETS_REQUIREMENTS') {
+      console.log(`Submission ${submissionId} not approved by reviewer (status: ${submission.review_status}), skipping approver notification`);
+      return;
+    }
+
+    // Create notification record for approvers
+    const notification = await prisma.notification.create({
+      data: {
+        scope: 'approver',
+        type: 'reviewed_submission_approval',
+        title: 'Pengajuan Simlok Sudah Direview',
+        message: `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan perlu persetujuan final`,
+        data: JSON.stringify({
+          submissionId,
+          vendorName: submission.vendor_name,
+          officerName: submission.officer_name,
+          jobDescription: submission.job_description,
+          reviewedBy: submission.reviewed_by_user?.officer_name,
+          reviewStatus: submission.review_status,
+          reviewNote: submission.review_note
+        })
+      }
+    });
+
+    // Create notification event
+    const notificationEvent: NotificationNewEvent = {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      scope: 'approver',
+      createdAt: notification.created_at.toISOString()
+    };
+
+    eventsPublisher.notificationNew(notificationEvent);
+    
+    // Publish to real-time subscribers via Redis
+    await notificationsPublisher.publishNotification(notificationEvent);
+
+    // Update unread count for approvers
+    const unreadCount = await getUnreadCount('approver');
+    const unreadCountEvent = {
+      scope: 'approver' as const,
+      unreadCount: unreadCount,
+      count: unreadCount
+    };
+    eventsPublisher.notificationUnreadCount(unreadCountEvent);
+    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
+
+    // Update approver stats
+    const totalPendingFinal = await prisma.submission.count({
+      where: { 
+        review_status: 'MEETS_REQUIREMENTS',
+        final_status: 'PENDING_APPROVAL'
+      }
+    });
+
+    eventsPublisher.statsUpdate({
+      scope: 'approver',
+      changes: {
+        pendingFinalApproval: totalPendingFinal,
+        totalReviewedSubmissions: await prisma.submission.count({
+          where: { review_status: { not: 'PENDING_REVIEW' } }
+        })
+      }
+    });
+
+    console.log(`✅ Notified approvers about reviewed submission: ${submissionId}`);
+
+  } catch (error) {
+    console.error('Error notifying approver reviewed submission:', error);
   }
 }

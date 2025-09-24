@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 interface Props {
-  allowedRoles: ("SUPER_ADMIN" | "ADMIN" | "VENDOR" | "VERIFIER")[];
+  allowedRoles: ("SUPER_ADMIN" | "ADMIN" | "VENDOR" | "VERIFIER" | "REVIEWER" | "APPROVER")[];
   children: React.ReactNode;
 }
 

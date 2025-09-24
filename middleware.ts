@@ -4,8 +4,10 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 const roleHierarchy = {
-  SUPER_ADMIN: 4,
-  ADMIN: 3,
+  SUPER_ADMIN: 6,
+  ADMIN: 5,
+  APPROVER: 4,
+  REVIEWER: 3,
   VERIFIER: 2,
   VENDOR: 1,
 } as const;
@@ -16,6 +18,8 @@ type Role = keyof typeof roleHierarchy;
 const protectedRoutes: { prefix: string; minRole: Role }[] = [
   { prefix: "/super-admin", minRole: "SUPER_ADMIN" },
   { prefix: "/admin", minRole: "ADMIN" },
+  { prefix: "/approver", minRole: "APPROVER" },
+  { prefix: "/reviewer", minRole: "REVIEWER" },
   { prefix: "/verifier", minRole: "VERIFIER" },
   { prefix: "/vendor", minRole: "VENDOR" },
   { prefix: "/dashboard", minRole: "VENDOR" }, // contoh: semua role bisa akses /dashboard, nanti UI berbeda
@@ -62,8 +66,8 @@ export async function middleware(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // Check if user is verified (except for admin and super admin)
-  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN" && !verified_at) {
+  // Check if user is verified (except for admin, super admin, reviewer, and approver)
+  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN" && userRole !== "REVIEWER" && userRole !== "APPROVER" && !verified_at) {
     console.log('Middleware - User not verified, redirecting to verification-pending');
     const url = req.nextUrl.clone();
     url.pathname = "/verification-pending";
@@ -79,5 +83,5 @@ export async function middleware(req: NextRequest) {
 
 // apply to all routes; tune matcher as needed
 export const config = {
-  matcher: ["/super-admin/:path*", "/admin/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
+  matcher: ["/super-admin/:path*", "/admin/:path*", "/approver/:path*", "/reviewer/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
 };

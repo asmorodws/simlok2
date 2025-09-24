@@ -64,6 +64,12 @@ io.on('connection', (socket) => {
       if (role === 'ADMIN') {
         socket.join(ROOMS.ADMIN);
         console.log(`Socket ${socket.id} joined admin room`);
+      } else if (role === 'REVIEWER') {
+        socket.join(ROOMS.REVIEWER);
+        console.log(`Socket ${socket.id} joined reviewer room`);
+      } else if (role === 'APPROVER') {
+        socket.join(ROOMS.APPROVER);
+        console.log(`Socket ${socket.id} joined approver room`);
       } else if (role === 'VENDOR' && vendorId) {
         socket.join(ROOMS.VENDOR(vendorId));
         console.log(`Socket ${socket.id} joined vendor room: ${vendorId}`);
@@ -81,6 +87,14 @@ io.on('connection', (socket) => {
 // Helper functions for emitting events
 export const emitToAdmin = (event: string, payload: any) => {
   io.to(ROOMS.ADMIN).emit(event, payload);
+};
+
+export const emitToReviewer = (event: string, payload: any) => {
+  io.to(ROOMS.REVIEWER).emit(event, payload);
+};
+
+export const emitToApprover = (event: string, payload: any) => {
+  io.to(ROOMS.APPROVER).emit(event, payload);
 };
 
 export const emitToVendor = (vendorId: string, event: string, payload: any) => {
@@ -104,25 +118,37 @@ export const emitVendorSubmissionStatusChanged = (vendorId: string, payload: Ven
   emitToVendor(vendorId, EVENT_NAMES.VENDOR_SUBMISSION_STATUS_CHANGED, payload);
 };
 
-export const emitNotificationNew = (scope: 'admin' | 'vendor', vendorId: string | undefined, payload: NotificationNewEvent) => {
+export const emitNotificationNew = (scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId: string | undefined, payload: NotificationNewEvent) => {
   if (scope === 'admin') {
     emitToAdmin(EVENT_NAMES.NOTIFICATION_NEW, payload);
+  } else if (scope === 'reviewer') {
+    emitToReviewer(EVENT_NAMES.NOTIFICATION_NEW, payload);
+  } else if (scope === 'approver') {
+    emitToApprover(EVENT_NAMES.NOTIFICATION_NEW, payload);
   } else if (scope === 'vendor' && vendorId) {
     emitToVendor(vendorId, EVENT_NAMES.NOTIFICATION_NEW, payload);
   }
 };
 
-export const emitNotificationUnreadCount = (scope: 'admin' | 'vendor', vendorId: string | undefined, payload: NotificationUnreadCountEvent) => {
+export const emitNotificationUnreadCount = (scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId: string | undefined, payload: NotificationUnreadCountEvent) => {
   if (scope === 'admin') {
     emitToAdmin(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
+  } else if (scope === 'reviewer') {
+    emitToReviewer(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
+  } else if (scope === 'approver') {
+    emitToApprover(EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
   } else if (scope === 'vendor' && vendorId) {
     emitToVendor(vendorId, EVENT_NAMES.NOTIFICATION_UNREAD_COUNT, payload);
   }
 };
 
-export const emitStatsUpdate = (scope: 'admin' | 'vendor', vendorId: string | undefined, payload: StatsUpdateEvent) => {
+export const emitStatsUpdate = (scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId: string | undefined, payload: StatsUpdateEvent) => {
   if (scope === 'admin') {
     emitToAdmin(EVENT_NAMES.STATS_UPDATE, payload);
+  } else if (scope === 'reviewer') {
+    emitToReviewer(EVENT_NAMES.STATS_UPDATE, payload);
+  } else if (scope === 'approver') {
+    emitToApprover(EVENT_NAMES.STATS_UPDATE, payload);
   } else if (scope === 'vendor' && vendorId) {
     emitToVendor(vendorId, EVENT_NAMES.STATS_UPDATE, payload);
   }

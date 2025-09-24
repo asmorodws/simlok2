@@ -12,9 +12,24 @@ export class NotificationsPublisher {
    */
   async publishNotification(notification: NotificationNewEvent) {
     try {
-      const channelName = notification.scope === 'admin' 
-        ? 'notifications:admin' 
-        : `notifications:vendor:${notification.vendorId}`;
+      let channelName: string;
+      
+      switch (notification.scope) {
+        case 'admin':
+          channelName = 'notifications:admin';
+          break;
+        case 'reviewer':
+          channelName = 'notifications:reviewer';
+          break;
+        case 'approver':
+          channelName = 'notifications:approver';
+          break;
+        case 'vendor':
+          channelName = `notifications:vendor:${notification.vendorId}`;
+          break;
+        default:
+          throw new Error(`Unknown notification scope: ${notification.scope}`);
+      }
       
       const message = JSON.stringify({
         type: 'notification:new',
@@ -33,9 +48,24 @@ export class NotificationsPublisher {
    */
   async publishUnreadCount(update: NotificationUnreadCountEvent) {
     try {
-      const channelName = update.scope === 'admin' 
-        ? 'notifications:admin' 
-        : `notifications:vendor:${update.vendorId}`;
+      let channelName: string;
+      
+      switch (update.scope) {
+        case 'admin':
+          channelName = 'notifications:admin';
+          break;
+        case 'reviewer':
+          channelName = 'notifications:reviewer';
+          break;
+        case 'approver':
+          channelName = 'notifications:approver';
+          break;
+        case 'vendor':
+          channelName = `notifications:vendor:${update.vendorId}`;
+          break;
+        default:
+          throw new Error(`Unknown notification scope: ${update.scope}`);
+      }
       
       const message = JSON.stringify({
         type: 'notification:unread_count',
@@ -52,11 +82,26 @@ export class NotificationsPublisher {
   /**
    * Publish stats update to real-time subscribers
    */
-  async publishStatsUpdate(scope: 'admin' | 'vendor', vendorId: string | undefined, changes: Record<string, any>) {
+  async publishStatsUpdate(scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId: string | undefined, changes: Record<string, any>) {
     try {
-      const channelName = scope === 'admin' 
-        ? 'notifications:admin' 
-        : `notifications:vendor:${vendorId}`;
+      let channelName: string;
+      
+      switch (scope) {
+        case 'admin':
+          channelName = 'notifications:admin';
+          break;
+        case 'reviewer':
+          channelName = 'notifications:reviewer';
+          break;
+        case 'approver':
+          channelName = 'notifications:approver';
+          break;
+        case 'vendor':
+          channelName = `notifications:vendor:${vendorId}`;
+          break;
+        default:
+          throw new Error(`Unknown stats scope: ${scope}`);
+      }
       
       const message = JSON.stringify({
         type: 'stats:update',
