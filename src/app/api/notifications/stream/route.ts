@@ -13,13 +13,16 @@ export async function GET(request: NextRequest) {
   }
 
   const searchParams = request.nextUrl.searchParams;
-  const scope = searchParams.get('scope') || (session.user.role === 'ADMIN' ? 'admin' : 'vendor');
+  const scope = searchParams.get('scope') || 
+    (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' ? 'admin' :
+     session.user.role === 'REVIEWER' ? 'reviewer' :
+     session.user.role === 'APPROVER' ? 'approver' : 'vendor');
   const vendorId = searchParams.get('vendorId') || session.user.id;
 
   // Create Server-Sent Events stream
   const stream = new ReadableStream({
     start(controller) {
-      console.log('🔥 SSE connection established for:', { scope, vendorId });
+      console.log('🔥 SSE connection established for:', { scope, vendorId, role: session.user.role });
 
       // Send initial connection message
       const encoder = new TextEncoder();
@@ -27,11 +30,28 @@ export async function GET(request: NextRequest) {
         type: 'connected', 
         message: 'Real-time notifications connected',
         scope,
-        vendorId 
+        vendorId,
+        role: session.user.role
       })}\n\n`));
 
       // Subscribe to Redis channels for real-time updates
-      const channelName = scope === 'admin' ? 'notifications:admin' : `notifications:vendor:${vendorId}`;
+      let channelName: string;
+      switch (scope) {
+        case 'admin':
+          channelName = 'notifications:admin';
+          break;
+        case 'reviewer':
+          channelName = 'notifications:reviewer';
+          break;
+        case 'approver':
+          channelName = 'notifications:approver';
+          break;
+        case 'vendor':
+          channelName = `notifications:vendor:${vendorId}`;
+          break;
+        default:
+          channelName = 'notifications:admin';
+      }
       
       // Create a Redis subscriber for this connection
       const subscriber = redisPub.duplicate();

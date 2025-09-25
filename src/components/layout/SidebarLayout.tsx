@@ -47,6 +47,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     REVIEWER: [
       { label: "Dashboard", href: "/reviewer", icon: HomeIcon },
       { label: "Review Pengajuan", href: "/reviewer/submissions", icon: ClipboardDocumentListIcon },
+      { label: "Verifikasi User", href: "/reviewer/users", icon: UsersIcon },
     ],
     APPROVER: [
       { label: "Dashboard", href: "/approver", icon: HomeIcon },

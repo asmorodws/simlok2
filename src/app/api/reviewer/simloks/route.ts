@@ -20,21 +20,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const reviewStatus = searchParams.get('status');
+    const reviewStatus = searchParams.get('reviewStatus');
+    const finalStatus = searchParams.get('finalStatus');
     const vendorId = searchParams.get('vendorId');
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {
-      // Only show submissions that haven't been finalized yet
-      final_status: 'PENDING_APPROVAL'
-    };
+    const whereClause: any = {};
 
     // Filter by review status if provided
     if (reviewStatus && ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'].includes(reviewStatus)) {
       whereClause.review_status = reviewStatus;
+    }
+
+    // Filter by final status if provided
+    if (finalStatus && ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
+      whereClause.final_status = finalStatus;
+    } else if (!finalStatus) {
+      // Default to showing only pending approval submissions if no final status filter is applied
+      whereClause.final_status = 'PENDING_APPROVAL';
     }
 
     // Filter by vendor if provided
@@ -66,30 +72,29 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [submissions, total, statistics] = await Promise.all([
+    const [submissions, total, statistics, userStats] = await Promise.all([
       prisma.submission.findMany({
         where: whereClause,
-        include: {
+        select: {
+          id: true,
+          approval_status: true,
+          review_status: true,
+          final_status: true,
+          vendor_name: true,
+          based_on: true,
+          officer_name: true,
+          job_description: true,
+          work_location: true,
+          implementation: true,
+          working_hours: true,
+          other_notes: true,
+          work_facilities: true,
+          created_at: true,
           user: {
             select: {
               id: true,
-              officer_name: true,
-              email: true,
               vendor_name: true,
-            }
-          },
-          reviewed_by_user: {
-            select: {
-              id: true,
               officer_name: true,
-              email: true,
-            }
-          },
-          worker_list: {
-            select: {
-              id: true,
-              worker_name: true,
-              worker_photo: true,
             }
           }
         },
@@ -107,20 +112,38 @@ export async function GET(request: NextRequest) {
         _count: {
           review_status: true
         }
-      })
+      }),
+      // Get user verification statistics
+      Promise.all([
+        prisma.user.count({
+          where: { 
+            role: 'VENDOR',
+            verified_at: null 
+          }
+        }),
+        prisma.user.count({
+          where: { 
+            role: 'VENDOR',
+            verified_at: { not: null }
+          }
+        })
+      ])
     ]);
 
-    // Format statistics
+    // Format statistics for frontend
+    const [pendingUserVerifications, totalVerifiedUsers] = userStats;
     const stats = {
       total: total,
-      pending_review: statistics.find(s => s.review_status === 'PENDING_REVIEW')?._count.review_status || 0,
-      meets_requirements: statistics.find(s => s.review_status === 'MEETS_REQUIREMENTS')?._count.review_status || 0,
-      not_meets_requirements: statistics.find(s => s.review_status === 'NOT_MEETS_REQUIREMENTS')?._count.review_status || 0,
+      pendingReview: statistics.find(s => s.review_status === 'PENDING_REVIEW')?._count.review_status || 0,
+      meetsRequirements: statistics.find(s => s.review_status === 'MEETS_REQUIREMENTS')?._count.review_status || 0,
+      notMeetsRequirements: statistics.find(s => s.review_status === 'NOT_MEETS_REQUIREMENTS')?._count.review_status || 0,
+      pendingUserVerifications,
+      totalVerifiedUsers
     };
 
     return NextResponse.json({
       submissions,
-      statistics: stats,
+      stats,
       pagination: {
         page,
         limit,

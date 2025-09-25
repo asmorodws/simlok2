@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const reviewStatus = searchParams.get('reviewStatus');
+    const finalStatus = searchParams.get('finalStatus');
     const vendorId = searchParams.get('vendorId');
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'reviewed_at';
@@ -37,6 +38,11 @@ export async function GET(request: NextRequest) {
     // Filter by specific review status if provided
     if (reviewStatus && ['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'].includes(reviewStatus)) {
       whereClause.review_status = reviewStatus;
+    }
+
+    // Filter by final status if provided
+    if (finalStatus && ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
+      whereClause.final_status = finalStatus;
     }
 
     // Filter by vendor if provided

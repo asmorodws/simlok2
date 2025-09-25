@@ -153,6 +153,41 @@ class EventsPublisher {
   }
 
   /**
+   * Emit submission reviewed event to approvers
+   */
+  submissionReviewed(payload: { submissionId: string; reviewStatus: string; reviewedBy: string; reviewedAt: string }) {
+    this.emitToApprover('submission:reviewed', payload);
+  }
+
+  /**
+   * Emit submission created event to reviewers
+   */
+  submissionCreated(payload: { submissionId: string; vendorName: string; officerName: string; createdAt: string }) {
+    this.emitToReviewer('submission:created', payload);
+  }
+
+  /**
+   * Emit submission finalized event to vendor
+   */
+  submissionFinalized(vendorId: string, payload: { submissionId: string; finalStatus: string; finalizedBy: string; finalizedAt: string }) {
+    this.emitToVendor(vendorId, 'submission:finalized', payload);
+  }
+
+  /**
+   * Emit user verification needed event to reviewers
+   */
+  userVerificationNeeded(payload: { userId: string; vendorName: string; officerName: string; email: string; createdAt: string }) {
+    this.emitToReviewer('user:verification-needed', payload);
+  }
+
+  /**
+   * Emit user verification result event to specific vendor
+   */
+  userVerificationResult(vendorId: string, payload: { userId: string; status: string; verifiedAt: string; note: string }) {
+    this.emitToVendor(vendorId, 'user:verification-result', payload);
+  }
+
+  /**
    * Emit to all connected clients (use sparingly)
    */
   broadcast(event: string, payload: any) {

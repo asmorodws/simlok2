@@ -153,7 +153,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       
       const response = await fetch(`/api/reviewer/simloks/${submissionId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch submission details');
+        throw new Error('Gagal mengambil detail pengajuan');
       }
       
       const data = await response.json();
@@ -284,52 +284,71 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   }, [templateFields.tanggal_dari, templateFields.tanggal_sampai]);
 
-  // Template generator untuk lain-lain
+  // Template generator untuk lain-lain - Generate ketika tanggal pelaksanaan sudah dipilih
   useEffect(() => {
     const generateLainLainTemplate = () => {
-      const templateParts = [];
-      
-      // Header template
-      templateParts.push("Izin diberikan berdasarkan:");
-      
-      // SIMJA section
-      if (submission?.simja_number && submission?.simja_date) {
+      // Hanya generate jika tanggal pelaksanaan sudah dipilih
+      if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
+        const templateParts = [];
+        
+        // Header template
+        templateParts.push("Izin diberikan berdasarkan:");
+        
+        // SIMJA section
+        if (submission?.simja_number && submission?.simja_date) {
+          templateParts.push(
+            `• Simja Ast Man Facility Management`,
+            `  ${submission.simja_number} Tgl. ${new Date(submission.simja_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+          );
+        } else {
+          templateParts.push(
+            `• Simja Ast Man Facility Management`,
+            `  [nomor] Tgl. [tanggal]`
+          );
+        }
+        
+        // SIKA section  
+        if (submission?.sika_number && submission?.sika_date) {
+          templateParts.push(
+            `• SIKA Pekerjaan Dingin`,
+            `  ${submission.sika_number} Tgl. ${new Date(submission.sika_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+          );
+        } else {
+          templateParts.push(
+            `• SIKA Pekerjaan Dingin`,
+            `  [nomor] Tgl. [tanggal]`
+          );
+        }
+        
+        // Head of Security section
+        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Head Of Security Region I';
         templateParts.push(
-          `• Simja Ast Man Facility Management`,
-          `  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`
+          ``,
+          `Diterima ${jabatan}`,
+          `${today}`
         );
+        
+        const template = templateParts.join('\n');
+        setApprovalForm(prev => ({ ...prev, lain_lain: template }));
       }
-      
-      // SIKA section  
-      if (submission?.sika_number && submission?.sika_date) {
-        templateParts.push(
-          `• SIKA Pekerjaan Dingin`,
-          `  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`
-        );
-      }
-      
-      // Head of Security section
-      const tanggalDiterima = approvalForm.tanggal_simlok;
-      if (tanggalDiterima) {
-        templateParts.push(
-          ` \n`,
-          ` Diterima ${submission?.signer_position || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
-          `  ${formatDate(tanggalDiterima)}`
-        );
-      }
-      
-      return templateParts.join('\n');
     };
 
-    // Update template jika ada data yang diperlukan
-    const shouldUpdate = approvalForm.tanggal_simlok ||
-                        (submission?.simja_number && submission?.sika_number);
-    
-    if (shouldUpdate) {
-      const newTemplate = generateLainLainTemplate();
-      setApprovalForm(prev => ({ ...prev, lain_lain: newTemplate }));
+    // Generate template ketika tanggal pelaksanaan sudah dipilih
+    if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
+      generateLainLainTemplate();
     }
-  }, [approvalForm.tanggal_simlok, submission?.simja_number, submission?.simja_date, submission?.sika_number, submission?.sika_date, submission?.signer_position, approvalForm.jabatan_signer]);
+  }, [
+    submission?.id, 
+    templateFields.tanggal_dari,
+    templateFields.tanggal_sampai,
+    submission?.simja_number, 
+    submission?.simja_date, 
+    submission?.sika_number, 
+    submission?.sika_date, 
+    submission?.signer_position,
+    approvalForm.jabatan_signer
+  ]); // Re-generate when dates or relevant data changes
 
   const handleViewPdf = () => {
     setIsPdfModalOpen(true);
@@ -363,7 +382,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update submission');
+        throw new Error(errorData.error || 'Gagal memperbarui pengajuan');
       }
 
       const data = await response.json();
@@ -429,7 +448,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
       if (!reviewResponse.ok) {
         const errorData = await reviewResponse.json();
-        throw new Error(errorData.error || 'Failed to submit review');
+        throw new Error(errorData.error || 'Gagal mengirim review');
       }
 
       const data = await reviewResponse.json();
@@ -479,7 +498,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to delete worker photo');
+          throw new Error(errorData.error || 'Gagal menghapus foto pekerja');
         }
       } catch (err) {
         console.error('Error deleting worker:', err);
@@ -1193,13 +1212,20 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
               {/* Review Tab */}
               {activeTab === 'review' && (
-                <div className="space-y-8">
+                <div className="  space-y-8">
                   {/* Header Section */}
-                  <div className="border-b border-gray-200 pb-6">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Review Pengajuan</h3>
-                    <p className="text-gray-600">
-                      Berikan penilaian dan catatan untuk pengajuan SIMLOK ini
-                    </p>
+                  <div className="pb-6 border-b border-gray-200">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <CheckCircleIcon className="h-6 w-6 text-blue-600" />
+                        </div>
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900">Review Pengajuan SIMLOK</h2>
+                        <p className="text-gray-600 mt-1">{submission.vendor_name}</p>
+                      </div>
+                    </div>
                   </div>
                     
                   {/* Review Status Display */}
@@ -1238,85 +1264,138 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     <div className="bg-white border border-gray-200 rounded-xl p-6">
                       <div className="space-y-6">
                         {/* Status Selection */}
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4">Hasil Review</h4>
+                        <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-200 shadow-sm">
+                          <div className="text-center mb-6">
+                            <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-3">
+                              <CheckCircleIcon className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">Keputusan Review</h3>
+                            <p className="text-gray-600 text-sm">
+                              Pilih hasil review berdasarkan penilaian Anda terhadap pengajuan ini
+                            </p>
+                          </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div 
-                              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                                reviewData.review_status === 'MEETS_REQUIREMENTS' 
-                                  ? 'border-green-500 bg-green-50' 
-                                  : 'border-gray-200 hover:border-green-300 bg-white'
-                              }`}
-                              onClick={() => setReviewData({ ...reviewData, review_status: 'MEETS_REQUIREMENTS' })}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <input
-                                  type="radio"
-                                  name="review_status"
-                                  value="MEETS_REQUIREMENTS"
-                                  checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
-                                  onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
-                                  className="h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500"
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-2">
-                                    <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                                    <span className="text-green-700 font-semibold">Memenuhi Syarat</span>
-                                  </div>
-                                  <p className="text-sm text-green-600 mt-1">Pengajuan telah sesuai dengan persyaratan</p>
+                            {/* Meets Requirements Option */}
+                            <label className={`
+                              relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200
+                              ${reviewData.review_status === 'MEETS_REQUIREMENTS' 
+                                ? 'border-green-500 bg-green-50 shadow-md' 
+                                : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
+                              }
+                            `}>
+                              <input
+                                type="radio"
+                                name="review_status"
+                                value="MEETS_REQUIREMENTS"
+                                checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
+                                onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                                className="sr-only"
+                              />
+                              <div className="flex items-center flex-1">
+                                <div className={`
+                                  flex-shrink-0 w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center
+                                  ${reviewData.review_status === 'MEETS_REQUIREMENTS' 
+                                    ? 'border-green-500 bg-green-500' 
+                                    : 'border-gray-300'
+                                  }
+                                `}>
+                                  {reviewData.review_status === 'MEETS_REQUIREMENTS' && (
+                                    <CheckCircleIcon className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">Memenuhi Syarat</div>
+                                  <div className="text-xs text-gray-500">Pengajuan telah sesuai dengan persyaratan</div>
                                 </div>
                               </div>
-                            </div>
+                            </label>
 
-                            <div 
-                              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                                reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' 
-                                  ? 'border-red-500 bg-red-50' 
-                                  : 'border-gray-200 hover:border-red-300 bg-white'
-                              }`}
-                              onClick={() => setReviewData({ ...reviewData, review_status: 'NOT_MEETS_REQUIREMENTS' })}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <input
-                                  type="radio"
-                                  name="review_status"
-                                  value="NOT_MEETS_REQUIREMENTS"
-                                  checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
-                                  onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
-                                  className="h-4 w-4 text-red-600 border-gray-300 focus:ring-red-500"
-                                />
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-2">
-                                    <XCircleIcon className="h-5 w-5 text-red-600" />
-                                    <span className="text-red-700 font-semibold">Tidak Memenuhi Syarat</span>
-                                  </div>
-                                  <p className="text-sm text-red-600 mt-1">Pengajuan perlu perbaikan atau penyesuaian</p>
+                            {/* Not Meets Requirements Option */}
+                            <label className={`
+                              relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200
+                              ${reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' 
+                                ? 'border-red-500 bg-red-50 shadow-md' 
+                                : 'border-gray-200 bg-white hover:border-red-300 hover:bg-red-50'
+                              }
+                            `}>
+                              <input
+                                type="radio"
+                                name="review_status"
+                                value="NOT_MEETS_REQUIREMENTS"
+                                checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
+                                onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                                className="sr-only"
+                              />
+                              <div className="flex items-center flex-1">
+                                <div className={`
+                                  flex-shrink-0 w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center
+                                  ${reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' 
+                                    ? 'border-red-500 bg-red-500' 
+                                    : 'border-gray-300'
+                                  }
+                                `}>
+                                  {reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' && (
+                                    <XCircleIcon className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">Tidak Memenuhi Syarat</div>
+                                  <div className="text-xs text-gray-500">Pengajuan perlu perbaikan atau penyesuaian</div>
                                 </div>
                               </div>
-                            </div>
+                            </label>
                           </div>
                         </div>
 
                         {/* Catatan Review */}
-                        <div>
-                          <h5 className="text-base font-semibold text-gray-900 mb-3">Catatan Review</h5>
+                        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                          <div className="flex items-center mb-4">
+                            <div className="flex-shrink-0">
+                              <svg className="h-6 w-6 text-gray-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <h5 className="text-lg font-bold text-gray-900">Catatan Review</h5>
+                          </div>
                           <div className="space-y-4">
                             {/* Catatan untuk Approver */}
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
                                 Catatan untuk Approver <span className="text-red-500">*</span>
                               </label>
-                              <p className="text-xs text-gray-500 mb-2">
-                                Catatan ini akan dibaca oleh Approver untuk membantu proses persetujuan
-                              </p>
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                <p className="text-xs text-blue-700 flex items-center">
+                                  <svg className="h-4 w-4 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                  </svg>
+                                  Catatan ini akan diteruskan ke Approver untuk membantu pengambilan keputusan final
+                                </p>
+                              </div>
                               <textarea
                                 value={reviewData.review_note}
                                 onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
-                                rows={3}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                placeholder="Berikan penjelasan detail mengenai hasil review untuk membantu Approver dalam pengambilan keputusan..."
+                                rows={4}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+                                placeholder="Berikan penjelasan detail mengenai hasil review, termasuk poin-poin yang perlu diperhatikan approver..."
                                 required
                               />
+                            </div>
+
+                            {/* Keterangan dari Reviewer */}
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                Keterangan untuk Vendor
+                              </label>
+                              <textarea
+                                value={approvalForm.keterangan}
+                                onChange={(e) => setApprovalForm(prev => ({ ...prev, keterangan: e.target.value }))}
+                                rows={3}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none"
+                                placeholder="Tambahkan catatan khusus untuk persiapan approval..."
+                              />
+                              <p className="text-xs text-gray-500 mt-2">
+                                Catatan ini akan digunakan sebagai template saat admin melakukan approval
+                              </p>
                             </div>
                             
                             {/* Informasi Tambahan */}
@@ -1352,25 +1431,38 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
                   {/* Persiapan Approval Form - Hanya untuk yang bisa edit */}
                   {canEdit && (
-                    <div className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-6 mt-8">
-                      <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Persiapan Template Approval</h3>
-                        <p className="text-gray-600 text-sm">
-                          Lengkapi data berikut untuk mempersiapkan template approval. Data ini akan membantu admin saat melakukan approval final.
-                        </p>
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm mt-8">
+                      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Template Persiapan Approval</h3>
+                            <p className="text-sm text-gray-600">
+                              Lengkapi data untuk mempersiapkan template approval yang akan digunakan admin
+                            </p>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="space-y-6">
+                      
+                      <div className="p-6 space-y-8">
                         {/* Tanggal Pelaksanaan */}
-                        <div className="space-y-4">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Tanggal Pelaksanaan
-                            <span className="text-xs text-gray-500 ml-1">(Jadwal pelaksanaan kegiatan)</span>
-                          </label>
+                        <div>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                              <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <h4 className="text-base font-medium text-gray-900">Jadwal Pelaksanaan</h4>
+                          </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                              <label className="block text-sm text-gray-600 mb-2">Tanggal Mulai:</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
                               <DatePicker
                                 value={templateFields.tanggal_dari}
                                 onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_dari: value }))}
@@ -1379,7 +1471,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                               />
                             </div>
                             <div>
-                              <label className="block text-sm text-gray-600 mb-2">Tanggal Selesai:</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Selesai</label>
                               <DatePicker
                                 value={templateFields.tanggal_sampai}
                                 onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_sampai: value }))}
@@ -1389,129 +1481,168 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             </div>
                           </div>
 
-                          {/* Keterangan Pelaksanaan */}
                           <div>
-                            <label className="block text-sm text-gray-600 mb-2">Keterangan Pelaksanaan:</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Keterangan Pelaksanaan</label>
                             <textarea
                               value={approvalForm.pelaksanaan}
                               onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
                               rows={3}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                               placeholder="Contoh: Terhitung mulai tanggal 15 Januari 2024 sampai 20 Januari 2024. Termasuk hari Sabtu, Minggu dan hari libur lainnya."
                             />
                           </div>
                         </div>
 
-                        {/* Jabatan Signer */}
+                        {/* Penandatangan */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Jabatan Penandatangan
-                            <span className="text-xs text-gray-500 ml-1">(Jabatan yang menandatangani dokumen)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={approvalForm.jabatan_signer}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Contoh: Head Of Security Region I, Manager Operations, dll"
-                          />
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                              <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <h4 className="text-base font-medium text-gray-900">Data Penandatangan</h4>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Jabatan</label>
+                              <input
+                                type="text"
+                                value={approvalForm.jabatan_signer}
+                                onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Head Of Security Region I"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
+                              <input
+                                type="text"
+                                value={approvalForm.nama_signer}
+                                onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                                placeholder="Masukkan nama penandatangan"
+                              />
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Nama Signer */}
+                        {/* Template Lain-lain */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nama Penandatangan
-                            <span className="text-xs text-gray-500 ml-1">(Nama yang menandatangani dokumen)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={approvalForm.nama_signer}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Masukkan nama penandatangan"
-                          />
-                        </div>
-
-                        {/* Lain-lain */}
-                        <div className="space-y-3">
-                          <label className="block text-sm font-medium text-gray-700">
-                            Lain-lain
-                            <span className="text-xs text-gray-500 ml-1">(Catatan tambahan)</span>
-                          </label>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                              <svg className="h-4 w-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <h4 className="text-base font-medium text-gray-900">Template Lain-lain</h4>
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Auto-generate</span>
+                          </div>
 
                           <textarea
                             value={approvalForm.lain_lain}
                             onChange={(e) => setApprovalForm(prev => ({ ...prev, lain_lain: e.target.value }))}
                             rows={6}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Izin diberikan berdasarkan:&#10;• Simja Ast Man Facility Management&#10;  [nomor] Tgl. [tanggal]&#10;• SIKA Pekerjaan Dingin&#10;  [nomor] Tgl. [tanggal]&#10;  Diterima Head Of Security Region 1&#10;  [tanggal]"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors font-mono text-sm"
+                            placeholder="Template akan otomatis ter-generate berdasarkan data SIMJA dan SIKA..."
                           />
+                          
+                          {templateFields.tanggal_dari && templateFields.tanggal_sampai ? (
+                            <div className="mt-3 flex items-center space-x-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+                              <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              <span>Template berhasil dibuat otomatis berdasarkan data SIMJA dan SIKA</span>
+                            </div>
+                          ) : (
+                            <div className="mt-3 flex items-center space-x-2 text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                              <svg className="h-4 w-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                              </svg>
+                              <span>Pilih tanggal pelaksanaan untuk generate template otomatis</span>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Content */}
+                        {/* Content Surat */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Content
-                            <span className="text-xs text-gray-500 ml-1">(Isi surat izin masuk lokasi)</span>
-                          </label>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+                              <svg className="h-4 w-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <h4 className="text-base font-medium text-gray-900">Isi Surat SIMLOK</h4>
+                          </div>
+
                           <textarea
                             value={approvalForm.content}
                             onChange={(e) => setApprovalForm(prev => ({ ...prev, content: e.target.value }))}
                             rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis."
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                            placeholder="Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban..."
                           />
                         </div>
 
-                        {/* Keterangan */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Keterangan
-                            <span className="text-xs text-gray-500 ml-1">(Catatan dari reviewer)</span>
-                          </label>
-                          <textarea
-                            value={approvalForm.keterangan}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, keterangan: e.target.value }))}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Tambahkan catatan untuk persiapan approval..."
-                          />
-                        </div>
+
 
                         {/* Save Button - Removed from here, will be combined at the bottom */}
 
                         {/* Info Box */}
-                        <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-md">
-                          <p className="font-medium mb-1">Catatan:</p>
-                          <ul className="list-disc list-inside space-y-1">
-                            <li>Data ini akan digunakan sebagai template saat admin melakukan approval</li>
-                            <li>Template akan otomatis tergenerate berdasarkan tanggal yang dipilih</li>
-                            <li>Semua field bersifat opsional dan dapat diubah kembali oleh admin</li>
-                          </ul>
+                        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                          <div className="flex items-start space-x-3">
+                            <svg className="h-5 w-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                              <h4 className="text-sm font-medium text-blue-800 mb-2">Informasi Template</h4>
+                              <ul className="text-sm text-blue-700 space-y-1">
+                                <li>• Data ini digunakan sebagai template saat admin melakukan approval</li>
+                                <li>• Template lain-lain akan otomatis generate berdasarkan tanggal yang dipilih</li>
+                                <li>• Semua field bersifat opsional dan dapat diubah kembali oleh admin</li>
+                              </ul>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
                       {/* Combined Submit Button */}
-                      <div className="mt-8 pt-6 border-t border-gray-200">
+                      <div className="border-t border-gray-200 bg-gray-50 px-6 py-6">
+                        <div className="text-center mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 mb-2">Finalisasi Review</h4>
+                          <p className="text-gray-600 text-sm">
+                            Pastikan semua data sudah benar sebelum mengirim review
+                          </p>
+                        </div>
+                        
                         <Button
                           onClick={handleSubmitReviewAndSave}
                           variant="primary"
                           disabled={!reviewData.review_status || !reviewData.review_note.trim() || saving}
-                          className="w-full bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-semibold py-3 text-base transition-all duration-200"
+                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-bold py-4 text-base transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
                         >
                           {saving ? (
                             <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                              Mengirim Review & Menyimpan Template...
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                              <span>Mengirim Review & Menyimpan Template...</span>
                             </div>
                           ) : (
-                            'Kirim Review & Simpan Template Approval'
+                            <div className="flex items-center justify-center">
+                              <svg className="h-5 w-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l3-3z" clipRule="evenodd" />
+                              </svg>
+                              <span>Kirim Review & Simpan Template Approval</span>
+                            </div>
                           )}
                         </Button>
                         
-                        <p className="text-xs text-gray-500 mt-3 text-center">
-                          Tombol ini akan mengirim review dan menyimpan template approval sekaligus
-                        </p>
+                        <div className="flex items-center justify-center mt-4 text-xs text-gray-500">
+                          <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          Review akan dikirim ke approver untuk persetujuan final
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1546,11 +1677,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 flex-shrink-0 bg-white">
           <div>
-            {/* Tampilkan tombol PDF setelah submission sudah di-review dan ada simlok_number */}
-            {submission?.review_status !== 'PENDING_REVIEW' && submission?.simlok_number && (
+            {/* Tampilkan tombol PDF setelah reviewer memberikan status review */}
+            {submission?.review_status !== 'PENDING_REVIEW' && (
               <Button onClick={handleViewPdf} variant="primary" size="sm">
                 <DocumentTextIcon className="w-4 h-4 mr-2" />
-                Lihat PDF SIMLOK
+                Lihat Preview PDF SIMLOK
               </Button>
             )}
           </div>

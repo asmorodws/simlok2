@@ -158,50 +158,22 @@ export async function PATCH(
       }
     });
 
-    // Create notifications for vendor and reviewer
-    const notificationPromises = [
-      // Notification for vendor
-      prisma.notification.create({
-        data: {
-          scope: 'vendor',
-          vendor_id: existingSubmission.user.id,
-          type: validatedData.final_status === 'APPROVED' ? 'submission_approved' : 'submission_rejected',
-          title: validatedData.final_status === 'APPROVED' ? 'Pengajuan Simlok Disetujui' : 'Pengajuan Simlok Ditolak',
-          message: validatedData.final_status === 'APPROVED' 
-            ? `Selamat! Pengajuan Simlok Anda telah disetujui dengan nomor ${updateData.simlok_number}`
-            : `Maaf, pengajuan Simlok Anda ditolak. ${validatedData.final_note || ''}`,
-          data: JSON.stringify({
-            submissionId: params.id,
-            finalStatus: validatedData.final_status,
-            simlokNumber: updateData.simlok_number || null,
-            finalNote: validatedData.final_note,
-            approvedBy: session.user.officer_name,
-          }),
-        }
-      })
-    ];
+    // Import and use the event system for real-time notifications
+    const { notifyVendorStatusChange } = await import('@/server/events');
+    
+    // Notify vendor with real-time updates
+    const vendorStatus = validatedData.final_status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+    await notifyVendorStatusChange(
+      existingSubmission.user.id, 
+      params.id, 
+      vendorStatus as 'APPROVED' | 'REJECTED'
+    );
 
-    // Notification for reviewer if exists
+    // Notify reviewer if exists about the final decision
     if (existingSubmission.reviewed_by_user) {
-      notificationPromises.push(
-        prisma.notification.create({
-          data: {
-            scope: 'reviewer',
-            type: validatedData.final_status === 'APPROVED' ? 'submission_approved' : 'submission_rejected',
-            title: validatedData.final_status === 'APPROVED' ? 'Pengajuan yang Direview Disetujui' : 'Pengajuan yang Direview Ditolak',
-            message: `Pengajuan dari ${existingSubmission.user.vendor_name} yang Anda review telah ${validatedData.final_status === 'APPROVED' ? 'disetujui' : 'ditolak'}`,
-            data: JSON.stringify({
-              submissionId: params.id,
-              vendorName: existingSubmission.user.vendor_name,
-              finalStatus: validatedData.final_status,
-              approvedBy: session.user.officer_name,
-            }),
-          }
-        })
-      );
+      const { notifyReviewerFinalDecision } = await import('@/server/events');
+      await notifyReviewerFinalDecision(params.id, validatedData.final_status);
     }
-
-    await Promise.all(notificationPromises);
 
     return NextResponse.json({ 
       submission: updatedSubmission,

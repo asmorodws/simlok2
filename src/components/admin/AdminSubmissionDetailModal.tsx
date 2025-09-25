@@ -1085,7 +1085,7 @@ export default function AdminSubmissionDetailModal({
                     variant="primary"
                     size="sm"
                     className="flex items-center"
-                    title="Lihat PDF SIMLOK"
+                    title="Lihat PDF"
                   >
                     <DocumentIcon className="h-4 w-4 mr-2" />
                     Lihat PDF

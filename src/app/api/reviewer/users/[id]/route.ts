@@ -1,0 +1,193 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/singletons';
+import { z } from 'zod';
+
+// Schema for validating user verification data
+const userVerificationSchema = z.object({
+  status: z.enum(['VERIFY', 'REJECT']),
+  note: z.string().optional(),
+});
+
+// PATCH /api/reviewer/users/[id] - Verify or reject user
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
+    }
+
+    // Check if user exists and is a vendor
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        officer_name: true,
+        vendor_name: true,
+        role: true,
+        verified_at: true,
+        created_at: true
+      }
+    });
+
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (existingUser.role !== 'VENDOR') {
+      return NextResponse.json({ error: 'Only vendor users can be verified' }, { status: 400 });
+    }
+
+    if (existingUser.verified_at) {
+      return NextResponse.json({ error: 'User has already been verified' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const validatedData = userVerificationSchema.parse(body);
+
+    let updatedUser;
+    let notificationTitle: string;
+    let notificationMessage: string;
+    let notificationType: string;
+
+    if (validatedData.status === 'VERIFY') {
+      // Verify the user
+      updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          verified_at: new Date(),
+          verified_by: session.user.id,
+        },
+        include: {
+          submissions: {
+            select: { id: true }
+          }
+        }
+      });
+
+      notificationTitle = 'Akun Anda Telah Diverifikasi';
+      notificationMessage = 'Selamat! Akun vendor Anda telah diverifikasi dan sekarang dapat mengajukan permohonan Simlok.';
+      notificationType = 'user_verified';
+    } else {
+      // For rejection, we might want to add a rejected_at field in the future
+      // For now, we'll just create a notification
+      notificationTitle = 'Akun Anda Ditolak';
+      notificationMessage = `Maaf, akun vendor Anda tidak dapat diverifikasi. ${validatedData.note || 'Silakan hubungi admin untuk informasi lebih lanjut.'}`;
+      notificationType = 'user_rejected';
+      
+      updatedUser = existingUser;
+    }
+
+    // Create notification for the user
+    await prisma.notification.create({
+      data: {
+        scope: 'vendor',
+        vendor_id: id,
+        type: notificationType,
+        title: notificationTitle,
+        message: notificationMessage,
+        data: JSON.stringify({
+          userId: id,
+          verificationStatus: validatedData.status,
+          verifiedBy: session.user.officer_name,
+          verifiedAt: new Date().toISOString(),
+          note: validatedData.note
+        })
+      }
+    });
+
+    // Notify the user via real-time events
+    const { notifyUserVerificationResult } = await import('@/server/events');
+    await notifyUserVerificationResult(id, validatedData.status, validatedData.note);
+
+    return NextResponse.json({ 
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        officer_name: updatedUser.officer_name,
+        vendor_name: updatedUser.vendor_name,
+        verified_at: validatedData.status === 'VERIFY' ? updatedUser.verified_at : null,
+        verified_by: validatedData.status === 'VERIFY' ? session.user.id : null
+      },
+      message: `User ${validatedData.status === 'VERIFY' ? 'verified' : 'rejected'} successfully`
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Validation error', 
+        details: error.issues 
+      }, { status: 400 });
+    }
+    
+    console.error('Error verifying user:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// GET /api/reviewer/users/[id] - Get user details for verification
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        officer_name: true,
+        vendor_name: true,
+        address: true,
+        phone_number: true,
+        profile_photo: true,
+        role: true,
+        created_at: true,
+        verified_at: true,
+        verified_by: true,
+        submissions: {
+          select: {
+            id: true,
+            job_description: true,
+            approval_status: true,
+            created_at: true
+          },
+          orderBy: { created_at: 'desc' },
+          take: 5 // Show recent submissions
+        }
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ user });
+  } catch (error) {
+    console.error('Error fetching user details:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

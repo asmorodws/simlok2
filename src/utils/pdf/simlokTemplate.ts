@@ -8,6 +8,7 @@ import {
   type PDFImage,
 } from "pdf-lib";
 import * as QRCode from 'qrcode';
+import { numberToBahasa } from "@/lib/parseNumber";
 
 /**
  * Load logo image for PDF generation
@@ -84,11 +85,13 @@ export interface SubmissionPDFData {
   other_notes?: string | null;
   work_facilities: string;
   worker_names?: string | null;
+  worker_count?: number | null;
   content?: string | null;
   signer_position?: string | null;
   signer_name?: string | null;
   qrcode?: string | null;  // QR code string for PDF
   // Tambahkan untuk daftar pekerja dari tabel terpisah
+  final_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | null;
   workerList?: Array<{
     worker_name: string;
     worker_photo?: string | null;
@@ -477,7 +480,11 @@ for (let idx = 0; idx < lines.length; idx++) {
     await k.numberedRow(7, "Lain-lain", "");
   }
   
-  await k.numberedRow(8, "Sarana Kerja", s.work_facilities);
+  // Get actual worker count from worker data if worker_count is null/0
+  const currentWorkerData = s.workerList || (s as any).worker_list;
+  const actualWorkerCount = s.worker_count || (currentWorkerData ? currentWorkerData.length : 0);
+  
+  await k.numberedRow(8, "Sarana Kerja", `${s.work_facilities}. Jumlah Pekerja ${actualWorkerCount} (${numberToBahasa(actualWorkerCount)}) Orang`);
 
   // Add content paragraph if available
   k.y -= 10;
@@ -519,7 +526,7 @@ for (let idx = 0; idx < lines.length; idx++) {
   k.text(jabatanSigner, A4.w - 230, jabatanY);
   
   // Add QR code if available - positioned with simple pixel values for easy maintenance
-  if (s.qrcode) {
+  if (s.qrcode && s.final_status === 'APPROVED') {
     const qrImage = await generateQRImage(k.doc, s.qrcode);
     if (qrImage) {
       const qrSize = 100;

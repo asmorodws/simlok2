@@ -174,8 +174,11 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    // Notify admin about new vendor registration
+    // Notify admin and reviewer about new vendor registration
     await notifyAdminNewVendor(newUser.id);
+    
+    const { notifyReviewerNewUser } = await import('@/server/events');
+    await notifyReviewerNewUser(newUser.id);
 
     // Log successful registration (for audit purposes)
     console.log(`New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);

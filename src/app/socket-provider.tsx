@@ -163,6 +163,36 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         
         console.log('✅ Notifications removed from store for submission:', payload.submissionId);
       });
+
+      // Listen for submission reviewed event (for real-time dashboard updates)
+      socket.on('submission:reviewed', (payload: any) => {
+        console.log('📝 Submission reviewed event received:', payload);
+        // This will trigger dashboard refreshes in ApproverDashboard and ApproverSubmissionsManagement
+      });
+
+      // Listen for submission created event (for real-time dashboard updates)
+      socket.on('submission:created', (payload: any) => {
+        console.log('📋 Submission created event received:', payload);
+        // This will trigger dashboard refreshes in ReviewerDashboard and ReviewerSubmissionsManagement
+      });
+
+      // Listen for submission finalized event (for real-time vendor dashboard updates)
+      socket.on('submission:finalized', (payload: any) => {
+        console.log('🏁 Submission finalized event received:', payload);
+        // This will trigger dashboard refreshes in VendorDashboard and VendorSubmissionsManagement
+      });
+
+      // Listen for user verification needed event (for real-time reviewer dashboard updates)
+      socket.on('user:verification-needed', (payload: any) => {
+        console.log('👤 User verification needed event received:', payload);
+        // This will trigger dashboard refreshes in ReviewerDashboard and user verification components
+      });
+
+      // Listen for user verification result event (for real-time vendor notifications)
+      socket.on('user:verification-result', (payload: any) => {
+        console.log('✅ User verification result event received:', payload);
+        // This will trigger updates in VendorDashboard and vendor notifications
+      });
     }
 
     return () => {

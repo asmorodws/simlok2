@@ -17,6 +17,7 @@ import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
 import ReviewerSubmissionDetailModal from '../reviewer/ReviewerSubmissionDetailModal';
 import UserVerificationModal from '../admin/UserVerificationModal';
+import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
 import { UserData } from '@/types/user';
 import { useToast } from '@/hooks/useToast';
 
@@ -87,7 +88,7 @@ export default function NotificationsPanel({
       console.log('handleViewDetail called with notification:', notification);
       
       // Handle vendor notifications
-      if (notification.type === 'user_registered' || notification.type === 'new_vendor') {
+      if (notification.type === 'user_registered' || notification.type === 'new_vendor' || notification.type === 'new_user_verification') {
         await handleVendorDetail(notification);
         return;
       }
@@ -226,7 +227,14 @@ export default function NotificationsPanel({
       }
 
       console.log('🔍 Fetching vendor data for ID:', vendorId);
-      const response = await fetch(`/api/admin/users/${vendorId}`);
+      
+      // Determine the correct API endpoint based on user role
+      let apiEndpoint = `/api/admin/users/${vendorId}`;
+      if (session?.user?.role === 'REVIEWER') {
+        apiEndpoint = `/api/reviewer/users/${vendorId}`;
+      }
+      
+      const response = await fetch(apiEndpoint);
       
       if (response.status === 404) {
         console.warn('User not found:', vendorId);
@@ -388,9 +396,10 @@ export default function NotificationsPanel({
         };
       case 'user_registered':
       case 'new_vendor':
+      case 'new_user_verification':
         return {
-          title: 'Vendor Baru Terdaftar',
-          message: truncateText(message.replace('User baru terdaftar', 'Vendor baru mendaftar dan perlu verifikasi')),
+          title: 'User Baru Perlu Verifikasi',
+          message: truncateText(message.replace('User baru terdaftar', 'User baru mendaftar dan perlu verifikasi')),
           action: 'Lihat detail'
         };
       default:
@@ -406,7 +415,7 @@ export default function NotificationsPanel({
     console.log('hasSubmissionData check for:', notification);
     
     // Check if this is a vendor notification
-    if (notification.type === 'user_registered' || notification.type === 'new_vendor') {
+    if (notification.type === 'user_registered' || notification.type === 'new_vendor' || notification.type === 'new_user_verification') {
       return true;
     }
     
@@ -690,20 +699,42 @@ export default function NotificationsPanel({
 
       {/* User Verification Modal for Vendor Details */}
       {selectedVendorUser && (
-        <UserVerificationModal
-          isOpen={!!selectedVendorUser}
-          onClose={() => {
-            console.log('🚪 Closing vendor user modal');
-            setSelectedVendorUser(null);
-          }}
-          user={selectedVendorUser}
-          onUserUpdate={(updatedUser) => {
-            setSelectedVendorUser(updatedUser);
-          }}
-          onUserRemove={() => {
-            setSelectedVendorUser(null);
-          }}
-        />
+        <>
+          {/* Show Reviewer User Verification Modal for REVIEWER role */}
+          {session?.user?.role === 'REVIEWER' ? (
+            <ReviewerUserVerificationModal
+              isOpen={!!selectedVendorUser}
+              onClose={() => {
+                console.log('🚪 Closing reviewer user verification modal');
+                setSelectedVendorUser(null);
+              }}
+              user={selectedVendorUser}
+              onUserUpdate={(updatedUser: UserData) => {
+                setSelectedVendorUser(updatedUser);
+              }}
+              onUserRemove={() => {
+                setSelectedVendorUser(null);
+              }}
+            />
+          ) : (
+            /* Show Admin User Verification Modal for ADMIN/SUPER_ADMIN roles */
+            <UserVerificationModal
+              isOpen={!!selectedVendorUser}
+              onClose={() => {
+                console.log('🚪 Closing admin user verification modal');
+                setSelectedVendorUser(null);
+              }}
+              user={selectedVendorUser}
+              userRole={session?.user?.role}
+              onUserUpdate={(updatedUser: UserData) => {
+                setSelectedVendorUser(updatedUser);
+              }}
+              onUserRemove={() => {
+                setSelectedVendorUser(null);
+              }}
+            />
+          )}
+        </>
       )}
     </>
   );

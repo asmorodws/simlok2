@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { UserData } from '@/types/user';
-import Card from '@/components/ui/Card';
+import React, { useState } from 'react';
 import Button from '@/components/ui/button/Button';
+import Card from '@/components/ui/Card';
+import { UserData } from '@/types/user';
 import { 
   XMarkIcon, 
   CheckCircleIcon, 
@@ -19,24 +19,22 @@ import {
   IdentificationIcon
 } from '@heroicons/react/24/outline';
 
-interface UserVerificationModalProps {
+interface ReviewerUserVerificationModalProps {
   user: UserData | null;
   isOpen: boolean;
   onClose: () => void;
   onUserUpdate?: (updatedUser: UserData) => void;
-  onUserRemove?: (userId: string) => void;
-  userRole?: string | undefined; // Add userRole prop to determine which API to use
+  onUserRemove?: () => void;
 }
 
-export default function UserVerificationModal({
+export default function ReviewerUserVerificationModal({
   user,
   isOpen,
   onClose,
   onUserUpdate,
-  onUserRemove,
-  userRole
-}: UserVerificationModalProps) {
-  const [isProcessing, setIsProcessing] = useState(false);
+  onUserRemove
+}: ReviewerUserVerificationModalProps) {
+  const [processing, setProcessing] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<'approve' | 'reject' | null>(null);
 
   if (!isOpen || !user) return null;
@@ -53,130 +51,50 @@ export default function UserVerificationModal({
     });
   };
 
-  const isVerified = !!user.verified_at;
-
   const handleVerifyUser = async (action: 'approve' | 'reject') => {
-    setIsProcessing(true);
+    if (!user) return;
+    
+    setProcessing(user.id);
+    
     try {
-      // Determine API endpoint based on user role
-      let apiEndpoint = `/api/users/${user.id}/verify`;
-      let method = 'PUT';
-      let body = JSON.stringify({ action });
-
-      if (userRole === 'REVIEWER') {
-        apiEndpoint = `/api/reviewer/users/${user.id}`;
-        method = 'PATCH';
-        body = JSON.stringify({ 
+      const response = await fetch(`/api/reviewer/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           status: action === 'approve' ? 'VERIFY' : 'REJECT'
-        });
-      }
-
-      const response = await fetch(apiEndpoint, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body,
+        })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        
-        if (action === 'approve' && result.user) {
-          onUserUpdate?.(result.user);
-        } else if (action === 'reject') {
-          onUserRemove?.(user.id);
-        }
-        
-        setShowConfirmModal(null);
-        onClose();
-      } else {
-        const error = await response.json();
-        alert(error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update user verification');
       }
+
+      const result = await response.json();
+      
+      if (action === 'approve' && result.user) {
+        onUserUpdate?.(result.user);
+      } else if (action === 'reject') {
+        onUserRemove?.();
+      }
+
+      setShowConfirmModal(null);
+      onClose();
+      
     } catch (error) {
-      console.error('Error:', error);
-      alert(`Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
+      console.error('Error updating user verification:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update user verification');
     } finally {
-      setIsProcessing(false);
+      setProcessing(null);
     }
   };
 
-  const ConfirmModal = () => {
-    if (!showConfirmModal) return null;
-
-    const isApprove = showConfirmModal === 'approve';
-
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
-        <Card className="max-w-md w-full mx-4">
-          <div className="p-6">
-            <div className="flex items-center mb-4">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                isApprove ? 'bg-green-100' : 'bg-red-100'
-              }`}>
-                {isApprove ? (
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                ) : (
-                  <XCircleIcon className="w-6 h-6 text-red-600" />
-                )}
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Konfirmasi {isApprove ? 'Persetujuan' : 'Penolakan'}
-                </h3>
-              </div>
-            </div>
-
-            <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin {isApprove ? 'menyetujui' : 'menolak'} user{' '}
-              <strong className="text-gray-900">{user.officer_name}</strong>?
-            </p>
-
-            {!isApprove && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start">
-                  <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-red-800 mb-1">Peringatan!</p>
-                    <p className="text-red-700">
-                      User akan dihapus dari sistem dan tidak dapat login lagi.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3">
-              <Button
-                onClick={() => setShowConfirmModal(null)}
-                variant="outline"
-                size="sm"
-                disabled={isProcessing}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={() => handleVerifyUser(showConfirmModal)}
-                disabled={isProcessing}
-                variant={isApprove ? "primary" : "destructive"}
-                size="sm"
-              >
-                {isProcessing ? (
-                  <span className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                    Memproses...
-                  </span>
-                ) : (
-                  `Ya, ${isApprove ? 'Setujui' : 'Tolak'}`
-                )}
-              </Button>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
+  const handleModalClose = () => {
+    setShowConfirmModal(null);
+    onClose();
   };
+
+  const isVerified = !!user.verified_at;
 
   return (
     <>
@@ -199,7 +117,7 @@ export default function UserVerificationModal({
                 </div>
               </div>
               <Button
-                onClick={onClose}
+                onClick={handleModalClose}
                 variant="ghost"
                 size="sm"
                 className="p-2"
@@ -291,7 +209,7 @@ export default function UserVerificationModal({
                         {user.address && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                              <MapPinIcon className="w-5 h-5 text-blue-600" />
+                              <MapPinIcon className="w-5 h-5 text-purple-600" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500">Alamat</p>
@@ -371,14 +289,15 @@ export default function UserVerificationModal({
                         <CheckCircleIcon className="w-5 h-5 mr-2 text-blue-600" />
                         Tindakan Verifikasi
                       </h3>
-                      <p className="text-sm text-gray-600 mb-6">
+                      <p className="text-sm text-gray-600 mb-4">
                         Pilih tindakan yang sesuai untuk user ini. Persetujuan akan memberikan akses sistem, 
                         sedangkan penolakan akan menghapus user dari sistem.
                       </p>
+
                       <div className="flex flex-col sm:flex-row gap-4">
                         <Button
                           onClick={() => setShowConfirmModal('approve')}
-                          disabled={isProcessing}
+                          disabled={processing === user.id}
                           variant="primary"
                           size="md"
                           className="flex-1"
@@ -388,7 +307,7 @@ export default function UserVerificationModal({
                         </Button>
                         <Button
                           onClick={() => setShowConfirmModal('reject')}
-                          disabled={isProcessing}
+                          disabled={processing === user.id}
                           variant="destructive"
                           size="md"
                           className="flex-1"
@@ -427,7 +346,7 @@ export default function UserVerificationModal({
 
             {/* Footer */}
             <div className="flex justify-end p-6 border-t border-gray-200">
-              <Button onClick={onClose} variant="outline" size="md">
+              <Button onClick={handleModalClose} variant="outline" size="md">
                 Tutup
               </Button>
             </div>
@@ -436,7 +355,102 @@ export default function UserVerificationModal({
       </div>
 
       {/* Confirmation Modal */}
-      <ConfirmModal />
+      {showConfirmModal && user && (
+        <ConfirmationModal
+          isOpen={!!showConfirmModal}
+          onClose={() => setShowConfirmModal(null)}
+          user={user}
+          action={showConfirmModal}
+          isProcessing={processing === user.id}
+          onConfirm={() => handleVerifyUser(showConfirmModal)}
+        />
+      )}
     </>
+  );
+}
+
+// Modal Konfirmasi
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  user: UserData;
+  action: 'approve' | 'reject';
+  isProcessing: boolean;
+  onConfirm: () => void;
+}
+
+function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConfirm }: ConfirmationModalProps) {
+  if (!isOpen) return null;
+
+  const isApprove = action === 'approve';
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+      <Card className="max-w-md w-full mx-4">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              isApprove ? 'bg-green-100' : 'bg-red-100'
+            }`}>
+              {isApprove ? (
+                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+              ) : (
+                <XCircleIcon className="w-6 h-6 text-red-600" />
+              )}
+            </div>
+            <div className="ml-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Konfirmasi {isApprove ? 'Persetujuan' : 'Penolakan'}
+              </h3>
+            </div>
+          </div>
+
+          <p className="text-gray-600 mb-6">
+            Apakah Anda yakin ingin {isApprove ? 'menyetujui' : 'menolak'} user{' '}
+            <strong className="text-gray-900">{user.officer_name}</strong>?
+          </p>
+
+          {!isApprove && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start">
+                <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-red-800 mb-1">Peringatan!</p>
+                  <p className="text-red-700">
+                    User akan dihapus dari sistem dan tidak dapat login lagi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end space-x-3">
+            <Button
+              onClick={onClose}
+              variant="outline"
+              size="sm"
+              disabled={isProcessing}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={onConfirm}
+              disabled={isProcessing}
+              variant={isApprove ? "primary" : "destructive"}
+              size="sm"
+            >
+              {isProcessing ? (
+                <span className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                  Memproses...
+                </span>
+              ) : (
+                `Ya, ${isApprove ? 'Setujui' : 'Tolak'}`
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </div>
   );
 }

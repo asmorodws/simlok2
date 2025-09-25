@@ -138,7 +138,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       
       const response = await fetch(`/api/approver/simloks/${submissionId}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch submission details');
+        throw new Error('Gagal mengambil detail pengajuan');
       }
       
       const data = await response.json();
@@ -209,7 +209,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit approval');
+        throw new Error(errorData.error || 'Gagal mengirim persetujuan');
       }
 
       const data = await response.json();
@@ -484,44 +484,20 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
               {/* Workers Tab */}
               {activeTab === 'workers' && (
                 <div className="space-y-6">
-                  {/* Header */}
+                  {/* Header dengan jumlah pekerja */}
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="text-lg font-medium text-gray-900">Data Pekerja</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                          {submission.worker_count || 0} total
-                        </span>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                          {submission.worker_list.length} foto
-                        </span>
-                      </div>
+                    <h3 className="text-lg font-medium text-gray-900">Data Pekerja</h3>
+                    <div className="flex items-center space-x-3">
+                      <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+                        Total: {submission.worker_count || 
+                          (submission.worker_names ? submission.worker_names.split('\n').filter(name => name.trim()).length : submission.worker_list.length)
+                        } pekerja
+                      </span>
+                      {/* <span className="bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full">
+                        Foto: {submission.worker_list.length}
+                      </span> */}
                     </div>
                   </div>
-
-                  {/* Info jika jumlah tidak sesuai */}
-                  {submission.worker_count && submission.worker_count !== submission.worker_list.length && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </div>
-                        <div className="ml-3">
-                          <h3 className="text-sm font-medium text-orange-800">Informasi Penting</h3>
-                          <p className="text-sm text-orange-700 mt-1">
-                            Jumlah pekerja yang diajukan adalah <strong>{submission.worker_count} orang</strong>, 
-                            tetapi foto yang diupload hanya <strong>{submission.worker_list.length} foto</strong>. 
-                            {submission.worker_count > submission.worker_list.length 
-                              ? ' Mungkin ada pekerja yang belum mengupload foto.'
-                              : ' Ada lebih banyak foto dari yang diajukan.'
-                            }
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {submission.worker_list.length === 0 ? (
                     <div className="text-center py-16">
@@ -574,16 +550,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">
                               {worker.worker_name}
                             </h4>
-                            <div className="flex items-center justify-between text-xs text-gray-500">
-                              <span>Upload:</span>
-                              <span>
-                                {new Date(worker.created_at).toLocaleDateString('id-ID', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  year: 'numeric'
-                                })}
-                              </span>
-                            </div>
+                            
                           </div>
                         </div>
                       ))}
@@ -746,9 +713,9 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       </div>
 
                       {approvalData.final_status === 'APPROVED' && (
-                        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-                          <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
-                            <DocumentTextIcon className="h-5 w-5 text-green-600 mr-2" />
+                        <div className="bg-white border border-gray-200 rounded-xl p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <DocumentTextIcon className="h-5 w-5 text-blue-600 mr-2" />
                             Informasi SIMLOK
                           </h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -762,16 +729,16 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                                   type="text"
                                   value={approvalData.simlok_number}
                                   onChange={(e) => setApprovalData({ ...approvalData, simlok_number: e.target.value })}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white shadow-sm"
-                                  placeholder="Auto-generated"
+                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                                  placeholder="Dibuat otomatis"
                                   required
                                 />
                                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                  <CheckCircleIcon className="h-5 w-5 text-blue-500" />
                                 </div>
                               </div>
                               <p className="text-xs text-gray-600 mt-2 flex items-center">
-                                <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                                 Nomor otomatis dibuat berdasarkan urutan bulanan
                               </p>
                             </div>
@@ -783,7 +750,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                                 type="date"
                                 value={approvalData.simlok_date}
                                 onChange={(e) => setApprovalData({ ...approvalData, simlok_date: e.target.value })}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white shadow-sm"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
                               />
                               <p className="text-xs text-gray-600 mt-2 flex items-center">
                                 <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
@@ -875,7 +842,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
             {submission && (
               <Button onClick={handleViewPdf} variant="primary" size="sm">
                 <DocumentTextIcon className="w-4 h-4 mr-2" />
-                Lihat PDF SIMLOK
+                Lihat PDF
               </Button>
             )}
           </div>

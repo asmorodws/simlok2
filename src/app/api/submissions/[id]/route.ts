@@ -128,7 +128,7 @@ async function generatePDF(submission: any) {
 
     // Allow PDF generation for any submission
     // If no simlok_number, use a placeholder or generate temporary one
-    let pdfData = { ...submission };
+    const pdfData = { ...submission };
     
     if (!submission.simlok_number) {
       console.log('PDF Generation: Using placeholder simlok_number');

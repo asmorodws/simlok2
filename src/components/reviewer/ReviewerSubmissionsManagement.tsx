@@ -70,12 +70,6 @@ interface Submission {
 
 interface SubmissionsResponse {
   submissions: Submission[];
-  statistics: {
-    total: number;
-    pending_review: number;
-    meets_requirements: number;
-    not_meets_requirements: number;
-  };
   pagination: {
     page: number;
     limit: number;
@@ -94,15 +88,11 @@ export default function ReviewerSubmissionsManagement() {
   // Filters and pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('');
+  const [finalStatusFilter, setFinalStatusFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    pending_review: 0,
-    meets_requirements: 0,
-    not_meets_requirements: 0,
-  });
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -124,16 +114,16 @@ export default function ReviewerSubmissionsManagement() {
       });
 
       if (searchTerm) params.append('search', searchTerm);
-      if (statusFilter) params.append('status', statusFilter);
+      if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
+      if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
       const response = await fetch(`/api/reviewer/simloks?${params}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch submissions');
+        throw new Error('Gagal mengambil data pengajuan');
       }
 
       const data: SubmissionsResponse = await response.json();
       setSubmissions(data.submissions);
-      setStatistics(data.statistics);
       setPagination(data.pagination);
     } catch (err) {
       console.error('Error fetching submissions:', err);
@@ -141,7 +131,7 @@ export default function ReviewerSubmissionsManagement() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
+  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -151,7 +141,11 @@ export default function ReviewerSubmissionsManagement() {
   useEffect(() => {
     if (!socket) return;
 
+    // Join reviewer room
+    socket.emit('join', { role: 'REVIEWER' });
+
     const handleSubmissionUpdate = () => {
+      console.log('Submission update received, refreshing reviewer submissions');
       fetchSubmissions();
     };
 
@@ -226,32 +220,12 @@ export default function ReviewerSubmissionsManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards - Unified Design */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Total</h3>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{statistics.total}</p>
-        </div>
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Menunggu Review</h3>
-          <p className="text-2xl font-bold text-yellow-600 mt-1">{statistics.pending_review}</p>
-        </div>
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Memenuhi Syarat</h3>
-          <p className="text-2xl font-bold text-green-600 mt-1">{statistics.meets_requirements}</p>
-        </div>
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Tidak Memenuhi</h3>
-          <p className="text-2xl font-bold text-red-600 mt-1">{statistics.not_meets_requirements}</p>
-        </div>
-      </div>
-
       {/* Header and Filters - Unified Design */}
       <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Review Pengajuan</h1>
-            <p className="text-sm text-gray-500 mt-1">Kelola dan review pengajuan SIMLOK ({statistics.total} pengajuan)</p>
+            <p className="text-sm text-gray-500 mt-1">Kelola dan review pengajuan SIMLOK</p>
           </div>
         </div>
 
@@ -274,17 +248,30 @@ export default function ReviewerSubmissionsManagement() {
           </div>
           <div className="flex gap-2 md:w-auto">
             <select
-              value={statusFilter}
+              value={reviewStatusFilter}
               onChange={(e) => {
-                setStatusFilter(e.target.value);
+                setReviewStatusFilter(e.target.value);
                 setCurrentPage(1);
               }}
               className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-sm"
             >
-              <option value="">Semua Status</option>
+              <option value="">Semua Status Review</option>
               <option value="PENDING_REVIEW">Menunggu Review</option>
               <option value="MEETS_REQUIREMENTS">Memenuhi Syarat</option>
               <option value="NOT_MEETS_REQUIREMENTS">Tidak Memenuhi Syarat</option>
+            </select>
+            <select
+              value={finalStatusFilter}
+              onChange={(e) => {
+                setFinalStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-sm"
+            >
+              <option value="">Semua Status Akhir</option>
+              <option value="PENDING_APPROVAL">Menunggu Persetujuan</option>
+              <option value="APPROVED">Disetujui</option>
+              <option value="REJECTED">Ditolak</option>
             </select>
           </div>
         </div>
@@ -301,7 +288,7 @@ export default function ReviewerSubmissionsManagement() {
             <ClipboardDocumentListIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada pengajuan</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              {searchTerm || statusFilter 
+              {searchTerm || reviewStatusFilter || finalStatusFilter 
                 ? 'Tidak ada pengajuan yang sesuai dengan filter yang dipilih.'
                 : 'Belum ada pengajuan yang tersedia untuk di-review.'
               }

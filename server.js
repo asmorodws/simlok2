@@ -39,6 +39,12 @@ app.prepare().then(() => {
         if (role === 'ADMIN') {
           socket.join('admin');
           console.log(`Socket ${socket.id} joined admin room`);
+        } else if (role === 'REVIEWER') {
+          socket.join('reviewer');
+          console.log(`Socket ${socket.id} joined reviewer room`);
+        } else if (role === 'APPROVER') {
+          socket.join('approver');
+          console.log(`Socket ${socket.id} joined approver room`);
         } else if (role === 'VENDOR' && vendorId) {
           socket.join(`vendor:${vendorId}`);
           console.log(`Socket ${socket.id} joined vendor room: ${vendorId}`);

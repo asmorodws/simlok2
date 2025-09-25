@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import ApproverSubmissionsManagement from "@/components/approver/ApproverSubmissionsManagement";
+import ApproverDashboard from "@/components/approver/ApproverDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Approver - SIMLOK",
@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 export default function ApproverPage() {
   return (
     <RoleGate allowedRoles={["APPROVER", "ADMIN", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Approver Panel" titlePage="Persetujuan Pengajuan">
-        <ApproverSubmissionsManagement />
+      <SidebarLayout title="Approver Panel" titlePage="Dashboard Persetujuan">
+        <ApproverDashboard />
       </SidebarLayout>
     </RoleGate>
   );

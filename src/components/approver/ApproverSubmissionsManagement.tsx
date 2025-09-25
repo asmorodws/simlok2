@@ -78,13 +78,6 @@ interface Submission {
 
 interface SubmissionsResponse {
   submissions: Submission[];
-  statistics: {
-    total: number;
-    pending_approval_meets: number;
-    pending_approval_not_meets: number;
-    approved: number;
-    rejected: number;
-  };
   pagination: {
     page: number;
     limit: number;
@@ -155,16 +148,6 @@ function EmptyState({ hasFilters, onClearFilters }: { hasFilters: boolean; onCle
 function LoadingState() {
   return (
     <div className="space-y-6">
-      {/* Loading Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-24 mb-3"></div>
-            <div className="h-8 bg-gray-200 rounded w-16"></div>
-          </div>
-        ))}
-      </div>
-      
       {/* Loading Filters */}
       <div className="bg-white p-6 rounded-lg shadow animate-pulse">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -206,15 +189,10 @@ export default function ApproverSubmissionsManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('');
+  const [finalStatusFilter, setFinalStatusFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState('reviewed_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    pending_approval_meets: 0,
-    pending_approval_not_meets: 0,
-    approved: 0,
-    rejected: 0,
-  });
+
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -237,15 +215,15 @@ export default function ApproverSubmissionsManagement() {
 
       if (searchTerm) params.append('search', searchTerm);
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
+      if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
       const response = await fetch(`/api/approver/simloks?${params}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch submissions');
+        throw new Error('Gagal mengambil data pengajuan');
       }
 
       const data: SubmissionsResponse = await response.json();
       setSubmissions(data.submissions);
-      setStatistics(data.statistics);
       setPagination(data.pagination);
     } catch (err) {
       console.error('Error fetching submissions:', err);
@@ -253,7 +231,7 @@ export default function ApproverSubmissionsManagement() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, reviewStatusFilter, sortBy, sortOrder]);
+  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -263,7 +241,11 @@ export default function ApproverSubmissionsManagement() {
   useEffect(() => {
     if (!socket) return;
 
+    // Join approver room
+    socket.emit('join', { role: 'APPROVER' });
+
     const handleSubmissionUpdate = () => {
+      console.log('Submission update received, refreshing approver submissions');
       fetchSubmissions();
     };
 
@@ -327,6 +309,7 @@ export default function ApproverSubmissionsManagement() {
   const clearFilters = () => {
     setSearchTerm('');
     setReviewStatusFilter('');
+    setFinalStatusFilter('');
     setCurrentPage(1);
   };
 
@@ -339,7 +322,7 @@ export default function ApproverSubmissionsManagement() {
     fetchSubmissions(); // Refresh data after approval
   };
 
-  const hasFilters = searchTerm || reviewStatusFilter;
+  const hasFilters = searchTerm || reviewStatusFilter || finalStatusFilter;
 
   if (loading && submissions.length === 0) {
     return <LoadingState />;
@@ -347,37 +330,12 @@ export default function ApproverSubmissionsManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards - Unified Design */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Total Pengajuan</h3>
-          <p className="text-2xl font-bold text-blue-600 mt-1">{statistics.total}</p>
-        </div>
-        
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
-          <p className="text-2xl font-bold text-amber-600 mt-1">
-            {statistics.pending_approval_meets + statistics.pending_approval_not_meets}
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
-          <p className="text-2xl font-bold text-green-600 mt-1">{statistics.approved}</p>
-        </div>
-        
-        <div className="bg-white rounded-xl border shadow-sm p-4">
-          <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-          <p className="text-2xl font-bold text-red-600 mt-1">{statistics.rejected}</p>
-        </div>
-      </div>
-
       {/* Header and Filters - Unified Design */}
       <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Persetujuan Pengajuan</h1>
-            <p className="text-sm text-gray-500 mt-1">Kelola dan setujui pengajuan SIMLOK ({statistics.total} pengajuan)</p>
+            <p className="text-sm text-gray-500 mt-1">Kelola dan setujui pengajuan SIMLOK</p>
           </div>
         </div>
 
@@ -410,6 +368,19 @@ export default function ApproverSubmissionsManagement() {
               <option value="">Semua Status Review</option>
               <option value="MEETS_REQUIREMENTS">Memenuhi Syarat</option>
               <option value="NOT_MEETS_REQUIREMENTS">Tidak Memenuhi Syarat</option>
+            </select>
+            <select
+              value={finalStatusFilter}
+              onChange={(e) => {
+                setFinalStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-sm"
+            >
+              <option value="">Semua Status Akhir</option>
+              <option value="PENDING_APPROVAL">Menunggu Persetujuan</option>
+              <option value="APPROVED">Disetujui</option>
+              <option value="REJECTED">Ditolak</option>
             </select>
             {hasFilters && (
               <Button
