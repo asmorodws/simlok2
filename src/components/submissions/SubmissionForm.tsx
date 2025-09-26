@@ -399,9 +399,17 @@ export default function SubmissionForm() {
               </div>
             </div>
 
-            {/* Jumlah Pekerja */}
+
+
+            {/* Daftar nama pekerja */}
             <div className="p-6 rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerja</h2>
+              <div className="flex justify-between items-center mb-6 border-b border-gray-300 ">
+                <div className='flex justify-between'>
+                  <h2 className="text-lg font-semibold text-gray-900 pb-2">Daftar Nama Pekerja</h2>
+                  {/* <p className="text-sm text-gray-500 mt-2">Total: {workers.length} pekerja</p> */}
+                </div>
+               
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <Label htmlFor="worker_count">Jumlah Pekerja</Label>
@@ -433,18 +441,6 @@ export default function SubmissionForm() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Daftar nama pekerja */}
-            <div className="p-6 rounded-lg">
-              <div className="flex justify-between items-center mb-6 border-b border-gray-300 ">
-                <div className='flex justify-between'>
-                  <h2 className="text-lg font-semibold text-gray-900 pb-2">Daftar Nama Pekerja</h2>
-                  <p className="text-sm text-gray-500 mt-2">Total: {workers.length} pekerja</p>
-                </div>
-               
-              </div>
-              
               {/* Workers Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {workers.map((worker, _index) => (

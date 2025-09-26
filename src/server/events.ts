@@ -539,24 +539,27 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
       throw new Error('Submission not found');
     }
 
-    // Determine notification message based on review status
+    // Determine notification message and type based on review status
     let notificationMessage: string;
     let notificationType: string;
+    let notificationTitle: string;
     
     if (submission.review_status === 'MEETS_REQUIREMENTS') {
       notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan perlu persetujuan final`;
       notificationType = 'reviewed_submission_approval';
+      notificationTitle = 'Pengajuan Simlok Perlu Persetujuan';
     } else {
       notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan tidak memenuhi syarat`;
       notificationType = 'reviewed_submission_rejection';
+      notificationTitle = 'Pengajuan Simlok Sudah Direview';
     }
 
-    // Create notification record for approvers
+    // Create notification record for approvers (for both meets and doesn't meet requirements)
     const notification = await prisma.notification.create({
       data: {
         scope: 'approver',
         type: notificationType,
-        title: 'Pengajuan Simlok Sudah Direview',
+        title: notificationTitle,
         message: notificationMessage,
         data: JSON.stringify({
           submissionId,
@@ -715,94 +718,4 @@ export async function notifyUserVerificationResult(
   }
 }
 
-export async function notifyReviewerFinalDecision(
-  submissionId: string, 
-  finalStatus: 'APPROVED' | 'REJECTED'
-) {
-  try {
-    // Get submission details
-    const submission = await prisma.submission.findUnique({
-      where: { id: submissionId },
-      include: { 
-        user: true,
-        approved_by_final_user: {
-          select: {
-            officer_name: true
-          }
-        }
-      }
-    });
-
-    if (!submission) {
-      throw new Error('Submission not found');
-    }
-
-    const statusText = finalStatus === 'APPROVED' ? 'disetujui' : 'ditolak';
-    const title = finalStatus === 'APPROVED' 
-      ? 'Pengajuan yang Direview Disetujui' 
-      : 'Pengajuan yang Direview Ditolak';
-
-    // Create notification record for reviewer
-    const notification = await prisma.notification.create({
-      data: {
-        scope: 'reviewer',
-        type: finalStatus === 'APPROVED' ? 'submission_approved' : 'submission_rejected',
-        title: title,
-        message: `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} yang Anda review telah ${statusText}`,
-        data: JSON.stringify({
-          submissionId,
-          vendorName: submission.vendor_name,
-          officerName: submission.officer_name,
-          finalStatus,
-          approvedBy: submission.approved_by_final_user?.officer_name,
-          simlokNumber: submission.simlok_number
-        })
-      }
-    });
-
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'reviewer',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Update unread count for reviewers
-    const unreadCount = await getUnreadCount('reviewer');
-    const unreadCountEvent = {
-      scope: 'reviewer' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update reviewer stats
-    const totalReviewed = await prisma.submission.count({
-      where: { 
-        review_status: { not: 'PENDING_REVIEW' }
-      }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'reviewer',
-      changes: {
-        totalReviewedSubmissions: totalReviewed
-      }
-    });
-
-    console.log(`✅ Notified reviewer about final decision for submission: ${submissionId}`);
-
-  } catch (error) {
-    console.error('Error notifying reviewer final decision:', error);
-  }
-}
+// notifyReviewerFinalDecision function removed - reviewers no longer need notification when submissions are approved/rejected

@@ -134,7 +134,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     pelaksanaan: '',
     lain_lain: '',
     content: '',
-    jabatan_signer: 'Head Of Security Region I',
+    jabatan_signer: 'Sr Officer Security III',
     nama_signer: 'Julianto Santoso'
   });
 
@@ -229,7 +229,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         pelaksanaan: sub.implementation || '',
         lain_lain: sub.other_notes || '',
         content: sub.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
-        jabatan_signer: sub.signer_position || 'Head Of Security Region I',
+        jabatan_signer: sub.signer_position || 'Sr Officer Security III',
         nama_signer: sub.signer_name || 'Julianto Santoso'
       });
 
@@ -322,7 +322,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         
         // Head of Security section
         const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Head Of Security Region I';
+        const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Sr Officer Security III';
         templateParts.push(
           ``,
           `Diterima ${jabatan}`,
@@ -1512,7 +1512,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                 value={approvalForm.jabatan_signer}
                                 onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                                placeholder="Head Of Security Region I"
+                                placeholder="Sr Officer Security III"
                               />
                             </div>
                             <div>

@@ -86,10 +86,8 @@ export async function PATCH(
       }
     });
 
-    // Notify approvers if submission was approved
-    if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
-      await notifyApproverReviewedSubmission(id);
-    }
+    // Notify approvers about the review result (both meets and doesn't meet requirements)
+    await notifyApproverReviewedSubmission(id);
 
     return NextResponse.json({ 
       submission: updatedSubmission,

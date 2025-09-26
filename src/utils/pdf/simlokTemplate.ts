@@ -107,7 +107,7 @@ export type SIMLOKOptions = {
   logoBase64?: string;     // opsional
   primary?: RGB;           // warna judul
   cityIssued?: string;     // default "Jakarta"
-  headTitle?: string;      // default "Head of Security Region I"
+  headTitle?: string;      // default "Sr Officer Security III"
   headName?: string;       // default "Juliarto Santoso"
   fontSize?: number;       // default 12
   leftLabelWidth?: number; // default 190

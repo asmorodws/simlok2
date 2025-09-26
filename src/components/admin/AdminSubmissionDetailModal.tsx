@@ -86,7 +86,7 @@ export default function AdminSubmissionDetailModal({
     pelaksanaan: '',
     lain_lain: '',
     content: '',
-    jabatan_signer: 'Head Of Security Region I',
+    jabatan_signer: 'Sr Officer Security III',
     nama_signer: 'Julianto Santoso'
   });
 
@@ -158,7 +158,7 @@ export default function AdminSubmissionDetailModal({
           pelaksanaan: submission.implementation || '',
           lain_lain: submission.other_notes || '',
           content: submission.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
-          jabatan_signer: submission.signer_position || 'Head Of Security Region I',
+          jabatan_signer: submission.signer_position || 'Sr Officer Security III',
           nama_signer: submission.signer_name || 'Julianto Santoso'
         });
 
@@ -913,7 +913,7 @@ export default function AdminSubmissionDetailModal({
                               value={approvalForm.jabatan_signer}
                               onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Contoh: Head Of Security Region I, Manager Operations, dll"
+                              placeholder="Contoh: Sr Officer Security III, Manager Operations, dll"
                             />
                           </div>
 

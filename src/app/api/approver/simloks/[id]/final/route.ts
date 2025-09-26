@@ -169,11 +169,7 @@ export async function PATCH(
       vendorStatus as 'APPROVED' | 'REJECTED'
     );
 
-    // Notify reviewer if exists about the final decision
-    if (existingSubmission.reviewed_by_user) {
-      const { notifyReviewerFinalDecision } = await import('@/server/events');
-      await notifyReviewerFinalDecision(params.id, validatedData.final_status);
-    }
+    // Note: Reviewer notification removed - only vendor should be notified about final decisions
 
     return NextResponse.json({ 
       submission: updatedSubmission,
