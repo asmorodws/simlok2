@@ -318,11 +318,11 @@ export default function SubmissionForm() {
                       id="simja_document_upload"
                       name="simja_document_upload"
                       label=""
-                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.simja_document_upload || ''}
                       onChange={handleFileUpload('simja_document_upload')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={5}
+                      maxSize={8}
                       required
                     />
                   </div>
@@ -335,11 +335,11 @@ export default function SubmissionForm() {
                       id="sika_document_upload"
                       name="sika_document_upload"
                       label=""
-                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.sika_document_upload || ''}
                       onChange={handleFileUpload('sika_document_upload')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={5}
+                      maxSize={8}
                       required
                     />
                   </div>
@@ -515,7 +515,7 @@ export default function SubmissionForm() {
                           value={worker.worker_photo}
                           onChange={(url) => updateWorkerPhoto(worker.id, url)}
                           accept=".jpg,.jpeg,.png"
-                          maxSize={5}
+                          maxSize={8}
                           required={false}
                           className="sr-only"
                         />

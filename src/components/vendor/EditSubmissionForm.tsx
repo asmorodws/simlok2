@@ -542,11 +542,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                       id="upload_doc_simja"
                       name="upload_doc_simja"
                       label=""
-                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.upload_doc_simja}
                       onChange={handleFileUpload('upload_doc_simja')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={5}
+                      maxSize={8}
                       required={false}
                     />
                   </div>
@@ -559,11 +559,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                       id="upload_doc_sika"
                       name="upload_doc_sika"
                       label=""
-                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 5MB"
+                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.upload_doc_sika}
                       onChange={handleFileUpload('upload_doc_sika')}
                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={5}
+                      maxSize={8}
                       required={false}
                     />
                   </div>
@@ -745,7 +745,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                           value={worker.foto_pekerja}
                           onChange={(url) => updateWorkerPhoto(worker.id, url)}
                           accept=".jpg,.jpeg,.png"
-                          maxSize={5}
+                          maxSize={8}
                           required={false}
                           className="sr-only"
                         />

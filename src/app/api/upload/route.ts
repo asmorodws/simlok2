@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { fileManager } from '@/lib/fileManager';
 
-// Configure maximum file size (5MB)
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// Configure maximum file size (8MB)
+const MAX_FILE_SIZE = 8 * 1024 * 1024;
 
 // Allowed file types
 const ALLOWED_TYPES = [

@@ -44,7 +44,7 @@ export default function FilesPage() {
               description="File akan disimpan di folder 'dokumen-sika'"
               onChange={handleFileUpload('sika')}
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              maxSize={5}
+              maxSize={8}
             />
             
             <FileUpload
@@ -53,7 +53,7 @@ export default function FilesPage() {
               description="File akan disimpan di folder 'dokumen-simja'"
               onChange={handleFileUpload('simja')}
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-              maxSize={5}
+              maxSize={8}
             />
           </div>
         </Card>

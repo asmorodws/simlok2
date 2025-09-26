@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { DocumentIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { validateFile } from '@/utils/file-validation';
 
 interface FileUploadProps {
   id?: string;
@@ -11,7 +12,7 @@ interface FileUploadProps {
   onFileChange?: (file: File | null) => void;
   accept?: string;
   multiple?: boolean;
-  maxSize?: number; // in MB
+  maxSize?: number; // in MB - default is now 8MB
   required?: boolean;
   disabled?: boolean;
   className?: string;
@@ -27,7 +28,7 @@ export default function FileUpload({
   onFileChange,
   accept = ".pdf,.doc,.docx,.jpg,.jpeg,.png",
   multiple = false,
-  maxSize = 5, // 5MB default
+  maxSize = 8, // 8MB default
   required = false,
   disabled = false,
   className,
@@ -40,14 +41,22 @@ export default function FileUpload({
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
-    // Check file size
-    if (file.size > maxSize * 1024 * 1024) {
-      return `File size must be less than ${maxSize}MB`;
+  const validateFileInput = (file: File): string | null => {
+    // Use the centralized validation utility with current options
+    const acceptedTypes = accept.split(',').map(type => type.trim());
+    const acceptedExtensions = acceptedTypes.filter(type => type.startsWith('.'));
+    
+    const validation = validateFile(file, {
+      maxSizeMB: maxSize,
+      allowedTypes: [], // We'll use the existing accept pattern for now
+      allowedExtensions: acceptedExtensions
+    });
+
+    if (!validation.isValid) {
+      return validation.error || 'File validation failed';
     }
 
-    // Check file type
-    const acceptedTypes = accept.split(',').map(type => type.trim());
+    // Additional check for accepted types using the accept prop pattern
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
     const isValidType = acceptedTypes.some(type => {
       if (type.startsWith('.')) {
@@ -57,7 +66,7 @@ export default function FileUpload({
     });
 
     if (!isValidType) {
-      return `File type not supported. Accepted types: ${accept}`;
+      return `Tipe file tidak didukung. Tipe yang diizinkan: ${accept}`;
     }
 
     return null;
@@ -95,7 +104,7 @@ export default function FileUpload({
     setError(null);
 
     // Validate file
-    const validationError = validateFile(file);
+    const validationError = validateFileInput(file);
     if (validationError) {
       setError(validationError);
       return;
