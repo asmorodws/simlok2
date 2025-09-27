@@ -9,10 +9,8 @@ import {
   ClockIcon,
   EyeIcon
 } from "@heroicons/react/24/outline";
-import Card from "../ui/Card";
-import { Badge } from "../ui/Badge";
-import Button from "../ui/button/Button";
-import Alert from "../ui/alert/Alert";
+import { Card, Badge } from '@/components/ui';
+import { Button, Alert } from "../ui";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import UserVerificationModal from "../admin/UserVerificationModal";
 import { UserData } from "@/types/user";
@@ -120,7 +118,7 @@ export default function AdminDashboard() {
     switch (status) {
       case 'PENDING': return <Badge variant="warning">Menunggu Review</Badge>;
       case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
-      case 'REJECTED': return <Badge variant="destructive">Ditolak</Badge>;
+      case 'REJECTED': return <Badge variant="error">Ditolak</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };

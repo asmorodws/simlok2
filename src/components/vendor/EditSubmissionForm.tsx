@@ -3,14 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/button/Button';
-import Input from '@/components/form/Input';
-import Label from '@/components/form/Label';
+import { Card, Label, Button, Input, Alert } from '@/components/ui';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import FileUpload from '@/components/form/FileUpload';
-import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
 

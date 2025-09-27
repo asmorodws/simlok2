@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSocket } from '@/app/socket-provider';
-import Button from '@/components/ui/button/Button';
-import Card from '@/components/ui/Card';
+import { Button } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { 
   MagnifyingGlassIcon,
   ChevronUpIcon,

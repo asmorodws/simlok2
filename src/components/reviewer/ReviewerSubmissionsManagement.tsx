@@ -11,9 +11,7 @@ import {
   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 
-import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
-import Alert from '@/components/ui/alert/Alert';
+import { Button, Badge, Alert } from '@/components/ui';
 import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 
@@ -186,7 +184,7 @@ export default function ReviewerSubmissionsManagement() {
       case 'MEETS_REQUIREMENTS':
         return <Badge variant="success">Memenuhi Syarat</Badge>;
       case 'NOT_MEETS_REQUIREMENTS':
-        return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+        return <Badge variant="error">Tidak Memenuhi Syarat</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
     }
@@ -199,7 +197,7 @@ export default function ReviewerSubmissionsManagement() {
       case 'APPROVED':
         return <Badge variant="success">Disetujui</Badge>;
       case 'REJECTED':
-        return <Badge variant="destructive">Ditolak</Badge>;
+        return <Badge variant="error">Ditolak</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
     }

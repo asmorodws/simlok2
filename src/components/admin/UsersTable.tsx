@@ -10,7 +10,7 @@ import {
   ChevronDownIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/24/outline";
-import Button from "@/components/ui/button/Button";
+import { Button } from '@/components/ui';
 
 interface UsersTableProps {
   onEdit: (user: UserData) => void;
@@ -415,7 +415,7 @@ export default function UsersTable({
                       </Button>
                       <Button
                         onClick={() => onEdit(user)}
-                        variant="warning"
+                        variant="destructive"
                         size="sm"
                         className="px-3 py-1.5"
                       >

@@ -9,9 +9,7 @@ import {
   ArrowDownTrayIcon
 } from "@heroicons/react/24/outline";
 
-import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
-import Alert from '@/components/ui/alert/Alert';
+import { Button, Badge, Alert } from '@/components/ui';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import AdminSubmissionDetailModal from './AdminSubmissionDetailModal';
 import ExportModal from './ExportModal';
@@ -276,7 +274,7 @@ export default function SubmissionsManagement() {
     switch (status) {
       case 'PENDING': return <Badge variant="warning">Menunggu Review</Badge>;
       case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
-      case 'REJECTED': return <Badge variant="destructive">Ditolak</Badge>;
+      case 'REJECTED': return <Badge variant="error">Ditolak</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
@@ -354,9 +352,9 @@ export default function SubmissionsManagement() {
             onClick={() => setShowExportModal(true)}
             variant="outline"
             size="md"
-            startIcon={<ArrowDownTrayIcon className="w-4 h-4" />}
             className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 whitespace-nowrap"
           >
+            <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
             Export Excel
           </Button>
         </div>

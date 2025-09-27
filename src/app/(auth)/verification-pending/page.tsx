@@ -3,8 +3,8 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/button/Button';
+import { Card } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { 
   ClockIcon, 
   ExclamationTriangleIcon, 

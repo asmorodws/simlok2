@@ -10,7 +10,7 @@ import {
   PlusIcon
 } from "@heroicons/react/24/outline";
 import SubmissionDetailModal from './SubmissionDetailModal';
-import Button from '../ui/button/Button';
+import { Button } from '../ui';
 import { useToast } from '@/hooks/useToast';
 import ConfirmModal from '../ui/modal/ConfirmModal';
 import { useSubmissionStore } from '@/store/useSubmissionStore';
@@ -331,9 +331,9 @@ export default function VendorSubmissionsContent() {
           <Button 
             variant="primary"
             size="md"
-            startIcon={<PlusIcon className="w-4 h-4" />}
             className="whitespace-nowrap"
           >
+            <PlusIcon className="w-4 h-4 mr-2" />
             Buat Pengajuan Baru
           </Button>
         </Link>
@@ -410,8 +410,8 @@ export default function VendorSubmissionsContent() {
             <Button 
               variant="primary"
               size="md"
-              startIcon={<PlusIcon className="w-4 h-4" />}
             >
+              <PlusIcon className="w-4 h-4 mr-2" />
               Buat Pengajuan Baru
             </Button>
           </Link>
@@ -569,7 +569,7 @@ export default function VendorSubmissionsContent() {
                               <>
                                 <Link href={`/vendor/submissions/edit/${submission.id}`} className="w-full">
                                   <Button
-                                    variant="warning"
+                                    variant="destructive"
                                     size="sm"
                                     title="Edit submission"
                                     className="text-xs w-full"
@@ -678,7 +678,7 @@ export default function VendorSubmissionsContent() {
                           <>
                             <Link href={`/vendor/submissions/edit/${submission.id}`}>
                               <Button
-                                variant="warning"
+                                variant="destructive"
                                 size="sm"
                                 className="text-xs"
                               >

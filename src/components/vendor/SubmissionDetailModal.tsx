@@ -19,7 +19,7 @@ import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import WorkersList from '@/components/common/WorkersList';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
-import Button from '@/components/ui/button/Button';
+import { Button } from '@/components/ui';
 
 interface Submission {
   id: string;

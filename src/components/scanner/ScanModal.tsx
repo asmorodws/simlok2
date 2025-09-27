@@ -3,7 +3,7 @@
 import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
-import Button from '@/components/ui/button/Button';
+import { Button } from '@/components/ui';
 
 interface ScanResult {
   success: boolean;

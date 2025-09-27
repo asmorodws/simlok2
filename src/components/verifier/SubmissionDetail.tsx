@@ -16,7 +16,7 @@ import {
   PhotoIcon
 } from '@heroicons/react/24/outline';
 import { useToast } from '@/hooks/useToast';
-import Button from '../ui/button/Button';
+import { Button } from '../ui';
 import Image from 'next/image';
 import * as QRCode from 'qrcode';
 

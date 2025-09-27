@@ -11,7 +11,7 @@ import {
   ShieldCheckIcon,
   InboxIcon
 } from '@heroicons/react/24/outline';
-import Button from '../ui/button/Button';
+import { Button } from '../ui';
 import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
@@ -492,7 +492,7 @@ export default function NotificationsPanel({
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
               <Button
-                onClick={markAllAsRead}
+                onClick={() => markAllAsRead()}
                 variant="outline"
                 size="sm"
                 className="text-xs px-3 py-1.5 hover:bg-blue-50 hover:border-blue-300 transition-colors"

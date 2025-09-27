@@ -8,7 +8,7 @@ import {
   DocumentArrowDownIcon 
 } from '@heroicons/react/24/outline';
 import { exportSubmissionsToExcel } from '@/lib/exportToExcel';
-import Button from '@/components/ui/button/Button';
+import { Button } from '@/components/ui';
 import DatePicker from '@/components/form/DatePicker';
 
 interface ExportModalProps {

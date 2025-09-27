@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import QRCode from 'qrcode';
-import Button from '@/components/ui/button/Button';
+import { Button } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { generateQrString } from '@/lib/qr-security';
 

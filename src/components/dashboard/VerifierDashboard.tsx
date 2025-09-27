@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { CameraIcon } from '@heroicons/react/24/outline';
-import Button from '../ui/button/Button';
+import { Button } from '../ui';
 import CameraQRScanner from '../scanner/CameraQRScanner';
 import ScanHistory from '../scanner/ScanHistory';
 

@@ -17,7 +17,7 @@ import {
   XMarkIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-import Button from '@/components/ui/button/Button';
+import { Button } from '@/components/ui';
 import AdminSubmissionDetailModal from '@/components/admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
 import UserVerificationModal from '@/components/admin/UserVerificationModal';

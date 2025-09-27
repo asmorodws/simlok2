@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { PlusIcon, ChartPieIcon, ClockIcon, ArrowTrendingUpIcon } from "@heroicons/react/24/outline";
-import Card from "../ui/Card";
+import { Card } from '@/components/ui';
 import { SectionTitle } from "../ui/SectionTitle";
 import { Stat } from "../ui/Stat";
 import { ActivityList } from "../ui/ActivityList";

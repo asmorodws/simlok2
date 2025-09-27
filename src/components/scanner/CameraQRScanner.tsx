@@ -8,8 +8,8 @@ import {
   CameraIcon,
   StopIcon
 } from '@heroicons/react/24/outline';
-import Button from '@/components/ui/button/Button';
-import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui';
+import { Modal } from '@/components/ui';
 import ScanModal from './ScanModal';
 
 interface ScanResult {
@@ -325,16 +325,19 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
                 
                 <div className="flex gap-2">
                   {!isScanning ? (
-                    <Button onClick={initializeScanner} startIcon={<CameraIcon className="h-4 w-4" />}>
+                    <Button onClick={initializeScanner}>
+                      <CameraIcon className="h-4 w-4 mr-2" />
                       Start Scanning
                     </Button>
                   ) : (
-                    <Button onClick={stopScanner} variant="outline" startIcon={<StopIcon className="h-4 w-4" />}>
+                    <Button onClick={stopScanner} variant="outline">
+                      <StopIcon className="h-4 w-4 mr-2" />
                       Stop Scanning
                     </Button>
                   )}
                   
-                  <Button onClick={handleClose} variant="outline" startIcon={<XMarkIcon className="h-4 w-4" />}>
+                  <Button onClick={handleClose} variant="outline">
+                    <XMarkIcon className="h-4 w-4 mr-2" />
                     Close
                   </Button>
                 </div>

@@ -14,9 +14,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
-import Alert from '@/components/ui/alert/Alert';
+import { Button, Badge, Alert } from '@/components/ui';
 
 interface QrScan {
   id: string;
@@ -131,7 +129,7 @@ export default function ApproverScanHistoryContent() {
         case 'MEETS_REQUIREMENTS':
           return <Badge variant="success">Memenuhi Syarat</Badge>;
         case 'NOT_MEETS_REQUIREMENTS':
-          return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+          return <Badge variant="error">Tidak Memenuhi Syarat</Badge>;
         default:
           return null;
       }
@@ -142,7 +140,7 @@ export default function ApproverScanHistoryContent() {
         case 'APPROVED':
           return <Badge variant="success">Disetujui</Badge>;
         case 'REJECTED':
-          return <Badge variant="destructive">Ditolak</Badge>;
+          return <Badge variant="error">Ditolak</Badge>;
         default:
           return null;
       }

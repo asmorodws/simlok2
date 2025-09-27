@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { QrCodeIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
-import Button from '../ui/button/Button';
+import { Button } from '../ui';
 
 export default function QRTestHelper() {
   const [submissionId, setSubmissionId] = useState('');

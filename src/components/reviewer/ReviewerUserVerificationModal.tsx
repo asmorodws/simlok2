@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import Button from '@/components/ui/button/Button';
-import Card from '@/components/ui/Card';
+import { Button } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { UserData } from '@/types/user';
 import { 
   XMarkIcon, 

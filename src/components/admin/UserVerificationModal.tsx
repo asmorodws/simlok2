@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { UserData } from '@/types/user';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/button/Button';
+import { Card } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { 
   XMarkIcon, 
   CheckCircleIcon, 

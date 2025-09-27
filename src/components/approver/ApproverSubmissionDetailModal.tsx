@@ -11,8 +11,7 @@ import {
   QrCodeIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
-import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
+import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/hooks/useToast';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
@@ -292,13 +291,13 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       case 'MEETS_REQUIREMENTS':
         return <Badge variant="success">Memenuhi Syarat</Badge>;
       case 'NOT_MEETS_REQUIREMENTS':
-        return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+        return <Badge variant="error">Tidak Memenuhi Syarat</Badge>;
       case 'PENDING_APPROVAL':
         return <Badge variant="warning">Menunggu Persetujuan</Badge>;
       case 'APPROVED':
         return <Badge variant="success">Disetujui</Badge>;
       case 'REJECTED':
-        return <Badge variant="destructive">Ditolak</Badge>;
+        return <Badge variant="error">Ditolak</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
     }

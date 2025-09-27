@@ -9,8 +9,8 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 
-import Button from '@/components/ui/button/Button';
-import Alert from '@/components/ui/alert/Alert';
+import { Button } from '@/components/ui';
+import { Alert } from '@/components/ui';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import Link from 'next/link';

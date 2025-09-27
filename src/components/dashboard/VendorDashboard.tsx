@@ -9,10 +9,7 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from "@heroicons/react/24/outline";
-import Card from "../ui/Card";
-import { Badge } from "../ui/Badge";
-import Button from "../ui/button/Button";
-import Alert from "../ui/alert/Alert";
+import { Card, Button, Alert, Badge } from '@/components/ui';
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import SubmissionDetailModal from "../vendor/SubmissionDetailModal";
 import { useStatsStore } from "@/store/useStatsStore";
@@ -130,7 +127,7 @@ export default function VendorDashboard() {
     switch (status) {
       case 'PENDING': return <Badge variant="warning">Menunggu</Badge>;
       case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
-      case 'REJECTED': return <Badge variant="destructive">Ditolak</Badge>;
+      case 'REJECTED': return <Badge variant="error">Ditolak</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
@@ -402,7 +399,7 @@ export default function VendorDashboard() {
                           <>
                             <Link href={`/vendor/submissions/edit/${submission.id}`}>
                               <Button
-                                variant="warning"
+                                variant="destructive"
                                 size="sm"
                                 title="Ubah Pengajuan"
                                 className="mr-2"

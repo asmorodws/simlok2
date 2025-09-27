@@ -11,8 +11,8 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
-import Button from '@/components/ui/button/Button';
-import Card from '@/components/ui/Card';
+import { Button } from '@/components/ui';
+import { Card } from '@/components/ui';
 
 interface FileInfo {
   originalName: string;

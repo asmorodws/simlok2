@@ -13,8 +13,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
-import Alert from '@/components/ui/alert/Alert';
-import Button from '@/components/ui/button/Button';
+import { Alert } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 interface ScanHistoryItem {
   id: string;

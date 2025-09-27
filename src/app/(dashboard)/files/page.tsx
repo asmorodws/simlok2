@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import FileManager from '@/components/files/FileManager';
 import FileUpload from '@/components/form/FileUpload';
-import Card from '@/components/ui/Card';
+import { Card } from '@/components/ui';
 import { DocumentPlusIcon } from '@heroicons/react/24/outline';
 
 export default function FilesPage() {

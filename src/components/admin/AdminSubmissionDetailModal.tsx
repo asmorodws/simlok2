@@ -9,8 +9,8 @@ import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import WorkersList from '@/components/common/WorkersList';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
-import Alert from '@/components/ui/alert/Alert';
-import Button from '@/components/ui/button/Button';
+import { Alert } from '@/components/ui';
+import { Button } from '@/components/ui';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 
 interface Submission {

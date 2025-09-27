@@ -1,10 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { useModal } from "@/hooks/useModal";
-import { Modal } from "@/components/ui/modal";
-import Button from "@/components/ui/button/Button";
-import Input from "@/components/form/input/InputField";
-import Label from "@/components/form/Label";
+import { Modal, Button, Input, Label } from '@/components/ui';
 
 export default function ChangePasswordCard() {
   const { isOpen, openModal, closeModal } = useModal();
@@ -142,7 +139,7 @@ export default function ChangePasswordCard() {
                 name="currentPassword"
                 value={passwords.currentPassword}
                 onChange={handleChange}
-                error={errors.currentPassword}
+                errorMessage={errors.currentPassword}
               />
             </div>
 
@@ -153,7 +150,7 @@ export default function ChangePasswordCard() {
                 name="newPassword"
                 value={passwords.newPassword}
                 onChange={handleChange}
-                error={errors.newPassword}
+                errorMessage={errors.newPassword}
               />
             </div>
 
@@ -164,7 +161,7 @@ export default function ChangePasswordCard() {
                 name="confirmPassword"
                 value={passwords.confirmPassword}
                 onChange={handleChange}
-                error={errors.confirmPassword}
+                errorMessage={errors.confirmPassword}
               />
             </div>
 

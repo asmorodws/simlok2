@@ -1,7 +1,7 @@
 'use client';
 
 import { XMarkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import Button from '../button/Button';
+import { Button } from '../atoms/Button';
 import LoadingSpinner from '../LoadingSpinner';
 
 interface ConfirmModalProps {

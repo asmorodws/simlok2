@@ -1,9 +1,6 @@
 "use client";
 
-import Checkbox from "@/components/form/Checkbox";
-import Input from "@/components/form/Input";
-import Label from "@/components/form/Label";
-import Button from "@/components/ui/button/Button";
+import { Input, Button, Label, Checkbox } from '@/components/ui';
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import type { FC } from "react";
@@ -51,7 +48,7 @@ const SignInForm: FC<Props> = ({
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <Label>Email <span className="text-red-500">*</span></Label>
+            <Label required>Email</Label>
             <Input
               type="email"
               placeholder="info@gmail.com"
@@ -62,7 +59,7 @@ const SignInForm: FC<Props> = ({
           </div>
 
           <div>
-            <Label>Password <span className="text-red-500">*</span></Label>
+            <Label required>Password</Label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
@@ -87,7 +84,7 @@ const SignInForm: FC<Props> = ({
           <div className="flex items-center justify-between">
             <Checkbox
               checked={keepLoggedIn}
-              onChange={setKeep}
+              onChange={(e) => setKeep(e.target.checked)}
               label="Keep me logged in"
             />
             <Link

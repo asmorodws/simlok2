@@ -1,38 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { notifyAdminNewSubmission } from '@/server/events';
+
+/**
+ * SOFT DELETE IMPLEMENTATION - API AUDIT PROTOCOL STAGE 2
+ * 
+ * This endpoint has been marked for removal as part of the dead code elimination process.
+ * - No frontend references found in static analysis
+ * - Endpoint serves no production purpose
+ * - Returning HTTP 410 Gone to track any hidden usage
+ * 
+ * Monitoring Period: 2 weeks from deployment
+ * Permanent Removal: After confirmation of no usage
+ */
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  // Critical logging for audit trail
+  console.warn('🚨 AUDIT: Test notification endpoint accessed - marked for removal');
+  console.warn('🔍 Client IP:', request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown');
+  console.warn('🔍 User Agent:', request.headers.get('user-agent') || 'unknown');
+  console.warn('🔍 Timestamp:', new Date().toISOString());
   
-  if (!session?.user || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  return NextResponse.json({ 
+    error: 'Endpoint removed',
+    message: 'This test endpoint has been permanently removed. Use the production notification system instead.',
+    removedOn: '2025-09-28',
+    alternative: '/api/v1/notifications'
+  }, { status: 410 }); // HTTP 410 Gone
+}
 
-  try {
-    const body = await request.json();
-    const { submissionId } = body;
-
-    if (!submissionId) {
-      return NextResponse.json({ error: 'submissionId is required' }, { status: 400 });
-    }
-
-    console.log('🧪 Test: Triggering notification for submission:', submissionId);
-    
-    // Trigger the same notification system used for real submissions
-    await notifyAdminNewSubmission(submissionId);
-    
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Test notification sent',
-      submissionId 
-    });
-  } catch (error) {
-    console.error('❌ Test notification error:', error);
-    return NextResponse.json({ 
-      error: 'Failed to send test notification',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
+export async function GET(request: NextRequest) {
+  // Also handle GET requests that might be probing
+  console.warn('🚨 AUDIT: Test notification endpoint GET accessed - marked for removal');
+  console.warn('🔍 Client IP:', request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown');
+  
+  return NextResponse.json({ 
+    error: 'Endpoint removed',
+    message: 'This test endpoint has been permanently removed.',
+    status: 410
+  }, { status: 410 });
 }
