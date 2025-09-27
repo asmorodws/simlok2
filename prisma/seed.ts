@@ -64,7 +64,7 @@ async function main() {
     {
       officer_name: "Super Admin",
       email: "superadmin@example.com",
-      password: "super123",
+      password: "super123", 
       role: Role.SUPER_ADMIN,
       profile_photo: null,
       address: "Jl. Super Admin No. 1, Jakarta",
@@ -285,7 +285,7 @@ async function main() {
         content: null, // akan diisi admin saat approve
         user_id: vendorData.id,
         approval_status: status,
-        qrcode: `QR-${vendorData.id}-${Date.now()}-${submissionCount}`,
+        qrcode: '',
         created_at: createdDate,
         simja_number: submissionCount % 2 === 0 ? `SIMJA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
         simja_date: submissionCount % 2 === 0 ? new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000) : null,

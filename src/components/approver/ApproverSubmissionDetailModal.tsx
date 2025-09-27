@@ -744,7 +744,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Tanggal Penerbitan
+                                Tanggal Penerbitan Simlok
                               </label>
                               <input
                                 type="date"

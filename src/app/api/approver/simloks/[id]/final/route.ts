@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
+import { generateQrString } from '@/lib/qr-security';
 
 // Schema for validating final approval data
 const finalApprovalSchema = z.object({
@@ -68,6 +69,8 @@ export async function PATCH(
         review_status: true,
         final_status: true,
         user_id: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
         user: {
           select: {
             id: true,
@@ -124,6 +127,14 @@ export async function PATCH(
         updateData.simlok_date = new Date();
       }
       
+      // Auto-generate QR code when approved
+      const qrString = generateQrString({
+        id: params.id,
+        implementation_start_date: existingSubmission.implementation_start_date || null,
+        implementation_end_date: existingSubmission.implementation_end_date || null
+      });
+      updateData.qrcode = qrString;
+      
       updateData.approval_status = 'APPROVED'; // Update legacy field too
     } else {
       updateData.approval_status = 'REJECTED'; // Update legacy field too
@@ -157,6 +168,11 @@ export async function PATCH(
         }
       }
     });
+
+    // Log QR code generation for approved submissions
+    if (validatedData.final_status === 'APPROVED' && updateData.qrcode) {
+      console.log(`✅ QR Code auto-generated for approved submission ${params.id}: ${updateData.qrcode.substring(0, 50)}...`);
+    }
 
     // Import and use the event system for real-time notifications
     const { notifyVendorStatusChange } = await import('@/server/events');
