@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { DocumentIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
-import { validateFile } from '@/utils/file-validation';
 
 interface FileUploadProps {
   id?: string;
@@ -42,22 +41,15 @@ export default function FileUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFileInput = (file: File): string | null => {
-    // Use the centralized validation utility with current options
-    const acceptedTypes = accept.split(',').map(type => type.trim());
-    const acceptedExtensions = acceptedTypes.filter(type => type.startsWith('.'));
-    
-    const validation = validateFile(file, {
-      maxSizeMB: maxSize,
-      allowedTypes: [], // We'll use the existing accept pattern for now
-      allowedExtensions: acceptedExtensions
-    });
-
-    if (!validation.isValid) {
-      return validation.error || 'File validation failed';
+    // Check file size first
+    if (file.size > maxSize * 1024 * 1024) {
+      return `Ukuran file terlalu besar. Maksimal ${maxSize}MB`;
     }
 
-    // Additional check for accepted types using the accept prop pattern
+    // Check file type based on accept prop
+    const acceptedTypes = accept.split(',').map(type => type.trim());
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    
     const isValidType = acceptedTypes.some(type => {
       if (type.startsWith('.')) {
         return type === fileExtension;

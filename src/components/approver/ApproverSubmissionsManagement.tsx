@@ -12,6 +12,7 @@ import {
   CheckCircleIcon,
   UserGroupIcon,
   DocumentCheckIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 
 import Button from '@/components/ui/button/Button';
@@ -413,7 +414,7 @@ export default function ApproverSubmissionsManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => handleSort('reviewed_at')}
                 >
                   <div className="flex items-center space-x-1">
@@ -422,27 +423,27 @@ export default function ApproverSubmissionsManagement() {
                   </div>
                 </th>
                 <th 
-                  className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => handleSort('vendor_name')}
                 >
                   <div className="flex items-center space-x-1">
-                    <span>Vendor</span>
+                    <span>Vendor & PJ</span>
                     {getSortIcon('vendor_name')}
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Deskripsi Pekerjaan
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pekerjaan & Lokasi
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status Review
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status Final
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reviewer
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aksi
                 </th>
               </tr>
@@ -450,52 +451,61 @@ export default function ApproverSubmissionsManagement() {
             <tbody className="bg-white divide-y divide-gray-200">
               {submissions.map((submission) => (
                 <tr key={submission.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {submission.reviewed_at 
-                      ? new Date(submission.reviewed_at).toLocaleDateString('id-ID', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })
-                      : '-'
-                    }
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {submission.vendor_name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {submission.officer_name}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-xs">
-                      <p className="truncate font-medium">{submission.job_description}</p>
-                      <p className="text-gray-500 text-xs truncate">{submission.work_location}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getReviewStatusBadge(submission.review_status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {getFinalStatusBadge(submission.final_status)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {submission.reviewed_by_user?.officer_name || '-'}
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">
+                      {submission.reviewed_at 
+                        ? new Date(submission.reviewed_at).toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })
+                        : '-'
+                      }
                     </div>
                     {submission.reviewed_at && (
                       <div className="text-xs text-gray-500">
-                        {new Date(submission.reviewed_at).toLocaleDateString('id-ID')}
+                        {new Date(submission.reviewed_at).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-4 py-3">
+                    <div className="max-w-44">
+                      <div className="text-sm font-medium text-gray-900 truncate" title={submission.vendor_name}>
+                        {submission.vendor_name}
+                      </div>
+                      <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
+                        <UserIcon className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate" title={submission.officer_name}>{submission.officer_name}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="max-w-52">
+                      <div className="text-sm font-medium text-gray-900 truncate" title={submission.job_description}>
+                        {submission.job_description}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 truncate" title={submission.work_location}>
+                        📍 {submission.work_location}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {getReviewStatusBadge(submission.review_status)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {getFinalStatusBadge(submission.final_status)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 max-w-28">
+                      <span className="truncate block" title={submission.reviewed_by_user?.officer_name || '-'}>
+                        {submission.reviewed_by_user?.officer_name || '-'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                     <Button
                       onClick={() => handleViewDetails(submission)}
                       size="sm"
@@ -512,7 +522,7 @@ export default function ApproverSubmissionsManagement() {
           </table>
         </div>        {/* Enhanced Pagination */}
         {pagination.pages > 1 && (
-          <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
             <div className="flex-1 flex justify-between sm:hidden">
               <Button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}

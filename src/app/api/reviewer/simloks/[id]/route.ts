@@ -7,6 +7,7 @@ import { z } from 'zod';
 // Schema for validating submission updates
 const updateSubmissionSchema = z.object({
   vendor_name: z.string().optional(),
+  vendor_phone: z.string().optional(),
   based_on: z.string().optional(),
   officer_name: z.string().optional(),
   job_description: z.string().optional(),
@@ -56,6 +57,12 @@ export async function GET(
             officer_name: true,
             email: true,
             vendor_name: true,
+            phone_number: true,
+            address: true,
+            role: true,
+            verified_at: true,
+            verified_by: true,
+            created_at: true,
           }
         },
         reviewed_by_user: {
@@ -173,6 +180,12 @@ export async function PATCH(
             officer_name: true,
             email: true,
             vendor_name: true,
+            phone_number: true,
+            address: true,
+            role: true,
+            verified_at: true,
+            verified_by: true,
+            created_at: true,
           }
         },
         reviewed_by_user: {

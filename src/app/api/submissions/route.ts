@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
         data: {
           ...submissionData,
           user_id: session.user.id,
+          vendor_phone: userExists.phone_number, // Auto-fill dari data user
           worker_count: submissionData.worker_count || null,
           simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
           sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,

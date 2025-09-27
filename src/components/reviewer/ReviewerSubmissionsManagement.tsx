@@ -301,24 +301,27 @@ export default function ReviewerSubmissionsManagement() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th 
-                      className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                       onClick={() => handleSort('created_at')}
                     >
                       <div className="flex items-center space-x-1">
-                        <span>Tanggal & Vendor</span>
+                        <span>Tanggal</span>
                         {getSortIcon('created_at')}
                       </div>
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Deskripsi Pekerjaan
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Vendor & Penanggung Jawab
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pekerjaan & Lokasi
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status Review
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status Final
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aksi
                     </th>
                   </tr>
@@ -326,39 +329,49 @@ export default function ReviewerSubmissionsManagement() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {submissions.map((submission) => (
                     <tr key={submission.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="space-y-2">
-                          <div className="text-sm text-gray-900">
-                            {new Date(submission.created_at).toLocaleDateString('id-ID', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {new Date(submission.created_at).toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(submission.created_at).toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="max-w-48">
+                          <div className="font-medium text-sm text-gray-900 truncate" title={submission.vendor_name}>
+                            {submission.vendor_name}
                           </div>
-                          <div className="font-medium text-gray-900">{submission.vendor_name}</div>
-                          <div className="flex items-center space-x-2 text-sm text-gray-500">
-                            <UserIcon className="h-4 w-4" />
-                            <span>{submission.officer_name}</span>
+                          <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
+                            <UserIcon className="h-3 w-3 flex-shrink-0" />
+                            <span className="truncate" title={submission.officer_name}>{submission.officer_name}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="max-w-xs">
-                          <div className="font-medium text-gray-900 text-sm line-clamp-2">
+                      <td className="px-4 py-3">
+                        <div className="max-w-64">
+                          <div className="text-sm text-gray-900 font-medium truncate" title={submission.job_description}>
                             {submission.job_description}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {submission.work_location}
+                          <div className="text-xs text-gray-500 mt-1 truncate" title={submission.work_location}>
+                            📍 {submission.work_location}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {getReviewStatusBadge(submission.review_status)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {getFinalStatusBadge(submission.final_status)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
                         <Button
                           onClick={() => handleViewDetails(submission)}
                           size="sm"
@@ -377,7 +390,7 @@ export default function ReviewerSubmissionsManagement() {
 
             {/* Pagination */}
             {pagination.pages > 1 && (
-              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="text-sm text-gray-700">
                     Menampilkan {((currentPage - 1) * pagination.limit) + 1} sampai{' '}

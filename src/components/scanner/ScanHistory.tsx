@@ -9,6 +9,7 @@ import {
   UserIcon,
   BuildingOfficeIcon,
   DocumentIcon,
+  MapPinIcon,
   ChevronLeftIcon,
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
@@ -19,6 +20,7 @@ interface ScanHistoryItem {
   id: string;
   scanned_at: string;
   scanner_name?: string;
+  scan_location?: string;
   notes?: string;
   user: {
     id: string;
@@ -310,6 +312,17 @@ const ScanHistory = forwardRef<ScanHistoryRef, ScanHistoryProps>(function ScanHi
                           <span className="ml-1">{scan.submission.work_location}</span>
                         </div>
 
+                        {/* Scan Location */}
+                        {scan.scan_location && (
+                          <div className="flex items-center text-sm">
+                            <MapPinIcon className="h-4 w-4 text-orange-400 mr-2" />
+                            <div>
+                              <span className="text-gray-600">Lokasi Scan:</span>
+                              <span className="ml-1 font-medium text-orange-600">{scan.scan_location}</span>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Notes */}
                         {scan.notes && (
                           <div className="text-sm bg-blue-50 p-3 rounded-md border-l-4 border-blue-200">
@@ -443,6 +456,19 @@ const ScanHistory = forwardRef<ScanHistoryRef, ScanHistoryProps>(function ScanHi
                       </div>
                     </div>
                   </div>
+
+                  {/* Scan Location */}
+                  {selectedScan.scan_location && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <div className="flex items-center">
+                        <MapPinIcon className="h-5 w-5 text-orange-500 mr-2" />
+                        <span className="block font-medium text-gray-600 mb-2">Scan Location</span>
+                      </div>
+                      <div className="bg-orange-50 p-3 rounded-md text-sm text-orange-700 border-l-4 border-orange-200">
+                        {selectedScan.scan_location}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Notes */}
                   {selectedScan.notes && (

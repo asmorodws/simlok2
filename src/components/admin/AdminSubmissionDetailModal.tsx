@@ -11,6 +11,7 @@ import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import Alert from '@/components/ui/alert/Alert';
 import Button from '@/components/ui/button/Button';
+import RichTextEditor from '@/components/ui/RichTextEditor';
 
 interface Submission {
   id: string;
@@ -200,21 +201,21 @@ export default function AdminSubmissionDetailModal({
       const templateParts = [];
       
       // Header template
-      templateParts.push("Izin diberikan berdasarkan:");
+      templateParts.push("Izin diberikan berdasarkan :");
       
       // SIMJA section
       if (submission?.simja_number && submission?.simja_date) {
         templateParts.push(
-          `• Simja Ast Man Facility Management`,
-          `  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`
+          `• SIMJA Ast. Man. Facility Management`,
+          `  No. ${submission.simja_number} Tanggal ${formatDate(submission.simja_date)}`
         );
       }
       
       // SIKA section  
       if (submission?.sika_number && submission?.sika_date) {
         templateParts.push(
-          `• SIKA Pekerjaan Dingin`,
-          `  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`
+          `• **SIKA** Pekerjaan Dingin`,
+          `  **No.**${submission.sika_number} **Tgl.** ${formatDate(submission.sika_date)}`
         );
       }
       
@@ -222,9 +223,9 @@ export default function AdminSubmissionDetailModal({
       const tanggalDiterima = approvalForm.tanggal_simlok;
       if (tanggalDiterima) {
         templateParts.push(
-          ` \n`,
+          ` `,
           ` Diterima ${submission?.signer_position || approvalForm.jabatan_signer || '[Jabatan akan diisi saat approval]'}`,
-          `  ${formatDate(tanggalDiterima)}`
+          `  <strong>${formatDate(tanggalDiterima)}</strong>`
         );
       }
       
@@ -939,12 +940,10 @@ export default function AdminSubmissionDetailModal({
                               <span className="text-xs text-gray-500 ml-1">(Catatan tambahan)</span>
                             </label>
 
-                            <textarea
+                            <RichTextEditor
                               value={approvalForm.lain_lain}
-                              onChange={(e) => setApprovalForm(prev => ({ ...prev, lain_lain: e.target.value }))}
-                              rows={6}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              placeholder="Izin diberikan berdasarkan:&#10;• Simja Ast Man Facility Management&#10;  [nomor] Tgl. [tanggal]&#10;• SIKA Pekerjaan Dingin&#10;  [nomor] Tgl. [tanggal]&#10;  Diterima Head Of Security Region 1&#10;  [tanggal]"
+                              onChange={(value) => setApprovalForm(prev => ({ ...prev, lain_lain: value }))}
+                              placeholder="Izin diberikan berdasarkan:\n• Simja Ast Man Facility Management\n  [nomor] Tgl. [tanggal]\n• SIKA Pekerjaan Dingin\n  [nomor] Tgl. [tanggal]\n  Diterima Head Of Security Region 1\n  [tanggal]"
                             />
                           </div>
 

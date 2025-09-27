@@ -1,5 +1,6 @@
 export interface SubmissionData {
   vendor_name: string;
+  vendor_phone?: string;
   based_on: string;
   officer_name: string;
   job_description: string;

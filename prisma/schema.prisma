@@ -86,6 +86,7 @@ model Submission {
   approval_status           String       @default("PENDING")
   approved_by               String?
   vendor_name               String
+  vendor_phone              String?
   based_on                  String
   officer_name              String
   job_description           String
@@ -195,6 +196,7 @@ model QrScan {
   scanned_by    String
   scanned_at    DateTime   @default(now())
   scanner_name  String?    // Optional: name of the person who scanned
+  scan_location String?    // Location where the scan was performed (from verifier's address)
   notes         String?    // Optional: additional notes about the scan
   submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)
   user          User       @relation("QrScannedBy", fields: [scanned_by], references: [id], onDelete: Cascade)

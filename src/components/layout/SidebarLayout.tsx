@@ -11,6 +11,7 @@ import {
   UsersIcon,
   ClipboardDocumentListIcon,
   ClockIcon,
+  QrCodeIcon,
   Bars3Icon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -48,10 +49,12 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
       { label: "Dashboard", href: "/reviewer", icon: HomeIcon },
       { label: "Review Pengajuan", href: "/reviewer/submissions", icon: ClipboardDocumentListIcon },
       { label: "Verifikasi User", href: "/reviewer/users", icon: UsersIcon },
+      { label: "Scan History", href: "/reviewer/scan-history", icon: QrCodeIcon },
     ],
     APPROVER: [
       { label: "Dashboard", href: "/approver", icon: HomeIcon },
       { label: "Persetujuan", href: "/approver/submissions", icon: ClipboardDocumentListIcon },
+      { label: "Scan History", href: "/approver/scan-history", icon: QrCodeIcon },
     ],
     VENDOR: [
       { label: "Dashboard", href: "/vendor", icon: HomeIcon },

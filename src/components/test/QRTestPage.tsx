@@ -137,9 +137,9 @@ export default function QRTestPage() {
         <div className="mt-4">
           <h4 className="font-medium mb-2">Test Cases:</h4>
           <div className="space-y-1 text-xs font-mono">
-            <div>✅ SL:test-123:1695211200000:abc123def456...</div>
-            <div>✅ SL|eyJpIjoidGVzdC0xMjMiLCJlIjoxNjk1...</div>
-            <div>⚠️ test-submission-123 (raw ID)</div>
+            <div>VALID: SL:test-123:1695211200000:abc123def456...</div>
+            <div>VALID: SL|eyJpIjoidGVzdC0xMjMiLCJlIjoxNjk1...</div>
+            <div>WARNING: test-submission-123 (raw ID)</div>
           </div>
         </div>
       </div>

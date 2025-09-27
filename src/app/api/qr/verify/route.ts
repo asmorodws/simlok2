@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     // Check if this user exists in database
     const userExists = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { id: true, email: true, role: true, officer_name: true }
+      select: { id: true, email: true, role: true, officer_name: true, address: true }
     });
     console.log('userExists in DB:', userExists);
     
@@ -134,15 +134,25 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // Check if this verifier has already scanned this QR code/barcode
-    console.log('=== CHECKING FOR DUPLICATE SCAN ===');
+    // Check for duplicate scans - only prevent same verifier scanning same SIMLOK on same day
+    console.log('=== CHECKING FOR DUPLICATE SCAN BY SAME VERIFIER ON SAME DAY ===');
     console.log('submission_id:', qrPayload.id);
     console.log('scanned_by:', session.user.id);
     
-    const existingQrScan = await prisma.qrScan.findFirst({
+    // Get today's date range (start and end of day)
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+    
+    // Check if the same verifier has already scanned today
+    const existingTodayScanByUser = await prisma.qrScan.findFirst({
       where: {
         submission_id: qrPayload.id,
         scanned_by: session.user.id,
+        scanned_at: {
+          gte: startOfDay,
+          lte: endOfDay,
+        }
       },
       include: {
         user: {
@@ -153,31 +163,33 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('existingQrScan found:', !!existingQrScan);
+    console.log('existingTodayScanByUser found:', !!existingTodayScanByUser);
 
-    if (existingQrScan) {
-      console.log('=== DUPLICATE SCAN DETECTED ===');
-      const scanDate = new Date(existingQrScan.scanned_at);
+    if (existingTodayScanByUser) {
+      console.log('=== DUPLICATE SCAN BY SAME USER TODAY DETECTED ===');
+      const scanDate = new Date(existingTodayScanByUser.scanned_at);
       const formattedDate = scanDate.toLocaleDateString('id-ID', {
         day: '2-digit',
         month: '2-digit', 
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
       });
 
       return NextResponse.json({ 
         success: false, 
-        error: 'duplicate_scan',
-        message: `QR Code ini sudah pernah Anda scan sebelumnya pada ${formattedDate}`,
+        error: 'duplicate_scan_same_day',
+        message: `Anda sudah melakukan scan untuk SIMLOK ini hari ini pada ${formattedDate}. Verifikator yang sama tidak dapat scan SIMLOK yang sama di hari yang sama.`,
         previousScan: {
-          scanDate: existingQrScan.scanned_at,
-          scanId: existingQrScan.id,
-          scannerName: existingQrScan.user.officer_name,
+          scanDate: existingTodayScanByUser.scanned_at,
+          scanId: existingTodayScanByUser.id,
+          scannerName: existingTodayScanByUser.user.officer_name,
         }
       }, { status: 409 });
     }
+
+    // Note: Different verifiers CAN scan the same SIMLOK on the same day
+    // This is allowed per the new requirements
 
     console.log('=== NO DUPLICATE FOUND, PROCEEDING TO CREATE SCAN RECORD ===');
 
@@ -190,6 +202,7 @@ export async function POST(request: NextRequest) {
           submission_id: qrPayload.id,
           scanned_by: session.user.id,
           scanner_name: userExists.officer_name || session.user.officer_name,
+          scan_location: userExists.address || 'Lokasi tidak tersedia',
           notes: scanNotes || `Scanned via ${scanner_type || 'scanner'} at: ${scanLocation || 'Unknown location'}`,
         },
         include: {
@@ -235,11 +248,52 @@ export async function POST(request: NextRequest) {
       
       // Check if it's a unique constraint violation (in case of race condition)
       if (createError?.code === 'P2002') {
-        console.log('=== UNIQUE CONSTRAINT VIOLATION DETECTED ===');
+        console.log('=== UNIQUE CONSTRAINT VIOLATION DETECTED (RACE CONDITION) ===');
+        
+        // Check again for today's scans by same user only (race condition handling)
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+        
+        const raceConditionScan = await prisma.qrScan.findFirst({
+          where: {
+            submission_id: qrPayload.id,
+            scanned_by: session.user.id, // Only check for same user
+            scanned_at: {
+              gte: startOfDay,
+              lte: endOfDay,
+            }
+          },
+          include: {
+            user: {
+              select: {
+                officer_name: true,
+              },
+            },
+          },
+        });
+
+        if (raceConditionScan) {
+          const scanDate = new Date(raceConditionScan.scanned_at);
+          const formattedDate = scanDate.toLocaleDateString('id-ID', {
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+
+          return NextResponse.json({ 
+            success: false, 
+            error: 'duplicate_scan_same_day',
+            message: `Anda sudah melakukan scan untuk SIMLOK ini hari ini pada ${formattedDate}. Verifikator yang sama tidak dapat scan SIMLOK yang sama di hari yang sama.`
+          }, { status: 409 });
+        }
+
         return NextResponse.json({ 
           success: false, 
           error: 'duplicate_scan',
-          message: 'QR Code ini sudah pernah Anda scan sebelumnya (race condition detected)'
+          message: 'QR Code ini sudah pernah discan hari ini (race condition detected)'
         }, { status: 409 });
       }
       

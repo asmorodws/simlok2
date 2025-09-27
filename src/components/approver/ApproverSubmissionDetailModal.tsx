@@ -7,7 +7,9 @@ import {
   XCircleIcon,
   DocumentTextIcon,
   UserGroupIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  QrCodeIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -21,8 +23,10 @@ interface SubmissionDetail {
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
   final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
+  vendor_phone?: string;
   based_on: string;
   officer_name: string;
+  officer_email?: string;
   job_description: string;
   work_location: string;
   implementation: string | null;
@@ -42,7 +46,11 @@ interface SubmissionDetail {
   content: string;
   notes?: string;
   review_note?: string;
+  reviewed_by_name?: string;
+  reviewed_by_email?: string;
   final_note?: string;
+  approved_by_name?: string;
+  approved_by_email?: string;
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;
@@ -51,28 +59,32 @@ interface SubmissionDetail {
   approved_at?: string;
   signer_position?: string;
   signer_name?: string;
-  user: {
-    id: string;
-    officer_name: string;
-    email: string;
-    vendor_name: string;
-  };
-  reviewed_by_user?: {
-    id: string;
-    officer_name: string;
-    email: string;
-  };
-  approved_by_final_user?: {
-    id: string;
-    officer_name: string;
-    email: string;
-  };
   worker_list: Array<{
     id: string;
     worker_name: string;
     worker_photo: string | null;
     created_at: string;
   }>;
+}
+
+interface QrScan {
+  id: string;
+  scanned_at: string;
+  scanner_name?: string;
+  notes?: string;
+  user: {
+    id: string;
+    officer_name: string;
+    email: string;
+    role: string;
+  };
+}
+
+interface ScanHistory {
+  scans: QrScan[];
+  totalScans: number;
+  lastScan?: QrScan;
+  hasBeenScanned: boolean;
 }
 
 interface ApproverSubmissionDetailModalProps {
@@ -93,6 +105,8 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workers' | 'approval'>('details');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [scanHistory, setScanHistory] = useState<ScanHistory | null>(null);
+  const [loadingScanHistory, setLoadingScanHistory] = useState(false);
   const { showSuccess, showError } = useToast();
 
   // Function to generate auto SIMLOK number - mengikuti sistem admin yang sudah ada
@@ -171,9 +185,31 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     }
   };
 
+  const fetchScanHistory = async () => {
+    if (!submissionId) return;
+    
+    try {
+      setLoadingScanHistory(true);
+      const response = await fetch(`/api/submissions/${submissionId}/scans`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch scan history');
+      }
+
+      const data: ScanHistory = await response.json();
+      setScanHistory(data);
+    } catch (err) {
+      console.error('Error fetching scan history:', err);
+      // Don't show error for scan history as it's not critical
+    } finally {
+      setLoadingScanHistory(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && submissionId) {
       fetchSubmissionDetail();
+      fetchScanHistory();
     }
   }, [isOpen, submissionId]);
 
@@ -278,9 +314,65 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Detail & Approval Pengajuan</h2>
             {submission && (
-              <p className="text-sm text-gray-500 mt-1">
-                {submission.vendor_name} - {submission.user.officer_name}
-              </p>
+              <div className="text-sm text-gray-500 mt-1 space-y-1">
+                <p>
+                  <span className="font-medium">{submission.vendor_name}</span> - {submission.officer_name}
+                </p>
+                {submission.simlok_number && (
+                  <p className="text-xs">
+                    <span className="font-medium">No. SIMLOK:</span> {submission.simlok_number}
+                    {submission.simlok_date && (
+                      <span className="ml-2">• <span className="font-medium">Tanggal:</span> {new Date(submission.simlok_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    )}
+                  </p>
+                )}
+                <p className="text-xs">
+                  <span className="font-medium">ID Pengajuan:</span> {submission.id}
+                </p>
+                
+                {/* Scan Status */}
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  {loadingScanHistory ? (
+                    <div className="flex items-center text-xs text-gray-500">
+                      <ClockIcon className="h-3 w-3 mr-1 animate-spin" />
+                      Memuat status scan...
+                    </div>
+                  ) : scanHistory ? (
+                    <div className="space-y-1">
+                      {scanHistory.hasBeenScanned ? (
+                        <div className="flex items-center text-xs text-green-600">
+                          <QrCodeIcon className="h-3 w-3 mr-1" />
+                          <span className="font-medium">SIMLOK telah discan</span>
+                          <span className="ml-2">({scanHistory.totalScans}x)</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <QrCodeIcon className="h-3 w-3 mr-1" />
+                          <span>SIMLOK belum discan</span>
+                        </div>
+                      )}
+                      
+                      {scanHistory.lastScan && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <ClockIcon className="h-3 w-3 mr-1" />
+                          <span>Terakhir discan: {new Date(scanHistory.lastScan.scanned_at).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-xs text-gray-400">
+                      <QrCodeIcon className="h-3 w-3 mr-1" />
+                      <span>Status scan tidak tersedia</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           <Button
@@ -357,95 +449,241 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   </div>
 
                   {/* Data Vendor */}
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Data Vendor</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nama Vendor</label>
-                        <p className="text-gray-900 py-2">{submission.vendor_name}</p>
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                    <h4 className="text-base font-semibold text-gray-900 mb-6">Data Vendor & Penanggung Jawab</h4>
+                    
+                    <div className="space-y-6">
+                      {/* Informasi Vendor */}
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h5 className="text-lg font-semibold text-gray-900 mb-6">Informasi Vendor</h5>
+                        
+                        {/* Informasi Perusahaan */}
+                        <div className="mb-6">
+                          <h6 className="text-sm font-medium text-gray-800 mb-4 pb-2 border-b border-gray-200">Informasi Perusahaan</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nama Perusahaan Vendor
+                              </label>
+                              <p className="text-gray-900 py-2 font-medium">{submission.vendor_name}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nomor Telepon Vendor
+                              </label>
+                              <p className="text-gray-900 py-2">
+                                {submission.vendor_phone || (
+                                  <span className="text-gray-400 italic">Belum diisi</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Informasi Penanggung Jawab */}
+                        <div>
+                          <h6 className="text-sm font-medium text-gray-800 mb-4 pb-2 border-b border-gray-200">Informasi Penanggung Jawab</h6>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Nama Penanggung Jawab
+                              </label>
+                              <p className="text-gray-900 py-2 font-medium">{submission.officer_name}</p>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Email Penanggung Jawab
+                              </label>
+                              <p className="text-gray-900 py-2">{submission.officer_email || '-'}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Petugas</label>
-                        <p className="text-gray-900 py-2">{submission.user.officer_name}</p>
+
+                      {/* Dokumen Dasar */}
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Berdasarkan</h5>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-3">
+                            Dokumen Dasar / Referensi
+                          </label>
+                          <div className="bg-white rounded-md p-4 border border-gray-200">
+                            <p className="text-gray-900 whitespace-pre-line leading-relaxed">{submission.based_on}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-3">
+                            Dokumen kontrak, SPK, Work Order, atau referensi lain yang menjadi dasar pengajuan SIMLOK
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                        <p className="text-gray-900 py-2">{submission.user.email}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Dokumen Dasar</label>
-                        <p className="text-gray-900 py-2">{submission.based_on}</p>
+
+                      {/* Status Pengajuan */}
+                      <div className="bg-white rounded-lg p-6 border border-gray-200">
+                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Status Pengajuan</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="bg-white rounded-md p-4 border border-gray-200">
+                            <div className="text-sm text-gray-600 mb-2 font-medium">Tanggal Pengajuan</div>
+                            <div className="text-base font-semibold text-gray-900">
+                              {new Date(submission.created_at).toLocaleDateString('id-ID')}
+                            </div>
+                          </div>
+                          <div className="bg-white rounded-md p-4 border border-gray-200">
+                            <div className="text-sm text-gray-600 mb-2 font-medium">Status Review</div>
+                            <div>{getStatusBadge(submission.review_status)}</div>
+                          </div>
+                          <div className="bg-white rounded-md p-4 border border-gray-200">
+                            <div className="text-sm text-gray-600 mb-2 font-medium">Status Persetujuan</div>
+                            <div>{getStatusBadge(submission.final_status)}</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Informasi Pekerjaan */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <h4 className="text-base font-semibold text-gray-900 mb-4">Informasi Pekerjaan</h4>
                     <div className="space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Deskripsi Pekerjaan</label>
-                        <p className="text-gray-900 py-2 whitespace-pre-line">{submission.job_description}</p>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Lokasi Kerja</label>
-                          <p className="text-gray-900 py-2">{submission.work_location}</p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Jam Kerja</label>
-                          <p className="text-gray-900 py-2">{submission.working_hours}</p>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Deskripsi Pekerjaan
+                        </label>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900 whitespace-pre-line">{submission.job_description}</p>
                         </div>
                       </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Lokasi Kerja
+                          </label>
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                            <p className="text-gray-900 font-medium">{submission.work_location}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jam Kerja
+                          </label>
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                            <p className="text-gray-900 font-medium">{submission.working_hours || 'Tidak ditentukan'}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jumlah Pekerja
+                          </label>
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                            <p className="text-gray-900 font-bold text-lg">{submission.worker_count || 0} <span className="text-sm font-normal">orang</span></p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Informasi Tambahan */}
+                      {(submission.work_facilities || submission.implementation || submission.other_notes) && (
+                        <div className="border-t border-gray-200 pt-4 space-y-4">
+                          {submission.work_facilities && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Fasilitas Kerja
+                              </label>
+                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                                <p className="text-gray-900 text-sm">{submission.work_facilities}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {submission.implementation && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Keterangan Pelaksanaan
+                              </label>
+                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                                <p className="text-gray-900 text-sm whitespace-pre-line">{submission.implementation}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {submission.other_notes && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Catatan Lainnya
+                              </label>
+                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                                <p className="text-gray-900 text-sm whitespace-pre-line">{submission.other_notes}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Dokumen Pendukung */}
-                  <div className="bg-gray-50 rounded-lg p-6">
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                     <h4 className="text-base font-semibold text-gray-900 mb-4">Dokumen Pendukung</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Nomor SIMJA</label>
-                        <p className="text-gray-900 py-2">{submission.simja_number || '-'}</p>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">{submission.simja_number || '-'}</p>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal SIMJA</label>
-                        <p className="text-gray-900 py-2">
-                          {submission.simja_date ? new Date(submission.simja_date).toLocaleDateString('id-ID') : '-'}
-                        </p>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">
+                            {submission.simja_date ? new Date(submission.simja_date).toLocaleDateString('id-ID') : '-'}
+                          </p>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Nomor SIKA</label>
-                        <p className="text-gray-900 py-2">{submission.sika_number || '-'}</p>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">{submission.sika_number || '-'}</p>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal SIKA</label>
-                        <p className="text-gray-900 py-2">
-                          {submission.sika_date ? new Date(submission.sika_date).toLocaleDateString('id-ID') : '-'}
-                        </p>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">
+                            {submission.sika_date ? new Date(submission.sika_date).toLocaleDateString('id-ID') : '-'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Review Information */}
-                  {submission.review_note && (
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <h4 className="text-base font-semibold text-gray-900 mb-4">Catatan Review</h4>
-                      <p className="text-gray-700 whitespace-pre-line">{submission.review_note}</p>
-                      {submission.reviewed_by_user && (
-                        <p className="text-sm text-gray-500 mt-2">
-                          Direview oleh: {submission.reviewed_by_user.officer_name}
-                          {submission.reviewed_at && (
-                            <span> pada {new Date(submission.reviewed_at).toLocaleDateString('id-ID')}</span>
-                          )}
-                        </p>
-                      )}
+                  {/* Jadwal Pelaksanaan */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <h4 className="text-base font-semibold text-gray-900 mb-4">Jadwal Pelaksanaan</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tanggal Mulai Pelaksanaan
+                        </label>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">
+                            {submission.implementation_start_date ? new Date(submission.implementation_start_date).toLocaleDateString('id-ID') : '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tanggal Selesai Pelaksanaan
+                        </label>
+                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
+                          <p className="text-gray-900">
+                            {submission.implementation_end_date ? new Date(submission.implementation_end_date).toLocaleDateString('id-ID') : '-'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Final Status Information */}
                   {submission.final_status !== 'PENDING_APPROVAL' && (
-                    <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                       <h4 className="text-base font-semibold text-gray-900 mb-4">Status</h4>
                       <div className="space-y-2">
                         <div className="flex items-center">
@@ -467,9 +705,9 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <strong>Catatan:</strong> {submission.final_note}
                           </p>
                         )}
-                        {submission.approved_by_final_user && (
+                        {submission.approved_by_name && (
                           <p className="text-xs text-gray-500">
-                            Diproses oleh: {submission.approved_by_final_user.officer_name}
+                            Diproses oleh: {submission.approved_by_name}
                             {submission.approved_at && (
                               <span> pada {new Date(submission.approved_at).toLocaleDateString('id-ID')}</span>
                             )}
@@ -563,7 +801,22 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
               {activeTab === 'approval' && (
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900">Proses Approval Final</h3>
-                  
+                  {/* Review Information */}
+                  {submission.review_note && (
+                    <div className="bg-blue-50 rounded-lg p-6">
+                      <h4 className="text-base font-semibold text-gray-900 mb-4">Catatan Review</h4>
+                      <p className="text-gray-700 whitespace-pre-line">{submission.review_note}</p>
+                      {submission.reviewed_by_name && (
+                        <p className="text-sm text-gray-500 mt-2">
+                          Direview oleh: {submission.reviewed_by_name}
+                          {submission.reviewed_at && (
+                            <span> pada {new Date(submission.reviewed_at).toLocaleDateString('id-ID')}</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {submission.final_status !== 'PENDING_APPROVAL' && (
                     <div className={`
                       rounded-xl p-6 mb-6 border-2
@@ -607,11 +860,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                                 <p className="mt-1 text-gray-600">{submission.final_note}</p>
                               </div>
                             )}
-                            {submission.approved_by_final_user && (
+                            {submission.approved_by_name && (
                               <div className="pt-2 border-t border-gray-200">
                                 <span className="font-medium text-gray-700">Diproses oleh:</span>
                                 <p className="text-gray-600">
-                                  {submission.approved_by_final_user.officer_name} pada{' '}
+                                  {submission.approved_by_name} pada{' '}
                                   {new Date(submission.approved_at!).toLocaleDateString('id-ID', {
                                     weekday: 'long',
                                     year: 'numeric',

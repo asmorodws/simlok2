@@ -76,6 +76,8 @@ const ScanModal: React.FC<ScanModalProps> = ({
               
               <p className="text-lg font-medium mb-2">
                 {result.success ? 'Barcode/QR Code Valid' : 
+                 result.error === 'duplicate_scan_same_day' ? 'Sudah Discan Hari Ini' :
+                 result.error === 'already_scanned_by_other' ? 'Sudah Discan Verifikator Lain' :
                  result.error === 'duplicate_scan' ? 'QR Code Sudah Pernah Discan' :
                  'Barcode/QR Code Tidak Valid'}
               </p>
@@ -84,26 +86,26 @@ const ScanModal: React.FC<ScanModalProps> = ({
                 <p className="text-gray-600 text-sm md:text-base">{result.message}</p>
               )}
               
-              {/* Show previous scan info for duplicate error */}
-              {/* {result.error === 'duplicate_scan' && result.previousScan && (
+              {/* Show previous scan info for all duplicate error types */}
+              {(result.error === 'duplicate_scan_same_day' || 
+                result.error === 'already_scanned_by_other' || 
+                result.error === 'duplicate_scan') && result.previousScan && (
                 <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200 text-left max-w-md mx-auto">
                   <h4 className="text-sm font-medium text-yellow-800 mb-2">Informasi Scan Sebelumnya:</h4>
                   <div className="text-xs text-yellow-700 space-y-1">
-                    <p><span className="font-medium">Scanner:</span> {result.previousScan.scannerName}</p>
-                    <p><span className="font-medium">Scan ID:</span> {result.previousScan.scanId}</p>
+                    <p><span className="font-medium">Verifikator:</span> {result.previousScan.scannerName}</p>
                     <p><span className="font-medium">Waktu:</span> {new Date(result.previousScan.scanDate).toLocaleDateString('id-ID', {
                       day: '2-digit',
                       month: '2-digit',
                       year: 'numeric',
                       hour: '2-digit',
                       minute: '2-digit',
-                      second: '2-digit',
                     })}</p>
                   </div>
                 </div>
-              )} */}
+              )}
               
-              {result.error && result.error !== 'duplicate_scan' && (
+              {result.error && !['duplicate_scan', 'duplicate_scan_same_day', 'already_scanned_by_other'].includes(result.error) && (
                 <p className="text-red-600 text-sm md:text-base">{result.error}</p>
               )}
             </div>

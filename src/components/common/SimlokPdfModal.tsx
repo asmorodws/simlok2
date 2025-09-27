@@ -254,7 +254,7 @@ export default function SimlokPdfModal({
             {error && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
                 <div className="text-center p-8">
-                  <div className="text-red-500 text-6xl mb-4">❌</div>
+                  <div className="text-red-500 text-6xl mb-4">!</div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Gagal Memuat PDF</h3>
                   <p className="text-gray-600 mb-4">{error}</p>
                   <div className="space-x-4">

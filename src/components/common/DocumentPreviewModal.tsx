@@ -85,7 +85,7 @@ export default function DocumentPreviewModal({
       return (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-red-500 text-lg mb-2">❌</div>
+            <div className="text-red-500 text-lg mb-2">!</div>
             <p className="text-gray-600">{error}</p>
             <button
               onClick={handleOpenInNewTab}
