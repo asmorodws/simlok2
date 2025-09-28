@@ -16,8 +16,10 @@ import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import DatePicker from '@/components/form/DatePicker';
+import DateRangePicker from '@/components/form/DateRangePicker';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import RichTextEditor from '@/components/ui/RichTextEditor';
+import { useImplementationDates } from '@/hooks/useImplementationDates';
 
 interface WorkerPhoto {
   id: string;
@@ -156,11 +158,17 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     nama_signer: 'Julianto Santoso'
   });
 
-  // Template helper fields (tidak disimpan ke database)
-  const [templateFields, setTemplateFields] = useState({
-    tanggal_dari: '',
-    tanggal_sampai: '',
-    tanggal_simlok: ''
+  // Implementation dates hook untuk handle logika tanggal dengan lebih robust
+  const implementationDates = useImplementationDates({
+    simjaNumber: submission?.simja_number || undefined,
+    simjaDate: submission?.simja_date || undefined,
+    sikaNumber: submission?.sika_number || undefined,
+    sikaDate: submission?.sika_date || undefined,
+    signerPosition: approvalForm.jabatan_signer,
+    initialDates: {
+      startDate: formData.implementation_start_date,
+      endDate: formData.implementation_end_date
+    }
   });
 
   const fetchSubmissionDetail = async () => {
@@ -287,11 +295,13 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         nama_signer: sub.signer_name || 'Julianto Santoso'
       });
 
-      setTemplateFields({
-        tanggal_dari: sub.implementation_start_date ? formatDateForInput(sub.implementation_start_date) : '',
-        tanggal_sampai: sub.implementation_end_date ? formatDateForInput(sub.implementation_end_date) : '',
-        tanggal_simlok: sub.simlok_date || '',
-      });
+      // Initialize implementation dates hook dengan data yang ada
+      if (sub.implementation_start_date || sub.implementation_end_date) {
+        implementationDates.updateDates({
+          startDate: sub.implementation_start_date ? formatDateForInput(sub.implementation_start_date) : '',
+          endDate: sub.implementation_end_date ? formatDateForInput(sub.implementation_end_date) : ''
+        });
+      }
 
     } catch (err) {
       console.error('Error fetching submission:', err);
@@ -360,100 +370,27 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     setIsEditingWorkers(false);
   }, [activeTab]);
 
-  // Template pelaksanaan
-  useEffect(() => {
-    try {
-      if (templateFields.tanggal_dari && templateFields.tanggal_sampai) {
-        const template = `Terhitung mulai tanggal ${formatDate(templateFields.tanggal_dari)} sampai ${formatDate(templateFields.tanggal_sampai)}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
-        setApprovalForm(prev => ({ ...prev, pelaksanaan: template }));
-      }
-    } catch (error) {
-      console.warn('Error updating template pelaksanaan:', error);
-      // Fallback to empty template
-      setApprovalForm(prev => ({ ...prev, pelaksanaan: '' }));
+  // Update approval form ketika implementation dates berubah
+  React.useEffect(() => {
+    if (implementationDates.isValid) {
+      setApprovalForm(prev => ({
+        ...prev,
+        pelaksanaan: implementationDates.template.pelaksanaan,
+        lain_lain: implementationDates.template.lainLain
+      }));
     }
-  }, [templateFields.tanggal_dari, templateFields.tanggal_sampai]);
+  }, [implementationDates.isValid, implementationDates.template.pelaksanaan, implementationDates.template.lainLain]);
 
-  // Template generator untuk lain-lain - Generate ketika tanggal pelaksanaan sudah dipilih
-  useEffect(() => {
-    const generateLainLainTemplate = () => {
-      try {
-        // Hanya generate jika tanggal pelaksanaan sudah dipilih
-        if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
-          const templateParts = [];
-
-          // Header template
-          templateParts.push("Izin diberikan berdasarkan :");
-
-          // SIMJA section
-          if (submission?.simja_number && submission?.simja_date) {
-            const simjaDate = new Date(submission.simja_date);
-            const simjaDateStr = !isNaN(simjaDate.getTime()) 
-              ? simjaDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-              : '[tanggal]';
-            
-            templateParts.push(
-              `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
-              `  <strong>No. ${submission.simja_number}</strong> <strong>Tanggal ${simjaDateStr}</strong>`
-            );
-          } else {
-            templateParts.push(
-              `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
-              `  <strong>No. [nomor]</strong> <strong>Tanggal [tanggal]</strong>`
-            );
-          }
-
-          // SIKA section  
-          if (submission?.sika_number && submission?.sika_date) {
-            const sikaDate = new Date(submission.sika_date);
-            const sikaDateStr = !isNaN(sikaDate.getTime()) 
-              ? sikaDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-              : '[tanggal]';
-            
-            templateParts.push(
-              `• <strong>SIKA</strong> Pekerjaan Dingin`,
-              `  <strong>No.${submission.sika_number}</strong> <strong>Tgl. ${sikaDateStr}</strong>`
-            );
-          } else {
-            templateParts.push(
-              `• <strong>SIKA</strong> Pekerjaan Dingin`,
-              `  <strong>No.[nomor]</strong> <strong>Tgl. [tanggal]</strong>`
-            );
-          }
-
-          // Head of Security section
-          const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-          const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Sr Officer Security III';
-          templateParts.push(
-            ``,
-            `Diterima ${jabatan}`,
-            `<strong>${today}</strong>`
-          );
-
-          const template = templateParts.join('\n');
-          setApprovalForm(prev => ({ ...prev, lain_lain: template }));
-        }
-      } catch (error) {
-        console.warn('Error generating lain-lain template:', error);
-        // Fallback to simple template
-        setApprovalForm(prev => ({ ...prev, lain_lain: 'Izin diberikan berdasarkan dokumen yang terlampir.' }));
-      }
-    };
-
-    // Generate template ketika tanggal pelaksanaan sudah dipilih
-    if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
-      generateLainLainTemplate();
+  // Sync form data dengan implementation dates hook
+  React.useEffect(() => {
+    if (submission && implementationDates.dates.startDate !== formData.implementation_start_date) {
+      setFormData(prev => ({
+        ...prev,
+        implementation_start_date: implementationDates.dates.startDate,
+        implementation_end_date: implementationDates.dates.endDate
+      }));
     }
-  }, [
-    submission?.id,
-    templateFields.tanggal_dari,
-    templateFields.tanggal_sampai,
-    submission?.simja_number,
-    submission?.simja_date,
-    submission?.sika_number,
-    submission?.sika_date,
-    submission?.signer_position
-  ]); // Re-generate when dates or relevant data changes
+  }, [implementationDates.dates, formData.implementation_start_date, submission]);
 
   const handleViewPdf = () => {
     setIsPdfModalOpen(true);
@@ -464,6 +401,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       setSaving(true);
 
       // Gabungkan formData dengan approvalForm
+      const implementationData = implementationDates.getData();
       const requestBody = {
         ...formData,
         // Tambahkan data approval form ke requestBody
@@ -472,10 +410,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         content: approvalForm.content,
         signer_position: approvalForm.jabatan_signer,
         signer_name: approvalForm.nama_signer,
-        implementation: approvalForm.pelaksanaan,
-        // Tambahkan tanggal pelaksanaan jika ada
-        ...(templateFields.tanggal_dari && { implementation_start_date: templateFields.tanggal_dari }),
-        ...(templateFields.tanggal_sampai && { implementation_end_date: templateFields.tanggal_sampai }),
+        implementation: implementationData.pelaksanaan,
+        // Tambahkan tanggal pelaksanaan dari hook
+        implementation_start_date: implementationData.startDate,
+        implementation_end_date: implementationData.endDate,
       };
 
       const response = await fetch(`/api/reviewer/simloks/${submissionId}`, {
@@ -520,6 +458,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       setSaving(true);
 
       // 1. Save approval template data first
+      const implementationData = implementationDates.getData();
       const requestBody = {
         ...formData,
         vendor_note: approvalForm.vendor_note, // Catatan khusus ke vendor
@@ -527,9 +466,9 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         content: approvalForm.content,
         signer_position: approvalForm.jabatan_signer,
         signer_name: approvalForm.nama_signer,
-        implementation: approvalForm.pelaksanaan,
-        ...(templateFields.tanggal_dari && { implementation_start_date: templateFields.tanggal_dari }),
-        ...(templateFields.tanggal_sampai && { implementation_end_date: templateFields.tanggal_sampai }),
+        implementation: implementationData.pelaksanaan,
+        implementation_start_date: implementationData.startDate,
+        implementation_end_date: implementationData.endDate,
       };
 
       const saveResponse = await fetch(`/api/reviewer/simloks/${submissionId}`, {
@@ -1730,46 +1669,54 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       </div>
 
                       <div className="p-6 space-y-8">
-                        {/* Tanggal Pelaksanaan */}
+                        {/* Tanggal Pelaksanaan - Menggunakan DateRangePicker yang robust */}
                         <div>
-                          <div className="flex items-center space-x-2 mb-4">
+                          <div className="flex items-center space-x-2 mb-6">
                             <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
                               <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                               </svg>
                             </div>
                             <h4 className="text-base font-medium text-gray-900">Jadwal Pelaksanaan</h4>
+                            {implementationDates.duration && (
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                                {implementationDates.duration} hari
+                              </span>
+                            )}
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
-                              <DatePicker
-                                value={templateFields.tanggal_dari}
-                                onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_dari: value }))}
-                                placeholder="Pilih tanggal mulai"
-                                className="w-full"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Selesai</label>
-                              <DatePicker
-                                value={templateFields.tanggal_sampai}
-                                onChange={(value) => setTemplateFields(prev => ({ ...prev, tanggal_sampai: value }))}
-                                placeholder="Pilih tanggal selesai"
-                                className="w-full"
-                              />
-                            </div>
-                          </div>
+                          {/* DateRangePicker Component */}
+                          <DateRangePicker
+                            value={{
+                              startDate: implementationDates.dates.startDate,
+                              endDate: implementationDates.dates.endDate
+                            }}
+                            onChange={(range) => {
+                              implementationDates.updateDates(range);
+                            }}
+                            startLabel="Tanggal Mulai Pelaksanaan"
+                            endLabel="Tanggal Selesai Pelaksanaan"
+                            required={true}
+                            className="mb-6"
+                            {...(implementationDates.errors.startDate || implementationDates.errors.endDate ? {
+                              error: implementationDates.errors.startDate || implementationDates.errors.endDate
+                            } : {})}
+                          />
 
+                          {/* Keterangan Pelaksanaan - Auto generated dari hook */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Keterangan Pelaksanaan</label>
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-2">
+                              <p className="text-sm text-gray-700">
+                                {implementationDates.template.pelaksanaan || 'Template akan dibuat otomatis setelah memilih tanggal'}
+                              </p>
+                            </div>
                             <textarea
                               value={approvalForm.pelaksanaan}
                               onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
                               rows={3}
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                              placeholder="Contoh: Terhitung mulai tanggal 15 Januari 2024 sampai 20 Januari 2024. Termasuk hari Sabtu, Minggu dan hari libur lainnya."
+                              placeholder="Keterangan akan dibuat otomatis atau Anda bisa mengedit manual..."
                             />
                           </div>
                         </div>
@@ -1847,12 +1794,12 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             Template ini akan dikirim ke admin sebagai konten "Lain-lain" saat proses approval SIMLOK
                           </p>
 
-                          {templateFields.tanggal_dari && templateFields.tanggal_sampai ? (
+                          {implementationDates.isValid ? (
                             <div className="mt-3 flex items-center space-x-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
                               <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                               </svg>
-                              <span>Template berhasil dibuat otomatis berdasarkan data SIMJA dan SIKA</span>
+                              <span>Template berhasil dibuat otomatis berdasarkan data SIMJA dan SIKA ({implementationDates.duration} hari)</span>
                             </div>
                           ) : (
                             <div className="mt-3 flex items-center space-x-2 text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">

@@ -12,7 +12,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import Alert from '@/components/ui/alert/Alert';
 import { useSocket } from '@/components/common/RealtimeUpdates';
-import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
 import Link from 'next/link';
 
 interface Submission {
@@ -393,6 +393,7 @@ const ReviewerDashboard = () => {
       {/* Modal */}
       {selectedSubmission && (
         <ReviewerSubmissionDetailModal
+          key={selectedSubmission}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           submissionId={selectedSubmission}

@@ -14,7 +14,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
-import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 
 interface Submission {
@@ -445,6 +445,7 @@ export default function ReviewerSubmissionsManagement() {
       {/* Detail Modal */}
       {showDetailModal && selectedSubmission && (
         <ReviewerSubmissionDetailModal
+          key={selectedSubmission.id}
           isOpen={showDetailModal}
           onClose={() => {
             setShowDetailModal(false);
