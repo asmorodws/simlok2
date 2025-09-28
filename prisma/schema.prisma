@@ -21,6 +21,9 @@ model User {
   phone_number        String?
   verified_at         DateTime?
   verified_by         String?
+  isActive            Boolean        @default(true)
+  lastActiveAt        DateTime?
+  sessionExpiry       DateTime?
   accounts            Account[]
   refreshTokens       RefreshToken[]
   sessions            Session[]

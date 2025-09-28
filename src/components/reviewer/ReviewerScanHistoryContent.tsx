@@ -17,6 +17,7 @@ import { id } from 'date-fns/locale';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
+import DatePicker from '@/components/form/DatePicker';
 
 interface QrScan {
   id: string;
@@ -199,11 +200,11 @@ export default function ReviewerScanHistoryContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tanggal Dari
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={filters.dateFrom}
-                    onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(value) => setFilters(prev => ({ ...prev, dateFrom: value }))}
+                    placeholder="Pilih tanggal dari"
+                    className="w-full"
                   />
                 </div>
                 
@@ -211,11 +212,11 @@ export default function ReviewerScanHistoryContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tanggal Sampai
                   </label>
-                  <input
-                    type="date"
+                  <DatePicker
                     value={filters.dateTo}
-                    onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(value) => setFilters(prev => ({ ...prev, dateTo: value }))}
+                    placeholder="Pilih tanggal sampai"
+                    className="w-full"
                   />
                 </div>
 

@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,7 +21,8 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const submissionId = params.id;
+    const resolvedParams = await params;
+    const submissionId = resolvedParams.id;
 
     // Get scan history for the specific submission
     const scans = await prisma.qrScan.findMany({

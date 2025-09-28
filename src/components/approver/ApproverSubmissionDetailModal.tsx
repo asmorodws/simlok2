@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import DatePicker from '@/components/form/DatePicker';
 
 interface SubmissionDetail {
   id: string;
@@ -999,11 +1000,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Tanggal Penerbitan Simlok
                               </label>
-                              <input
-                                type="date"
+                              <DatePicker
                                 value={approvalData.simlok_date}
-                                onChange={(e) => setApprovalData({ ...approvalData, simlok_date: e.target.value })}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
+                                onChange={(value) => setApprovalData({ ...approvalData, simlok_date: value })}
+                                placeholder="Pilih tanggal penerbitan SIMLOK"
+                                className="w-full px-4 py-3 bg-white shadow-sm"
                               />
                               <p className="text-xs text-gray-600 mt-2 flex items-center">
                                 <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>

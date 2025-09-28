@@ -8,10 +8,11 @@ import path from 'path';
 // DELETE /api/reviewer/simloks/[id]/workers/[workerId] - Delete worker photo
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string; workerId: string } }
+  { params }: { params: Promise<{ id: string; workerId: string }> }
 ) {
   try {
-    const { id, workerId } = await params;
+    const resolvedParams = await params;
+    const { id, workerId } = resolvedParams;
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {

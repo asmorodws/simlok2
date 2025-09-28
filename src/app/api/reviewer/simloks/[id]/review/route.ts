@@ -14,10 +14,10 @@ const reviewSchema = z.object({
 // PATCH /api/reviewer/simloks/[id]/review - Set review status and note
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -31,7 +31,7 @@ export async function PATCH(
 
     // Check if submission exists and is still reviewable
     const existingSubmission = await prisma.submission.findUnique({
-      where: { id },
+      where: { id: resolvedParams.id },
       select: {
         id: true,
         final_status: true,
@@ -60,7 +60,7 @@ export async function PATCH(
     const validatedData = reviewSchema.parse(body);
 
     const updatedSubmission = await prisma.submission.update({
-      where: { id },
+      where: { id: resolvedParams.id },
       data: {
         review_status: validatedData.review_status,
         review_note: validatedData.review_note || null,
@@ -87,7 +87,7 @@ export async function PATCH(
     });
 
     // Notify approvers about the review result (both meets and doesn't meet requirements)
-    await notifyApproverReviewedSubmission(id);
+    await notifyApproverReviewedSubmission(resolvedParams.id);
 
     return NextResponse.json({ 
       submission: updatedSubmission,

@@ -8,7 +8,7 @@ import path from 'path';
 // DELETE /api/reviewer/worker-photos/[photoId] - Delete worker photo
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { photoId: string } }
+  { params }: { params: Promise<{ photoId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -22,9 +22,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
     }
 
+    const resolvedParams = await params;
+    
     // Find the worker and check if the submission is still editable
     const worker = await prisma.workerList.findUnique({
-      where: { id: params.photoId },
+      where: { id: resolvedParams.photoId },
       include: {
         submission: {
           select: {
@@ -59,7 +61,7 @@ export async function DELETE(
 
     // Update worker to remove photo reference
     const updatedWorker = await prisma.workerList.update({
-      where: { id: params.photoId },
+      where: { id: resolvedParams.photoId },
       data: {
         worker_photo: null,
       }

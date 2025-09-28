@@ -196,8 +196,23 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         });
       }
 
-      // Initialize form data
+      // Initialize form data with error handling
       const sub = data.submission;
+      
+      const safeDateConversion = (dateValue: string | null | undefined): string => {
+        if (!dateValue) return '';
+        try {
+          const date = new Date(dateValue);
+          if (isNaN(date.getTime())) return '';
+          const isoString = date.toISOString();
+          const datePart = isoString.split('T')[0];
+          return datePart || '';
+        } catch (error) {
+          console.warn('Date conversion error:', error);
+          return '';
+        }
+      };
+      
       setFormData({
         vendor_name: sub.vendor_name || '',
         vendor_phone: sub.vendor_phone || '',
@@ -211,11 +226,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         work_facilities: sub.work_facilities || '',
         worker_count: sub.worker_count || 0,
         simja_number: sub.simja_number || '',
-        simja_date: (sub.simja_date ? new Date(sub.simja_date).toISOString().split('T')[0] : '') as string,
+        simja_date: safeDateConversion(sub.simja_date),
         sika_number: sub.sika_number || '',
-        sika_date: (sub.sika_date ? new Date(sub.sika_date).toISOString().split('T')[0] : '') as string,
-        implementation_start_date: (sub.implementation_start_date ? new Date(sub.implementation_start_date).toISOString().split('T')[0] : '') as string,
-        implementation_end_date: (sub.implementation_end_date ? new Date(sub.implementation_end_date).toISOString().split('T')[0] : '') as string,
+        sika_date: safeDateConversion(sub.sika_date),
+        implementation_start_date: safeDateConversion(sub.implementation_start_date),
+        implementation_end_date: safeDateConversion(sub.implementation_end_date),
         worker_names: sub.worker_names || '',
         content: sub.content || '',
       });
@@ -228,19 +243,38 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
       // Initialize approval form data
       const formatDateForInput = (dateString: string | null | undefined): string => {
-        if (!dateString) {
+        try {
+          if (!dateString) {
+            const today = new Date();
+            const todayYear = today.getFullYear();
+            const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(today.getDate()).padStart(2, '0');
+            return `${todayYear}-${todayMonth}-${todayDay}`;
+          }
+
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            // Fallback to today if date is invalid
+            const today = new Date();
+            const todayYear = today.getFullYear();
+            const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
+            const todayDay = String(today.getDate()).padStart(2, '0');
+            return `${todayYear}-${todayMonth}-${todayDay}`;
+          }
+          
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        } catch (error) {
+          console.warn('Error formatting date for input:', error);
+          // Return today's date as fallback
           const today = new Date();
           const todayYear = today.getFullYear();
           const todayMonth = String(today.getMonth() + 1).padStart(2, '0');
           const todayDay = String(today.getDate()).padStart(2, '0');
           return `${todayYear}-${todayMonth}-${todayDay}`;
         }
-
-        const date = new Date(dateString);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
       };
 
       setApprovalForm({
@@ -288,15 +322,23 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   };
 
-  // Format date function
+  // Format date function with error handling
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return '-';
+      }
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return '-';
+    }
   };
 
   useEffect(() => {
@@ -320,59 +362,81 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
   // Template pelaksanaan
   useEffect(() => {
-    if (templateFields.tanggal_dari && templateFields.tanggal_sampai) {
-      const template = `Terhitung mulai tanggal ${formatDate(templateFields.tanggal_dari)} sampai ${formatDate(templateFields.tanggal_sampai)}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
-      setApprovalForm(prev => ({ ...prev, pelaksanaan: template }));
+    try {
+      if (templateFields.tanggal_dari && templateFields.tanggal_sampai) {
+        const template = `Terhitung mulai tanggal ${formatDate(templateFields.tanggal_dari)} sampai ${formatDate(templateFields.tanggal_sampai)}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
+        setApprovalForm(prev => ({ ...prev, pelaksanaan: template }));
+      }
+    } catch (error) {
+      console.warn('Error updating template pelaksanaan:', error);
+      // Fallback to empty template
+      setApprovalForm(prev => ({ ...prev, pelaksanaan: '' }));
     }
   }, [templateFields.tanggal_dari, templateFields.tanggal_sampai]);
 
   // Template generator untuk lain-lain - Generate ketika tanggal pelaksanaan sudah dipilih
   useEffect(() => {
     const generateLainLainTemplate = () => {
-      // Hanya generate jika tanggal pelaksanaan sudah dipilih
-      if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
-        const templateParts = [];
+      try {
+        // Hanya generate jika tanggal pelaksanaan sudah dipilih
+        if (submission && templateFields.tanggal_dari && templateFields.tanggal_sampai) {
+          const templateParts = [];
 
-        // Header template
-        templateParts.push("Izin diberikan berdasarkan :");
+          // Header template
+          templateParts.push("Izin diberikan berdasarkan :");
 
-        // SIMJA section
-        if (submission?.simja_number && submission?.simja_date) {
+          // SIMJA section
+          if (submission?.simja_number && submission?.simja_date) {
+            const simjaDate = new Date(submission.simja_date);
+            const simjaDateStr = !isNaN(simjaDate.getTime()) 
+              ? simjaDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+              : '[tanggal]';
+            
+            templateParts.push(
+              `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
+              `  <strong>No. ${submission.simja_number}</strong> <strong>Tanggal ${simjaDateStr}</strong>`
+            );
+          } else {
+            templateParts.push(
+              `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
+              `  <strong>No. [nomor]</strong> <strong>Tanggal [tanggal]</strong>`
+            );
+          }
+
+          // SIKA section  
+          if (submission?.sika_number && submission?.sika_date) {
+            const sikaDate = new Date(submission.sika_date);
+            const sikaDateStr = !isNaN(sikaDate.getTime()) 
+              ? sikaDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+              : '[tanggal]';
+            
+            templateParts.push(
+              `• <strong>SIKA</strong> Pekerjaan Dingin`,
+              `  <strong>No.${submission.sika_number}</strong> <strong>Tgl. ${sikaDateStr}</strong>`
+            );
+          } else {
+            templateParts.push(
+              `• <strong>SIKA</strong> Pekerjaan Dingin`,
+              `  <strong>No.[nomor]</strong> <strong>Tgl. [tanggal]</strong>`
+            );
+          }
+
+          // Head of Security section
+          const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+          const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Sr Officer Security III';
           templateParts.push(
-            `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
-            `  <strong>No. ${submission.simja_number}</strong> <strong>Tanggal ${new Date(submission.simja_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>`
+            ``,
+            `Diterima ${jabatan}`,
+            `<strong>${today}</strong>`
           );
-        } else {
-          templateParts.push(
-            `• <strong>SIMJA</strong> Ast. Man. Facility Management`,
-            `  <strong>No. [nomor]</strong> <strong>Tanggal [tanggal]</strong>`
-          );
+
+          const template = templateParts.join('\n');
+          setApprovalForm(prev => ({ ...prev, lain_lain: template }));
         }
-
-        // SIKA section  
-        if (submission?.sika_number && submission?.sika_date) {
-          templateParts.push(
-            `• <strong>SIKA</strong> Pekerjaan Dingin`,
-            `  <strong>No.${submission.sika_number}</strong> <strong>Tgl. ${new Date(submission.sika_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>`
-          );
-        } else {
-          templateParts.push(
-            `• <strong>SIKA</strong> Pekerjaan Dingin`,
-            `  <strong>No.[nomor]</strong> <strong>Tgl. [tanggal]</strong>`
-          );
-        }
-
-        // Head of Security section
-        const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        const jabatan = approvalForm.jabatan_signer || submission?.signer_position || 'Sr Officer Security III';
-        templateParts.push(
-          ``,
-          `Diterima ${jabatan}`,
-          `<strong>${today}</strong>`
-        );
-
-        const template = templateParts.join('\n');
-        setApprovalForm(prev => ({ ...prev, lain_lain: template }));
+      } catch (error) {
+        console.warn('Error generating lain-lain template:', error);
+        // Fallback to simple template
+        setApprovalForm(prev => ({ ...prev, lain_lain: 'Izin diberikan berdasarkan dokumen yang terlampir.' }));
       }
     };
 
@@ -388,8 +452,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     submission?.simja_date,
     submission?.sika_number,
     submission?.sika_date,
-    submission?.signer_position,
-    approvalForm.jabatan_signer
+    submission?.signer_position
   ]); // Re-generate when dates or relevant data changes
 
   const handleViewPdf = () => {
@@ -1109,11 +1172,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           Tanggal SIMJA
                         </label>
                         {isEditing ? (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={formData.simja_date}
-                            onChange={(e) => setFormData({ ...formData, simja_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(value) => setFormData({ ...formData, simja_date: value })}
+                            placeholder="Pilih tanggal SIMJA"
+                            className="w-full"
                           />
                         ) : (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg">
@@ -1146,11 +1209,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           Tanggal SIKA
                         </label>
                         {isEditing ? (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={formData.sika_date}
-                            onChange={(e) => setFormData({ ...formData, sika_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(value) => setFormData({ ...formData, sika_date: value })}
+                            placeholder="Pilih tanggal SIKA"
+                            className="w-full"
                           />
                         ) : (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg">
@@ -1172,11 +1235,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           Tanggal Mulai Pelaksanaan
                         </label>
                         {isEditing ? (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={formData.implementation_start_date}
-                            onChange={(e) => setFormData({ ...formData, implementation_start_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(value) => setFormData({ ...formData, implementation_start_date: value })}
+                            placeholder="Pilih tanggal mulai pelaksanaan"
+                            className="w-full"
                           />
                         ) : (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg">
@@ -1191,11 +1254,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           Tanggal Selesai Pelaksanaan
                         </label>
                         {isEditing ? (
-                          <input
-                            type="date"
+                          <DatePicker
                             value={formData.implementation_end_date}
-                            onChange={(e) => setFormData({ ...formData, implementation_end_date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(value) => setFormData({ ...formData, implementation_end_date: value })}
+                            placeholder="Pilih tanggal selesai pelaksanaan"
+                            className="w-full"
                           />
                         ) : (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg">

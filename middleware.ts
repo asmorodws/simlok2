@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { SessionValidationService } from "@/middleware/SessionValidation";
 
 const roleHierarchy = {
   SUPER_ADMIN: 6,
@@ -35,6 +36,15 @@ export async function middleware(req: NextRequest) {
       pathname.startsWith("/api/auth") ||
       pathname === "/") {
     return NextResponse.next();
+  }
+
+  // Session validation with auto-logout
+  if (!SessionValidationService.shouldExcludePath(pathname)) {
+    const sessionResult = await SessionValidationService.validateSession(req);
+    if (!sessionResult.isValid && sessionResult.shouldLogout) {
+      console.log(`Auto-logout triggered: ${sessionResult.reason}`);
+      return SessionValidationService.createLogoutResponse(req, sessionResult.reason);
+    }
   }
 
   // check if this path is protected

@@ -47,7 +47,7 @@ async function generateSimlokNumber(): Promise<string> {
 // PATCH /api/approver/simloks/[id]/final - Set final approval status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -61,9 +61,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Approver access required' }, { status: 403 });
     }
 
+    const resolvedParams = await params;
+    
     // Check if submission exists and has been reviewed
     const existingSubmission = await prisma.submission.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: {
         id: true,
         review_status: true,
@@ -129,7 +131,7 @@ export async function PATCH(
       
       // Auto-generate QR code when approved
       const qrString = generateQrString({
-        id: params.id,
+        id: resolvedParams.id,
         implementation_start_date: existingSubmission.implementation_start_date || null,
         implementation_end_date: existingSubmission.implementation_end_date || null
       });
@@ -141,7 +143,7 @@ export async function PATCH(
     }
 
     const updatedSubmission = await prisma.submission.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: updateData,
       include: {
         user: {
@@ -171,7 +173,7 @@ export async function PATCH(
 
     // Log QR code generation for approved submissions
     if (validatedData.final_status === 'APPROVED' && updateData.qrcode) {
-      console.log(`✅ QR Code auto-generated for approved submission ${params.id}: ${updateData.qrcode.substring(0, 50)}...`);
+      console.log(`✅ QR Code auto-generated for approved submission ${resolvedParams.id}: ${updateData.qrcode.substring(0, 50)}...`);
     }
 
     // Import and use the event system for real-time notifications
@@ -181,7 +183,7 @@ export async function PATCH(
     const vendorStatus = validatedData.final_status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
     await notifyVendorStatusChange(
       existingSubmission.user.id, 
-      params.id, 
+      resolvedParams.id, 
       vendorStatus as 'APPROVED' | 'REJECTED'
     );
 

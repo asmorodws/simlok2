@@ -6,7 +6,7 @@ import { prisma } from '@/lib/singletons';
 // GET /api/approver/simloks/[id] - Get single submission for final approval (read-only)
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -20,8 +20,9 @@ export async function GET(
       return NextResponse.json({ error: 'Approver access required' }, { status: 403 });
     }
 
+    const resolvedParams = await params;
     const submission = await prisma.submission.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         user: {
           select: {

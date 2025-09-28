@@ -7,6 +7,20 @@ import { JWT_CONFIG } from "@/utils/jwt-config";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
+  debug: process.env.NODE_ENV === 'development',
+  logger: {
+    error(code, metadata) {
+      if (code === 'JWT_SESSION_ERROR') {
+        console.log('JWT Session Error - clearing invalid token');
+        // Don't log the full error in production
+        return;
+      }
+      console.error('NextAuth Error:', code, metadata);
+    },
+    warn(code) {
+      console.warn('NextAuth Warning:', code);
+    },
+  },
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -54,8 +68,9 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
-      // Check if token is expired
-      const now = Date.now() / 1000; // Current time in seconds
+      try {
+        // Check if token is expired
+        const now = Date.now() / 1000; // Current time in seconds
       
       // user only exists on first sign-in, but we need to refresh verification status
       if (user) {
@@ -98,6 +113,11 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return token;
+      } catch (error) {
+        console.error('JWT callback error:', error);
+        // Return empty token on error to force re-authentication
+        return {};
+      }
     },
     async session({ session, token }) {
       if (token) {

@@ -320,6 +320,150 @@ async function main() {
 
   console.log(`   ✓ ${submissionCount} submissions berhasil dibuat`);
 
+  // Update some submissions to be APPROVED and add QR scans
+  console.log("📊 Mengupdate beberapa submissions menjadi APPROVED dan menambahkan QR scans...");
+  
+  const approverUser = createdUsers['approver@example.com'];
+  const verifierUser = createdUsers['verifier@example.com'];
+  const reviewerUser = createdUsers['reviewer@example.com'];
+  
+  if (!approverUser || !verifierUser || !reviewerUser) {
+    console.error("❌ Required users not found for QR scan seeding");
+    return;
+  }
+  
+  // Get all submissions
+  const allSubmissions = await prisma.submission.findMany({
+    orderBy: { created_at: 'asc' }
+  });
+  
+  // Update 60% of submissions to APPROVED status with SIMLOK numbers
+  const submissionsToApprove = allSubmissions.slice(0, Math.floor(allSubmissions.length * 0.6));
+  
+  for (let i = 0; i < submissionsToApprove.length; i++) {
+    const submission = submissionsToApprove[i];
+    if (!submission) continue;
+    
+    const simlokNumber = `SIMLOK/${new Date().getFullYear()}/${String(i + 1).padStart(4, '0')}`;
+    const simlokDate = new Date(submission.created_at.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000); // 0-7 days after creation
+    
+    // Create implementation dates
+    const implStartDate = new Date(simlokDate.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000); // 0-3 days after SIMLOK
+    const implEndDate = new Date(implStartDate.getTime() + (Math.random() * 14 + 1) * 24 * 60 * 60 * 1000); // 1-15 days duration
+    
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: {
+        approval_status: 'APPROVED',
+        simlok_number: simlokNumber,
+        simlok_date: simlokDate,
+        approved_by: approverUser.id,
+        reviewed_by_id: reviewerUser.id,
+        review_status: 'MEETS_REQUIREMENTS',
+        review_note: `Dokumen lengkap dan sesuai persyaratan untuk ${submission.job_description}`,
+        approved_by_final_id: approverUser.id,
+        final_status: 'APPROVED',
+        final_note: `Disetujui untuk pelaksanaan di ${submission.work_location}`,
+        implementation: `Pelaksanaan ${submission.job_description} sesuai dengan SPK yang telah disetujui`,
+        implementation_start_date: implStartDate,
+        implementation_end_date: implEndDate,
+        content: `Dokumen SIMLOK untuk ${submission.job_description} di ${submission.work_location}`,
+        qrcode: `{"submissionId":"${submission.id}","simlokNumber":"${simlokNumber}","vendorName":"${submission.vendor_name}","type":"SIMLOK_QR"}`,
+      }
+    });
+  }
+  
+  console.log(`   ✓ ${submissionsToApprove.length} submissions diupdate ke status APPROVED`);
+  
+  // Add QR Scans for approved submissions
+  console.log("🔍 Menambahkan data QR scans untuk submissions yang sudah diapprove...");
+  
+  const approvedSubmissions = await prisma.submission.findMany({
+    where: { approval_status: 'APPROVED' },
+    orderBy: { simlok_date: 'asc' }
+  });
+  
+  let qrScanCount = 0;
+  
+  // Create QR scans for 80% of approved submissions (some scanned multiple times)
+  const submissionsToScan = approvedSubmissions.slice(0, Math.floor(approvedSubmissions.length * 0.8));
+  
+  for (const submission of submissionsToScan) {
+    if (!submission.simlok_date || !submission.implementation_end_date) continue;
+    
+    // Create 1-3 QR scans per submission (simulate multiple scans)
+    const numScans = Math.floor(Math.random() * 3) + 1; // 1-3 scans
+    
+    for (let scanIndex = 0; scanIndex < numScans; scanIndex++) {
+      // Create scan dates between SIMLOK date and implementation end date
+      const scanDate = new Date(
+        submission.simlok_date.getTime() + 
+        Math.random() * (submission.implementation_end_date.getTime() - submission.simlok_date.getTime())
+      );
+      
+      // Add some variation to scan locations
+      const scanLocations = [
+        'Pos Security Entrance',
+        'Area Kerja Utama', 
+        'Site Office',
+        'Safety Checkpoint',
+        'Main Gate',
+        'Project Site',
+        'Supervisor Office',
+        'Quality Control Point'
+      ];
+      
+      const scanLocation = scanLocations[Math.floor(Math.random() * scanLocations.length)];
+      
+      const scanNotes = [
+        'Verifikasi rutin dokumen SIMLOK',
+        'Pemeriksaan saat masuk area kerja',
+        'Kontrol kualitas dokumen',
+        'Verifikasi sebelum mulai kerja',
+        'Pemeriksaan keamanan',
+        'Audit compliance dokumen',
+        'Verifikasi kelengkapan tim',
+        'Kontrol akses area restricted'
+      ];
+      
+      const selectedNote = scanNotes[Math.floor(Math.random() * scanNotes.length)];
+      
+      await prisma.qrScan.create({
+        data: {
+          submission_id: submission.id,
+          scanned_by: verifierUser.id,
+          scanned_at: scanDate,
+          scanner_name: verifierUser.officer_name,
+          scan_location: scanLocation || null,
+          notes: selectedNote || null,
+        }
+      });
+      
+      qrScanCount++;
+    }
+  }
+  
+  // Add some recent scans (within last 7 days) for dashboard stats
+  const recentApprovedSubmissions = approvedSubmissions.slice(0, 5);
+  for (const submission of recentApprovedSubmissions) {
+    const recentScanDate = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000); // Within last 7 days
+    
+    await prisma.qrScan.create({
+      data: {
+        submission_id: submission.id,
+        scanned_by: verifierUser.id,
+        scanned_at: recentScanDate,
+        scanner_name: verifierUser.officer_name,
+        scan_location: 'Mobile Verification',
+        notes: 'Verifikasi lapangan menggunakan aplikasi mobile',
+      }
+    });
+    
+    qrScanCount++;
+  }
+  
+  console.log(`   ✓ ${qrScanCount} QR scans berhasil dibuat`);
+
   // Create sample notifications
   console.log("🔔 Membuat sample notifications...");
   
@@ -367,10 +511,10 @@ async function main() {
         vendor_id: null,
         type: 'new_submission',
         title: 'Pengajuan Baru',
-        message: `Pengajuan baru dari ${submission.user.vendor_name}: ${submission.job_description}`,
+        message: `Pengajuan baru dari ${submission.vendor_name}: ${submission.job_description}`,
         data: JSON.stringify({
           submissionId: submission.id,
-          vendorName: submission.user.vendor_name,
+          vendorName: submission.vendor_name,
           jobDescription: submission.job_description,
         }),
         created_at: submission.created_at,

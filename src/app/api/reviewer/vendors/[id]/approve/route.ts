@@ -12,7 +12,7 @@ const approveVendorSchema = z.object({
 // PATCH /api/reviewer/vendors/[id]/approve - Approve or reject vendor registration
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,13 +26,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
     }
 
+    const resolvedParams = await params;
     const body = await request.json();
     const { approve } = approveVendorSchema.parse(body);
 
     // Find the vendor user
     const vendor = await prisma.user.findUnique({
       where: { 
-        id: params.id,
+        id: resolvedParams.id,
         role: 'VENDOR'
       },
       select: {
@@ -55,7 +56,7 @@ export async function PATCH(
     if (approve) {
       // Approve the vendor
       const updatedVendor = await prisma.user.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: {
           verified_at: new Date(),
           verified_by: session.user.id,

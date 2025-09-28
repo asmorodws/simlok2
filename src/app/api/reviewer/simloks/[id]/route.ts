@@ -33,10 +33,10 @@ const updateSubmissionSchema = z.object({
 // GET /api/reviewer/simloks/[id] - Get single submission for review
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -49,7 +49,7 @@ export async function GET(
     }
 
     const submission = await prisma.submission.findUnique({
-      where: { id },
+      where: { id: resolvedParams.id },
       include: {
         user: {
           select: {
@@ -104,10 +104,10 @@ export async function GET(
 // PATCH /api/reviewer/simloks/[id] - Update submission content (only if not finalized)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const resolvedParams = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user) {
@@ -121,7 +121,7 @@ export async function PATCH(
 
     // Check if submission exists and is still editable
     const existingSubmission = await prisma.submission.findUnique({
-      where: { id },
+      where: { id: resolvedParams.id },
       select: {
         id: true,
         final_status: true,
@@ -171,7 +171,7 @@ export async function PATCH(
     }
 
     const updatedSubmission = await prisma.submission.update({
-      where: { id },
+      where: { id: resolvedParams.id },
       data: updateData,
       include: {
         user: {
