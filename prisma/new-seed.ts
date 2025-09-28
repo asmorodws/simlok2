@@ -26,11 +26,12 @@ async function cleanDatabase() {
     await prisma.refreshToken.deleteMany({});
     console.log("   ✓ Semua data refresh tokens dihapus");
     
-    await prisma.session.deleteMany({});
-    console.log("   ✓ Semua data sessions dihapus");
+    // Session and Account models removed from schema
+    // await prisma.session.deleteMany({});
+    // console.log("   ✓ Semua data sessions dihapus");
     
-    await prisma.account.deleteMany({});
-    console.log("   ✓ Semua data accounts dihapus");
+    // await prisma.account.deleteMany({});
+    // console.log("   ✓ Semua data accounts dihapus");
     
     await prisma.user.deleteMany({});
     console.log("   ✓ Semua data user dihapus");

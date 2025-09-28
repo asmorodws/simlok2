@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import ApproverDashboard from "@/components/approver/ApproverDashboard";
+import ApproverDashboard from "@/components/dashboard/ApproverDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Approver - SIMLOK",

@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import ReviewerDashboard from "@/components/reviewer/ReviewerDashboard";
+import ReviewerDashboard from "@/components/dashboard/ReviewerDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Reviewer - SIMLOK",
