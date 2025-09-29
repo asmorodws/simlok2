@@ -10,8 +10,7 @@ import {
   ClockIcon,
   EyeIcon,
   ChevronLeftIcon,
-  ChevronRightIcon,
-  MapPinIcon
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';

@@ -265,8 +265,6 @@ async function main() {
         continue;
       }
       
-      const status = 'PENDING'; // Semua submission pending
-      
       // Create date variations
       const createdDate = new Date(currentDate);
       createdDate.setDate(createdDate.getDate() - Math.floor(Math.random() * 60)); // Random date within last 60 days
@@ -281,29 +279,44 @@ async function main() {
         officer_name: vendorData.officer_name,
         job_description: template.job_description,
         work_location: template.work_location,
-        implementation: null, // akan diisi admin saat approve
+        implementation: null, // akan diisi setelah diapprove
         working_hours: template.working_hours,
-        other_notes: null, // akan diisi admin saat approve
+        other_notes: null, // akan diisi setelah diapprove
         work_facilities: template.work_facilities,
         worker_names: template.worker_names,
         worker_count: workerCount, // Hitung dari worker_names
-        content: null, // akan diisi admin saat approve
+        content: null, // akan diisi setelah diapprove
         user_id: vendorData.id,
-        approval_status: status,
-        review_status: "PENDING_REVIEW", // Default review status
-        final_status: "PENDING_APPROVAL", // Default final status
-        qrcode: '',
+        approval_status: 'PENDING', // Semua submission pending approval
+        review_status: "PENDING_REVIEW", // Semua pending review dari reviewer
+        final_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
+        review_note: null, // belum ada review
+        final_note: null, // belum ada final note
+        reviewed_by_id: null, // belum di-review
+        reviewed_at: null, // belum di-review
+        approved_by: null, // belum diapprove
+        approved_by_final_id: null, // belum diapprove final
+        approved_at: null, // belum diapprove
+        qrcode: '', // akan diisi setelah diapprove
         created_at: createdDate,
         simja_number: submissionCount % 2 === 0 ? `SIMJA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
         simja_date: submissionCount % 2 === 0 ? new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000) : null,
         sika_number: submissionCount % 3 === 0 ? `SIKA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
         sika_date: submissionCount % 3 === 0 ? new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000) : null,
-        implementation_start_date: null,
-        implementation_end_date: null,
+        simlok_number: null, // akan diisi setelah diapprove
+        simlok_date: null, // akan diisi setelah diapprove
+        implementation_start_date: null, // akan diisi setelah diapprove
+        implementation_end_date: null, // akan diisi setelah diapprove
+        signer_position: null, // akan diisi setelah diapprove
+        signer_name: null, // akan diisi setelah diapprove
+        sika_document_upload: null, // bisa diupload vendor
+        simja_document_upload: null, // bisa diupload vendor
       };
 
-      // Semua submission pending - tidak ada approval data
-      // Admin akan mengisi data saat approve melalui UI
+      // Semua submission dibuat dengan status PENDING untuk testing review workflow
+      // Admin/Reviewer akan review melalui UI
+      // Approver akan melakukan final approval melalui UI
+      // QR Code akan dibuat otomatis setelah final approval
 
       const createdSubmission = await prisma.submission.create({
         data: submissionData,
@@ -326,197 +339,13 @@ async function main() {
 
   console.log(`   ✓ ${submissionCount} submissions berhasil dibuat`);
 
-  // Update some submissions to be APPROVED and add QR scans
-  console.log("📊 Mengupdate beberapa submissions menjadi APPROVED dan menambahkan QR scans...");
-  
-  const approverUser = createdUsers['approver@example.com'];
-  const verifierUser = createdUsers['verifier@example.com'];
-  const reviewerUser = createdUsers['reviewer@example.com'];
-  
-  if (!approverUser || !verifierUser || !reviewerUser) {
-    console.error("❌ Required users not found for QR scan seeding");
-    return;
-  }
-  
-  // Get all submissions
-  const allSubmissions = await prisma.submission.findMany({
-    orderBy: { created_at: 'asc' }
-  });
-  
-  // Update 60% of submissions to APPROVED status with SIMLOK numbers
-  const submissionsToApprove = allSubmissions.slice(0, Math.floor(allSubmissions.length * 0.6));
-  
-  for (let i = 0; i < submissionsToApprove.length; i++) {
-    const submission = submissionsToApprove[i];
-    if (!submission) continue;
-    
-    const simlokNumber = `SIMLOK/${new Date().getFullYear()}/${String(i + 1).padStart(4, '0')}`;
-    const simlokDate = new Date(submission.created_at.getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000); // 0-7 days after creation
-    
-    // Create implementation dates
-    const implStartDate = new Date(simlokDate.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000); // 0-3 days after SIMLOK
-    const implEndDate = new Date(implStartDate.getTime() + (Math.random() * 14 + 1) * 24 * 60 * 60 * 1000); // 1-15 days duration
-    
-    await prisma.submission.update({
-      where: { id: submission.id },
-      data: {
-        approval_status: 'APPROVED',
-        simlok_number: simlokNumber,
-        simlok_date: simlokDate,
-        approved_by: approverUser.id,
-        reviewed_by_id: reviewerUser.id,
-        reviewed_at: new Date(simlokDate.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 hari sebelum simlok
-        review_status: 'MEETS_REQUIREMENTS',
-        review_note: `Dokumen lengkap dan sesuai persyaratan untuk ${submission.job_description}`,
-        approved_by_final_id: approverUser.id,
-        approved_at: simlokDate,
-        final_status: 'APPROVED',
-        final_note: `Disetujui untuk pelaksanaan di ${submission.work_location}`,
-        implementation: `Terhitung mulai tanggal ${implStartDate.toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'long', 
-          year: 'numeric'
-        })} sampai ${implEndDate.toLocaleDateString('id-ID', {
-          day: 'numeric',
-          month: 'long', 
-          year: 'numeric'
-        })}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`,
-        implementation_start_date: implStartDate,
-        implementation_end_date: implEndDate,
-        content: `Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.`,
-        other_notes: `Izin diberikan berdasarkan:\n${submission.simja_number ? `• Simja Ast Man Facility Management\n  ${submission.simja_number} Tgl. ${submission.simja_date ? submission.simja_date.toLocaleDateString('id-ID') : ''}\n` : ''}${submission.sika_number ? `• SIKA Pekerjaan Dingin\n  ${submission.sika_number} Tgl. ${submission.sika_date ? submission.sika_date.toLocaleDateString('id-ID') : ''}\n` : ''}  Diterima Sr Officer Security III\n  ${simlokDate.toLocaleDateString('id-ID')}`,
-        signer_position: 'Sr Officer Security III',
-        signer_name: 'Julianto Santoso',
-        qrcode: `{"submissionId":"${submission.id}","simlokNumber":"${simlokNumber}","vendorName":"${submission.vendor_name}","type":"SIMLOK_QR"}`,
-      }
-    });
-  }
-  
-  console.log(`   ✓ ${submissionsToApprove.length} submissions diupdate ke status APPROVED`);
-  
-  // Create some submissions with NOT_MEETS_REQUIREMENTS status
-  console.log("❌ Membuat submissions dengan status NOT_MEETS_REQUIREMENTS...");
-  const remainingSubmissions = await prisma.submission.findMany({
-    where: {
-      review_status: 'PENDING_REVIEW'
-    },
-    take: 3 // Ambil 3 submission untuk dijadikan NOT_MEETS_REQUIREMENTS
-  });
+  // All submissions remain PENDING for review and final approval
+  console.log("📋 Semua submissions dibuat dengan status PENDING_REVIEW dan PENDING_APPROVAL");
+  console.log("   ✓ Reviewer dapat melakukan review submissions");
+  console.log("   ✓ Approver dapat melakukan final approval setelah review");
+  console.log("   ✓ QR codes akan dibuat setelah approval final");
 
-  for (let i = 0; i < remainingSubmissions.length; i++) {
-    const submission = remainingSubmissions[i];
-    if (!submission) continue;
-    
-    const rejectionReasons = [
-      'Dokumen SIMJA tidak lengkap atau tidak sesuai',
-      'Dokumen SIKA tidak memenuhi standar keselamatan',
-      'Data pekerja tidak lengkap atau tidak valid'
-    ];
-
-    await prisma.submission.update({
-      where: { id: submission.id },
-      data: {
-        reviewed_by_id: reviewerUser.id,
-        reviewed_at: new Date(submission.created_at.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000), // 0-5 days after creation
-        review_status: 'NOT_MEETS_REQUIREMENTS',
-        review_note: rejectionReasons[i] || 'Dokumen tidak memenuhi persyaratan yang ditetapkan',
-        final_status: 'PENDING_APPROVAL', // Tetap menunggu keputusan final dari approver
-      }
-    });
-  }
-  
-  console.log(`   ✓ ${remainingSubmissions.length} submissions diupdate ke status NOT_MEETS_REQUIREMENTS`);
-  
-  // Add QR Scans for approved submissions
-  console.log("🔍 Menambahkan data QR scans untuk submissions yang sudah diapprove...");
-  
-  const approvedSubmissions = await prisma.submission.findMany({
-    where: { approval_status: 'APPROVED' },
-    orderBy: { simlok_date: 'asc' }
-  });
-  
-  let qrScanCount = 0;
-  
-  // Create QR scans for 80% of approved submissions (some scanned multiple times)
-  const submissionsToScan = approvedSubmissions.slice(0, Math.floor(approvedSubmissions.length * 0.8));
-  
-  for (const submission of submissionsToScan) {
-    if (!submission.simlok_date || !submission.implementation_end_date) continue;
-    
-    // Create 1-3 QR scans per submission (simulate multiple scans)
-    const numScans = Math.floor(Math.random() * 3) + 1; // 1-3 scans
-    
-    for (let scanIndex = 0; scanIndex < numScans; scanIndex++) {
-      // Create scan dates between SIMLOK date and implementation end date
-      const scanDate = new Date(
-        submission.simlok_date.getTime() + 
-        Math.random() * (submission.implementation_end_date.getTime() - submission.simlok_date.getTime())
-      );
-      
-      // Add some variation to scan locations
-      const scanLocations = [
-        'Pos Security Entrance',
-        'Area Kerja Utama', 
-        'Site Office',
-        'Safety Checkpoint',
-        'Main Gate',
-        'Project Site',
-        'Supervisor Office',
-        'Quality Control Point'
-      ];
-      
-      const scanLocation = scanLocations[Math.floor(Math.random() * scanLocations.length)];
-      
-      const scanNotes = [
-        'Verifikasi rutin dokumen SIMLOK',
-        'Pemeriksaan saat masuk area kerja',
-        'Kontrol kualitas dokumen',
-        'Verifikasi sebelum mulai kerja',
-        'Pemeriksaan keamanan',
-        'Audit compliance dokumen',
-        'Verifikasi kelengkapan tim',
-        'Kontrol akses area restricted'
-      ];
-      
-      const selectedNote = scanNotes[Math.floor(Math.random() * scanNotes.length)];
-      
-      await prisma.qrScan.create({
-        data: {
-          submission_id: submission.id,
-          scanned_by: verifierUser.id,
-          scanned_at: scanDate,
-          scanner_name: verifierUser.officer_name,
-          scan_location: scanLocation || null,
-          notes: selectedNote || null,
-        }
-      });
-      
-      qrScanCount++;
-    }
-  }
-  
-  // Add some recent scans (within last 7 days) for dashboard stats
-  const recentApprovedSubmissions = approvedSubmissions.slice(0, 5);
-  for (const submission of recentApprovedSubmissions) {
-    const recentScanDate = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000); // Within last 7 days
-    
-    await prisma.qrScan.create({
-      data: {
-        submission_id: submission.id,
-        scanned_by: verifierUser.id,
-        scanned_at: recentScanDate,
-        scanner_name: verifierUser.officer_name,
-        scan_location: 'Mobile Verification',
-        notes: 'Verifikasi lapangan menggunakan aplikasi mobile',
-      }
-    });
-    
-    qrScanCount++;
-  }
-  
-  console.log(`   ✓ ${qrScanCount} QR scans berhasil dibuat`);
-
-  // Create sample notifications
+  // Create sample notifications untuk submission baru saja
   console.log("🔔 Membuat sample notifications...");
   
   // Create vendor registration notifications
@@ -543,7 +372,7 @@ async function main() {
     });
   }
 
-  // Create submission notifications
+  // Create submission notifications untuk submissions yang baru dibuat
   const recentSubmissions = await prisma.submission.findMany({
     where: {
       created_at: {
@@ -573,11 +402,39 @@ async function main() {
       },
     });
 
-    // Tidak ada status change notifications karena semua pending
+    // Create reviewer notification for pending review
+    await prisma.notification.create({
+      data: {
+        scope: 'reviewer',
+        vendor_id: null,
+        type: 'pending_review',
+        title: 'Pengajuan Menunggu Review',
+        message: `Pengajuan dari ${submission.vendor_name} menunggu review: ${submission.job_description}`,
+        data: JSON.stringify({
+          submissionId: submission.id,
+          vendorName: submission.vendor_name,
+          jobDescription: submission.job_description,
+        }),
+        created_at: submission.created_at,
+      },
+    });
   }
 
   console.log("   ✓ Sample notifications berhasil dibuat");
+  console.log("");
   console.log("✅ Seeding selesai dengan sukses!");
+  console.log("");
+  console.log("📊 Ringkasan data yang dibuat:");
+  console.log(`   👥 ${Object.keys(createdUsers).length} users (termasuk admin, reviewer, approver, verifier, vendor)`);
+  console.log(`   📋 ${submissionCount} submissions (semua dengan status PENDING_REVIEW & PENDING_APPROVAL)`);
+  console.log(`   🔔 Sample notifications untuk testing workflow`);
+  console.log("");
+  console.log("🎯 Workflow yang dapat ditest:");
+  console.log("   1. Login sebagai Reviewer untuk melakukan review submissions");
+  console.log("   2. Login sebagai Approver untuk melakukan final approval");
+  console.log("   3. Login sebagai Verifier untuk melakukan QR scan (setelah approval)");
+  console.log("   4. Login sebagai Vendor untuk melihat status submissions");
+  console.log("");
 }
 
 main()
