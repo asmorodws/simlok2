@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { XMarkIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface DocumentPreviewModalProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ export default function DocumentPreviewModal({
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <LoadingSpinner size="lg" className="mx-auto mb-4" />
                   <p className="text-gray-600">Memuat dokumen...</p>
                 </div>
               </div>
@@ -129,7 +130,7 @@ export default function DocumentPreviewModal({
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                  <LoadingSpinner size="lg" className="mx-auto mb-4" />
                   <p className="text-gray-600">Memuat gambar...</p>
                 </div>
               </div>

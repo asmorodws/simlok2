@@ -13,6 +13,7 @@ import {
   ArrowRightIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
+import PageLoader from '@/components/ui/PageLoader';
 
 export default function VerificationPendingPage() {
   const { data: session, status } = useSession();
@@ -50,11 +51,7 @@ export default function VerificationPendingPage() {
   }, [session, router]);
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Memeriksa status verifikasi..." />;
   }
 
   const formatDate = (dateString: string) => {

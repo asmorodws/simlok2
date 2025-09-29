@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface SimlokPdfModalProps {
   isOpen: boolean;
@@ -243,7 +244,7 @@ export default function SimlokPdfModal({
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10">
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mx-auto mb-4" />
+                  <LoadingSpinner size="lg" className="mx-auto mb-4" />
                   <p className="text-gray-700 font-medium">Memuat dokumen SIMLOK...</p>
                   <p className="text-sm text-gray-500 mt-2">Mohon tunggu sebentar</p>
                 </div>

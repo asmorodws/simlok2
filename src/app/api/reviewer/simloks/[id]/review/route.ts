@@ -9,6 +9,7 @@ import { notifyApproverReviewedSubmission } from '@/server/events';
 const reviewSchema = z.object({
   review_status: z.enum(['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS']),
   review_note: z.string().optional(),
+  final_note: z.string().optional(),
 });
 
 // PATCH /api/reviewer/simloks/[id]/review - Set review status and note
@@ -64,6 +65,7 @@ export async function PATCH(
       data: {
         review_status: validatedData.review_status,
         review_note: validatedData.review_note || null,
+        final_note: validatedData.final_note || null,
         reviewed_by_id: session.user.id,
         reviewed_at: new Date(),
       },

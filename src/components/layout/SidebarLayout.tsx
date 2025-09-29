@@ -159,7 +159,9 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
             <Bars3Icon className="h-6 w-6" />
           </button>
           <div className="text-xl font-semibold">{titlePage}</div>
-          <NotificationsBell /> 
+          {session?.user?.role !== "SUPER_ADMIN" && (
+            <NotificationsBell />
+          )}
         </header>
 
         {/* Content area */}

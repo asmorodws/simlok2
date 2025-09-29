@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         success: false, 
         error: 'duplicate_scan_same_day',
-        message: `Anda sudah melakukan scan untuk SIMLOK ini hari ini pada ${formattedDate}. Verifikator yang sama tidak dapat scan SIMLOK yang sama di hari yang sama.`,
+        message: `QR code sudah anda scan hari ini pada ${formattedDate}. Satu verifikator hanya dapat melakukan scan sekali per hari untuk SIMLOK yang sama.`,
         previousScan: {
           scanDate: existingTodayScanByUser.scanned_at,
           scanId: existingTodayScanByUser.id,
@@ -329,6 +329,11 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
     const submissionId = searchParams.get('submission_id');
+    const search = searchParams.get('search');
+    const status = searchParams.get('status');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
+    const location = searchParams.get('location');
 
     // Build where clause
     const whereClause: any = {};
@@ -340,6 +345,59 @@ export async function GET(request: NextRequest) {
     // For verifiers, only show their own scans
     if (session.user.role === 'VERIFIER') {
       whereClause.scanned_by = session.user.id;
+    }
+
+    // Add search filter
+    if (search) {
+      whereClause.OR = [
+        {
+          submission: {
+            simlok_number: {
+              contains: search
+            }
+          }
+        },
+        {
+          submission: {
+            vendor_name: {
+              contains: search
+            }
+          }
+        },
+        {
+          scan_location: {
+            contains: search
+          }
+        }
+      ];
+    }
+
+    // Add status filter
+    if (status) {
+      whereClause.submission = {
+        ...whereClause.submission,
+        approval_status: status
+      };
+    }
+
+    // Add date range filter
+    if (dateFrom || dateTo) {
+      whereClause.scanned_at = {};
+      if (dateFrom) {
+        whereClause.scanned_at.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999); // End of day
+        whereClause.scanned_at.lte = endDate;
+      }
+    }
+
+    // Add location filter
+    if (location) {
+      whereClause.scan_location = {
+        contains: location
+      };
     }
 
     // Fetch scan history

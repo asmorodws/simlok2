@@ -57,6 +57,25 @@ export default function DatePicker({
         showPopperArrow={false}
         isClearable={false}
         todayButton="Hari ini"
+        onKeyDown={(e) => {
+          // Mencegah pengetikan manual kecuali untuk navigasi
+          if (
+            e.key !== 'Tab' && 
+            e.key !== 'Enter' && 
+            e.key !== 'Escape' && 
+            e.key !== 'ArrowUp' && 
+            e.key !== 'ArrowDown' && 
+            e.key !== 'ArrowLeft' && 
+            e.key !== 'ArrowRight'
+          ) {
+            e.preventDefault();
+          }
+        }}
+        onFocus={(e) => {
+          // Membuka datepicker saat input mendapat focus
+          e.target.blur();
+          e.target.focus();
+        }}
       />
     </div>
   );

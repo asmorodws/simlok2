@@ -5,9 +5,11 @@ import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
+import { useToast } from "@/hooks/useToast";
 
 export default function ChangePasswordCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const { showSuccess, showError } = useToast();
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
@@ -93,9 +95,11 @@ export default function ChangePasswordCard() {
         });
         
         // Show success message
-        alert("Password berhasil diubah");
+        showSuccess('Berhasil', 'Password berhasil diubah');
+        closeModal();
       } catch (error) {
         console.error("Error changing password:", error);
+        showError('Error', error instanceof Error ? error.message : "Gagal mengubah password");
         setErrors((prev) => ({
           ...prev,
           currentPassword: error instanceof Error ? error.message : "Gagal mengubah password",

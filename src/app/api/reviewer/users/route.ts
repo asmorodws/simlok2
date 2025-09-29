@@ -40,9 +40,9 @@ export async function GET(request: NextRequest) {
     // Search by name, vendor name, or email
     if (search) {
       whereClause.OR = [
-        { officer_name: { contains: search, mode: 'insensitive' } },
-        { vendor_name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
+        { officer_name: { contains: search } },
+        { vendor_name: { contains: search } },
+        { email: { contains: search } }
       ];
     }
 

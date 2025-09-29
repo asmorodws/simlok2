@@ -55,20 +55,17 @@ export async function GET(request: NextRequest) {
       whereClause.OR = [
         {
           vendor_name: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         },
         {
           job_description: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         },
         {
           officer_name: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         }
       ];

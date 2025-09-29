@@ -412,6 +412,18 @@ export default function AdminSubmissionDetailModal({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         
+        if (response.status === 404) {
+          setErrorMessage('Pengajuan sudah dihapus oleh vendor');
+          setShowErrorAlert(true);
+          setTimeout(() => setShowErrorAlert(false), 3000);
+          onClose();
+          // Add delay before refreshing so user can see the error message
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          return;
+        }
+        
         if (errorData.code === 'INVALID_SESSION') {
           throw new Error('Your session has expired. Please refresh the page and log in again.');
         }
@@ -943,7 +955,7 @@ export default function AdminSubmissionDetailModal({
                             <RichTextEditor
                               value={approvalForm.lain_lain}
                               onChange={(value) => setApprovalForm(prev => ({ ...prev, lain_lain: value }))}
-                              placeholder="Izin diberikan berdasarkan:\n• Simja Ast Man Facility Management\n  [nomor] Tgl. [tanggal]\n• SIKA Pekerjaan Dingin\n  [nomor] Tgl. [tanggal]\n  Diterima Head Of Security Region 1\n  [tanggal]"
+                              placeholder="Izin diberikan berdasarkan:\n• Simja Ast Man Facility Management\n  [nomor] Tgl. [tanggal]\n• SIKA Pekerjaan Dingin\n  [nomor] Tgl. [tanggal]\n  Diterima Sr Officer Security III\n  [tanggal]"
                             />
                           </div>
 

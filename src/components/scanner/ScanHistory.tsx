@@ -15,6 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Alert from '@/components/ui/alert/Alert';
 import Button from '@/components/ui/button/Button';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface ScanHistoryItem {
   id: string;
@@ -213,8 +214,8 @@ const ScanHistory = forwardRef<ScanHistoryRef, ScanHistoryProps>(function ScanHi
           {/* Loading State */}
           {isLoading && (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-              <span className="text-gray-600">Loading scan history...</span>
+              <LoadingSpinner size="lg" className="mr-3" />
+              <span className="text-gray-600">Memuat riwayat scan...</span>
             </div>
           )}
 

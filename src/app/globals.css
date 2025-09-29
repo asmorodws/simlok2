@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "react-datepicker/dist/react-datepicker.css";
 @import "../styles/datepicker.css";
+@import "../styles/auth.css";
 
 
 @custom-variant dark (&:is(.dark *));

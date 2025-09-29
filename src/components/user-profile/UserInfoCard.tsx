@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
-import Input from "../form/input/InputField";
+import EnhancedInput from "../form/EnhancedInput";
 import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
@@ -39,61 +39,37 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
   });
 
   const validateForm = () => {
-    const newErrors = {
-      officer_name: "",
-      vendor_name: "",
-      phone_number: "",
-      address: "",
-      email: ""
-    };
-    let isValid = true;
-
-    // Validate Officer Name
-    if (!formData.officer_name.trim()) {
-      newErrors.officer_name = "Nama petugas wajib diisi";
-      isValid = false;
+    // Validasi berdasarkan role
+    if (user.role === 'VENDOR') {
+      // Untuk vendor, hanya validasi vendor_name yang wajib
+      return formData.vendor_name.trim();
+    } else {
+      // Untuk role lain (VERIFIER, ADMIN, etc), validasi semua field kecuali vendor_name
+      return formData.officer_name.trim() && 
+             formData.email.trim() && 
+             formData.phone_number.trim() && 
+             formData.address.trim();
     }
-
-    // Validate Email
-    if (!formData.email.trim()) {
-      newErrors.email = "Email wajib diisi";
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Format email tidak valid";
-      isValid = false;
-    }
-
-    // Validate Phone Number
-    if (!formData.phone_number.trim()) {
-      newErrors.phone_number = "Nomor telepon wajib diisi";
-      isValid = false;
-    } else if (!/^[0-9+\-\s()]*$/.test(formData.phone_number)) {
-      newErrors.phone_number = "Nomor telepon hanya boleh berisi angka dan karakter + - ( )";
-      isValid = false;
-    }
-
-    // Validate Vendor Name
-    if (!formData.vendor_name.trim()) {
-      newErrors.vendor_name = "Nama vendor wajib diisi";
-      isValid = false;
-    }
-
-    // Validate Address
-    if (!formData.address.trim()) {
-      newErrors.address = "Alamat wajib diisi";
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Validasi alamat: hanya huruf, angka, spasi, koma, titik, tanda hubung
+    if (name === 'address') {
+      if (/^[a-zA-Z0-9\s,./-]*$/.test(value)) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
     // Clear error when user starts typing
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({
@@ -190,85 +166,113 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div>
-            <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
-            {isEditing ? (
-              <Input 
-                type="text"
-                name="officer_name"
-                value={formData.officer_name}
-                onChange={handleChange}
-                className="mt-1"
-                error={errors.officer_name}
-              />
-            ) : (
-              <p className="mt-1 text-base text-gray-900">{user.officer_name}</p>
-            )}
-          </div>
+          {/* Nama Petugas - Hide for VENDOR role */}
+          {user.role !== 'VENDOR' && (
+            <div>
+              <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
+              {isEditing ? (
+                <EnhancedInput 
+                  id="officer_name"
+                  name="officer_name"
+                  value={formData.officer_name}
+                  onChange={(value) => setFormData(prev => ({ ...prev, officer_name: value }))}
+                  validationType="name"
+                  label=""
+                  placeholder="Masukkan nama petugas"
+                  required
+                  className="mt-1"
+                />
+              ) : (
+                <p className="mt-1 text-base text-gray-900">{user.officer_name}</p>
+              )}
+            </div>
+          )}
 
-          <div>
-            <p className="text-sm font-medium text-gray-500">Email</p>
-            {isEditing ? (
-              <Input 
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1"
-                error={errors.email}
-              />
-            ) : (
-              <p className="mt-1 text-base text-gray-900">{user.email}</p>
-            )}
-          </div>
+          {/* Email - Hide for VENDOR role */}
+          {user.role !== 'VENDOR' && (
+            <div>
+              <p className="text-sm font-medium text-gray-500">Email</p>
+              {isEditing ? (
+                <EnhancedInput 
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
+                  validationType="email"
+                  label=""
+                  placeholder="email@perusahaan.com"
+                  required
+                  className="mt-1"
+                />
+              ) : (
+                <p className="mt-1 text-base text-gray-900">{user.email}</p>
+              )}
+            </div>
+          )}
 
-          <div>
-            <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
-            {isEditing ? (
-              <Input 
-                type="text"
-                name="phone_number"
-                value={formData.phone_number}
-                onChange={handleChange}
-                className="mt-1"
-                error={errors.phone_number}
-              />
-            ) : (
-              <p className="mt-1 text-base text-gray-900">{user.phone_number || "-"}</p>
-            )}
-          </div>
+          {/* Nomor Telepon - Hide for VENDOR role */}
+          {user.role !== 'VENDOR' && (
+            <div>
+              <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
+              {isEditing ? (
+                <EnhancedInput 
+                  id="phone_number"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone_number: value }))}
+                  validationType="phone"
+                  label=""
+                  placeholder="08123456789"
+                  required
+                  className="mt-1"
+                />
+              ) : (
+                <p className="mt-1 text-base text-gray-900">{user.phone_number || "-"}</p>
+              )}
+            </div>
+          )}
 
-          <div>
-            <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
-            {isEditing ? (
-              <Input 
-                type="text"
-                name="vendor_name"
-                value={formData.vendor_name}
-                onChange={handleChange}
-                className="mt-1"
-                error={errors.vendor_name}
-              />
-            ) : (
-              <p className="mt-1 text-base text-gray-900">{user.vendor_name || "-"}</p>
-            )}
-          </div>
+          {/* Nama Vendor - Show for VENDOR role only */}
+          {user.role === "VENDOR" && (
+            <div className="lg:col-span-2">
+              <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
+              {isEditing ? (
+                <EnhancedInput 
+                  id="vendor_name"
+                  name="vendor_name"
+                  value={formData.vendor_name}
+                  onChange={(value) => setFormData(prev => ({ ...prev, vendor_name: value }))}
+                  validationType="vendor"
+                  label=""
+                  placeholder="PT. Nama Perusahaan"
+                  required
+                  className="mt-1"
+                />
+              ) : (
+                <p className="mt-1 text-base text-gray-900">{user.vendor_name || "-"}</p>
+              )}
+            </div>
+          )}
 
-          <div className="lg:col-span-2">
-            <p className="text-sm font-medium text-gray-500">Alamat</p>
-            {isEditing ? (
-              <TextArea
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="mt-1"
-                rows={3}
-                error={errors.address}
-              />
-            ) : (
-              <p className="mt-1 text-base text-gray-900 whitespace-pre-line">{user.address || "-"}</p>
-            )}
-          </div>
+
+          {/* Alamat - Hide for VENDOR role */}
+          {user.role !== 'VENDOR' && (
+            <div className="lg:col-span-2">
+              <p className="text-sm font-medium text-gray-500">Alamat</p>
+              {isEditing ? (
+                <TextArea
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="mt-1"
+                  rows={3}
+                  error={errors.address}
+                />
+              ) : (
+                <p className="mt-1 text-base text-gray-900 whitespace-pre-line">{user.address || "-"}</p>
+              )}
+            </div>
+          )}
 
         </div>
       </div>

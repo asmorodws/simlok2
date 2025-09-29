@@ -13,6 +13,7 @@ import Card from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import Button from "../ui/button/Button";
 import Alert from "../ui/alert/Alert";
+import LoadingSpinner from "../ui/LoadingSpinner";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import SubmissionDetailModal from "../vendor/SubmissionDetailModal";
 import { useStatsStore } from "@/store/useStatsStore";
@@ -343,8 +344,8 @@ export default function VendorDashboard() {
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                      <span className="ml-2">Loading...</span>
+                      <LoadingSpinner size="md" />
+                      <span className="ml-2 text-gray-600">Memuat pengajuan...</span>
                     </div>
                   </td>
                 </tr>

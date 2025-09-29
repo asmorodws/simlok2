@@ -177,7 +177,7 @@ export async function PATCH(
     }
 
     // Import and use the event system for real-time notifications
-    const { notifyVendorStatusChange } = await import('@/server/events');
+    const { notifyVendorStatusChange, notifyReviewerSubmissionApproved } = await import('@/server/events');
     
     // Notify vendor with real-time updates
     const vendorStatus = validatedData.final_status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
@@ -187,7 +187,10 @@ export async function PATCH(
       vendorStatus as 'APPROVED' | 'REJECTED'
     );
 
-    // Note: Reviewer notification removed - only vendor should be notified about final decisions
+    // Notify reviewers when submission is approved
+    if (validatedData.final_status === 'APPROVED') {
+      await notifyReviewerSubmissionApproved(resolvedParams.id);
+    }
 
     return NextResponse.json({ 
       submission: updatedSubmission,

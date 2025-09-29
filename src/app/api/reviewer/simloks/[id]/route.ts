@@ -26,6 +26,7 @@ const updateSubmissionSchema = z.object({
   worker_names: z.string().optional(),
   content: z.string().optional(),
   notes: z.string().optional(),
+
   signer_position: z.string().optional(),
   signer_name: z.string().optional(),
 });

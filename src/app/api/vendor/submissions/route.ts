@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { job_description: { contains: search, mode: 'insensitive' } },
-        { work_location: { contains: search, mode: 'insensitive' } },
-        { vendor_name: { contains: search, mode: 'insensitive' } },
-        { officer_name: { contains: search, mode: 'insensitive' } },
-        { simlok_number: { contains: search, mode: 'insensitive' } }
+        { job_description: { contains: search } },
+        { work_location: { contains: search } },
+        { vendor_name: { contains: search } },
+        { officer_name: { contains: search } },
+        { simlok_number: { contains: search } }
       ];
     }
 

@@ -1,11 +1,12 @@
 "use client";
 
 import Checkbox from "@/components/form/Checkbox";
-import Input from "@/components/form/Input";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
+import EnhancedInput from "@/components/form/EnhancedInput";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
+import Image from "next/image";
 import type { FC } from "react";
 
 interface Props {
@@ -59,214 +60,284 @@ const SignUpForm: FC<Props> = ({
   setAgree,
   handleSubmit,
 }) => (
-  <div className="flex flex-col w-full items-center justify-center my-auto min-h-screen bg-blue-900 py-8">
-    <div className="flex flex-col justify-center w-full max-w-2xl mx-4 bg-white p-8 border border-gray-200 rounded-lg shadow-lg">
-      <div>
-        <div className="mb-6">
-          <h1 className="mb-2 font-semibold text-gray-800 text-2xl">
-            Daftar Akun Vendor
+  <div className="min-h-screen flex">
+    {/* Left Section - Welcome & Branding */}
+    <div className="hidden lg:flex lg:w-1/2 bg-blue-600 relative">
+      <div className="flex flex-col justify-center items-center w-full text-white">
+         <div className="text-center w-full" style={{ marginTop: '-10rem' }}>
+          <div className="mb-15 flex w-full bg-white p-5 justify-center">
+            <Image
+              src="/assets/logo.svg"
+              alt="Logo SIMLOK"
+              width={200}
+              height={90}
+              className="object-contain drop-shadow-lg"
+            />
+          </div>
+          
+          {/* SIMLOK Title */}
+          <h1 className="text-6xl font-bold mb-6 tracking-wide text-white">
+            SIMLOK
           </h1>
-          <p className="text-sm text-gray-500">
-            Buat akun vendor untuk mengakses sistem SIMLOK
+          <p className="text-xl text-white font-light tracking-wide leading-relaxed">
+            Sistem Informasi Manajemen Lokasi Kerja Pertamina
           </p>
         </div>
+      </div>
+    </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Personal Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Informasi Personal
-            </h3>
-            
-            <div>
-              <Label>Nama Lengkap Petugas <span className="text-red-500">*</span></Label>
-              <Input
-                type="text"
-                placeholder="Contoh: Ahmad Budi Santoso"
-                value={nama_petugas}
-                onChange={(e) => setNamaPetugas(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Nama petugas yang akan bertanggung jawab
-              </p>
-            </div>
-
-            <div>
-              <Label>Email <span className="text-red-500">*</span></Label>
-              <Input
-                type="email"
-                placeholder="email@perusahaan.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label>No. Telepon <span className="text-red-500">*</span></Label>
-              <Input
-                type="tel"
-                placeholder="08123456789"
-                value={no_telp}
-                onChange={(e) => setNoTelp(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label>Alamat Lengkap <span className="text-red-500">*</span></Label>
-              <textarea
-                placeholder="Alamat lengkap perusahaan"
-                value={alamat}
-                onChange={(e) => setAlamat(e.target.value)}
-                required
-                disabled={isLoading}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-          </div>
-
-          {/* Company Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Informasi Vendor
-            </h3>
-            
-            <div>
-              <Label>Nama Vendor/Perusahaan <span className="text-red-500">*</span></Label>
-              <Input
-                type="text"
-                placeholder="PT. Nama Perusahaan"
-                value={nama_vendor}
-                onChange={(e) => setNamaVendor(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          {/* Security Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
-              Keamanan Akun
-            </h3>
-            
-            <div>
-              <Label>Password <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Masukkan password (min. 8 karakter)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  disabled={isLoading}
-                />
-                <span
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="w-5 h-5 text-gray-500" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5 text-gray-500" />
-                  )}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Password minimal 8 karakter, kombinasi huruf, angka dan simbol
-              </p>
-            </div>
-
-            <div>
-              <Label>Konfirmasi Password <span className="text-red-500">*</span></Label>
-              <div className="relative">
-                <Input
-                  type={showConfirmPassword ? "text" : "password"}
-                  placeholder="Ulangi password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  disabled={isLoading}
-                />
-                <span
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute z-30 -translate-y-1/2 cursor-pointer right-4 top-1/2"
-                >
-                  {showConfirmPassword ? (
-                    <EyeSlashIcon className="w-5 h-5 text-gray-500" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5 text-gray-500" />
-                  )}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Terms Agreement */}
-          <div className="flex items-start gap-3 pt-4">
-            <Checkbox
-              checked={agreeToTerms}
-              onChange={setAgree}
-              label=""
-              disabled={isLoading}
+    {/* Right Section - Sign Up Form */}
+    <div className="w-full lg:w-1/2 flex flex-col bg-white h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col justify-center p-4 lg:p-6">
+        <div className="w-full max-w-lg mx-auto">
+          <div className="lg:hidden flex justify-center mb-6">
+            <Image
+              src="/assets/logo.svg"
+              alt="Logo SIMLOK"
+              width={200}
+              height={90}
+              className="object-contain"
             />
-            <span className="text-sm text-gray-700 -mt-1">
-              Saya menyetujui{" "}
-              <Link href="/terms" className="text-blue-500 hover:text-blue-600 underline">
-                Syarat dan Ketentuan
-              </Link>{" "}
-              serta{" "}
-              <Link href="/privacy" className="text-blue-500 hover:text-blue-600 underline">
-                Kebijakan Privasi
-              </Link>{" "}
-              yang berlaku. <span className="text-red-500">*</span>
-            </span>
           </div>
 
-          <Button 
-            className="w-full" 
-            size="md" 
-            type="submit"
-            disabled={isLoading || !agreeToTerms || password !== confirmPassword}
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Mendaftar...
+          <div className="w-full">
+            <div className="mb-4">
+              <h1 className="text-lg font-bold text-gray-900 mb-1">Daftar Akun Vendor</h1>
+              <p className="text-gray-600 text-xs">
+                Lengkapi formulir untuk mendaftar sebagai vendor SIMLOK
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-xs text-red-800">{error}</p>
               </div>
-            ) : (
-              "Daftar Sekarang"
             )}
-          </Button>
 
-          {password !== confirmPassword && confirmPassword && (
-            <p className="text-sm text-red-600 text-center">
-              Password dan konfirmasi password tidak sama
-            </p>
-          )}
-        </form>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900">Informasi Petugas</h3>
 
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <p className="text-sm text-center text-gray-700">
-            Sudah memiliki akun?{" "}
-            <Link href="/login" className="text-blue-500 hover:text-blue-600 font-medium">
-              Masuk di sini
-            </Link>
-          </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      Nama Petugas <span className="text-red-500">*</span>
+                    </Label>
+                    <EnhancedInput
+                      id="nama_petugas"
+                      name="nama_petugas"
+                      value={nama_petugas}
+                      onChange={setNamaPetugas}
+                      validationType="name"
+                      label=""
+                      placeholder="Ahmad Budi"
+                      required
+                      disabled={isLoading}
+                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      Email <span className="text-red-500">*</span>
+                    </Label>
+                    <EnhancedInput
+                      id="email"
+                      name="email"
+                      value={email}
+                      onChange={setEmail}
+                      validationType="email"
+                      label=""
+                      placeholder="email@perusahaan.com"
+                      required
+                      disabled={isLoading}
+                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      No. Telepon <span className="text-red-500">*</span>
+                    </Label>
+                    <EnhancedInput
+                      id="no_telp"
+                      name="no_telp"
+                      value={no_telp}
+                      onChange={setNoTelp}
+                      validationType="phone"
+                      label=""
+                      placeholder="08123456789"
+                      required
+                      disabled={isLoading}
+                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      Nama Vendor <span className="text-red-500">*</span>
+                    </Label>
+                    <EnhancedInput
+                      id="nama_vendor"
+                      name="nama_vendor"
+                      value={nama_vendor}
+                      onChange={setNamaVendor}
+                      validationType="vendor"
+                      label=""
+                      placeholder="PT. Nama Perusahaan"
+                      required
+                      disabled={isLoading}
+                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-gray-700 font-medium text-xs">
+                    Alamat Perusahaan <span className="text-red-500">*</span>
+                  </Label>
+                  <textarea
+                    value={alamat}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Validasi alamat: hanya huruf, angka, spasi, koma, titik, tanda hubung
+                      if (/^[a-zA-Z0-9\s,./-]*$/.test(value)) {
+                        setAlamat(value);
+                      }
+                    }}
+                    placeholder="Jalan, Nomor, Kelurahan, Kecamatan, Kota"
+                    required
+                    disabled={isLoading}
+                    rows={2}
+                    className="mt-1 w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-3 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900">Keamanan Akun</h3>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      Password <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative mt-1">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Min 8 karakter"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={8}
+                        disabled={isLoading}
+                        className="w-full h-8 px-2 pr-8 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? (
+                          <EyeSlashIcon className="w-3 h-3" />
+                        ) : (
+                          <EyeIcon className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-700 font-medium text-xs">
+                      Konfirmasi <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="relative mt-1">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Ulangi password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={8}
+                        disabled={isLoading}
+                        className="w-full h-8 px-2 pr-8 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeSlashIcon className="w-3 h-3" />
+                        ) : (
+                          <EyeIcon className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {password !== confirmPassword && confirmPassword && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Password tidak sama
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-start gap-2 pt-3">
+                <Checkbox
+                  checked={agreeToTerms}
+                  onChange={setAgree}
+                  label=""
+                  disabled={isLoading}
+                />
+                <span className="text-xs text-gray-700">
+                  Saya menyetujui{" "}
+                  <Link href="/terms" className="text-blue-600 hover:text-blue-800 underline">
+                    Syarat dan Ketentuan
+                  </Link>{" "}
+                  serta{" "}
+                  <Link href="/privacy" className="text-blue-600 hover:text-blue-800 underline">
+                    Kebijakan Privasi
+                  </Link>{" "}
+                  yang berlaku. <span className="text-red-500">*</span>
+                </span>
+              </div>
+
+              <Button 
+                className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded text-sm disabled:opacity-50" 
+                type="submit"
+                disabled={isLoading || !agreeToTerms || password !== confirmPassword}
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                    Mendaftar...
+                  </div>
+                ) : (
+                  "Daftar sebagai Vendor"
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-4 pt-3 border-t border-gray-200">
+              <p className="text-center text-gray-600 text-xs">
+                Sudah memiliki akun?{" "}
+                <Link 
+                  href="/login" 
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Masuk di sini
+                </Link>
+              </p>
+            </div>
+          </div>
+
+          {/* <div className="mt-3 text-center text-xs text-gray-500">
+            <p>© 2025 Pertamina. Seluruh hak cipta dilindungi.</p>
+          </div> */}
         </div>
       </div>
     </div>

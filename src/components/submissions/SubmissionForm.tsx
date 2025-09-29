@@ -9,7 +9,8 @@ import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
-import FileUpload from '@/components/form/FileUpload';
+import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
+import EnhancedInput from '@/components/form/EnhancedInput';
 import Alert from "../ui/alert/Alert";
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types/submission';
@@ -221,68 +222,73 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="vendor_name">Nama vendor</Label>
-                  <Input
+                  <EnhancedInput
                     id="vendor_name"
                     name="vendor_name"
                     value={session?.user?.vendor_name || formData.vendor_name || ''}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData(prev => ({ ...prev, vendor_name: value }))}
+                    validationType="vendor"
+                    label="Nama Vendor"
                     required
-                    readOnly={!!session?.user?.vendor_name}
                     disabled={!!session?.user?.vendor_name}
-                    className={session?.user?.vendor_name ? " cursor-not-allowed" : ""}
+                    placeholder="Masukkan nama vendor"
+                    className={session?.user?.vendor_name ? "cursor-not-allowed bg-gray-50" : ""}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="officer_name">Nama petugas</Label>
-                  <Input
+                  <EnhancedInput
                     id="officer_name"
                     name="officer_name"
-                    value={session?.user?.officer_name || formData.officer_name || ''}
-                    onChange={handleChange}
+                    value={formData.officer_name || ''}
+                    onChange={(value) => setFormData(prev => ({ ...prev, officer_name: value }))}
+                    validationType="name"
+                    label="Nama Petugas"
+                    fieldName="Nama petugas"
                     required
-                    readOnly={!!session?.user?.officer_name}
-                    disabled={!!session?.user?.officer_name}
-                    className={session?.user?.officer_name ? " cursor-not-allowed" : ""}
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="based_on">Berdasarkan</Label>
-                  <Input
+                  <EnhancedInput
                     id="based_on"
                     name="based_on"
                     value={formData.based_on}
-                    onChange={handleChange}
-                    type='text'
+                    onChange={(value) => setFormData(prev => ({ ...prev, based_on: value }))}
+                    validationType="text"
+                    label="Berdasarkan"
                     required
+                    placeholder="Contoh: Surat Izin Kerja No. 123/2024"
                   />
                 </div>
 
                 {/* Document Numbers */}
                 <div>
-                  <Label htmlFor="simja_number">Nomor SIMJA</Label>
-                  <Input
+                  <EnhancedInput
                     id="simja_number"
                     name="simja_number"
-                    value={formData.simja_number}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIMJA/2024/001"
+                    value={formData.simja_number || ''}
+                    onChange={(value) => setFormData(prev => ({ ...prev, simja_number: value }))}
+                    validationType="document"
+                    documentType="SIMJA"
+                    label="Nomor SIMJA"
                     required
+                    placeholder="Contoh: SIMJA/2024/001"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="sika_number">Nomor SIKA</Label>
-                  <Input
+                  <EnhancedInput
                     id="sika_number"
                     name="sika_number"
-                    value={formData.sika_number}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIKA/2024/001"
+                    value={formData.sika_number || ''}
+                    onChange={(value) => setFormData(prev => ({ ...prev, sika_number: value }))}
+                    validationType="document"
+                    documentType="SIKA"
+                    label="Nomor SIKA"
                     required
+                    placeholder="Contoh: SIKA/2024/001"
                   />
                 </div>
 
@@ -314,15 +320,14 @@ export default function SubmissionForm() {
                 <div className="space-y-2">
                   <Label htmlFor="simja_document_upload">UPLOAD DOKUMEN SIMJA</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <FileUpload
+                    <EnhancedFileUpload
                       id="simja_document_upload"
                       name="simja_document_upload"
-                      label=""
-                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.simja_document_upload || ''}
                       onChange={handleFileUpload('simja_document_upload')}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={8}
+                      uploadType="document"
+                      label=""
+                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       required
                     />
                   </div>
@@ -331,16 +336,15 @@ export default function SubmissionForm() {
                 <div className="space-y-2">
                   <Label htmlFor="sika_document_upload">UPLOAD DOKUMEN SIKA</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <FileUpload
+                    <EnhancedFileUpload
                       id="sika_document_upload"
                       name="sika_document_upload"
-                      label=""
-                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                       value={formData.sika_document_upload || ''}
                       onChange={handleFileUpload('sika_document_upload')}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={8}
+                      uploadType="document"
                       required
+                      label=""
+                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
                     />
                   </div>
                 </div>
@@ -352,24 +356,28 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="job_description">Pekerjaan</Label>
-                  <Input
+                  <EnhancedInput
                     id="job_description"
                     name="job_description"
                     value={formData.job_description}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData(prev => ({ ...prev, job_description: value }))}
+                    validationType="job"
+                    label="Pekerjaan"
                     required
+                    placeholder="Contoh: Instalasi dan pemeliharaan peralatan"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="work_location">Lokasi kerja</Label>
-                  <Input
+                  <EnhancedInput
                     id="work_location"
                     name="work_location"
                     value={formData.work_location}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData(prev => ({ ...prev, work_location: value }))}
+                    validationType="address"
+                    label="Lokasi Kerja"
                     required
+                    placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
                   />
                 </div>
 
@@ -497,44 +505,33 @@ export default function SubmissionForm() {
                             </button>
                           </div>
                         ) : (
-                          <div 
-                            onClick={() => document.getElementById(`worker_photo_${worker.id}`)?.click()}
-                            className="w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 bg-gray-50"
-                          >
-                           
-                            <p className="text-sm font-medium text-gray-600">Upload Foto Pekerja</p>
-                            <p className="text-xs text-gray-500 mt-1">Klik atau drag & drop foto</p>
-   
+                          <div className="w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center bg-gray-50">
+                            <EnhancedFileUpload
+                              id={`worker_photo_${worker.id}`}
+                              name={`worker_photo_${worker.id}`}
+                              value={worker.worker_photo}
+                              onChange={(url) => updateWorkerPhoto(worker.id, url)}
+                              uploadType="worker-photo"
+                              workerName={worker.worker_name || `Pekerja ${worker.id}`}
+                              required={false}
+                            />
                           </div>
                         )}
-                        <FileUpload
-                          id={`worker_photo_${worker.id}`}
-                          name={`worker_photo_${worker.id}`}
-                          label=""
-                          description=""
-                          value={worker.worker_photo}
-                          onChange={(url) => updateWorkerPhoto(worker.id, url)}
-                          accept=".jpg,.jpeg,.png"
-                          maxSize={8}
-                          required={false}
-                          className="sr-only"
-                        />
                       </div>
                     </div>
                     
                     {/* Name Input */}
                     <div>
-                      <Label htmlFor={`worker_name_${worker.id}`} className="text-sm font-medium text-gray-700">
-                        Nama Lengkap
-                      </Label>
-                      <Input
+                      <EnhancedInput
                         id={`worker_name_${worker.id}`}
                         name={`worker_name_${worker.id}`}
                         value={worker.worker_name}
-                        onChange={(e) => updateWorkerName(worker.id, e.target.value)}
-                        placeholder="Masukkan nama lengkap"
+                        onChange={(value) => updateWorkerName(worker.id, value)}
+                        validationType="name"
+                        label="Nama Lengkap Pekerja"
+                        fieldName="Nama pekerja"
                         required
-                        className="mt-1"
+                        placeholder="Masukkan nama lengkap"
                       />
                     </div>
                     

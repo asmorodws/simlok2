@@ -36,12 +36,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter by final status if provided
-    if (finalStatus && ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
-      whereClause.final_status = finalStatus;
-    } else if (!finalStatus) {
-      // Default to showing only pending approval submissions if no final status filter is applied
-      whereClause.final_status = 'PENDING_APPROVAL';
+    if (finalStatus && finalStatus.trim()) {
+      if (['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
+        whereClause.final_status = finalStatus;
+      }
     }
+    // Note: If no finalStatus is provided, show all submissions (don't filter by final_status)
 
     // Filter by vendor if provided
     if (vendorId) {
@@ -53,20 +53,17 @@ export async function GET(request: NextRequest) {
       whereClause.OR = [
         {
           vendor_name: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         },
         {
           job_description: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         },
         {
           officer_name: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
           }
         }
       ];
@@ -89,12 +86,32 @@ export async function GET(request: NextRequest) {
           working_hours: true,
           other_notes: true,
           work_facilities: true,
+          simlok_number: true,
+          simlok_date: true,
           created_at: true,
           user: {
             select: {
-              id: true,
               vendor_name: true,
               officer_name: true,
+            }
+          },
+          reviewed_by_user: {
+            select: {
+              officer_name: true,
+            }
+          },
+          qrScans: {
+            select: {
+              scanned_at: true,
+            },
+            orderBy: {
+              scanned_at: 'desc'
+            },
+            take: 1
+          },
+          _count: {
+            select: {
+              qrScans: true
             }
           }
         },
@@ -130,6 +147,36 @@ export async function GET(request: NextRequest) {
       ])
     ]);
 
+    // Format submissions with scan data and remove IDs
+    const formattedSubmissions = submissions.map(submission => ({
+      approval_status: submission.approval_status,
+      review_status: submission.review_status,
+      final_status: submission.final_status,
+      vendor_name: submission.vendor_name,
+      based_on: submission.based_on,
+      officer_name: submission.officer_name,
+      job_description: submission.job_description,
+      work_location: submission.work_location,
+      implementation: submission.implementation,
+      working_hours: submission.working_hours,
+      other_notes: submission.other_notes,
+      work_facilities: submission.work_facilities,
+      simlok_number: submission.simlok_number,
+      simlok_date: submission.simlok_date,
+      created_at: submission.created_at,
+      scan_count: submission._count.qrScans,
+      last_scanned_at: submission.qrScans[0]?.scanned_at || null,
+      user: {
+        vendor_name: submission.vendor_name,
+        officer_name: submission.officer_name,
+      },
+      reviewed_by_user: submission.reviewed_by_user ? {
+        officer_name: submission.reviewed_by_user.officer_name,
+      } : null,
+      // Keep ID for internal operations but don't expose in list view
+      id: submission.id
+    }));
+
     // Format statistics for frontend
     const [pendingUserVerifications, totalVerifiedUsers] = userStats;
     const stats = {
@@ -142,7 +189,7 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({
-      submissions,
+      submissions: formattedSubmissions,
       stats,
       pagination: {
         page,

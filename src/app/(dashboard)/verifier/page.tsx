@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import VerifierDashboard from "@/components/dashboard/VerifierDashboard";
+import VerifierDashboard from "@/components/verifier/VerifierDashboard";
 
 export const metadata: Metadata = {
   title: "Dashboard Verifikator - SIMLOK",

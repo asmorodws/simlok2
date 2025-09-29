@@ -13,6 +13,7 @@ import Card from "../ui/Card";
 import { Badge } from "../ui/Badge";
 import Button from "../ui/button/Button";
 import Alert from "../ui/alert/Alert";
+import LoadingSpinner from "../ui/LoadingSpinner";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import UserVerificationModal from "../admin/UserVerificationModal";
 import { UserData } from "@/types/user";
@@ -225,8 +226,11 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-gray-200">
                 {submissionsLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
-                      Loading...
+                    <td colSpan={4} className="px-3 py-4">
+                      <div className="flex items-center justify-center">
+                        <LoadingSpinner size="sm" />
+                        <span className="ml-2 text-gray-500">Memuat pengajuan...</span>
+                      </div>
                     </td>
                   </tr>
                 ) : submissions.length === 0 ? (
@@ -288,8 +292,11 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-gray-200">
                 {usersLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-3 py-4 text-center text-gray-500">
-                      Loading...
+                    <td colSpan={4} className="px-3 py-4">
+                      <div className="flex items-center justify-center">
+                        <LoadingSpinner size="sm" />
+                        <span className="ml-2 text-gray-500">Memuat vendor...</span>
+                      </div>
                     </td>
                   </tr>
                 ) : pendingUsers.length === 0 ? (

@@ -64,32 +64,27 @@ export async function GET(request: NextRequest) {
       whereConditions.OR = [
         {
           simlok_number: {
-            contains: search,
-            mode: 'insensitive' as const
+            contains: search
           }
         },
         {
           vendor_name: {
-            contains: search,
-            mode: 'insensitive' as const
+            contains: search
           }
         },
         {
           officer_name: {
-            contains: search,
-            mode: 'insensitive' as const
+            contains: search
           }
         },
         {
           job_description: {
-            contains: search,
-            mode: 'insensitive' as const
+            contains: search
           }
         },
         {
           work_location: {
-            contains: search,
-            mode: 'insensitive' as const
+            contains: search
           }
         }
       ];

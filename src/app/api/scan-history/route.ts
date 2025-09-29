@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     const dateTo = searchParams.get('dateTo');
     const verifier = searchParams.get('verifier');
     const submissionId = searchParams.get('submissionId');
+    const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
@@ -47,8 +48,7 @@ export async function GET(request: NextRequest) {
     if (verifier) {
       where.user = {
         officer_name: {
-          contains: verifier,
-          mode: 'insensitive'
+          contains: verifier
         }
       };
     }
@@ -56,10 +56,41 @@ export async function GET(request: NextRequest) {
     if (submissionId) {
       where.submission = {
         simlok_number: {
-          contains: submissionId,
-          mode: 'insensitive'
+          contains: submissionId
         }
       };
+    }
+
+    // Add search functionality
+    if (search) {
+      where.OR = [
+        {
+          submission: {
+            simlok_number: {
+              contains: search
+            }
+          }
+        },
+        {
+          submission: {
+            vendor_name: {
+              contains: search
+            }
+          }
+        },
+        {
+          user: {
+            officer_name: {
+              contains: search
+            }
+          }
+        },
+        {
+          scan_location: {
+            contains: search
+          }
+        }
+      ];
     }
 
     // Get total count for pagination

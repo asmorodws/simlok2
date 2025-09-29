@@ -10,7 +10,8 @@ import {
   ClockIcon,
   EyeIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
 import { formatDistanceToNow, format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -18,6 +19,7 @@ import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import DatePicker from '@/components/form/DatePicker';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 
 interface QrScan {
   id: string;
@@ -25,6 +27,7 @@ interface QrScan {
   scanned_by: string;
   scanned_at: string;
   scanner_name?: string;
+  scan_location?: string;
   notes?: string;
   submission: {
     id: string;
@@ -63,6 +66,7 @@ export default function ReviewerScanHistoryContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedScan, setSelectedScan] = useState<QrScan | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const pageSize = 15;
@@ -473,10 +477,18 @@ export default function ReviewerScanHistoryContent() {
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Informasi Verifikator</h4>
                   <div className="space-y-2 text-sm">
+                     {selectedScan.scanner_name && (
                     <div className="flex justify-between">
-                      <span className="text-gray-500">Nama:</span>
-                      <span className="font-medium">{selectedScan.user.full_name}</span>
+                      <span className="text-gray-500">Scanner Name:</span>
+                      <span className="font-medium">{selectedScan.scanner_name}</span>
                     </div>
+                  )}
+                  {selectedScan.scan_location && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Lokasi Scan:</span>
+                      <span className="font-medium">{selectedScan.scan_location}</span>
+                    </div>
+                  )}
                     <div className="flex justify-between">
                       <span className="text-gray-500">Email:</span>
                       <span className="font-medium">{selectedScan.user.email}</span>
@@ -495,31 +507,34 @@ export default function ReviewerScanHistoryContent() {
                       {format(new Date(selectedScan.scanned_at), 'dd/MM/yyyy HH:mm:ss', { locale: id })}
                     </span>
                   </div>
-                  {selectedScan.scanner_name && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Scanner Name:</span>
-                      <span className="font-medium">{selectedScan.scanner_name}</span>
-                    </div>
-                  )}
-                  {selectedScan.notes && (
-                    <div className="col-span-2">
-                      <span className="text-gray-500">Notes:</span>
-                      <p className="mt-1 font-medium">{selectedScan.notes}</p>
-                    </div>
-                  )}
+                 
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Current Status</h4>
-                <div className="flex flex-wrap gap-3">
-                  {getStatusBadge(selectedScan.submission.review_status, 'review')}
-                  {getStatusBadge(selectedScan.submission.final_status, 'final')}
-                </div>
+              {/* PDF Button */}
+              <div className="flex justify-center pt-4 border-t border-gray-200">
+                <Button
+                  onClick={() => setShowPdfModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
+                >
+                  <DocumentTextIcon className="w-5 h-5" />
+                  <span>Lihat PDF SIMLOK</span>
+                </Button>
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* SimlokPdfModal */}
+      {selectedScan && (
+        <SimlokPdfModal
+          isOpen={showPdfModal}
+          onClose={() => setShowPdfModal(false)}
+          submissionId={selectedScan.submission.id}
+          submissionName={selectedScan.submission.vendor_name}
+          nomorSimlok={selectedScan.submission.simlok_number}
+        />
       )}
     </div>
   );

@@ -12,6 +12,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import Alert from '@/components/ui/alert/Alert';
 import { useSocket } from '@/components/common/RealtimeUpdates';
+import PageLoader from '@/components/ui/PageLoader';
 import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
 import Link from 'next/link';
 
@@ -207,11 +208,7 @@ const ReviewerDashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Memuat dashboard reviewer..." />;
   }
 
   return (

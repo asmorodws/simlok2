@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
+import EnhancedInput from '@/components/form/EnhancedInput';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
@@ -449,25 +450,30 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Label htmlFor="nama_vendor">Nama vendor</Label>
-                  <Input
+                  <EnhancedInput
                     id="nama_vendor"
                     name="nama_vendor"
                     value={session?.user?.vendor_name || formData.nama_vendor || ''}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData(prev => ({ ...prev, nama_vendor: value }))}
+                    validationType="vendor"
+                    label=""
                     required
-                    readOnly={!!session?.user?.vendor_name}
                     disabled={!!session?.user?.vendor_name}
+                    placeholder="PT. Nama Perusahaan"
                     className={session?.user?.vendor_name ? "cursor-not-allowed" : ""}
                   />
                 </div>
 
                 <div>
                   <Label htmlFor="nama_petugas">Nama petugas</Label>
-                  <Input
+                  <EnhancedInput
                     id="nama_petugas"
                     name="nama_petugas"
                     value={formData.nama_petugas}
-                    onChange={handleChange}
+                    onChange={(value) => setFormData(prev => ({ ...prev, nama_petugas: value }))}
+                    validationType="name"
+                    label=""
+                    fieldName="Nama petugas"
                     required
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
@@ -757,11 +763,14 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                       <Label htmlFor={`nama_pekerja_${worker.id}`} className="text-sm font-medium text-gray-700">
                         Nama Lengkap
                       </Label>
-                      <Input
+                      <EnhancedInput
                         id={`nama_pekerja_${worker.id}`}
                         name={`nama_pekerja_${worker.id}`}
                         value={worker.nama_pekerja}
-                        onChange={(e) => updateWorkerName(worker.id, e.target.value)}
+                        onChange={(value) => updateWorkerName(worker.id, value)}
+                        validationType="name"
+                        label=""
+                        fieldName="Nama pekerja"
                         placeholder="Masukkan nama lengkap"
                         required
                         className="mt-1"

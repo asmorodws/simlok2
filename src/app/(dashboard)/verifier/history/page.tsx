@@ -4,14 +4,14 @@ import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import RoleGate from '@/components/security/RoleGate';
 import SidebarLayout from '@/components/layout/SidebarLayout';
-import SubmissionsList from '@/components/verifier/SubmissionsList';
+import VerifierScanHistory from '@/components/verifier/VerifierScanHistory';
 
 export const metadata: Metadata = {
-  title: 'Daftar SIMLOK - Verifier',
-  description: 'Daftar semua submission SIMLOK untuk verifier',
+  title: 'Riwayat Scan - Verifier',
+  description: 'Riwayat scan QR code SIMLOK oleh verifier',
 };
 
-export default async function VerifierSubmissionsPage() {
+export default async function VerifierHistoryPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -24,8 +24,8 @@ export default async function VerifierSubmissionsPage() {
 
   return (
     <RoleGate allowedRoles={["VERIFIER"]}>
-      <SidebarLayout title="Daftar SIMLOK" titlePage="Verifier">
-        <SubmissionsList />
+      <SidebarLayout title="Riwayat Scan" titlePage="Verifier">
+        <VerifierScanHistory />
       </SidebarLayout>
     </RoleGate>
   );

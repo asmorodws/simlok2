@@ -331,6 +331,11 @@ class PDFKit {
     const value = (rawValue ?? "").toString();
     await this.pageBreak();
 
+    // Minimal spacing between rows for compactness
+    if (no > 1) {
+      this.y -= this.lineGap * 0.2; // Reduced from 0.5 to 0.2
+    }
+
     // Label kiri (bold)
     const left = `${no}. ${label}`;
     this.text(left, this.x, this.y, { bold: false });
@@ -345,6 +350,9 @@ class PDFKit {
     await this.wrap(normalizeInline(value) || "-", rightX, rightW, {
       bold: !!opts?.valueBold,
     });
+    
+    // Spacing after each numbered row for better readability
+    this.y -= this.lineGap * 0.4; // Increased spacing between points
   }
 }
 
@@ -377,10 +385,10 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   k.doc.setCreationDate(currentDate);
   k.doc.setModificationDate(currentDate);
 
-  // Set initial styling
-  k.fs = 12;
-  k.lineGap = LINE_GAP_DEFAULT;
-  k.leftLabelWidth = LEFT_LABEL_WIDTH_DEFAULT;
+  // Set initial styling - optimized for single page
+  k.fs = 11; // Increased from 10 to 11
+  k.lineGap = 13; // Increased from 12 to 13
+  k.leftLabelWidth = 140; // Keep as 140 for compactness
 
   // Add logo to top-right if available
   if (logoImage) {
@@ -398,15 +406,15 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   }
 
   // Add centered header
-  k.center("SURAT IZIN MASUK LOKASI", height - 100, {
-    size: 16,
+  k.center("SURAT IZIN MASUK LOKASI", height - 85, {
+    size: 14, // Reduced from 16 to 14
     bold: true,
     color: rgb(0, 0, 0),
   });
 
   // Add border bottom line under the title
-  const titleY = height - 80;
-  const lineY = titleY - 25; // 25 pixels below the title
+  const titleY = height - 70;
+  const lineY = titleY - 20; // Reduced spacing
   const lineStartX = 185; // Start line position
   const lineEndX = A4.w - 185; // End line position
   page.drawLine({
@@ -418,17 +426,17 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 
   // SIMLOK number (centered)
   const simlokNo = s.simlok_number ? `${s.simlok_number}` : "";
-  k.center(`SIMLOK NO-${simlokNo}`, height - 120, {
-    size: 14,
+  k.center(`SIMLOK NO-${simlokNo}`, height - 105, {
+    size: 12, // Reduced from 14 to 12
   });
 
   // Introduction text
-  k.text("Dengan ini di berikan izin memasuki lokasi PT PERTAMINA (PERSERO) kepada", 50, height - 160, {
-    size: 12,
+  k.text("Dengan ini di berikan izin memasuki lokasi PT PERTAMINA (PERSERO) kepada", 50, height - 135, {
+    size: 11, // Match with content font size
   });
 
-  // Move to content area and add numbered items
-  k.y = height - 190;
+  // Move to content area and add numbered items with proper spacing
+  k.y = height - 160; // Added more spacing between intro text and point 1
 
   await k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
@@ -440,10 +448,21 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   await k.numberedRow(2, "Berdasarkan", berdasarkan);
   await k.numberedRow(3, "Pekerjaan", s.job_description);
   await k.numberedRow(4, "Lokasi Kerja", s.work_location);
-  await k.numberedRow(5, "Pelaksanaan", normalizeInline(s.implementation || ""));
+  
+  // Use provided pelaksanaan or generate template based on dates
+  let pelaksanaanText = s.implementation;
+  if (!pelaksanaanText || pelaksanaanText.trim().length === 0) {
+    if (s.implementation_start_date && s.implementation_end_date) {
+      pelaksanaanText = `Terhitung mulai tanggal ${fmtDateID(s.implementation_start_date)} sampai ${fmtDateID(s.implementation_end_date)}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
+    } else {
+      pelaksanaanText = "Terhitung mulai tanggal [Tanggal Mulai] sampai [Tanggal Selesai]. Termasuk hari Sabtu, Minggu dan hari libur lainnya.";
+    }
+  }
+  
+  await k.numberedRow(5, "Pelaksanaan", normalizeInline(pelaksanaanText));
   await k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
   
-  // Special handling for "Lain-lain" to show as bulleted list
+  // Special handling for "Lain-lain" to show as bulleted list or template preview
   if (s.other_notes && s.other_notes.trim().length > 0) {
     await k.pageBreak();
     
@@ -476,9 +495,79 @@ for (let idx = 0; idx < lines.length; idx++) {
   }
 }
 
+    // Add spacing after custom other_notes to match other numbered rows
+    k.y -= k.lineGap * 0.4;
+
   } else {
-    await k.numberedRow(7, "Lain-lain", "");
+    // Generate template preview when no actual data
+    await k.pageBreak();
+    
+    // Label kiri (bold)
+    const left = "7. Lain-lain";
+    k.text(left, k.x, k.y, { bold: false });
+
+    // Titik dua di kolom tengah
+    const colonX = k.x + k.leftLabelWidth - k.measure(":", { size: k.fs }) - 2;
+    k.text(":", colonX, k.y);
+
+    // Generate template preview similar to reviewer
+    const rightX = k.x + k.leftLabelWidth + 4;
+    const rightW = A4.w - MARGIN - rightX;
+    
+    // Generate structured template with bold formatting
+    
+    // Line 1: Introduction
+    await k.wrap(" Izin diberikan berdasarkan :", rightX, rightW, { bold: false });
+    
+    // Minimal spacing before SIMJA section
+    k.y -= k.lineGap * 0.2; // Reduced spacing
+    
+    // SIMJA section with bold formatting
+    if ((s.simja_number && s.simja_date) || s.simja_number || s.simja_date) {
+      await k.pageBreak();
+      // Bullet point dan SIMJA dalam satu baris
+      await k.wrap(" • SIMJA Ast. Man. Facility Management", rightX, rightW, { bold: true });
+      
+      // Baris kedua dengan indentasi untuk No. dan Tanggal
+      await k.pageBreak();
+      const simjaNum = s.simja_number || '[Nomor SIMJA]';
+      const simjaDate = s.simja_date ? fmtDateID(s.simja_date) : '[Tanggal SIMJA]';
+      await k.wrap(`   No. ${simjaNum} Tanggal ${simjaDate}`, rightX, rightW, { bold: true });
+      
+      // Minimal spacing after SIMJA section
+      k.y -= k.lineGap * 0.2;
+    }
+    
+    // SIKA section with bold formatting
+    if ((s.sika_number && s.sika_date) || s.sika_number || s.sika_date) {
+      await k.pageBreak();
+      // Bullet point dan SIKA dalam satu baris
+      await k.wrap(" • SIKA Pekerjaan Dingin", rightX, rightW, { bold: true });
+      
+      // Baris kedua dengan indentasi untuk No. dan Tanggal
+      await k.pageBreak();
+      const sikaNum = s.sika_number || '[Nomor SIKA]';
+      const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
+      await k.wrap(`   No.${sikaNum} Tgl. ${sikaDate}`, rightX, rightW, { bold: true });
+      
+      // Minimal spacing after SIKA section
+      k.y -= k.lineGap * 0.2;
+    }
+    
+    // Head of Security section with bold date
+    await k.pageBreak();
+    await k.wrap(" ", rightX, rightW, { bold: false });
+    
+    await k.pageBreak();
+    await k.wrap("  Diterima Sr Officer III Security:", rightX, rightW, { bold: false });
+    
+    await k.pageBreak();
+    const simlokDate = s.simlok_date ? fmtDateID(s.simlok_date) : fmtDateID(new Date());
+    await k.wrap(`  Tanggal ${simlokDate}`, rightX, rightW, { bold: true });
   }
+  
+  // Add spacing after point 7 (Lain-lain) to match other numbered rows
+  k.y -= k.lineGap * 0.4; // Same spacing as numberedRow function
   
   // Get actual worker count from worker data if worker_count is null/0
   const currentWorkerData = s.workerList || (s as any).worker_list;
@@ -486,13 +575,15 @@ for (let idx = 0; idx < lines.length; idx++) {
   
   await k.numberedRow(8, "Sarana Kerja", `${s.work_facilities}. Jumlah Pekerja ${actualWorkerCount} (${numberToBahasa(actualWorkerCount)}) Orang`);
 
-  // Add content paragraph if available
-  k.y -= 10;
-  if (s.content && s.content.trim().length > 0) {
-    await k.pageBreak();
-    await k.wrap(normalizeInline(s.content), 50, A4.w - 2 * MARGIN);
-    k.y -= 10;
-  }
+  // Add content paragraph - use provided content or default template
+  k.y -= 3; // Further reduced spacing
+  const contentText = s.content && s.content.trim().length > 0 
+    ? s.content 
+    : "Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.";
+  
+  await k.pageBreak();
+  await k.wrap(normalizeInline(contentText), 50, A4.w - 2 * MARGIN, { size: 11 }); // Match with main content font size
+  k.y -= 3; // Further reduced spacing
 
   // Add bottom text
 //   k.pageBreak();
@@ -503,7 +594,7 @@ for (let idx = 0; idx < lines.length; idx++) {
 // SIMLOK 2 hari sebelum masa berlaku habis.`, 50, A4.w - 2 * MARGIN);
 
   // Add signature section
-  k.y -= 20;
+  k.y -= 8; // Further reduced spacing
   const signatureY = k.y;
 
   // Extract date from pelaksanaan or use tanggal_simlok as fallback
@@ -511,27 +602,27 @@ for (let idx = 0; idx < lines.length; idx++) {
   const displayDate = dateFromPelaksanaan || toDate(s.simlok_date);
 
   // Right side - Location and Date (above Head title)
-  k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY);
-  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 20);
+  k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
+  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
 
   // Right side - Head title and name (below location/date)
   const jabatanSigner = s.signer_position || "Head Or Security Region I";
   const namaSigner = s.signer_name || "Julianto Santoso";
   
-  // Calculate precise positions for perfect centering
-  const jabatanY = signatureY - 50;
-  const namaY = signatureY - 180;
+  // Calculate precise positions for perfect centering - more compact
+  const jabatanY = signatureY - 40; // Reduced spacing
+  const namaY = signatureY - 145; // Reduced spacing
   
   // Draw jabatan
-  k.text(jabatanSigner, A4.w - 230, jabatanY);
+  k.text(jabatanSigner, A4.w - 230, jabatanY, { size: 11 });
   
   // Add QR code if available - positioned with simple pixel values for easy maintenance
   if (s.qrcode && s.final_status === 'APPROVED') {
     const qrImage = await generateQRImage(k.doc, s.qrcode);
     if (qrImage) {
-      const qrSize = 100;
-      const qrX = 385; // Fixed X position from left edge
-      const qrY = signatureY - 160; // Fixed Y position: between jabatan (-50) and nama (-180)
+      const qrSize = 80; // Reduced QR code size
+      const qrX = 395; // Adjusted position
+      const qrY = signatureY - 130; // Adjusted position for more compact layout
       
       // Draw QR code at fixed pixel position
       page.drawImage(qrImage, {
@@ -544,62 +635,70 @@ for (let idx = 0; idx < lines.length; idx++) {
   }
   
   // Draw nama
-  k.text(namaSigner, A4.w - 230, namaY, { bold: true });
+  k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
 
   // Add second page with worker photos if available
   // Handle both workerList (interface) and worker_list (database)
   const workerData = s.workerList || (s as any).worker_list;
-  console.log('=== WORKER DATA DEBUG ===');
   if (workerData && workerData.length > 0) {
-    console.log(`Found ${workerData.length} workers`);
-    workerData.forEach((worker: any, index: number) => {
-      console.log(`Worker ${index + 1}: ${worker.worker_name}, Photo: ${worker.worker_photo ? 'YES' : 'NO'}`);
-      if (worker.worker_photo) {
-        console.log(`  Photo type: ${typeof worker.worker_photo}, Length: ${worker.worker_photo.length}`);
-        console.log(`  Preview: ${worker.worker_photo.substring(0, 50)}...`);
-      }
-    });
     await addWorkerPhotosPage(k, workerData);
-  } else {
-    console.log('No worker data found');
   }
 
   return k.doc.save();
 }
 
+// Cache for loaded images to avoid reloading same images
+const imageCache = new Map<string, PDFImage>();
+
 /**
- * Load and embed photo from file path or base64
+ * Clear image cache to free memory
+ */
+export function clearImageCache() {
+  imageCache.clear();
+}
+
+/**
+ * Preload worker photos in batch for better performance
+ */
+async function preloadWorkerPhotos(
+  pdfDoc: PDFDocument, 
+  workerList: Array<{ worker_name: string; worker_photo?: string | null }>
+): Promise<void> {
+  const photoPromises = workerList
+    .filter(worker => worker.worker_photo && !imageCache.has(worker.worker_photo))
+    .map(worker => loadWorkerPhoto(pdfDoc, worker.worker_photo));
+  
+  // Load all photos in parallel
+  await Promise.all(photoPromises);
+}
+
+/**
+ * Load and embed photo from file path or base64 with caching
  */
 async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): Promise<PDFImage | null> {
   if (!photoPath) {
-    console.log('No photo path provided');
     return null;
   }
 
-  console.log('Loading worker photo...');
-  console.log('Photo starts with "data:":', photoPath.startsWith('data:'));
-  console.log('Photo preview:', photoPath.substring(0, 100) + '...');
+  // Check cache first
+  if (imageCache.has(photoPath)) {
+    return imageCache.get(photoPath)!;
+  }
 
   try {
+    let resultImage: PDFImage | null = null;
+
     // Check if it's a base64 string (could be with or without data: prefix)
     if (photoPath.startsWith('data:image/') || photoPath.startsWith('data:') || photoPath.match(/^[A-Za-z0-9+/=]+$/)) {
-      console.log('Processing base64 image');
       let base64Data: string | undefined;
-      let imageFormat = 'jpeg'; // default
+      let isPng = false;
       
       if (photoPath.startsWith('data:image/')) {
         // Standard data URL format: data:image/jpeg;base64,/9j/4AAQ...
         const base64Parts = photoPath.split(',');
         if (base64Parts.length > 1) {
           base64Data = base64Parts[1];
-          // Extract format from mime type
-          if (photoPath.includes('image/png')) {
-            imageFormat = 'png';
-          } else if (photoPath.includes('image/jpeg') || photoPath.includes('image/jpg')) {
-            imageFormat = 'jpeg';
-          }
-        } else {
-          throw new Error('Invalid data URL format');
+          isPng = photoPath.includes('image/png');
         }
       } else if (photoPath.startsWith('data:')) {
         // Generic data format
@@ -610,93 +709,36 @@ async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): 
         base64Data = photoPath;
       }
       
-      console.log('Base64 data length:', base64Data?.length || 0);
-      console.log('Image format detected:', imageFormat);
-      
       if (base64Data) {
-        let photoBytes: Buffer;
-        
-        if (typeof window !== 'undefined') {
-          // Client-side: use Uint8Array for better browser compatibility
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          photoBytes = Buffer.from(bytes);
-        } else {
-          // Server-side: use Buffer directly
-          photoBytes = Buffer.from(base64Data, 'base64');
-        }
-        
-        if (imageFormat === 'png' || photoPath.includes('image/png')) {
-          console.log('Embedding PNG image');
-          return await pdfDoc.embedPng(photoBytes);
-        } else {
-          console.log('Embedding JPG image');
-          return await pdfDoc.embedJpg(photoBytes);
-        }
+        const photoBytes = Buffer.from(base64Data, 'base64');
+        resultImage = isPng ? await pdfDoc.embedPng(photoBytes) : await pdfDoc.embedJpg(photoBytes);
       }
     } else {
       // Handle file path - could be API path or direct file path
-      console.log('Processing file path photo');
       let fullPath: string;
       
       if (photoPath.startsWith('/api/files/')) {
-        // API endpoint path - convert to actual file path
-        // /api/files/userId/folder/filename -> /uploads/userId/folder/filename
         fullPath = photoPath.replace('/api/files/', '/uploads/');
-        console.log('Converted API path to file path:', fullPath);
       } else {
-        // Regular file path
         fullPath = photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`;
       }
       
-      console.log('Full photo path:', fullPath);
-      
       if (typeof window !== 'undefined') {
-        // Client-side: use fetch - try both API endpoint and file path
-        console.log('Client-side photo loading');
-        
-        // First try the API endpoint
-        if (photoPath.startsWith('/api/files/')) {
-          console.log('Trying API endpoint first');
-          const apiResponse = await fetch(photoPath);
-          console.log('API fetch response status:', apiResponse.status, apiResponse.ok);
-          if (apiResponse.ok) {
-            const photoBytes = await apiResponse.arrayBuffer();
-            const uint8Array = new Uint8Array(photoBytes);
-            
-            if (fullPath.toLowerCase().includes('.png')) {
-              return await pdfDoc.embedPng(uint8Array);
-            } else {
-              return await pdfDoc.embedJpg(uint8Array);
-            }
-          }
-        }
-        
-        // Fallback to direct file path
-        console.log('Trying direct file path');
-        const response = await fetch(fullPath);
-        console.log('File fetch response status:', response.status, response.ok);
+        // Client-side: use fetch
+        const response = await fetch(photoPath.startsWith('/api/files/') ? photoPath : fullPath);
         if (response.ok) {
           const photoBytes = await response.arrayBuffer();
           const uint8Array = new Uint8Array(photoBytes);
           
-          // Try to determine format from file extension or content
-          if (fullPath.toLowerCase().includes('.png')) {
-            return await pdfDoc.embedPng(uint8Array);
-          } else {
-            return await pdfDoc.embedJpg(uint8Array);
-          }
+          resultImage = fullPath.toLowerCase().includes('.png') 
+            ? await pdfDoc.embedPng(uint8Array)
+            : await pdfDoc.embedJpg(uint8Array);
         }
       } else {
         // Server-side: use file system
-        console.log('Server-side photo loading');
         const fs = await import('fs');
         const path = await import('path');
         
-        // Simplified path resolution - no more fallbacks
         let photoFilePath: string;
         
         if (photoPath.startsWith('/api/files/')) {
@@ -707,53 +749,48 @@ async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | null): 
             const category = apiParts[4];
             const filename = apiParts.slice(5).join('/');
             
-            // Validate required components
             if (!userId || !category || !filename) {
-              throw new Error('Invalid API path components');
+              return null;
             }
             
-            // Map category to actual folder name (from fileManager.ts)
+            // Map category to actual folder name
             const categoryFolders: Record<string, string> = {
               sika: 'dokumen-sika',
               simja: 'dokumen-simja',
               id_card: 'id-card',
               other: 'lainnya',
-              'worker-photo': 'foto-pekerja' // New category for worker photos
+              'worker-photo': 'foto-pekerja'
             };
             
             const folderName = categoryFolders[category] || category;
-            
             photoFilePath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
-            console.log('Resolved photo file path:', photoFilePath);
           } else {
-            throw new Error('Invalid API path format');
+            return null;
           }
         } else {
-          // Regular file path
           photoFilePath = path.join(process.cwd(), 'public', fullPath);
         }
         
         if (fs.existsSync(photoFilePath)) {
-          console.log('Photo file exists, reading...');
           const fileBuffer = fs.readFileSync(photoFilePath);
           
-          if (photoFilePath.toLowerCase().includes('.png')) {
-            console.log('Embedding PNG image from file');
-            return await pdfDoc.embedPng(fileBuffer);
-          } else {
-            console.log('Embedding JPG image from file');
-            return await pdfDoc.embedJpg(fileBuffer);
-          }
-        } else {
-          console.log('Photo file not found:', photoFilePath);
+          resultImage = photoFilePath.toLowerCase().includes('.png')
+            ? await pdfDoc.embedPng(fileBuffer)
+            : await pdfDoc.embedJpg(fileBuffer);
         }
       }
     }
+
+    // Cache the result if successful
+    if (resultImage) {
+      imageCache.set(photoPath, resultImage);
+    }
+
+    return resultImage;
   } catch (error) {
-    console.warn('Failed to load worker photo:', photoPath, error);
+    // Silently fail - photo is optional
+    return null;
   }
-  
-  return null;
 }
 
 /**
@@ -768,30 +805,11 @@ async function addWorkerPhotosPage(
     return;
   }
 
+  // Preload all worker photos in batch for better performance
+  await preloadWorkerPhotos(k.doc, workerList);
+
   // Add new page - header akan otomatis ditambahkan
   await k.addPage();
-  
-  // // Add header
-  // k.center("DAFTAR PEKERJA", A4.h - 100, {
-  //   size: 16,
-  //   bold: true,
-  //   color: rgb(0, 0, 0),
-  // });
-  
-  // Add line under header
-  // const headerY = A4.h - 40;
-  // const lineY = headerY - 65;
-  // const lineStartX = 190;
-  // const lineEndX = A4.w - 190;
-  // k.page.drawLine({
-  //   start: { x: lineStartX, y: lineY },
-  //   end: { x: lineEndX, y: lineY },
-  //   thickness: 1,
-  //   color: rgb(0, 0, 0),
-  // });
-  
-  // Header akan otomatis ditambahkan oleh k.addPage() karena ini halaman kedua
-
 
   // Calculate grid layout optimized for 3x3 photos
   const photosPerRow = 3;
@@ -805,13 +823,6 @@ async function addWorkerPhotosPage(
   let currentCol = 0;
   const startY = A4.h - 140; // Optimized start position to fit header
 
-  console.log(`=== WORKER LAYOUT DEBUG ===`);
-  console.log(`Total workers: ${workerList.length}`);
-  console.log(`Photos per row: ${photosPerRow}`);
-  console.log(`Photo dimensions: ${photoWidth}x${photoHeight}`);
-  console.log(`Margins - H: ${marginHorizontal}, V: ${marginVertical}`);
-  console.log(`Start Y: ${startY}`);
-
   // Process each worker
   for (let i = 0; i < workerList.length; i++) {
     const worker = workerList[i];
@@ -821,22 +832,16 @@ async function addWorkerPhotosPage(
     const x = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
     const y = startY - (currentRow * (photoHeight + marginVertical + nameSpacing)); // Use nameSpacing constant
 
-    console.log(`Worker ${i+1} (${worker.worker_name}): Row ${currentRow}, Col ${currentCol}, Position (${Math.round(x)}, ${Math.round(y)})`);
-
     // Check if we need a new page (optimized for 3x3 grid)
     const bottomY = y - photoHeight;
     const pageLimit = MARGIN + 30;
-    console.log(`  Bottom Y: ${Math.round(bottomY)}, Page limit: ${pageLimit}, Need new page: ${bottomY < pageLimit}`);
     
     // Check if we need a new page - either by space limit or by 3x3 grid limit (max 9 per page)
     const workersOnCurrentPage = (currentRow * photosPerRow) + currentCol;
     const needNewPageBySpace = bottomY < pageLimit;
     const needNewPageByGrid = workersOnCurrentPage >= 9; // 3x3 = 9 workers max per page
     
-    console.log(`  Workers on page: ${workersOnCurrentPage}, Need new page by grid: ${needNewPageByGrid}`);
-    
     if (needNewPageBySpace || needNewPageByGrid) {
-      console.log(`  Adding new page for worker ${i+1}`);
       await k.addPage(); // Header akan otomatis ditambahkan oleh addPage()
       
       currentRow = 0;
@@ -888,10 +893,8 @@ async function drawWorkerCard(
 
   // Load and draw photo if available
   if (worker.worker_photo) {
-    console.log('Worker has photo:', worker.worker_name, worker.worker_photo);
     const photoImage = await loadWorkerPhoto(doc, worker.worker_photo);
     if (photoImage) {
-      console.log('Photo loaded successfully for:', worker.worker_name);
       // Calculate dimensions to maintain aspect ratio
       const imgDims = photoImage.scale(1);
       const imgAspectRatio = imgDims.width / imgDims.height;
@@ -920,7 +923,6 @@ async function drawWorkerCard(
         height: drawHeight,
       });
     } else {
-      console.log('Photo not loaded for:', worker.worker_name);
       // Draw placeholder text if photo couldn't be loaded
       page.drawText("Foto tidak", { 
         x: x + photoWidth/2 - 25, 
@@ -938,7 +940,6 @@ async function drawWorkerCard(
       });
     }
   } else {
-    console.log('Worker has no photo:', worker.worker_name);
     // Draw placeholder for no photo
     page.drawText("Tidak ada", { 
       x: x + photoWidth/2 - 25, 

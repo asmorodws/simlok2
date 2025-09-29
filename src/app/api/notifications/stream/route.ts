@@ -66,13 +66,14 @@ export async function GET(request: NextRequest) {
 
       subscriber.on('message', (channel, message) => {
         try {
-          console.log(`📨 Received message on ${channel}:`, message);
+          console.log(`📨 SSE Received message on ${channel}:`, message);
           const data = JSON.parse(message);
           
           // Send the notification data to client
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+          console.log(`📤 SSE Forwarded message to client:`, data.type);
         } catch (error) {
-          console.error('Error processing Redis message:', error);
+          console.error('❌ SSE Error processing Redis message:', error);
         }
       });
 

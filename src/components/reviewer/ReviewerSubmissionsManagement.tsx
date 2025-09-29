@@ -18,7 +18,7 @@ import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailMod
 import { useSocket } from '@/components/common/RealtimeUpdates';
 
 interface Submission {
-  id: string;
+  id: string; // Keep for internal operations
   approval_status: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
   final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
@@ -50,19 +50,18 @@ interface Submission {
   approved_at?: string;
   signer_position?: string;
   signer_name?: string;
+  scan_count: number;
+  last_scanned_at?: string | null;
   user: {
-    id: string;
     officer_name: string;
     email: string;
     vendor_name: string;
   };
   reviewed_by_user?: {
-    id: string;
     officer_name: string;
     email: string;
   };
   worker_list: Array<{
-    id: string;
     worker_name: string;
     worker_photo: string | null;
   }>;
@@ -89,7 +88,7 @@ export default function ReviewerSubmissionsManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('');
-  const [finalStatusFilter, setFinalStatusFilter] = useState<string>('');
+  const [finalStatusFilter, setFinalStatusFilter] = useState<string>(''); // Default to show all statuses
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -321,14 +320,17 @@ export default function ReviewerSubmissionsManagement() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status Final
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status Scan
+                    </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Aksi
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {submissions.map((submission) => (
-                    <tr key={submission.id} className="hover:bg-gray-50 transition-colors">
+                  {submissions.map((submission, index) => (
+                    <tr key={`submission-${index}-${submission.created_at}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {new Date(submission.created_at).toLocaleDateString('id-ID', {
@@ -370,6 +372,33 @@ export default function ReviewerSubmissionsManagement() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         {getFinalStatusBadge(submission.final_status)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {submission.final_status === 'APPROVED' ? (
+                          <div className="text-sm">
+                            {submission.scan_count > 0 ? (
+                              <div>
+                                <Badge variant="success">
+                                  Sudah discan ({submission.scan_count}x)
+                                </Badge>
+                                {submission.last_scanned_at && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    Terakhir: {new Date(submission.last_scanned_at).toLocaleDateString('id-ID', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <Badge variant="warning">Belum discan</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <Button

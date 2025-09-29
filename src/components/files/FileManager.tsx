@@ -13,6 +13,8 @@ import {
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useToast } from '@/hooks/useToast';
 
 interface FileInfo {
   originalName: string;
@@ -24,15 +26,12 @@ interface FileInfo {
   category: 'sika' | 'simja' | 'id_card' | 'other';
 }
 
-interface FilesByCategory {
-  sika: FileInfo[];
-  simja: FileInfo[];
-  id_card: FileInfo[];
-  other: FileInfo[];
-}
-
 export default function FileManager() {
-  const [files, setFiles] = useState<FilesByCategory>({
+  const { showSuccess, showError } = useToast();
+  const [files, setFiles] = useState<{
+    [key: string]: FileInfo[]
+  }>({
+    worker_photo: [],
     sika: [],
     simja: [],
     id_card: [],
@@ -116,12 +115,13 @@ export default function FileManager() {
         await loadFiles(); // Reload files
         setRenaming(null);
         setNewName('');
+        showSuccess('Berhasil', 'File berhasil diubah namanya');
       } else {
-        alert(data.error || 'Failed to rename file');
+        showError('Error', data.error || 'Failed to rename file');
       }
     } catch (error) {
       console.error('Error renaming file:', error);
-      alert('Error renaming file');
+      showError('Error', 'Error renaming file');
     }
   };
 
@@ -137,12 +137,13 @@ export default function FileManager() {
       
       if (data.success) {
         await loadFiles(); // Reload files
+        showSuccess('Berhasil', 'File berhasil dihapus');
       } else {
-        alert(data.error || 'Failed to delete file');
+        showError('Error', data.error || 'Failed to delete file');
       }
     } catch (error) {
       console.error('Error deleting file:', error);
-      alert('Error deleting file');
+      showError('Error', 'Error deleting file');
     }
   };
 
@@ -160,14 +161,14 @@ export default function FileManager() {
       const data = await response.json();
       
       if (data.success) {
-        alert(`Migration completed! ${data.migrated} files moved.${data.errors.length > 0 ? ` ${data.errors.length} errors occurred.` : ''}`);
+        showSuccess('Migration Completed', `${data.migrated} files moved.${data.errors.length > 0 ? ` ${data.errors.length} errors occurred.` : ''}`);
         await loadFiles(); // Reload files
       } else {
-        alert(data.error || 'Migration failed');
+        showError('Migration Failed', data.error || 'Migration failed');
       }
     } catch (error) {
       console.error('Error migrating files:', error);
-      alert('Error migrating files');
+      showError('Error', 'Error migrating files');
     } finally {
       setMigrating(false);
     }
@@ -189,8 +190,8 @@ export default function FileManager() {
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <ArrowPathIcon className="h-8 w-8 animate-spin text-blue-500" />
-        <span className="ml-2">Loading files...</span>
+        <LoadingSpinner size="lg" />
+        <span className="ml-3 text-gray-600">Memuat file...</span>
       </div>
     );
   }

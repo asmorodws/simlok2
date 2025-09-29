@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShow] = useState(false);
-  const [keepLoggedIn, setKeep] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
@@ -25,7 +24,24 @@ export default function LoginPage() {
     });
 
     if (res?.error) {
-      setError(res.error);
+      // Convert NextAuth error codes to user-friendly messages
+      switch (res.error) {
+        case "CredentialsSignin":
+          setError("Email atau password salah");
+          break;
+        case "Configuration":
+          setError("Terjadi kesalahan konfigurasi sistem");
+          break;
+        case "AccessDenied":
+          setError("Akses ditolak");
+          break;
+        case "Verification":
+          setError("Token verifikasi tidak valid");
+          break;
+        default:
+          setError("Terjadi kesalahan saat login. Silakan coba lagi.");
+          break;
+      }
     } else {
       router.push("/");
     }
@@ -37,12 +53,10 @@ export default function LoginPage() {
         email={email}
         password={password}
         showPassword={showPassword}
-        keepLoggedIn={keepLoggedIn}
         error={error}
         setEmail={setEmail}
         setPassword={setPassword}
         setShow={setShow}
-        setKeep={setKeep}
         handleSubmit={handleSubmit}
       />
     </AuthRedirect>

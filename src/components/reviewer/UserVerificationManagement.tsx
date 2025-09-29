@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useSocket } from '@/app/socket-provider';
 import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
+import { useToast } from '@/hooks/useToast';
 import { 
   MagnifyingGlassIcon,
   ChevronUpIcon,
@@ -70,6 +70,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export default function UserVerificationManagement({ className = '', refreshTrigger = 0 }: UserVerificationManagementProps) {
+  const { showSuccess, showError } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
@@ -108,7 +109,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
   // Debounced search term
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const { socket } = useSocket();
+  // Socket.IO has been replaced with Server-Sent Events
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -154,27 +155,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
     fetchUsers();
   }, [fetchUsers, refreshTrigger]);
 
-  useEffect(() => {
-    if (socket) {
-      // Listen for new user registrations
-      socket.on('user:verification-needed', () => {
-        console.log('New user needs verification, refreshing list');
-        fetchUsers();
-      });
-
-      // Listen for notification updates
-      socket.on('notification:new', () => {
-        fetchUsers();
-      });
-
-      return () => {
-        socket.off('user:verification-needed');
-        socket.off('notification:new');
-      };
-    }
-    
-    return () => {}; // Cleanup function for when socket is null
-  }, [socket, fetchUsers]);
+  // Socket.IO functionality removed - using Server-Sent Events instead
 
   // Reset ke halaman 1 saat search term berubah
   useEffect(() => {
@@ -297,9 +278,11 @@ export default function UserVerificationManagement({ className = '', refreshTrig
       setSelectedUser(null);
       setVerificationNote('');
       
+      showSuccess('Berhasil', action === 'approve' ? 'User berhasil diverifikasi' : 'User berhasil ditolak');
+      
     } catch (error) {
       console.error('Error updating user verification:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update user verification');
+      showError('Error', error instanceof Error ? error.message : 'Failed to update user verification');
     } finally {
       setProcessing(null);
     }
@@ -640,8 +623,6 @@ export default function UserVerificationManagement({ className = '', refreshTrig
           onClose={handleModalClose}
           user={selectedUser}
           isProcessing={processing === selectedUser.id}
-          verificationNote={verificationNote}
-          setVerificationNote={setVerificationNote}
           onApprove={() => setShowConfirmModal('approve')}
           onReject={() => setShowConfirmModal('reject')}
         />
@@ -668,8 +649,6 @@ interface UserVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   isProcessing: boolean;
-  verificationNote: string;
-  setVerificationNote: (note: string) => void;
   onApprove: () => void;
   onReject: () => void;
 }
@@ -679,8 +658,6 @@ function UserVerificationModal({
   isOpen,
   onClose,
   isProcessing,
-  verificationNote,
-  setVerificationNote,
   onApprove,
   onReject
 }: UserVerificationModalProps) {
@@ -897,18 +874,6 @@ function UserVerificationModal({
                       sedangkan penolakan akan menghapus user dari sistem.
                     </p>
 
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Catatan (Opsional)
-                      </label>
-                      <textarea
-                        value={verificationNote}
-                        onChange={(e) => setVerificationNote(e.target.value)}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Tambahkan catatan jika diperlukan..."
-                      />
-                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4">
                       <Button

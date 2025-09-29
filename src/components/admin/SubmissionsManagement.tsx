@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import AdminSubmissionDetailModal from './AdminSubmissionDetailModal';
+import TableLoader from '@/components/ui/TableLoader';
 import ExportModal from './ExportModal';
 import { useSubmissionStore } from '@/store/useSubmissionStore';
 import { useSocket } from '@/components/common/RealtimeUpdates';
@@ -422,43 +423,8 @@ export default function SubmissionsManagement() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-white shadow-sm">
-          {/* Loading Skeleton */}
           {loading ? (
-            <div className="divide-y">
-              {/* Header skeleton */}
-              <div className="bg-gray-50/50 p-3">
-                <div className="grid grid-cols-6 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                  ))}
-                </div>
-              </div>
-              {/* Rows skeleton */}
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="p-3">
-                  <div className="grid grid-cols-6 gap-4 items-center">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                      <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                      <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                    </div>
-                    <div className="h-6 bg-gray-200 rounded-full animate-pulse w-20"></div>
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-16"></div>
-                    <div className="flex space-x-2">
-                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
-                      <div className="h-8 bg-gray-200 rounded animate-pulse w-16"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TableLoader rows={5} columns={6} showHeader={true} />
           ) : (
             <>
               {/* Desktop Table View */}

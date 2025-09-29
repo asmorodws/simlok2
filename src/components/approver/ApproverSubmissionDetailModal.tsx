@@ -9,13 +9,24 @@ import {
   UserGroupIcon,
   ClipboardDocumentCheckIcon,
   QrCodeIcon,
-  ClockIcon
+  ClockIcon,
+  BuildingOfficeIcon,
+  UserIcon,
+  BriefcaseIcon,
+  DocumentIcon,
+  CalendarIcon,
+  EyeIcon,
+  MapPinIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import DetailSection from '@/components/common/DetailSection';
+import InfoCard from '@/components/common/InfoCard';
+import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
+
 import DatePicker from '@/components/form/DatePicker';
 
 interface SubmissionDetail {
@@ -72,6 +83,7 @@ interface QrScan {
   id: string;
   scanned_at: string;
   scanner_name?: string;
+  scan_location?: string;
   notes?: string;
   user: {
     id: string;
@@ -108,6 +120,15 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState<ScanHistory | null>(null);
   const [loadingScanHistory, setLoadingScanHistory] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{
+    isOpen: boolean;
+    fileUrl: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    fileUrl: '',
+    fileName: ''
+  });
   const { showSuccess, showError } = useToast();
 
   // Function to generate auto SIMLOK number - mengikuti sistem admin yang sudah ada
@@ -138,6 +159,39 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     return now.toISOString().split('T')[0];
   };
 
+  // Format date for display
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Handle file view
+  const handleFileView = (fileUrl: string, fileName: string) => {
+    if (fileUrl) {
+      // Convert legacy URL to new format if needed
+      const convertedUrl = fileUrlHelper.convertLegacyUrl(fileUrl, fileName);
+      setPreviewModal({
+        isOpen: true,
+        fileUrl: convertedUrl,
+        fileName
+      });
+    }
+  };
+
+  // Handle close preview
+  const handleClosePreview = () => {
+    setPreviewModal({
+      isOpen: false,
+      fileUrl: '',
+      fileName: ''
+    });
+  };
+
   // Approval form state
   const [approvalData, setApprovalData] = useState({
     final_status: '' as 'APPROVED' | 'REJECTED' | '',
@@ -153,6 +207,15 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       
       const response = await fetch(`/api/approver/simloks/${submissionId}`);
       if (!response.ok) {
+        if (response.status === 404) {
+          showError('Pengajuan Tidak Ditemukan', 'Pengajuan sudah dihapus oleh vendor');
+          onClose();
+          // Add delay before refreshing so user can see the error message
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          return;
+        }
         throw new Error('Gagal mengambil detail pengajuan');
       }
       
@@ -245,6 +308,15 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          showError('Pengajuan Tidak Ditemukan', 'Pengajuan sudah dihapus oleh vendor');
+          onClose();
+          // Add delay before refreshing so user can see the error message
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          return;
+        }
         const errorData = await response.json();
         throw new Error(errorData.error || 'Gagal mengirim persetujuan');
       }
@@ -327,9 +399,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                     )}
                   </p>
                 )}
-                <p className="text-xs">
-                  <span className="font-medium">ID Pengajuan:</span> {submission.id}
-                </p>
+
                 
                 {/* Scan Status */}
                 <div className="mt-2 pt-2 border-t border-gray-100">
@@ -354,15 +424,23 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       )}
                       
                       {scanHistory.lastScan && (
-                        <div className="flex items-center text-xs text-gray-500">
-                          <ClockIcon className="h-3 w-3 mr-1" />
-                          <span>Terakhir discan: {new Date(scanHistory.lastScan.scanned_at).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center text-xs text-gray-500">
+                            <ClockIcon className="h-3 w-3 mr-1" />
+                            <span>Terakhir discan: {new Date(scanHistory.lastScan.scanned_at).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}</span>
+                          </div>
+                          {scanHistory.lastScan.scan_location && (
+                            <div className="flex items-center text-xs text-gray-500">
+                              <MapPinIcon className="h-3 w-3 mr-1" />
+                              <span>Lokasi: {scanHistory.lastScan.scan_location}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -437,10 +515,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
             <>
               {/* Details Tab */}
               {activeTab === 'details' && (
-                <div className="space-y-8">
-                  {/* Header with Status */}
+                <div className="space-y-6">
+                  {/* Header dengan Status */}
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Informasi SIMLOK</h3>
+                    <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
                     <div className="flex items-center space-x-3">
                       <span className="text-sm text-gray-500">Review:</span>
                       {getStatusBadge(submission.review_status)}
@@ -449,273 +527,242 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                     </div>
                   </div>
 
-                  {/* Data Vendor */}
-                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                    <h4 className="text-base font-semibold text-gray-900 mb-6">Data Vendor & Penanggung Jawab</h4>
-                    
-                    <div className="space-y-6">
-                      {/* Informasi Vendor */}
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h5 className="text-lg font-semibold text-gray-900 mb-6">Informasi Vendor</h5>
-                        
-                        {/* Informasi Perusahaan */}
-                        <div className="mb-6">
-                          <h6 className="text-sm font-medium text-gray-800 mb-4 pb-2 border-b border-gray-200">Informasi Perusahaan</h6>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Nama Perusahaan Vendor
-                              </label>
-                              <p className="text-gray-900 py-2 font-medium">{submission.vendor_name}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Nomor Telepon Vendor
-                              </label>
-                              <p className="text-gray-900 py-2">
-                                {submission.vendor_phone || (
-                                  <span className="text-gray-400 italic">Belum diisi</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Informasi Penanggung Jawab */}
-                        <div>
-                          <h6 className="text-sm font-medium text-gray-800 mb-4 pb-2 border-b border-gray-200">Informasi Penanggung Jawab</h6>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Nama Penanggung Jawab
-                              </label>
-                              <p className="text-gray-900 py-2 font-medium">{submission.officer_name}</p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Email Penanggung Jawab
-                              </label>
-                              <p className="text-gray-900 py-2">{submission.officer_email || '-'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Dokumen Dasar */}
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Berdasarkan</h5>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Dokumen Dasar / Referensi
-                          </label>
-                          <div className="bg-white rounded-md p-4 border border-gray-200">
-                            <p className="text-gray-900 whitespace-pre-line leading-relaxed">{submission.based_on}</p>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-3">
-                            Dokumen kontrak, SPK, Work Order, atau referensi lain yang menjadi dasar pengajuan SIMLOK
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Status Pengajuan */}
-                      <div className="bg-white rounded-lg p-6 border border-gray-200">
-                        <h5 className="text-lg font-semibold text-gray-900 mb-4">Status Pengajuan</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="bg-white rounded-md p-4 border border-gray-200">
-                            <div className="text-sm text-gray-600 mb-2 font-medium">Tanggal Pengajuan</div>
-                            <div className="text-base font-semibold text-gray-900">
-                              {new Date(submission.created_at).toLocaleDateString('id-ID')}
-                            </div>
-                          </div>
-                          <div className="bg-white rounded-md p-4 border border-gray-200">
-                            <div className="text-sm text-gray-600 mb-2 font-medium">Status Review</div>
-                            <div>{getStatusBadge(submission.review_status)}</div>
-                          </div>
-                          <div className="bg-white rounded-md p-4 border border-gray-200">
-                            <div className="text-sm text-gray-600 mb-2 font-medium">Status Persetujuan</div>
-                            <div>{getStatusBadge(submission.final_status)}</div>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Informasi Vendor - menggunakan DetailSection seperti admin */}
+                  <DetailSection 
+                    title="Informasi Vendor" 
+                    icon={<BuildingOfficeIcon className="h-5 w-5 text-blue-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Nama Vendor"
+                        value={submission.vendor_name}
+                      />
+                      <InfoCard
+                        label="Nama Petugas"
+                        value={submission.officer_name}
+                        icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+                      />
+                      {/* <InfoCard
+                        label="Email"
+                        value={submission.officer_email || '-'}
+                      /> */}
+                      <InfoCard
+                        label="Nomor Telepon Vendor"
+                        value={submission.vendor_phone || '-'}
+                      />
+                      <InfoCard
+                        label="Berdasarkan"
+                        value={submission.based_on}
+                        className="md:col-span-2"
+                      />
                     </div>
-                  </div>
+                  </DetailSection>
 
-                  {/* Informasi Pekerjaan */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Informasi Pekerjaan</h4>
-                    <div className="space-y-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Deskripsi Pekerjaan
-                        </label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900 whitespace-pre-line">{submission.job_description}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Lokasi Kerja
-                          </label>
-                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                            <p className="text-gray-900 font-medium">{submission.work_location}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Jam Kerja
-                          </label>
-                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                            <p className="text-gray-900 font-medium">{submission.working_hours || 'Tidak ditentukan'}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Jumlah Pekerja
-                          </label>
-                          <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                            <p className="text-gray-900 font-bold text-lg">{submission.worker_count || 0} <span className="text-sm font-normal">orang</span></p>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Informasi Dokumen - sama seperti admin */}
+                  <DetailSection 
+                    title="Informasi Dokumen" 
+                    icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {submission.simja_number && (
+                        <InfoCard
+                          label="Nomor SIMJA"
+                          value={submission.simja_number}
+                        />
+                      )}
+                      {submission.simja_date && (
+                        <InfoCard
+                          label="Tanggal SIMJA"
+                          value={formatDate(submission.simja_date)}
+                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                      )}
+                      {submission.sika_number && (
+                        <InfoCard
+                          label="Nomor SIKA"
+                          value={submission.sika_number}
+                        />
+                      )}
+                      {submission.sika_date && (
+                        <InfoCard
+                          label="Tanggal SIKA"
+                          value={formatDate(submission.sika_date)}
+                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                      )}
+                      {/* Status dan Tanggal Pengajuan */}
+                      <InfoCard
+                        label="Tanggal Pengajuan"
+                        value={formatDate(submission.created_at)}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
+                    </div>
+                  </DetailSection>
 
-                      {/* Informasi Tambahan */}
-                      {(submission.work_facilities || submission.implementation || submission.other_notes) && (
-                        <div className="border-t border-gray-200 pt-4 space-y-4">
-                          {submission.work_facilities && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Fasilitas Kerja
-                              </label>
-                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                                <p className="text-gray-900 text-sm">{submission.work_facilities}</p>
-                              </div>
-                            </div>
-                          )}
-                          
-                          {submission.implementation && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Keterangan Pelaksanaan
-                              </label>
-                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                                <p className="text-gray-900 text-sm whitespace-pre-line">{submission.implementation}</p>
-                              </div>
-                            </div>
-                          )}
+                  {/* Detail Pekerjaan - sama seperti admin */}
+                  <DetailSection 
+                    title="Informasi Pekerjaan" 
+                    icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Pekerjaan"
+                        value={submission.job_description}
+                      />
+                      <InfoCard
+                        label="Lokasi Kerja"
+                        value={submission.work_location}
+                      />
+                      <InfoCard
+                        label="Pelaksanaan"
+                        value={submission.implementation || 'Belum diisi'}
+                      />
+                      <InfoCard
+                        label="Jam Kerja"
+                        value={submission.working_hours}
+                      />
+                      <InfoCard
+                        label="Jumlah Pekerja"
+                        value={`${submission.worker_count || 0} orang`}
+                      />
+                      <InfoCard
+                        label="Sarana Kerja"
+                        value={submission.work_facilities}
+                      />
+                    </div>
+                  </DetailSection>
 
-                          {submission.other_notes && (
+                  {/* Dokumen Pendukung */}
+                  <DetailSection title="Dokumen Pendukung" icon={<DocumentTextIcon className="h-5 w-5 text-blue-600" />}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Nomor SIMJA"
+                        value={submission.simja_number || '-'}
+                      />
+                      <InfoCard
+                        label="Tanggal SIMJA"
+                        value={submission.simja_date ? formatDate(submission.simja_date) : '-'}
+                      />
+                      <InfoCard
+                        label="Nomor SIKA"
+                        value={submission.sika_number || '-'}
+                      />
+                      <InfoCard
+                        label="Tanggal SIKA"
+                        value={submission.sika_date ? formatDate(submission.sika_date) : '-'}
+                      />
+                    </div>
+                  </DetailSection>
+
+                  {/* Jadwal Pelaksanaan */}
+                  <DetailSection title="Jadwal Pelaksanaan" icon={<CalendarIcon className="h-5 w-5 text-blue-600" />}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Tanggal Mulai Pelaksanaan"
+                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
+                      <InfoCard
+                        label="Tanggal Selesai Pelaksanaan"
+                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
+                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                      />
+                    </div>
+                  </DetailSection>
+
+                  {/* Dokumen Upload */}
+                  <DetailSection 
+                    title="Dokumen Upload" 
+                    icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Dokumen SIKA */}
+                      {submission.sika_document_upload && (
+                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Catatan Lainnya
-                              </label>
-                              <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                                <p className="text-gray-900 text-sm whitespace-pre-line">{submission.other_notes}</p>
-                              </div>
+                              <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                              <p className="text-sm text-gray-500">File tersedia</p>
                             </div>
-                          )}
+                          </div>
+                          <button
+                            onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                            <span>Lihat</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Dokumen SIMJA */}
+                      {submission.simja_document_upload && (
+                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                            <div>
+                              <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                              <p className="text-sm text-gray-500">File tersedia</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <EyeIcon className="w-4 h-4" />
+                            <span>Lihat</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Message if no documents */}
+                      {!submission.sika_document_upload && !submission.simja_document_upload && (
+                        <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                          <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                          <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Dokumen Pendukung */}
-                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Dokumen Pendukung</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nomor SIMJA</label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">{submission.simja_number || '-'}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal SIMJA</label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">
-                            {submission.simja_date ? new Date(submission.simja_date).toLocaleDateString('id-ID') : '-'}
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nomor SIKA</label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">{submission.sika_number || '-'}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal SIKA</label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">
-                            {submission.sika_date ? new Date(submission.sika_date).toLocaleDateString('id-ID') : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Jadwal Pelaksanaan */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-base font-semibold text-gray-900 mb-4">Jadwal Pelaksanaan</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tanggal Mulai Pelaksanaan
-                        </label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">
-                            {submission.implementation_start_date ? new Date(submission.implementation_start_date).toLocaleDateString('id-ID') : '-'}
-                          </p>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tanggal Selesai Pelaksanaan
-                        </label>
-                        <div className="bg-white p-3 border border-gray-200 rounded-lg">
-                          <p className="text-gray-900">
-                            {submission.implementation_end_date ? new Date(submission.implementation_end_date).toLocaleDateString('id-ID') : '-'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  </DetailSection>
 
                   {/* Final Status Information */}
                   {submission.final_status !== 'PENDING_APPROVAL' && (
-                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
-                      <h4 className="text-base font-semibold text-gray-900 mb-4">Status</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-600 mr-2">Status:</span>
-                          {getStatusBadge(submission.final_status)}
-                        </div>
+                    <DetailSection title="Status Pengajuan" icon={<CheckCircleIcon className="h-5 w-5 text-blue-600" />}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <InfoCard
+                          label="Status"
+                          value={getStatusBadge(submission.final_status)}
+                        />
                         {submission.simlok_number && (
-                          <p className="text-sm text-gray-700">
-                            <strong>Nomor SIMLOK:</strong> {submission.simlok_number}
-                          </p>
+                          <InfoCard
+                            label="Nomor SIMLOK"
+                            value={submission.simlok_number}
+                          />
                         )}
                         {submission.simlok_date && (
-                          <p className="text-sm text-gray-700">
-                            <strong>Tanggal SIMLOK:</strong> {new Date(submission.simlok_date).toLocaleDateString('id-ID')}
-                          </p>
+                          <InfoCard
+                            label="Tanggal SIMLOK"
+                            value={formatDate(submission.simlok_date)}
+                          />
                         )}
                         {submission.final_note && (
-                          <p className="text-sm text-gray-700">
-                            <strong>Catatan:</strong> {submission.final_note}
-                          </p>
+                          <InfoCard
+                            label="Catatan"
+                            value={submission.final_note}
+                            className="md:col-span-2"
+                          />
                         )}
                         {submission.approved_by_name && (
-                          <p className="text-xs text-gray-500">
-                            Diproses oleh: {submission.approved_by_name}
-                            {submission.approved_at && (
-                              <span> pada {new Date(submission.approved_at).toLocaleDateString('id-ID')}</span>
-                            )}
-                          </p>
+                          <InfoCard
+                            label="Diproses oleh"
+                            value={`${submission.approved_by_name}${submission.approved_at ? ` pada ${formatDate(submission.approved_at)}` : ''}`}
+                            className="md:col-span-2"
+                          />
                         )}
                       </div>
-                    </div>
+                    </DetailSection>
                   )}
                 </div>
               )}
@@ -1113,6 +1160,14 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         submissionId={submissionId}
         submissionName={submission?.vendor_name || ''}
         nomorSimlok={submission?.simlok_number || ''}
+      />
+
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={handleClosePreview}
+        fileUrl={previewModal.fileUrl}
+        fileName={previewModal.fileName}
       />
     </div>
   );

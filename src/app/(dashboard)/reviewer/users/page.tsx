@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Role } from "@prisma/client";
+// Import role types
 import { redirect } from "next/navigation";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import UserVerificationManagement from "@/components/reviewer/UserVerificationManagement";
+import PageLoader from "@/components/ui/PageLoader";
 
 export default function UserVerificationPage() {
   const { data: session, status } = useSession();
@@ -16,15 +17,11 @@ export default function UserVerificationPage() {
 
   // Loading state
   if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500"></div>
-      </div>
-    );
+    return <PageLoader message="Memuat halaman verifikasi user..." fullScreen={false} />;
   }
 
   // Redirect if not authenticated or not authorized
-  if (!session || !["REVIEWER", "ADMIN", "SUPER_ADMIN"].includes(session.user.role as Role)) {
+  if (!session || !["REVIEWER", "ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
     redirect("/login");
   }
 

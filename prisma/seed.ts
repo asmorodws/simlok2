@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -53,7 +53,7 @@ async function main() {
       officer_name: "Admin Utama",
       email: "admin@example.com",
       password: "admin123",
-      role: Role.ADMIN,
+      role: "ADMIN" as const,
       profile_photo: null,
       address: "Jl. Admin No. 1, Jakarta",
       phone_number: "081234567890",
@@ -65,7 +65,7 @@ async function main() {
       officer_name: "Super Admin",
       email: "superadmin@example.com",
       password: "super123", 
-      role: Role.SUPER_ADMIN,
+      role: "SUPER_ADMIN" as const,
       profile_photo: null,
       address: "Jl. Super Admin No. 1, Jakarta",
       phone_number: "081234567889",
@@ -77,7 +77,7 @@ async function main() {
       officer_name: "Reviewer Utama",
       email: "reviewer@example.com",
       password: "reviewer123",
-      role: Role.REVIEWER,
+      role: "REVIEWER" as const,
       profile_photo: null,
       address: "Jl. Reviewer No. 2, Jakarta",
       phone_number: "081234567888",
@@ -89,7 +89,7 @@ async function main() {
       officer_name: "Approver Utama",
       email: "approver@example.com",
       password: "approver123",
-      role: Role.APPROVER,
+      role: "APPROVER" as const,
       profile_photo: null,
       address: "Jl. Approver No. 3, Jakarta",
       phone_number: "081234567887",
@@ -101,7 +101,7 @@ async function main() {
       officer_name: "Verifier Utama",
       email: "verifier@example.com",
       password: "verifier123",
-      role: Role.VERIFIER,
+      role: "VERIFIER" as const,
       profile_photo: null,
       address: "Jl. Verifier No. 4, Jakarta",
       phone_number: "081234567891",
@@ -113,7 +113,7 @@ async function main() {
       officer_name: "Vendor A Petugas",
       email: "vendora@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: "VENDOR" as const,
       profile_photo: null,
       address: "Jl. Vendor A No. 5, Jakarta",
       phone_number: "081234567892",
@@ -125,7 +125,7 @@ async function main() {
       officer_name: "Vendor B Petugas",
       email: "vendorb@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: "VENDOR" as const,
       profile_photo: null,
       address: "Jl. Vendor B No. 6, Bandung",
       phone_number: "081234567893",
@@ -137,7 +137,7 @@ async function main() {
       officer_name: "Vendor C Petugas",
       email: "vendorc@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: "VENDOR" as const,
       profile_photo: null,
       address: "Jl. Vendor C No. 7, Surabaya",
       phone_number: "081234567894",
@@ -271,8 +271,12 @@ async function main() {
       const createdDate = new Date(currentDate);
       createdDate.setDate(createdDate.getDate() - Math.floor(Math.random() * 60)); // Random date within last 60 days
       
+      const workerNamesArray = template.worker_names.split('\n');
+      const workerCount = workerNamesArray.length;
+      
       const submissionData: any = {
         vendor_name: vendorData.vendor_name,
+        vendor_phone: vendorData.phone_number, // Ambil dari phone number vendor
         based_on: `${template.based_on.split('No.')[0]}No. ${template.based_on.split('/')[1]}/2024/${String(submissionCount + 1).padStart(3, '0')}`,
         officer_name: vendorData.officer_name,
         job_description: template.job_description,
@@ -282,9 +286,12 @@ async function main() {
         other_notes: null, // akan diisi admin saat approve
         work_facilities: template.work_facilities,
         worker_names: template.worker_names,
+        worker_count: workerCount, // Hitung dari worker_names
         content: null, // akan diisi admin saat approve
         user_id: vendorData.id,
         approval_status: status,
+        review_status: "PENDING_REVIEW", // Default review status
+        final_status: "PENDING_APPROVAL", // Default final status
         qrcode: '',
         created_at: createdDate,
         simja_number: submissionCount % 2 === 0 ? `SIMJA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
@@ -303,7 +310,6 @@ async function main() {
       });
 
       // Create worker list for this submission
-      const workerNamesArray = template.worker_names.split('\n');
       for (const workerName of workerNamesArray) {
         await prisma.workerList.create({
           data: {
@@ -359,21 +365,67 @@ async function main() {
         simlok_date: simlokDate,
         approved_by: approverUser.id,
         reviewed_by_id: reviewerUser.id,
+        reviewed_at: new Date(simlokDate.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 hari sebelum simlok
         review_status: 'MEETS_REQUIREMENTS',
         review_note: `Dokumen lengkap dan sesuai persyaratan untuk ${submission.job_description}`,
         approved_by_final_id: approverUser.id,
+        approved_at: simlokDate,
         final_status: 'APPROVED',
         final_note: `Disetujui untuk pelaksanaan di ${submission.work_location}`,
-        implementation: `Pelaksanaan ${submission.job_description} sesuai dengan SPK yang telah disetujui`,
+        implementation: `Terhitung mulai tanggal ${implStartDate.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long', 
+          year: 'numeric'
+        })} sampai ${implEndDate.toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long', 
+          year: 'numeric'
+        })}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`,
         implementation_start_date: implStartDate,
         implementation_end_date: implEndDate,
-        content: `Dokumen SIMLOK untuk ${submission.job_description} di ${submission.work_location}`,
+        content: `Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.`,
+        other_notes: `Izin diberikan berdasarkan:\n${submission.simja_number ? `• Simja Ast Man Facility Management\n  ${submission.simja_number} Tgl. ${submission.simja_date ? submission.simja_date.toLocaleDateString('id-ID') : ''}\n` : ''}${submission.sika_number ? `• SIKA Pekerjaan Dingin\n  ${submission.sika_number} Tgl. ${submission.sika_date ? submission.sika_date.toLocaleDateString('id-ID') : ''}\n` : ''}  Diterima Sr Officer Security III\n  ${simlokDate.toLocaleDateString('id-ID')}`,
+        signer_position: 'Sr Officer Security III',
+        signer_name: 'Julianto Santoso',
         qrcode: `{"submissionId":"${submission.id}","simlokNumber":"${simlokNumber}","vendorName":"${submission.vendor_name}","type":"SIMLOK_QR"}`,
       }
     });
   }
   
   console.log(`   ✓ ${submissionsToApprove.length} submissions diupdate ke status APPROVED`);
+  
+  // Create some submissions with NOT_MEETS_REQUIREMENTS status
+  console.log("❌ Membuat submissions dengan status NOT_MEETS_REQUIREMENTS...");
+  const remainingSubmissions = await prisma.submission.findMany({
+    where: {
+      review_status: 'PENDING_REVIEW'
+    },
+    take: 3 // Ambil 3 submission untuk dijadikan NOT_MEETS_REQUIREMENTS
+  });
+
+  for (let i = 0; i < remainingSubmissions.length; i++) {
+    const submission = remainingSubmissions[i];
+    if (!submission) continue;
+    
+    const rejectionReasons = [
+      'Dokumen SIMJA tidak lengkap atau tidak sesuai',
+      'Dokumen SIKA tidak memenuhi standar keselamatan',
+      'Data pekerja tidak lengkap atau tidak valid'
+    ];
+
+    await prisma.submission.update({
+      where: { id: submission.id },
+      data: {
+        reviewed_by_id: reviewerUser.id,
+        reviewed_at: new Date(submission.created_at.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000), // 0-5 days after creation
+        review_status: 'NOT_MEETS_REQUIREMENTS',
+        review_note: rejectionReasons[i] || 'Dokumen tidak memenuhi persyaratan yang ditetapkan',
+        final_status: 'PENDING_APPROVAL', // Tetap menunggu keputusan final dari approver
+      }
+    });
+  }
+  
+  console.log(`   ✓ ${remainingSubmissions.length} submissions diupdate ke status NOT_MEETS_REQUIREMENTS`);
   
   // Add QR Scans for approved submissions
   console.log("🔍 Menambahkan data QR scans untuk submissions yang sudah diapprove...");

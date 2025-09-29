@@ -28,10 +28,9 @@ interface QrScanResultModalProps {
   onClose: () => void;
   result: ScanResult;
   submission?: Submission | null;
-  scanTime?: string | undefined;
-  scannedBy?: string | undefined;
-  scanId?: string | undefined;
-  onScanAnother?: () => void;
+  scanTime?: Date;
+  scannedBy?: string;
+  onScanAnother: () => void;
 }
 
 const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
@@ -41,7 +40,6 @@ const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
   submission,
   scanTime,
   scannedBy,
-  scanId,
   onScanAnother
 }) => {
   // Extract submission from result if not provided directly
@@ -110,7 +108,7 @@ const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
               {scanTime && (
                 <div className="flex justify-between">
                   <span className="text-green-700">Waktu Scan:</span>
-                  <span className="text-green-800 font-medium">{scanTime}</span>
+                  <span className="text-green-800 font-medium">{scanTime.toLocaleString('id-ID')}</span>
                 </div>
               )}
               {scannedBy && (
@@ -119,12 +117,12 @@ const QrScanResultModal: React.FC<QrScanResultModalProps> = ({
                   <span className="text-green-800 font-medium">{scannedBy}</span>
                 </div>
               )}
-              {scanId && (
+              {/* {scanId && (
                 <div className="flex justify-between">
                   <span className="text-green-700">ID Scan:</span>
                   <span className="text-green-800 font-mono text-xs">{scanId}</span>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
 

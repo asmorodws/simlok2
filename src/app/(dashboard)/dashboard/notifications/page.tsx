@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useToast } from '@/hooks/useToast';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import RoleGate from '@/components/security/RoleGate';
 import { 
@@ -19,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import AdminSubmissionDetailModal from '@/components/admin/AdminSubmissionDetailModal';
+import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
 import UserVerificationModal from '@/components/admin/UserVerificationModal';
 import { UserData } from '@/types/user';
@@ -80,6 +82,7 @@ interface Submission {
 
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
+  const { showError } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
@@ -361,7 +364,7 @@ export default function NotificationsPage() {
           console.log('🚀 Opening user verification modal for vendorId:', vendorId);
         } catch (err) {
           console.error('❌ Error fetching vendor details:', err);
-          alert('Gagal memuat detail vendor');
+          showError('Error', 'Gagal memuat detail vendor');
         }
       } else {
         console.warn('⚠️ No vendor ID found in notification');
@@ -446,15 +449,15 @@ export default function NotificationsPage() {
           setSelectedSubmission(submission);
         } else {
           console.error('❌ Failed to fetch submission:', response.statusText);
-          alert('Gagal memuat detail submission');
+          showError('Error', 'Gagal memuat detail submission');
         }
       } else {
         console.warn('⚠️ No submission ID found in notification');
-        alert('ID submission tidak ditemukan dalam notifikasi ini');
+        showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
       }
     } catch (error) {
       console.error('💥 Error handling notification detail:', error);
-      alert('Terjadi kesalahan saat memuat detail');
+      showError('Error', 'Terjadi kesalahan saat memuat detail');
     }
   };
 
@@ -490,9 +493,7 @@ export default function NotificationsPage() {
     return (
       <SidebarLayout title="Notifikasi" titlePage="Memuat...">
         <div className="max-w-5xl mx-auto px-3 md:px-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+          <PageLoader message="Memuat notifikasi..." fullScreen={false} />
         </div>
       </SidebarLayout>
     );

@@ -24,6 +24,9 @@ import Button from '@/components/ui/button/Button';
 interface Submission {
   id: string;
   approval_status: string;
+  review_status?: string;
+  review_note?: string;
+  final_note?: string;
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -469,6 +472,54 @@ export default function SubmissionDetailModal({
                         </div>
                       }
                     />
+                  )}
+
+                  {/* Review Notes from Reviewer - Show if exists */}
+                  {submission.review_note && (
+                    <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start">
+                        <DocumentIcon className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-blue-800 mb-2">Catatan Review</h4>
+                          <p className="text-sm text-blue-700 whitespace-pre-line">
+                            {submission.review_note}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Final Notes for Vendor - Show if exists and submission is finalized */}
+                  {submission.final_note && (submission.approval_status === 'APPROVED' || submission.approval_status === 'REJECTED') && (
+                    <div className={`md:col-span-2 border rounded-lg p-4 ${
+                      submission.approval_status === 'APPROVED' 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-start">
+                        <DocumentIcon className={`h-5 w-5 mr-3 mt-0.5 flex-shrink-0 ${
+                          submission.approval_status === 'APPROVED' 
+                            ? 'text-green-500' 
+                            : 'text-red-500'
+                        }`} />
+                        <div className="flex-1">
+                          <h4 className={`text-sm font-medium mb-2 ${
+                            submission.approval_status === 'APPROVED' 
+                              ? 'text-green-800' 
+                              : 'text-red-800'
+                          }`}>
+                            Keterangan dari Reviewer
+                          </h4>
+                          <p className={`text-sm whitespace-pre-line ${
+                            submission.approval_status === 'APPROVED' 
+                              ? 'text-green-700' 
+                              : 'text-red-700'
+                          }`}>
+                            {submission.final_note}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Status-specific information */}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { UserData } from '@/types/user';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
+import { useToast } from '@/hooks/useToast';
 import { 
   XMarkIcon, 
   CheckCircleIcon, 
@@ -38,6 +39,7 @@ export default function UserVerificationModal({
 }: UserVerificationModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState<'approve' | 'reject' | null>(null);
+  const { showError } = useToast();
 
   if (!isOpen || !user) return null;
 
@@ -92,11 +94,11 @@ export default function UserVerificationModal({
         onClose();
       } else {
         const error = await response.json();
-        alert(error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
+        showError('Error', error.error || `Gagal ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert(`Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
+      showError('Error', `Terjadi kesalahan saat ${action === 'approve' ? 'menyetujui' : 'menolak'} user`);
     } finally {
       setIsProcessing(false);
     }

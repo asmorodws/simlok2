@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
 import { UserData } from '@/types/user';
+import { useToast } from '@/hooks/useToast';
 import { 
   XMarkIcon, 
   CheckCircleIcon, 
@@ -36,6 +37,7 @@ export default function ReviewerUserVerificationModal({
 }: ReviewerUserVerificationModalProps) {
   const [processing, setProcessing] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<'approve' | 'reject' | null>(null);
+  const { showSuccess, showError } = useToast();
 
   if (!isOpen || !user) return null;
 
@@ -74,8 +76,10 @@ export default function ReviewerUserVerificationModal({
       
       if (action === 'approve' && result.user) {
         onUserUpdate?.(result.user);
+        showSuccess('Berhasil', 'User berhasil diverifikasi');
       } else if (action === 'reject') {
         onUserRemove?.();
+        showSuccess('Berhasil', 'User berhasil ditolak');
       }
 
       setShowConfirmModal(null);
@@ -83,7 +87,7 @@ export default function ReviewerUserVerificationModal({
       
     } catch (error) {
       console.error('Error updating user verification:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update user verification');
+      showError('Error', error instanceof Error ? error.message : 'Failed to update user verification');
     } finally {
       setProcessing(null);
     }
