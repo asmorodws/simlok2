@@ -15,7 +15,7 @@ import Button from '../ui/button/Button';
 import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
-import ReviewerSubmissionDetailModal from '../reviewer/ReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from '../reviewer/ImprovedReviewerSubmissionDetailModal';
 import UserVerificationModal from '../admin/UserVerificationModal';
 import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
 import { UserData } from '@/types/user';
