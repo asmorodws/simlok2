@@ -1,4 +1,4 @@
-import { Role, VerificationStatus } from "@prisma/client";
+import { User_role as Role, VerificationStatus } from "@prisma/client";
 
 export interface UserData {
   id: string;

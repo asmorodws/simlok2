@@ -93,18 +93,34 @@ export default function NotificationsPage() {
       
       setLoading(true);
       try {
-        const scope = session.user.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
+        // Convert role to lowercase scope
+        let scope = session.user.role.toLowerCase();
+        
+        // Handle SUPER_ADMIN case - they can see admin notifications
+        if (session.user.role === 'SUPER_ADMIN') {
+          scope = 'admin';
+        }
+        
+        console.log('🔍 Fetching notifications for scope:', scope, 'user role:', session.user.role);
+        
         const response = await fetch(`/api/v1/notifications?scope=${scope}&limit=50`);
+        
+        console.log('📡 Notifications API response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
           console.log('📋 Notifications API v1 response:', data);
           console.log('📅 First notification createdAt:', data.data?.data?.[0]?.createdAt);
+          console.log('📊 Total notifications received:', data.data?.data?.length || 0);
+          
           // API v1 returns nested structure: {success: true, data: {data: [...], pagination: {...}}}
           setNotifications(data.data?.data || []);
+        } else {
+          const errorData = await response.text();
+          console.error('❌ Notifications API error:', response.status, errorData);
         }
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        console.error('💥 Error fetching notifications:', error);
       } finally {
         setLoading(false);
       }
@@ -120,6 +136,8 @@ export default function NotificationsPage() {
 
   const markAsRead = async (notificationId: string) => {
     try {
+      console.log('🏷️ Marking notification as read:', notificationId);
+      
       const response = await fetch(`/api/v1/notifications/${notificationId}/read`, {
         method: 'POST',
         headers: {
@@ -128,18 +146,29 @@ export default function NotificationsPage() {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Mark as read response:', result);
+        
+        // Update local state immediately for better UX
         setNotifications(prev => prev.map(notification => 
           notification.id === notificationId ? { ...notification, isRead: true } : notification
         ));
+        
+        console.log('🔄 Local state updated, notification should now appear as read');
+      } else {
+        const errorData = await response.text();
+        console.error('❌ Failed to mark as read:', response.status, errorData);
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('💥 Error marking notification as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const scope = session?.user?.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
+      console.log('🏷️ Marking all notifications as read for scope:', session?.user?.role);
+      
+      const scope = session?.user?.role;
       const response = await fetch('/api/v1/notifications/read-all', {
         method: 'POST',
         headers: {
@@ -149,10 +178,19 @@ export default function NotificationsPage() {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Mark all as read response:', result);
+        
+        // Update local state
         setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
+        
+        console.log('🔄 All notifications marked as read in local state');
+      } else {
+        const errorData = await response.text();
+        console.error('❌ Failed to mark all as read:', response.status, errorData);
       }
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error('💥 Error marking all notifications as read:', error);
     }
   };
 
@@ -438,7 +476,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR"]}>
+    <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR", "APPROVER", "REVIEWER"]}>
       <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
           

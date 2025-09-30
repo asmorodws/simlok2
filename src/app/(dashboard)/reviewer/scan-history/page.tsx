@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function ReviewerScanHistoryPage() {
   return (
-    <RoleGate allowedRoles={["REVIEWER", "ADMIN", "SUPER_ADMIN"]}>
+    <RoleGate allowedRoles={["REVIEWER" , "SUPER_ADMIN"]}>
       <SidebarLayout title="Reviewer Panel" titlePage="Scan History">
         <ReviewerScanHistoryContent />
       </SidebarLayout>

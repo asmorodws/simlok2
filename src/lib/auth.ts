@@ -131,7 +131,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id   = token.id as string; // Use the stored user.id instead of token.sub
-        session.user.role = token.role as import("@prisma/client").Role;
+        session.user.role = token.role as import("@prisma/client").User_role;
         session.user.officer_name = token.officer_name as string;
         session.user.vendor_name = token.vendor_name as string | null;
         session.user.verified_at = token.verified_at as Date | null;

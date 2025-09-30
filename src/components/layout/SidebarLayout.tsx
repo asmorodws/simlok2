@@ -34,16 +34,25 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     }
   };
 
-  const menu = {
+  // Define menu type
+  type MenuItem = {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+  };
+
+  type MenuConfig = {
+    SUPER_ADMIN: MenuItem[];
+    REVIEWER: MenuItem[];
+    APPROVER: MenuItem[];
+    VENDOR: MenuItem[];
+    VERIFIER: MenuItem[];
+  };
+
+  const menuConfig: MenuConfig = {
     SUPER_ADMIN: [
       { label: "Dashboard", href: "/super-admin", icon: HomeIcon },
       { label: "User Management", href: "/super-admin/users", icon: UsersIcon },
-    ],
-    ADMIN: [
-      { label: "Dashboard", href: "/admin", icon: HomeIcon },
-      { label: "Users", href: "/admin/users", icon: UsersIcon },
-      { label: "Submissions", href: "/admin/submissions", icon: ClipboardDocumentListIcon },
-      // { label: "Settings", href: "/admin/settings", icon: CogIcon },
     ],
     REVIEWER: [
       { label: "Dashboard", href: "/reviewer", icon: HomeIcon },
@@ -62,10 +71,12 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     ],
     VERIFIER: [
       { label: "Dashboard", href: "/verifier", icon: HomeIcon },
-      // { label: "Documents", href: "/verifier/docs", icon: DocumentTextIcon },
       { label: "History", href: "/verifier/history", icon: ClockIcon },
     ],
-  }[session?.user.role ?? "ADMIN"];
+  };
+
+  const userRole = session?.user?.role as keyof MenuConfig | undefined;
+  const menu = userRole ? menuConfig[userRole] : menuConfig.SUPER_ADMIN;
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -96,7 +107,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-2 px-2 py-6">
-          {menu.map((item) => {
+          {menu.map((item: MenuItem) => {
             const active = pathname === item.href;
             const Icon = item.icon;
             return (

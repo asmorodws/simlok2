@@ -9,12 +9,14 @@ import {
   PencilIcon,
   UserIcon,
   ClipboardDocumentListIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
+import ExportFilterModal, { ExportFilters } from './ExportFilterModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 
 interface Submission {
@@ -83,6 +85,8 @@ export default function ReviewerSubmissionsManagement() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   
   // Filters and pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -209,6 +213,56 @@ export default function ReviewerSubmissionsManagement() {
     setShowDetailModal(true);
   };
 
+  const handleExportToExcel = async (filters: ExportFilters) => {
+    try {
+      setExportLoading(true);
+      
+      // Build query parameters with filters from modal
+      const params = new URLSearchParams();
+      if (filters.search) params.append('search', filters.search);
+      if (filters.reviewStatus) params.append('reviewStatus', filters.reviewStatus);
+      if (filters.finalStatus) params.append('finalStatus', filters.finalStatus);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+
+      const response = await fetch(`/api/reviewer/simloks/export?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Gagal mengekspor data');
+      }
+
+      // Get the filename from response headers
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'Data_Pengajuan_SIMLOK.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      // Close modal after successful export
+      setShowExportModal(false);
+
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      setError('Gagal mengekspor data ke Excel');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   if (loading && submissions.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -225,6 +279,18 @@ export default function ReviewerSubmissionsManagement() {
           <div>
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Review Pengajuan</h1>
             <p className="text-sm text-gray-500 mt-1">Kelola dan review pengajuan SIMLOK</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setShowExportModal(true)}
+              disabled={exportLoading}
+              variant="outline"
+              size="sm"
+              className="text-green-600 border-green-600 hover:bg-green-50"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+              Export Excel
+            </Button>
           </div>
         </div>
 
@@ -470,6 +536,21 @@ export default function ReviewerSubmissionsManagement() {
           </>
         )}
       </div>
+
+      {/* Export Filter Modal */}
+      <ExportFilterModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExportToExcel}
+        currentFilters={{
+          search: searchTerm,
+          reviewStatus: reviewStatusFilter,
+          finalStatus: finalStatusFilter,
+          startDate: '',
+          endDate: ''
+        }}
+        exportLoading={exportLoading}
+      />
 
       {/* Detail Modal */}
       {showDetailModal && selectedSubmission && (

@@ -724,10 +724,10 @@ async function addWorkerPhotosPage(
       const newX = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
       
       // Draw on new page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, i, worker, newX, newY, photoWidth, photoHeight);
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, newX, newY, photoWidth, photoHeight);
     } else {
       // Draw on current page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, i,worker, x, y, photoWidth, photoHeight);
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, x, y, photoWidth, photoHeight);
     }
 
     // Move to next position
@@ -747,7 +747,6 @@ async function drawWorkerCard(
   doc: PDFDocument,
   font: PDFFont,
   boldFont: PDFFont,
-  index: number,
   worker: { worker_name: string; worker_photo?: string | null },
   x: number,
   y: number,
@@ -834,14 +833,14 @@ async function drawWorkerCard(
   // Draw worker name below photo with reduced spacing
   const nameY = y - photoHeight - 15; // Reduced from 15 to 8
   const maxNameWidth = photoWidth - 4; // Leave 2px margin on each side
-  let displayName = `${index}. ${worker.worker_name}`;
+  let displayName = worker.worker_name;
   let textWidth = boldFont.widthOfTextAtSize(displayName, 9);
   
   // Truncate name if too long to fit in photo width
   if (textWidth > maxNameWidth) {
     while (textWidth > maxNameWidth && displayName.length > 0) {
       displayName = displayName.substring(0, displayName.length - 4) + '...';
-      // textWidth = boldFont.widthOfTextAtSize(displayName, 9);
+      textWidth = boldFont.widthOfTextAtSize(displayName, 9);
     }
   }
   
