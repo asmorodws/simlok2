@@ -20,9 +20,9 @@ export async function GET(
     const { userId, category, filename } = await params;
 
     // Check if user can access this file
-    // Users can only access their own files, unless they're admin, reviewer, or approver
+    // Users can only access their own files, unless they're super admin, reviewer, or approver
     const canAccess = 
-      session.user.role === 'ADMIN' || 
+      session.user.role === 'SUPER_ADMIN' || 
       session.user.role === 'REVIEWER' || 
       session.user.role === 'APPROVER' ||
       session.user.id === userId;

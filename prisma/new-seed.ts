@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient, User_role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -53,7 +53,7 @@ async function main() {
       officer_name: "Super Admin",
       email: "superadmin@example.com",
       password: "superadmin123",
-      role: Role.SUPER_ADMIN,
+      role: User_role.SUPER_ADMIN,
       profile_photo: null,
       address: "Jl. Super Admin No. 1, Jakarta",
       phone_number: "081234567888",
@@ -62,22 +62,10 @@ async function main() {
       verified_by: "SYSTEM",
     },
     {
-      officer_name: "Admin Utama",
-      email: "admin@example.com",
-      password: "admin123",
-      role: Role.ADMIN,
-      profile_photo: null,
-      address: "Jl. Admin No. 1, Jakarta",
-      phone_number: "081234567890",
-      vendor_name: null, // kosong untuk admin
-      verified_at: new Date(), // admin sudah terverifikasi
-      verified_by: "SUPER_ADMIN",
-    },
-    {
       officer_name: "Verifier Utama",
       email: "verifier@example.com",
       password: "verifier123",
-      role: Role.VERIFIER,
+      role: User_role.VERIFIER,
       profile_photo: null,
       address: "Jl. Verifier No. 2, Jakarta",
       phone_number: "081234567891",
@@ -89,43 +77,43 @@ async function main() {
       officer_name: "Verifier Kedua",
       email: "verifier2@example.com",
       password: "verifier123",
-      role: Role.VERIFIER,
+      role: User_role.VERIFIER,
       profile_photo: null,
       address: "Jl. Verifier No. 3, Bandung",
       phone_number: "081234567899",
       vendor_name: null,
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
     },
     {
       officer_name: "Vendor A Petugas",
       email: "vendora@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: User_role.VENDOR,
       profile_photo: null,
       address: "Jl. Vendor A No. 3, Jakarta",
       phone_number: "081234567892",
       vendor_name: "PT. AHMAD VENDOR SERVICES",
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
     },
     {
       officer_name: "Vendor B Petugas",
       email: "vendorb@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: User_role.VENDOR,
       profile_photo: null,
       address: "Jl. Vendor B No. 4, Bandung",
       phone_number: "081234567893",
       vendor_name: "PT. BUANA KONSTRUKSI",
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
     },
     {
       officer_name: "Vendor C Petugas",
       email: "vendorc@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: User_role.VENDOR,
       profile_photo: null,
       address: "Jl. Vendor C No. 5, Surabaya",
       phone_number: "081234567894",
@@ -137,13 +125,13 @@ async function main() {
       officer_name: "Vendor D Petugas",
       email: "vendord@example.com",
       password: "vendor123",
-      role: Role.VENDOR,
+      role: User_role.VENDOR,
       profile_photo: null,
       address: "Jl. Vendor D No. 6, Medan",
       phone_number: "081234567895",
       vendor_name: "PT. DELTA ENGINEERING",
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
     },
   ];
 
@@ -177,7 +165,7 @@ async function main() {
 
   // Create sample submissions
   console.log("📋 Membuat sample submissions...");
-  const admin = createdUsers["admin@example.com"];
+  const superAdmin = createdUsers["superadmin@example.com"];
   const verifiers = Object.values(createdUsers).filter((user: any) => user.role === 'VERIFIER');
   const vendorUsers = Object.values(createdUsers).filter((user: any) => user.role === 'VENDOR');
 
@@ -317,12 +305,12 @@ async function main() {
         officer_name: vendorData.officer_name,
         job_description: template.job_description,
         work_location: template.work_location,
-        implementation: null, // akan diisi admin saat approve
+        implementation: null, // akan diisi super admin saat approve
         working_hours: template.working_hours,
-        other_notes: null, // akan diisi admin saat approve
+        other_notes: null, // akan diisi super admin saat approve
         work_facilities: template.work_facilities,
         worker_names: template.worker_names,
-        content: null, // akan diisi admin saat approve
+        content: null, // akan diisi super admin saat approve
         user_id: vendorData.id,
         approval_status: status,
         qrcode: `QR-${vendorData.id}-${Date.now()}-${submissionCount}`,
@@ -333,13 +321,13 @@ async function main() {
         simja_date: submissionCount % 2 === 0 ? new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000) : null,
         sika_number: submissionCount % 3 === 0 ? `SIKA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
         sika_date: submissionCount % 3 === 0 ? new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000) : null,
-        implementation_start_date: null, // akan diisi admin saat approve
-        implementation_end_date: null, // akan diisi admin saat approve
+        implementation_start_date: null, // akan diisi super admin saat approve
+        implementation_end_date: null, // akan diisi super admin saat approve
       };
 
       // Add approval data for approved/rejected submissions
       if (status === 'APPROVED') {
-        submissionData.approved_by = admin.id;
+        submissionData.approved_by = superAdmin.id;
         submissionData.simlok_number = `SIMLOK/2024/${String(submissionCount + 1).padStart(3, '0')}`;
         submissionData.simlok_date = new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000);
         
@@ -357,7 +345,7 @@ async function main() {
         submissionData.implementation_end_date = implementationEnd;
         
         submissionData.notes = 'Pengajuan disetujui dengan catatan mengikuti prosedur K3 dan laporan harian';
-        // Admin mengisi implementation, other_notes, dan content saat approve
+        // Super Admin mengisi implementation, other_notes, dan content saat approve
         submissionData.implementation = `${implementationStart.toISOString().split('T')[0]} s/d ${implementationEnd.toISOString().split('T')[0]}`;
         const otherNotesOptions = [
           'Koordinasi dengan supervisor produksi',
@@ -373,7 +361,7 @@ async function main() {
         ];
         submissionData.other_notes = otherNotesOptions[submissionCount % otherNotesOptions.length];
         
-        // Admin mengisi content saat approve
+        // Super Admin mengisi content saat approve
         const contentOptions = [
           'Pemeliharaan rutin mesin produksi untuk memastikan kinerja optimal',
           'Pemasangan sistem CCTV dan alarm keamanan di seluruh area kantor',
@@ -388,7 +376,7 @@ async function main() {
         ];
         submissionData.content = contentOptions[submissionCount % contentOptions.length];
       } else if (status === 'REJECTED') {
-        submissionData.approved_by = admin.id;
+        submissionData.approved_by = superAdmin.id;
         const rejectionReasons = [
           'Dokumen SIMJA belum lengkap, mohon dilengkapi terlebih dahulu',
           'Sertifikat pelatihan K3 sudah expired, mohon diperbaharui',
@@ -472,7 +460,7 @@ async function main() {
   for (const vendor of unverifiedVendors) {
     const vendorData = vendor as any;
     
-    // Create admin notification for new vendor registration
+    // Create super admin notification for new vendor registration
     await prisma.notification.create({
       data: {
         scope: 'admin',
@@ -503,7 +491,7 @@ async function main() {
   });
 
   for (const submission of recentSubmissions.slice(0, 8)) { // Ambil 8 submission terbaru
-    // Create admin notification for new submission
+    // Create super admin notification for new submission
     await prisma.notification.create({
       data: {
         scope: 'admin',
@@ -559,7 +547,7 @@ async function main() {
   });
 
   for (const scan of recentScans) {
-    // Create admin notification for QR scans
+    // Create super admin notification for QR scans
     await prisma.notification.create({
       data: {
         scope: 'admin',
@@ -600,7 +588,6 @@ async function main() {
   console.log("\n✅ Seeding selesai dengan sukses!");
   console.log("\n🔑 Login Credentials:");
   console.log("Super Admin: superadmin@example.com / superadmin123");
-  console.log("Admin: admin@example.com / admin123");
   console.log("Verifier 1: verifier@example.com / verifier123");
   console.log("Verifier 2: verifier2@example.com / verifier123");
   console.log("Vendor A: vendora@example.com / vendor123");

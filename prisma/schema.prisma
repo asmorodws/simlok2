@@ -9,33 +9,33 @@ datasource db {
 
 /// ----------  USER  ----------
 model User {
-  id                  String         @id @default(cuid())
-  email               String         @unique
-  password            String
-  role                Role           @default(VENDOR)
-  address             String?
-  created_at          DateTime       @default(now())
-  profile_photo       String?
-  officer_name        String
-  vendor_name         String?
-  phone_number        String?
-  verified_at         DateTime?
-  verified_by         String?
-  verification_status VerificationStatus @default(PENDING)
-  rejected_at         DateTime?
-  rejected_by         String?
-  rejection_reason    String?
-  isActive            Boolean        @default(true)
-  lastActiveAt        DateTime?
-  sessionExpiry       DateTime?
-  accounts            Account[]
-  refreshTokens       RefreshToken[]
-  sessions            Session[]
-  submissions         Submission[]
-  approvedSubmissions Submission[]   @relation("ApprovedSubmissions")
-  reviewedSubmissions Submission[]   @relation("ReviewedSubmissions")
-  finalApprovedSubmissions Submission[] @relation("FinalApprovedSubmissions")
-  qrScans             QrScan[]       @relation("QrScannedBy")
+  id                       String             @id @default(cuid())
+  email                    String             @unique
+  password                 String
+  role                     User_role          @default(VENDOR)
+  address                  String?
+  created_at               DateTime           @default(now())
+  profile_photo            String?
+  officer_name             String
+  vendor_name              String?
+  phone_number             String?
+  verified_at              DateTime?
+  verified_by              String?
+  isActive                 Boolean            @default(true)
+  lastActiveAt             DateTime?
+  sessionExpiry            DateTime?
+  rejected_at              DateTime?
+  rejected_by              String?
+  rejection_reason         String?
+  verification_status      VerificationStatus @default(PENDING)
+  accounts                 Account[]
+  qrScans                  QrScan[]           @relation("QrScannedBy")
+  refreshTokens            RefreshToken[]
+  sessions                 Session[]
+  finalApprovedSubmissions Submission[]       @relation("FinalApprovedSubmissions")
+  approvedSubmissions      Submission[]       @relation("ApprovedSubmissions")
+  reviewedSubmissions      Submission[]       @relation("ReviewedSubmissions")
+  submissions              Submission[]
 }
 
 /// ----------  REFRESH TOKEN  ----------
@@ -93,7 +93,6 @@ model Submission {
   approval_status           String       @default("PENDING")
   approved_by               String?
   vendor_name               String
-  vendor_phone              String?
   based_on                  String
   officer_name              String
   job_description           String
@@ -108,44 +107,35 @@ model Submission {
   sika_date                 DateTime?
   simlok_number             String?
   simlok_date               DateTime?
-  implementation_start_date DateTime?
-  implementation_end_date   DateTime?
-  worker_count              Int?         // Jumlah pekerja
   worker_names              String       @db.Text
   content                   String?      @db.Text
   notes                     String?      @db.Text
-  signer_position           String?
-  signer_name               String?
   sika_document_upload      String?
   simja_document_upload     String?
   qrcode                    String?      @db.LongText
   created_at                DateTime     @default(now())
-  
-  // New review/approval fields
-  review_status             ReviewStatus @default(PENDING_REVIEW)
-  review_note               String?      @db.Text
-  final_status              FinalStatus  @default(PENDING_APPROVAL)
-  final_note                String?      @db.Text
-  reviewed_by_id            String?
-  reviewed_at               DateTime?
-  approved_by_final_id      String?
-  approved_at               DateTime?
-  
-  // Relations
   user_id                   String
-  user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  
+  signer_position           String?
+  signer_name               String?
+  implementation_end_date   DateTime?
+  implementation_start_date DateTime?
+  approved_at               DateTime?
+  approved_by_final_id      String?
+  final_note                String?      @db.Text
+  final_status              FinalStatus  @default(PENDING_APPROVAL)
+  review_note               String?      @db.Text
+  review_status             ReviewStatus @default(PENDING_REVIEW)
+  reviewed_at               DateTime?
+  reviewed_by_id            String?
+  worker_count              Int?
+  vendor_phone              String?
+  qrScans                   QrScan[]     @relation("SubmissionQrScans")
+  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id])
   approved_by_user          User?        @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
   reviewed_by_user          User?        @relation("ReviewedSubmissions", fields: [reviewed_by_id], references: [id])
-  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id])
-  
-  // Relasi ke daftar pekerja
+  user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   worker_list               WorkerList[]
-  
-  // Relasi ke QR scan tracking
-  qrScans                   QrScan[]     @relation("SubmissionQrScans")
-  
-  // Performance indexes
+
   @@index([approval_status])
   @@index([review_status])
   @@index([final_status])
@@ -153,6 +143,7 @@ model Submission {
   @@index([user_id, approval_status])
   @@index([reviewed_by_id])
   @@index([approved_by_final_id])
+  @@index([approved_by], map: "Submission_approved_by_fkey")
 }
 
 /// ----------  WORKER LIST  ----------
@@ -202,25 +193,15 @@ model QrScan {
   submission_id String
   scanned_by    String
   scanned_at    DateTime   @default(now())
-  scanner_name  String?    // Optional: name of the person who scanned
-  scan_location String?    // Location where the scan was performed (from verifier's address)
-  notes         String?    // Optional: additional notes about the scan
-  submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)
+  scanner_name  String?
+  notes         String?
+  scan_location String?
   user          User       @relation("QrScannedBy", fields: [scanned_by], references: [id], onDelete: Cascade)
+  submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)
 
   @@index([submission_id])
   @@index([scanned_by])
   @@index([scanned_at])
-}
-
-/// ----------  ENUM  ----------
-enum Role {
-  VENDOR
-  VERIFIER
-  ADMIN
-  SUPER_ADMIN
-  REVIEWER
-  APPROVER
 }
 
 enum VerificationStatus {
@@ -246,4 +227,12 @@ enum NotificationScope {
   vendor
   reviewer
   approver
+}
+
+enum User_role {
+  VENDOR
+  VERIFIER
+  SUPER_ADMIN
+  REVIEWER
+  APPROVER
 }

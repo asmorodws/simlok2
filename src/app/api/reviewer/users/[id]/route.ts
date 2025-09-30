@@ -23,8 +23,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    // Only REVIEWER or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
     }
 
@@ -108,7 +108,7 @@ export async function PATCH(
       });
 
       notificationTitle = 'Akun Anda Ditolak';
-      notificationMessage = `Maaf, akun vendor Anda tidak dapat diverifikasi. ${validatedData.note || 'Silakan hubungi admin untuk informasi lebih lanjut.'}`;
+      notificationMessage = `Maaf, akun vendor Anda tidak dapat diverifikasi. ${validatedData.note || 'Silakan hubungi super admin untuk informasi lebih lanjut.'}`;
       notificationType = 'user_rejected';
     }
 
@@ -180,8 +180,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    // Only REVIEWER or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
     }
 

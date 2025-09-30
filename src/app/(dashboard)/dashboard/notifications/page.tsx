@@ -19,11 +19,8 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
-import AdminSubmissionDetailModal from '@/components/admin/AdminSubmissionDetailModal';
 import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
-import UserVerificationModal from '@/components/admin/UserVerificationModal';
-import { UserData } from '@/types/user';
 
 // Interface untuk notification
 interface Notification {
@@ -86,7 +83,6 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -97,7 +93,7 @@ export default function NotificationsPage() {
       
       setLoading(true);
       try {
-        const scope = session.user.role === 'ADMIN' ? 'admin' : 'vendor';
+        const scope = session.user.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
         const response = await fetch(`/api/v1/notifications?scope=${scope}&limit=50`);
         
         if (response.ok) {
@@ -143,7 +139,7 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const scope = session?.user?.role === 'ADMIN' ? 'admin' : 'vendor';
+      const scope = session?.user?.role === 'SUPER_ADMIN' ? 'admin' : 'vendor';
       const response = await fetch('/api/v1/notifications/read-all', {
         method: 'POST',
         headers: {
@@ -319,56 +315,8 @@ export default function NotificationsPage() {
     console.log('👤 Is vendor notification:', isVendorNotification);
     
     if (isVendorNotification) {
-      console.log('📋 Processing vendor notification.data:', notification.data);
-      
-      let vendorId = '';
-      
-      // Parse vendor ID from notification data
-      if (notification.data) {
-        let parsedData;
-        if (typeof notification.data === 'string') {
-          try {
-            parsedData = JSON.parse(notification.data);
-            console.log('✅ Parsed vendor data:', parsedData);
-          } catch {
-            // Jika tidak bisa parse JSON, coba extract dari string
-            const match = notification.data.match(/vendorId[:\s]*([a-zA-Z0-9_-]+)/);
-            if (match && match[1]) vendorId = match[1];
-            console.log('🔤 String match result for vendor:', match);
-          }
-        } else {
-          parsedData = notification.data;
-          console.log('📊 Direct vendor data:', parsedData);
-        }
-        
-        if (parsedData && parsedData.vendorId) {
-          vendorId = parsedData.vendorId;
-          console.log('🎯 Found vendorId in parsedData:', vendorId);
-        }
-      }
-
-      if (vendorId) {
-        // Fetch vendor user data
-        try {
-          const response = await fetch(`/api/admin/users/${vendorId}`);
-          
-          if (!response.ok) {
-            throw new Error('Failed to fetch vendor details');
-          }
-          
-          const data = await response.json();
-          console.log('✅ Vendor user data fetched:', data);
-          
-          setSelectedVendorUser(data.user);
-          
-          console.log('🚀 Opening user verification modal for vendorId:', vendorId);
-        } catch (err) {
-          console.error('❌ Error fetching vendor details:', err);
-          showError('Error', 'Gagal memuat detail vendor');
-        }
-      } else {
-        console.warn('⚠️ No vendor ID found in notification');
-      }
+      console.log('📋 Processing vendor notification - feature not available');
+      showError('Info', 'Detail vendor tidak tersedia saat ini');
       return;
     }
 
@@ -466,16 +414,6 @@ export default function NotificationsPage() {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
-  // Handle vendor user updates
-  const handleUserUpdate = (updatedUser: UserData) => {
-    setSelectedVendorUser(updatedUser);
-  };
-
-  // Handle vendor user removal
-  const handleUserRemove = () => {
-    setSelectedVendorUser(null);
-  };
-
   // Filter notifications
   const filteredNotifications = Array.isArray(notifications) ? notifications
     .filter((notification: Notification) => {
@@ -500,7 +438,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <RoleGate allowedRoles={["ADMIN", "VENDOR"]}>
+    <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR"]}>
       <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
           
@@ -519,7 +457,7 @@ export default function NotificationsPage() {
               </div>
               <div>
                 <h1 className="text-base md:text-lg font-semibold text-gray-900">
-                  {session?.user?.role === 'ADMIN' ? 'Notifikasi' : 'Notifikasi'}
+                  {session?.user?.role === 'SUPER_ADMIN' ? 'Notifikasi' : 'Notifikasi'}
                 </h1>
                 <p className="text-sm text-gray-500">
                   {loading ? 'Memuat...' : unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}
@@ -734,30 +672,11 @@ export default function NotificationsPage() {
         </div>
 
       {/* Modals */}
-      {selectedSubmission && session?.user?.role === 'ADMIN' && (
-        <AdminSubmissionDetailModal
-          submission={selectedSubmission}
-          isOpen={!!selectedSubmission}
-          onClose={() => setSelectedSubmission(null)}
-        />
-      )}
-
-      {selectedSubmission && session?.user?.role === 'VENDOR' && (
+      {selectedSubmission && (
         <SubmissionDetailModal
           submission={selectedSubmission}
           isOpen={!!selectedSubmission}
           onClose={() => setSelectedSubmission(null)}
-        />
-      )}
-
-      {/* User Verification Modal */}
-      {selectedVendorUser && (
-        <UserVerificationModal
-          isOpen={!!selectedVendorUser}
-          onClose={() => setSelectedVendorUser(null)}
-          user={selectedVendorUser}
-          onUserUpdate={handleUserUpdate}
-          onUserRemove={handleUserRemove}
         />
       )}
       </SidebarLayout>

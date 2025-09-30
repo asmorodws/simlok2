@@ -11,8 +11,6 @@ export default async function DashboardPage() {
   // Redirect to appropriate role-specific dashboard
   if (role === "SUPER_ADMIN") {
     redirect("/super-admin");
-  } else if (role === "ADMIN") {
-    redirect("/admin");
   } else if (role === "APPROVER") {
     redirect("/approver");
   } else if (role === "REVIEWER") {

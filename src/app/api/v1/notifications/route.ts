@@ -28,7 +28,7 @@ async function getNotifications(req: NextRequest) {
   if (authError) return authError;
 
   // Validate permissions
-  if (query.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (query.scope === 'admin' && !['SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
@@ -36,11 +36,11 @@ async function getNotifications(req: NextRequest) {
     return apiError('Access denied', 403);
   }
 
-  if (query.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (query.scope === 'reviewer' && !['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
-  if (query.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (query.scope === 'approver' && !['APPROVER', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 

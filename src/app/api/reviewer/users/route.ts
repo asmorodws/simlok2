@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+    // Only REVIEWER or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
       return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
     }
 

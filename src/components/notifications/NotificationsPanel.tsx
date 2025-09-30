@@ -12,11 +12,9 @@ import {
   InboxIcon
 } from '@heroicons/react/24/outline';
 import Button from '../ui/button/Button';
-import AdminSubmissionDetailModal from '../admin/AdminSubmissionDetailModal';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
 import ReviewerSubmissionDetailModal from '../reviewer/ImprovedReviewerSubmissionDetailModal';
-import UserVerificationModal from '../admin/UserVerificationModal';
 import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
 import { UserData } from '@/types/user';
 import { useToast } from '@/hooks/useToast';
@@ -134,8 +132,9 @@ export default function NotificationsPanel({
         apiEndpoint = `/api/approver/simloks/${submissionId}`;
       } else if (session?.user?.role === 'REVIEWER') {
         apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
-      } else if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') {
-        apiEndpoint = `/api/admin/submissions/${submissionId}`;
+      } else if (session?.user?.role === 'SUPER_ADMIN') {
+        // Use submissions endpoint for super admin - admin endpoints no longer exist
+        apiEndpoint = `/api/submissions/${submissionId}`;
       }
 
       // Fetch detail submission
@@ -228,42 +227,39 @@ export default function NotificationsPanel({
 
       console.log('🔍 Fetching vendor data for ID:', vendorId);
       
-      // Determine the correct API endpoint based on user role
-      let apiEndpoint = `/api/admin/users/${vendorId}`;
+      // Admin endpoints no longer exist - vendor user functionality disabled for now
       if (session?.user?.role === 'REVIEWER') {
-        apiEndpoint = `/api/reviewer/users/${vendorId}`;
-      }
-      
-      const response = await fetch(apiEndpoint);
-      
-      if (response.status === 404) {
-        console.warn('User not found:', vendorId);
-        showWarning(
-          'Data Vendor Tidak Ditemukan',
-          'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
-        );
-        
-        // Mark notification as read karena sudah dicoba akses
-        if (!notification.isRead) {
-          console.log('Marking notification as read (user not found):', notification.id);
-          await markAsRead(notification.id);
+        try {
+          const response = await fetch(`/api/reviewer/users/${vendorId}`);
+          
+          if (response.status === 404) {
+            console.warn('User not found:', vendorId);
+            showWarning(
+              'Data Vendor Tidak Ditemukan',
+              'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
+            );
+            return;
+          }
+          
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('✅ Vendor user data loaded:', data);
+          setSelectedVendorUser(data.user);
+        } catch (error) {
+          console.error('❌ Error fetching vendor details:', error);
+          showError('Error', 'Gagal memuat detail vendor');
         }
-        return;
+      } else {
+        console.log('Vendor user functionality disabled for SUPER_ADMIN - admin endpoints removed');
+        showWarning('Info', 'Fitur detail vendor tidak tersedia untuk role ini saat ini');
       }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch vendor details: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('✅ Vendor user data fetched:', data);
-      
-      setSelectedVendorUser(data.user);
-      console.log('🚀 Opening user verification modal for vendorId:', vendorId);
 
       // Mark notification as read
       if (!notification.isRead) {
-        console.log('Marking notification as read:', notification.id);
+        console.log('Marking notification as read (vendor detail):', notification.id);
         await markAsRead(notification.id);
       }
 
@@ -676,14 +672,11 @@ export default function NotificationsPanel({
             />
           )}
           
-          {(session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPER_ADMIN') && (
-            <AdminSubmissionDetailModal
+          {session?.user?.role === 'SUPER_ADMIN' && (
+            <SubmissionDetailModal
               submission={selectedSubmission}
               isOpen={isDetailModalOpen}
               onClose={handleCloseDetailModal}
-              onSubmissionUpdate={(updatedSubmission) => {
-                setSelectedSubmission(updatedSubmission);
-              }}
             />
           )}
           
@@ -714,22 +707,10 @@ export default function NotificationsPanel({
               }}
             />
           ) : (
-            /* Show Admin User Verification Modal for ADMIN/SUPER_ADMIN roles */
-            <UserVerificationModal
-              isOpen={!!selectedVendorUser}
-              onClose={() => {
-                console.log('🚪 Closing admin user verification modal');
-                setSelectedVendorUser(null);
-              }}
-              user={selectedVendorUser}
-              userRole={session?.user?.role}
-              onUserUpdate={(updatedUser: UserData) => {
-                setSelectedVendorUser(updatedUser);
-              }}
-              onUserRemove={() => {
-                setSelectedVendorUser(null);
-              }}
-            />
+            /* No admin modal available for SUPER_ADMIN roles - show basic info */
+            <div>
+              {/* Super Admin functionality not implemented yet */}
+            </div>
           )}
         </>
       )}

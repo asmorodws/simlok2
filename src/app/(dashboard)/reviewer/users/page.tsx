@@ -21,12 +21,12 @@ export default function UserVerificationPage() {
   }
 
   // Redirect if not authenticated or not authorized
-  if (!session || !["REVIEWER", "ADMIN", "SUPER_ADMIN"].includes(session.user.role)) {
+  if (!session || !["REVIEWER", "SUPER_ADMIN"].includes(session.user.role)) {
     redirect("/login");
   }
 
   return (
-    <RoleGate allowedRoles={["REVIEWER", "ADMIN", "SUPER_ADMIN"]}>
+    <RoleGate allowedRoles={["REVIEWER", "SUPER_ADMIN"]}>
       <SidebarLayout title="Reviewer Panel" titlePage="Verifikasi User">
         <div className="space-y-6">
           {/* Header Section */}

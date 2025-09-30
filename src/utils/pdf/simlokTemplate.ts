@@ -521,11 +521,20 @@ for (let idx = 0; idx < lines.length; idx++) {
     // Minimal spacing before SIMJA section
     k.y -= k.lineGap * 0.2; // Reduced spacing
     
-    // SIMJA section with bold formatting
+    // SIMJA section with mixed formatting
     if ((s.simja_number && s.simja_date) || s.simja_number || s.simja_date) {
       await k.pageBreak();
-      // Bullet point dan SIMJA dalam satu baris
-      await k.wrap(" • SIMJA Ast. Man. Facility Management", rightX, rightW, { bold: true });
+      
+      // Bullet point dengan SIMJA bold dan sisa text normal
+      const bulletX = rightX;
+      k.text(" • ", bulletX, k.y, { bold: false });
+      const simjaX = bulletX + k.measure(" • ", { bold: false });
+      k.text("SIMJA", simjaX, k.y, { bold: true });
+      const restX = simjaX + k.measure("SIMJA", { bold: true });
+      k.text(" Ast. Man. Facility Management", restX, k.y, { bold: false });
+      
+      // Move to next line
+      k.y -= k.lineGap;
       
       // Baris kedua dengan indentasi untuk No. dan Tanggal
       await k.pageBreak();
@@ -537,17 +546,26 @@ for (let idx = 0; idx < lines.length; idx++) {
       k.y -= k.lineGap * 0.2;
     }
     
-    // SIKA section with bold formatting
+    // SIKA section with mixed formatting
     if ((s.sika_number && s.sika_date) || s.sika_number || s.sika_date) {
       await k.pageBreak();
-      // Bullet point dan SIKA dalam satu baris
-      await k.wrap(" • SIKA Pekerjaan Dingin", rightX, rightW, { bold: true });
+      
+      // Bullet point dengan SIKA bold dan sisa text normal
+      const bulletX = rightX;
+      k.text(" • ", bulletX, k.y, { bold: false });
+      const sikaX = bulletX + k.measure(" • ", { bold: false });
+      k.text("SIKA", sikaX, k.y, { bold: true });
+      const restX = sikaX + k.measure("SIKA", { bold: true });
+      k.text(" Pekerjaan Dingin", restX, k.y, { bold: false });
+      
+      // Move to next line
+      k.y -= k.lineGap;
       
       // Baris kedua dengan indentasi untuk No. dan Tanggal
       await k.pageBreak();
       const sikaNum = s.sika_number || '[Nomor SIKA]';
       const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
-      await k.wrap(`   No.${sikaNum} Tgl. ${sikaDate}`, rightX, rightW, { bold: true });
+      await k.wrap(`   No.${sikaNum} Tanggal. ${sikaDate}`, rightX, rightW, { bold: true });
       
       // Minimal spacing after SIKA section
       k.y -= k.lineGap * 0.2;
@@ -706,10 +724,10 @@ async function addWorkerPhotosPage(
       const newX = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
       
       // Draw on new page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, newX, newY, photoWidth, photoHeight);
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, i, worker, newX, newY, photoWidth, photoHeight);
     } else {
       // Draw on current page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, x, y, photoWidth, photoHeight);
+      await drawWorkerCard(k.page, k.doc, k.font, k.bold, i,worker, x, y, photoWidth, photoHeight);
     }
 
     // Move to next position
@@ -729,6 +747,7 @@ async function drawWorkerCard(
   doc: PDFDocument,
   font: PDFFont,
   boldFont: PDFFont,
+  index: number,
   worker: { worker_name: string; worker_photo?: string | null },
   x: number,
   y: number,
@@ -815,14 +834,14 @@ async function drawWorkerCard(
   // Draw worker name below photo with reduced spacing
   const nameY = y - photoHeight - 15; // Reduced from 15 to 8
   const maxNameWidth = photoWidth - 4; // Leave 2px margin on each side
-  let displayName = worker.worker_name;
+  let displayName = `${index}. ${worker.worker_name}`;
   let textWidth = boldFont.widthOfTextAtSize(displayName, 9);
   
   // Truncate name if too long to fit in photo width
   if (textWidth > maxNameWidth) {
     while (textWidth > maxNameWidth && displayName.length > 0) {
       displayName = displayName.substring(0, displayName.length - 4) + '...';
-      textWidth = boldFont.widthOfTextAtSize(displayName, 9);
+      // textWidth = boldFont.widthOfTextAtSize(displayName, 9);
     }
   }
   
@@ -832,7 +851,7 @@ async function drawWorkerCard(
     x: nameX, 
     y: nameY, 
     size: 9, // Reduced font size from 10 to 9
-    font: boldFont,
+    // font: boldFont,
     color: rgb(0, 0, 0)
   });
 }

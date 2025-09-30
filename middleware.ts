@@ -6,7 +6,6 @@ import { SessionValidationService } from "@/middleware/SessionValidation";
 
 const roleHierarchy = {
   SUPER_ADMIN: 6,
-  ADMIN: 5,
   APPROVER: 4,
   REVIEWER: 3,
   VERIFIER: 2,
@@ -18,7 +17,6 @@ type Role = keyof typeof roleHierarchy;
 // mapping route prefix -> minimum role
 const protectedRoutes: { prefix: string; minRole: Role }[] = [
   { prefix: "/super-admin", minRole: "SUPER_ADMIN" },
-  { prefix: "/admin", minRole: "ADMIN" },
   { prefix: "/approver", minRole: "APPROVER" },
   { prefix: "/reviewer", minRole: "REVIEWER" },
   { prefix: "/verifier", minRole: "VERIFIER" },
@@ -76,8 +74,8 @@ export async function middleware(req: NextRequest) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  // Check if user is verified (except for admin, super admin, reviewer, and approver)
-  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN" && userRole !== "REVIEWER" && userRole !== "APPROVER" && !verified_at) {
+  // Check if user is verified (except for super admin, reviewer, and approver)
+  if (userRole !== "SUPER_ADMIN" && userRole !== "REVIEWER" && userRole !== "APPROVER" && !verified_at) {
     console.log('Middleware - User not verified, redirecting to verification-pending');
     const url = req.nextUrl.clone();
     url.pathname = "/verification-pending";
@@ -93,5 +91,5 @@ export async function middleware(req: NextRequest) {
 
 // apply to all routes; tune matcher as needed
 export const config = {
-  matcher: ["/super-admin/:path*", "/admin/:path*", "/approver/:path*", "/reviewer/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
+  matcher: ["/super-admin/:path*", "/approver/:path*", "/reviewer/:path*", "/verifier/:path*", "/vendor/:path*", "/dashboard/:path*", "/verification-pending"],
 };

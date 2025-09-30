@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/singletons";
-import { Role } from "@prisma/client";
+import { User_role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -11,7 +11,7 @@ const updateUserSchema = z.object({
   officer_name: z.string().min(1, "Nama petugas wajib diisi").optional(),
   email: z.string().email("Email tidak valid").optional(),
   password: z.string().min(6, "Password minimal 6 karakter").optional(),
-  role: z.nativeEnum(Role).optional(),
+  role: z.nativeEnum(User_role).optional(),
   address: z.string().optional(),
   phone_number: z.string().optional(),
   vendor_name: z.string().optional(),
@@ -27,7 +27,7 @@ export async function GET(
     const session = await getServerSession(authOptions);
     
     // Cek apakah user adalah super admin
-    if (!session || session.user.role !== Role.SUPER_ADMIN) {
+    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
       return NextResponse.json(
         { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
@@ -81,7 +81,7 @@ export async function PUT(
     const session = await getServerSession(authOptions);
     
     // Cek apakah user adalah super admin
-    if (!session || session.user.role !== Role.SUPER_ADMIN) {
+    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
       return NextResponse.json(
         { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
@@ -119,7 +119,7 @@ export async function PUT(
     }
 
     // Handle vendor_name berdasarkan role
-    if (updateData.role === Role.VERIFIER || updateData.role === Role.ADMIN) {
+    if (updateData.role === User_role.VERIFIER || updateData.role === User_role.SUPER_ADMIN) {
       updateData.vendor_name = null;
     }
 
@@ -180,7 +180,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     
     // Cek apakah user adalah super admin
-    if (!session || session.user.role !== Role.SUPER_ADMIN) {
+    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
       return NextResponse.json(
         { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }

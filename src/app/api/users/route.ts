@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/singletons";
-import { Role } from "@prisma/client";
+import { User_role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -10,7 +10,7 @@ const userSchema = z.object({
   officer_name: z.string().min(1, "Nama petugas wajib diisi"),
   email: z.string().email("Email tidak valid"),
   password: z.string().min(6, "Password minimal 6 karakter").optional(),
-  role: z.nativeEnum(Role),
+  role: z.nativeEnum(User_role),
   address: z.string().optional(),
   phone_number: z.string().optional(),
   vendor_name: z.string().optional(),
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     // Cek apakah user adalah super admin
-    if (!session || session.user.role !== Role.SUPER_ADMIN) {
+    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
       return NextResponse.json(
         { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     const where: any = {};
 
     // Filter by role if specified
-    if (role && (role === Role.VENDOR || role === Role.VERIFIER || role === Role.ADMIN)) {
+    if (role && (role === User_role.VENDOR || role === User_role.VERIFIER)) {
       where.role = role;
     }
 
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     // Cek apakah user adalah super admin
-    if (!session || session.user.role !== Role.SUPER_ADMIN) {
+    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
       return NextResponse.json(
         { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
         { status: 403 }
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
         role,
         address: address || null,
         phone_number: phone_number || null,
-        vendor_name: role === Role.VENDOR ? (vendor_name || null) : null,
+        vendor_name: role === User_role.VENDOR ? (vendor_name || null) : null,
         verified_by: session.user.officer_name,
         verified_at: new Date(),
       },

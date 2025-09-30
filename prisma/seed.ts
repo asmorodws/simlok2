@@ -50,19 +50,6 @@ async function main() {
   
   const users = [
     {
-      officer_name: "Admin Utama",
-      email: "admin@example.com",
-      password: "admin123",
-      role: "ADMIN" as const,
-      profile_photo: null,
-      address: "Jl. Admin No. 1, Jakarta",
-      phone_number: "081234567890",
-      vendor_name: null, // kosong untuk admin
-      verified_at: new Date(), // admin sudah terverifikasi
-      verified_by: "SYSTEM",
-      verification_status: "VERIFIED" as const,
-    },
-    {
       officer_name: "Super Admin",
       email: "superadmin@example.com",
       password: "super123", 
@@ -85,7 +72,7 @@ async function main() {
       phone_number: "081234567888",
       vendor_name: null, // kosong untuk reviewer
       verified_at: new Date(), // reviewer sudah terverifikasi
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,
     },
     {
@@ -98,7 +85,7 @@ async function main() {
       phone_number: "081234567887",
       vendor_name: null, // kosong untuk approver
       verified_at: new Date(), // approver sudah terverifikasi
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,
     },
     {
@@ -111,7 +98,7 @@ async function main() {
       phone_number: "081234567891",
       vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,
     },
     {
@@ -124,7 +111,7 @@ async function main() {
       phone_number: "081234567892",
       vendor_name: "PT. AHMAD VENDOR SERVICES",
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,
     },
     {
@@ -137,7 +124,7 @@ async function main() {
       phone_number: "081234567893",
       vendor_name: "PT. BUANA KONSTRUKSI",
       verified_at: new Date(),
-      verified_by: "ADMIN",
+      verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,
     },
     {
@@ -352,7 +339,7 @@ async function main() {
       };
 
       // Semua submission dibuat dengan status PENDING untuk testing review workflow
-      // Admin/Reviewer akan review melalui UI
+      // Reviewer/Super Admin akan review melalui UI
       // Approver akan melakukan final approval melalui UI
       // QR Code akan dibuat otomatis setelah final approval
 
@@ -463,7 +450,7 @@ async function main() {
   console.log("✅ Seeding selesai dengan sukses!");
   console.log("");
   console.log("📊 Ringkasan data yang dibuat:");
-  console.log(`   👥 ${Object.keys(createdUsers).length} users (termasuk admin, reviewer, approver, verifier, vendor)`);
+  console.log(`   👥 ${Object.keys(createdUsers).length} users (termasuk super admin, reviewer, approver, verifier, vendor)`);
   console.log(`   📋 ${submissionCount} submissions (semua dengan status PENDING_REVIEW & PENDING_APPROVAL)`);
   console.log(`   🔔 Sample notifications untuk testing workflow`);
   console.log("");

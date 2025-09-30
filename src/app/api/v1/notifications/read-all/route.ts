@@ -29,7 +29,7 @@ async function markAllAsRead(req: NextRequest) {
   if (authError) return authError;
 
   // Check permissions
-  if (body.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (body.scope === 'admin' && !['SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
@@ -37,11 +37,11 @@ async function markAllAsRead(req: NextRequest) {
     return apiError('Access denied', 403);
   }
 
-  if (body.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (body.scope === 'reviewer' && !['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 
-  if (body.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+  if (body.scope === 'approver' && !['APPROVER', 'SUPER_ADMIN'].includes(session.user.role)) {
     return apiError('Access denied', 403);
   }
 

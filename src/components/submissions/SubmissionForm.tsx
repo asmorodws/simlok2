@@ -221,6 +221,7 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                  <Label htmlFor="vendor_name">Nama Vendor</Label>
                   <Input
                     id="vendor_name"
                     name="vendor_name"
@@ -235,6 +236,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
+                  <Label htmlFor="officer_name">Nama Petugas</Label>
                   <Input
                     id="officer_name"
                     name="officer_name"
@@ -247,6 +249,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div className="md:col-span-2">
+                  <Label htmlFor="based_on">Berdasarkan</Label>
                   <Input
                     id="based_on"
                     name="based_on"
@@ -260,6 +263,7 @@ export default function SubmissionForm() {
 
                 {/* Document Numbers */}
                 <div>
+                  <Label htmlFor="simja_number">Nomor SIMJA</Label>
                   <Input
                     id="simja_number"
                     name="simja_number"
@@ -272,6 +276,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
+                  <Label htmlFor="sika_number">Nomor SIKA</Label>
                   <Input
                     id="sika_number"
                     name="sika_number"
@@ -347,6 +352,7 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                     <Label htmlFor="job_description">Pekerjaan</Label>
                   <Input
                     id="job_description"
                     name="job_description"
@@ -359,6 +365,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
+                     <Label htmlFor="work_location">Lokasi Kerja</Label>
                   <Input
                     id="work_location"
                     name="work_location"

@@ -74,9 +74,18 @@ export const EVENT_NAMES = {
 } as const;
 
 // Room names
+export const ROOM_MAPPING = {
+  SUPER_ADMIN: 'admin',
+  REVIEWER: 'reviewer',
+  APPROVER: 'approver',
+  VENDOR: 'vendor',
+  VERIFIER: 'admin', // verifiers use admin room
+} as const;
+
+// Socket.IO room names
 export const ROOMS = {
   ADMIN: 'admin',
-  REVIEWER: 'reviewer',
+  REVIEWER: 'reviewer', 
   APPROVER: 'approver',
   VENDOR: (vendorId: string) => `vendor:${vendorId}`,
 } as const;
