@@ -488,7 +488,7 @@ export default function ApproverSubmissionsManagement() {
                         {submission.job_description}
                       </div>
                       <div className="text-xs text-gray-500 mt-1 truncate" title={submission.work_location}>
-                        📍 {submission.work_location}
+                         {submission.work_location}
                       </div>
                     </div>
                   </td>

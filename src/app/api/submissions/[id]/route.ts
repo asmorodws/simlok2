@@ -56,6 +56,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const isPdfRequest = searchParams.get('format') === 'pdf';
+    const shouldClearCache = searchParams.get('clearCache') === 'true';
+
+    // Clear image cache if requested (for PDF generation)
+    if (shouldClearCache && isPdfRequest) {
+      try {
+        const { clearImageCache } = await import('@/utils/pdf/imageLoader');
+        clearImageCache();
+        console.log('API: Cleared image cache for fresh PDF generation');
+      } catch (error) {
+        console.warn('API: Failed to clear image cache:', error);
+      }
+    }
 
     // Fetch submission with user and approved by user details
     const submission = await prisma.submission.findFirst({
@@ -148,12 +160,15 @@ async function generatePDF(submission: any) {
       `SIMLOK_${pdfData.simlok_number.replace(/[\[\]/\\]/g, '_')}.pdf` :
       `SIMLOK_PREVIEW_${submission.id}.pdf`;
 
-    // Return PDF response
+    // Return PDF response with proper cache control
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${filename}"`,
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
 

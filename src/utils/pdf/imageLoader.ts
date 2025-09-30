@@ -1,6 +1,11 @@
 import { PDFDocument, PDFImage } from "pdf-lib";
 import { optimizeImage } from "./imageOptimizer";
 
+// Ensure this module only runs on server-side
+if (typeof window !== 'undefined') {
+  throw new Error('imageLoader should only be used on server-side');
+}
+
 const MAX_CACHE_SIZE = 20;
 const MAX_BATCH_SIZE = 3;
 const BATCH_DELAY = 100; // ms between batches
@@ -116,7 +121,12 @@ export async function loadWorkerPhoto(
   pdfDoc: PDFDocument,
   photoPath?: string | null
 ): Promise<PDFImage | null> {
-  if (!photoPath) return null;
+  if (!photoPath) {
+    console.log('LoadWorkerPhoto: No photo path provided');
+    return null;
+  }
+
+  console.log('LoadWorkerPhoto: Loading photo from path:', photoPath);
 
   try {
     // Check cache first with validation
@@ -126,13 +136,14 @@ export async function loadWorkerPhoto(
         // Validate cached image
         const imgDims = cached.scale(1);
         if (imgDims.width > 0 && imgDims.height > 0) {
+          console.log('LoadWorkerPhoto: Using cached image for:', photoPath);
           return cached;
         } else {
-          console.warn('Removing invalid cached image with zero dimensions');
+          console.warn('LoadWorkerPhoto: Removing invalid cached image with zero dimensions');
           imageCache.delete(photoPath);
         }
       } catch (error) {
-        console.warn('Invalid cached image, removing from cache:', error);
+        console.warn('LoadWorkerPhoto: Invalid cached image, removing from cache:', error);
         imageCache.delete(photoPath);
       }
     }
@@ -141,6 +152,7 @@ export async function loadWorkerPhoto(
     const timestamp = Date.now();
 
     if (photoPath.startsWith('data:image/') || photoPath.match(/^[A-Za-z0-9+/=]+$/)) {
+      console.log('LoadWorkerPhoto: Processing base64 image');
       // Handle base64 data
       const isPng = photoPath.includes('image/png');
       let base64Data = photoPath;
@@ -152,6 +164,7 @@ export async function loadWorkerPhoto(
 
       resultImage = await loadBase64Image(pdfDoc, base64Data, isPng);
     } else if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+      console.log('LoadWorkerPhoto: Processing remote URL with cache busting');
       // Handle remote URLs with cache busting
       try {
         const response = await fetch(`${photoPath}?t=${timestamp}`);
@@ -161,11 +174,13 @@ export async function loadWorkerPhoto(
         resultImage = isPng 
           ? await pdfDoc.embedPng(new Uint8Array(buffer))
           : await pdfDoc.embedJpg(new Uint8Array(buffer));
+        console.log('LoadWorkerPhoto: Successfully loaded remote image');
       } catch (error) {
-        console.warn('Failed to fetch remote image:', error);
+        console.warn('LoadWorkerPhoto: Failed to fetch remote image:', error);
         return null;
       }
     } else {
+      console.log('LoadWorkerPhoto: Processing local file path');
       // Handle local file path with improved path resolution
       const path = await import('path');
       const isPng = photoPath.toLowerCase().endsWith('.png');
@@ -173,13 +188,40 @@ export async function loadWorkerPhoto(
       // Determine final path based on input with proper error handling
       let finalPath: string;
       if (photoPath.startsWith('/api/files/')) {
-        finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
+        // Parse API file path: /api/files/{userId}/{category}/{filename}
+        const apiParts = photoPath.split('/');
+        if (apiParts.length >= 5) {
+          const [, , , userId, category, ...filenameParts] = apiParts;
+          const filename = filenameParts.join('/');
+          
+          // Validate required parts exist
+          if (!userId || !category || !filename) {
+            console.warn('LoadWorkerPhoto: Invalid API path structure:', { userId, category, filename });
+            finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
+          } else {
+            // Map API categories to actual directory names
+            const categoryFolders: Record<string, string> = {
+              sika: 'dokumen-sika',
+              simja: 'dokumen-simja',
+              'id-card': 'id-card',
+              other: 'lainnya',
+              'worker-photo': 'foto-pekerja'  // This is the key mapping!
+            };
+            
+            const folderName = categoryFolders[category] || category;
+            finalPath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+          }
+        } else {
+          // Fallback to simple replacement for malformed paths
+          finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
+        }
+      } else if (photoPath.startsWith('/uploads/')) {
+        finalPath = path.join(process.cwd(), 'public', photoPath);
       } else {
-        finalPath = path.join(process.cwd(), 'public', 
-          photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`);
+        finalPath = path.join(process.cwd(), 'public', `/uploads/${photoPath}`);
       }
 
-      console.log('Loading image from:', finalPath);
+      console.log('LoadWorkerPhoto: Resolved file path:', finalPath);
       resultImage = await loadFileImage(pdfDoc, finalPath, isPng);
     }
 
@@ -188,21 +230,23 @@ export async function loadWorkerPhoto(
       try {
         const imgDims = resultImage.scale(1);
         if (imgDims.width > 0 && imgDims.height > 0) {
+          console.log('LoadWorkerPhoto: Successfully loaded and cached image:', photoPath);
           imageCache.set(photoPath, resultImage);
           return resultImage;
         } else {
-          console.warn('Skipping invalid image with zero dimensions:', photoPath);
+          console.warn('LoadWorkerPhoto: Skipping invalid image with zero dimensions:', photoPath);
           return null;
         }
       } catch (error) {
-        console.warn('Failed to validate image dimensions:', error);
+        console.warn('LoadWorkerPhoto: Failed to validate image dimensions:', error);
         return null;
       }
     }
 
+    console.warn('LoadWorkerPhoto: Failed to load image:', photoPath);
     return null;
   } catch (error) {
-    console.warn('Failed to load worker photo:', error);
+    console.warn('LoadWorkerPhoto: Error loading worker photo:', error);
     return null;
   }
 }

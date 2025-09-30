@@ -646,7 +646,7 @@ for (let idx = 0; idx < lines.length; idx++) {
   return k.doc.save();
 }
 
-import { loadWorkerPhoto, preloadWorkerPhotos } from './newPhotoLoader';
+import { loadWorkerPhoto, preloadWorkerPhotos } from './imageLoader';
 
 /**
  * Add second page with worker photos

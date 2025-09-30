@@ -75,17 +75,20 @@ export default function SimlokPdfModal({
       setPdfUrl(null);
 
       try {
-        // Pakai timestamp supaya bypass cache
+        // Pakai timestamp supaya bypass cache dan clear server cache
         const t = Date.now();
         const apiUrl = `/api/submissions/${encodeURIComponent(
           submissionId
-        )}?format=pdf&t=${t}`;
+        )}?format=pdf&t=${t}&clearCache=true`;
+
+        console.log('SimlokPdfModal: Requesting PDF from:', apiUrl);
 
         // Kalau endpoint protected, pakai credentials: 'include'
         // dan mode 'same-origin' (default) supaya cookie terkirim
         const res = await fetch(apiUrl, {
           method: 'GET',
           credentials: 'include',
+          cache: 'no-store', // Force no caching
         });
 
         if (!res.ok) {
@@ -98,6 +101,8 @@ export default function SimlokPdfModal({
           }
         }
 
+        console.log('SimlokPdfModal: PDF response received successfully');
+
         // Gunakan blob -> object URL agar:
         // - lebih stabil di berbagai browser
         // - bisa di-print/download tanpa kebijakan CORS aneh
@@ -105,12 +110,15 @@ export default function SimlokPdfModal({
         const url = URL.createObjectURL(blob);
         objectUrlRef.current = url;
 
+        console.log('SimlokPdfModal: PDF blob URL created:', url);
+
         if (!cancelled) {
           setPdfUrl(url);
           setLoading(false);
           setError(null);
         }
       } catch (e: any) {
+        console.error('SimlokPdfModal: Error loading PDF:', e);
         if (!cancelled) {
           setError(e?.message || 'Gagal memuat dokumen PDF SIMLOK.');
           setLoading(false);

@@ -147,7 +147,7 @@ export async function loadWorkerPhoto(pdfDoc: PDFDocument, photoPath?: string | 
           }
         } else {
           // Handle file path with API compatibility
-          let fullPath = photoPath.startsWith('/api/files/') 
+          const fullPath = photoPath.startsWith('/api/files/') 
             ? photoPath.replace('/api/files/', '/uploads/')
             : photoPath.startsWith('/') ? photoPath : `/uploads/${photoPath}`;
 

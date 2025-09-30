@@ -1,4 +1,15 @@
-import sharp from 'sharp';
+// Conditional import for server-side only
+let sharp: any = null;
+
+// Only import sharp on server-side
+if (typeof window === 'undefined') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    sharp = require('sharp');
+  } catch (error) {
+    console.warn('Sharp not available, using fallback image processing');
+  }
+}
 
 const MAX_IMAGE_SIZE = 500; // Maximum dimension in pixels
 const JPEG_QUALITY = 70;   // JPEG compression quality (0-100)
@@ -14,6 +25,12 @@ interface ImageDimensions {
  * @returns Optimized image buffer
  */
 export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
+  // Return original buffer if not on server or sharp not available
+  if (typeof window !== 'undefined' || !sharp) {
+    console.log('Using original image buffer (client-side or sharp not available)');
+    return imageBuffer;
+  }
+
   try {
     // Get image info
     const metadata = await sharp(imageBuffer).metadata();
