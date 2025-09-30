@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 
-import EnhancedInput from "../form/EnhancedInput";
+import Input from "../form/Input";
 import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
@@ -171,13 +171,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <div>
               <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
               {isEditing ? (
-                <EnhancedInput 
+                <Input 
                   id="officer_name"
                   name="officer_name"
+                  type="text"
                   value={formData.officer_name}
-                  onChange={(value) => setFormData(prev => ({ ...prev, officer_name: value }))}
-                  validationType="name"
-                  label=""
+                  onChange={handleChange}
                   placeholder="Masukkan nama petugas"
                   required
                   className="mt-1"
@@ -193,13 +192,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <div>
               <p className="text-sm font-medium text-gray-500">Email</p>
               {isEditing ? (
-                <EnhancedInput 
+                <Input 
                   id="email"
                   name="email"
+                  type="email"
                   value={formData.email}
-                  onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
-                  validationType="email"
-                  label=""
+                  onChange={handleChange}
                   placeholder="email@perusahaan.com"
                   required
                   className="mt-1"
@@ -215,13 +213,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <div>
               <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
               {isEditing ? (
-                <EnhancedInput 
+                <Input 
                   id="phone_number"
                   name="phone_number"
+                  type="tel"
                   value={formData.phone_number}
-                  onChange={(value) => setFormData(prev => ({ ...prev, phone_number: value }))}
-                  validationType="phone"
-                  label=""
+                  onChange={handleChange}
                   placeholder="08123456789"
                   required
                   className="mt-1"
@@ -237,13 +234,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <div className="lg:col-span-2">
               <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
               {isEditing ? (
-                <EnhancedInput 
+                <Input 
                   id="vendor_name"
                   name="vendor_name"
+                  type="text"
                   value={formData.vendor_name}
-                  onChange={(value) => setFormData(prev => ({ ...prev, vendor_name: value }))}
-                  validationType="vendor"
-                  label=""
+                  onChange={handleChange}
                   placeholder="PT. Nama Perusahaan"
                   required
                   className="mt-1"

@@ -11,7 +11,6 @@ import {
   QrCodeIcon,
   ClockIcon,
   BuildingOfficeIcon,
-  UserIcon,
   BriefcaseIcon,
   DocumentIcon,
   CalendarIcon,
@@ -540,7 +539,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       <InfoCard
                         label="Nama Petugas"
                         value={submission.officer_name}
-                        icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                       />
                       {/* <InfoCard
                         label="Email"
@@ -574,7 +572,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         <InfoCard
                           label="Tanggal SIMJA"
                           value={formatDate(submission.simja_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                         />
                       )}
                       {submission.sika_number && (
@@ -587,95 +584,17 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         <InfoCard
                           label="Tanggal SIKA"
                           value={formatDate(submission.sika_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+
                         />
                       )}
                       {/* Status dan Tanggal Pengajuan */}
                       <InfoCard
                         label="Tanggal Pengajuan"
                         value={formatDate(submission.created_at)}
-                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+
                       />
                     </div>
-                  </DetailSection>
-
-                  {/* Detail Pekerjaan - sama seperti admin */}
-                  <DetailSection 
-                    title="Informasi Pekerjaan" 
-                    icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Pekerjaan"
-                        value={submission.job_description}
-                      />
-                      <InfoCard
-                        label="Lokasi Kerja"
-                        value={submission.work_location}
-                      />
-                      <InfoCard
-                        label="Pelaksanaan"
-                        value={submission.implementation || 'Belum diisi'}
-                      />
-                      <InfoCard
-                        label="Jam Kerja"
-                        value={submission.working_hours}
-                      />
-                      <InfoCard
-                        label="Jumlah Pekerja"
-                        value={`${submission.worker_count || 0} orang`}
-                      />
-                      <InfoCard
-                        label="Sarana Kerja"
-                        value={submission.work_facilities}
-                      />
-                    </div>
-                  </DetailSection>
-
-                  {/* Dokumen Pendukung */}
-                  <DetailSection title="Dokumen Pendukung" icon={<DocumentTextIcon className="h-5 w-5 text-blue-600" />}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Nomor SIMJA"
-                        value={submission.simja_number || '-'}
-                      />
-                      <InfoCard
-                        label="Tanggal SIMJA"
-                        value={submission.simja_date ? formatDate(submission.simja_date) : '-'}
-                      />
-                      <InfoCard
-                        label="Nomor SIKA"
-                        value={submission.sika_number || '-'}
-                      />
-                      <InfoCard
-                        label="Tanggal SIKA"
-                        value={submission.sika_date ? formatDate(submission.sika_date) : '-'}
-                      />
-                    </div>
-                  </DetailSection>
-
-                  {/* Jadwal Pelaksanaan */}
-                  <DetailSection title="Jadwal Pelaksanaan" icon={<CalendarIcon className="h-5 w-5 text-blue-600" />}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Tanggal Mulai Pelaksanaan"
-                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
-                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                      />
-                      <InfoCard
-                        label="Tanggal Selesai Pelaksanaan"
-                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
-                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                      />
-                    </div>
-                  </DetailSection>
-
-                  {/* Dokumen Upload */}
-                  <DetailSection 
-                    title="Dokumen Upload" 
-                    icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
                       {/* Dokumen SIKA */}
                       {submission.sika_document_upload && (
                         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -726,6 +645,80 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       )}
                     </div>
                   </DetailSection>
+
+                  {/* Detail Pekerjaan - sama seperti admin */}
+                  <DetailSection 
+                    title="Informasi Pekerjaan" 
+                    icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Pekerjaan"
+                        value={submission.job_description}
+                      />
+                      <InfoCard
+                        label="Lokasi Kerja"
+                        value={submission.work_location}
+                      />
+                      <InfoCard
+                        label="Pelaksanaan"
+                        value={submission.implementation || 'Belum diisi'}
+                      />
+                      <InfoCard
+                        label="Jam Kerja"
+                        value={submission.working_hours}
+                      />
+                      <InfoCard
+                        label="Jumlah Pekerja"
+                        value={`${submission.worker_count || 0} orang`}
+                      />
+                      <InfoCard
+                        label="Sarana Kerja"
+                        value={submission.work_facilities}
+                      />
+                    </div>
+                  </DetailSection>
+
+                  {/* Dokumen Pendukung */}
+                  {/* <DetailSection title="Dokumen Pendukung" icon={<DocumentTextIcon className="h-5 w-5 text-blue-600" />}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Nomor SIMJA"
+                        value={submission.simja_number || '-'}
+                      />
+                      <InfoCard
+                        label="Tanggal SIMJA"
+                        value={submission.simja_date ? formatDate(submission.simja_date) : '-'}
+                      />
+                      <InfoCard
+                        label="Nomor SIKA"
+                        value={submission.sika_number || '-'}
+                      />
+                      <InfoCard
+                        label="Tanggal SIKA"
+                        value={submission.sika_date ? formatDate(submission.sika_date) : '-'}
+                      />
+                    </div>
+                  </DetailSection> */}
+
+                  {/* Jadwal Pelaksanaan */}
+                  <DetailSection title="Jadwal Pelaksanaan" icon={<CalendarIcon className="h-5 w-5 text-blue-600" />}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Tanggal Mulai Pelaksanaan"
+                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
+                        
+                      />
+                      <InfoCard
+                        label="Tanggal Selesai Pelaksanaan"
+                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
+                        
+                      />
+                    </div>
+                  </DetailSection>
+
+                  {/* Dokumen Upload */}
+                  
 
                   {/* Final Status Information */}
                   {submission.final_status !== 'PENDING_APPROVAL' && (

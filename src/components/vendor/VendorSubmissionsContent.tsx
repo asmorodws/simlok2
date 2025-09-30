@@ -537,7 +537,7 @@ export default function VendorSubmissionsContent() {
                             </Button>
                             {submission.approval_status === 'PENDING' && (
                               <>
-                                <Link href={`/vendor/submissions/edit/${submission.id}`} className="w-full">
+                                {/* <Link href={`/vendor/submissions/edit/${submission.id}`} className="w-full">
                                   <Button
                                     variant="warning"
                                     size="sm"
@@ -546,7 +546,7 @@ export default function VendorSubmissionsContent() {
                                   >
                                     Edit
                                   </Button>
-                                </Link>
+                                </Link> */}
                                 <Button 
                                   onClick={() => handleDelete(submission.id)} 
                                   variant="destructive" 

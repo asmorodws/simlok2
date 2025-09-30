@@ -3,7 +3,7 @@
 import Checkbox from "@/components/form/Checkbox";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import EnhancedInput from "@/components/form/EnhancedInput";
+import Input from "@/components/form/Input";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import Image from "next/image";
@@ -123,17 +123,16 @@ const SignUpForm: FC<Props> = ({
                     <Label className="text-gray-700 font-medium text-xs">
                       Nama Petugas <span className="text-red-500">*</span>
                     </Label>
-                    <EnhancedInput
+                    <Input
                       id="nama_petugas"
                       name="nama_petugas"
+                      type="text"
                       value={nama_petugas}
-                      onChange={setNamaPetugas}
-                      validationType="name"
-                      label=""
+                      onChange={(e) => setNamaPetugas(e.target.value)}
                       placeholder="Ahmad Budi"
                       required
                       disabled={isLoading}
-                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                      className="mt-1 h-11 px-4 text-sm w-full border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                     />
                   </div>
 
@@ -141,17 +140,16 @@ const SignUpForm: FC<Props> = ({
                     <Label className="text-gray-700 font-medium text-xs">
                       Email <span className="text-red-500">*</span>
                     </Label>
-                    <EnhancedInput
+                    <Input
                       id="email"
                       name="email"
+                      type="email"
                       value={email}
-                      onChange={setEmail}
-                      validationType="email"
-                      label=""
+                      onChange={(e) => setEmail(e.target.value)}
                       placeholder="email@perusahaan.com"
                       required
                       disabled={isLoading}
-                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                      className="mt-1 h-11 px-4 text-sm w-full border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -161,17 +159,16 @@ const SignUpForm: FC<Props> = ({
                     <Label className="text-gray-700 font-medium text-xs">
                       No. Telepon <span className="text-red-500">*</span>
                     </Label>
-                    <EnhancedInput
+                    <Input
                       id="no_telp"
                       name="no_telp"
+                      type="tel"
                       value={no_telp}
-                      onChange={setNoTelp}
-                      validationType="phone"
-                      label=""
+                      onChange={(e) => setNoTelp(e.target.value)}
                       placeholder="08123456789"
                       required
                       disabled={isLoading}
-                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                      className="mt-1 h-11 px-4 text-sm w-full border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                     />
                   </div>
 
@@ -179,17 +176,16 @@ const SignUpForm: FC<Props> = ({
                     <Label className="text-gray-700 font-medium text-xs">
                       Nama Vendor <span className="text-red-500">*</span>
                     </Label>
-                    <EnhancedInput
+                    <Input
                       id="nama_vendor"
                       name="nama_vendor"
+                      type="text"
                       value={nama_vendor}
-                      onChange={setNamaVendor}
-                      validationType="vendor"
-                      label=""
+                      onChange={(e) => setNamaVendor(e.target.value)}
                       placeholder="PT. Nama Perusahaan"
                       required
                       disabled={isLoading}
-                      className="mt-1 h-8 px-2 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded"
+                      className="mt-1 h-11 px-4 text-sm w-full border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                     />
                   </div>
                 </div>
@@ -211,7 +207,7 @@ const SignUpForm: FC<Props> = ({
                     required
                     disabled={isLoading}
                     rows={2}
-                    className="mt-1 w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                    className="mt-1 w-full h-24 px-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                   />
                 </div>
               </div>
@@ -233,7 +229,7 @@ const SignUpForm: FC<Props> = ({
                         required
                         minLength={8}
                         disabled={isLoading}
-                        className="w-full h-8 px-2 pr-8 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-11 px-4 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button
                         type="button"
@@ -262,7 +258,7 @@ const SignUpForm: FC<Props> = ({
                         required
                         minLength={8}
                         disabled={isLoading}
-                        className="w-full h-8 px-2 pr-8 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full h-11 px-4 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                       <button
                         type="button"

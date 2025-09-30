@@ -111,16 +111,16 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
   // Validate date range
   const validateRange = useCallback((range: DateRange) => {
     const newErrors: { start?: string; end?: string } = {};
-    
+
     if (range.startDate && range.endDate) {
       const startDate = new Date(range.startDate);
       const endDate = new Date(range.endDate);
-      
+
       if (endDate < startDate) {
         newErrors.end = 'Tanggal selesai harus setelah tanggal mulai';
       }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, []);
@@ -129,7 +129,7 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
   const handleStartChange = useCallback((startDate: string) => {
     const newRange = { ...localRange, startDate };
     setLocalRange(newRange);
-    
+
     if (validateRange(newRange)) {
       onChange(newRange);
     }
@@ -139,7 +139,7 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
   const handleEndChange = useCallback((endDate: string) => {
     const newRange = { ...localRange, endDate };
     setLocalRange(newRange);
-    
+
     if (validateRange(newRange)) {
       onChange(newRange);
     }
@@ -148,13 +148,13 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
   // Calculate duration
   const getDuration = useCallback((): number | null => {
     if (!localRange.startDate || !localRange.endDate) return null;
-    
+
     try {
       const start = new Date(localRange.startDate);
       const end = new Date(localRange.endDate);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
-      
+
       const diffTime = end.getTime() - start.getTime();
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     } catch {
@@ -183,7 +183,7 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
             <div className="mt-1 text-sm text-red-600">{errors.start}</div>
           )}
         </div>
-        
+
         <div className="relative" style={{ zIndex: 20 }}>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Tanggal Selesai Pelaksanaan
@@ -318,7 +318,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'workers' | 'review'>('details');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
-  
+
   // Document preview modal state
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
@@ -329,7 +329,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     fileUrl: '',
     fileName: ''
   });
-  
+
   // Worker editing states
   const [isEditingWorkers, setIsEditingWorkers] = useState(false);
   const [editableWorkers, setEditableWorkers] = useState<WorkerPhoto[]>([]);
@@ -337,16 +337,16 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   const [editableWorkerCount, setEditableWorkerCount] = useState(0);
   const [workerCountInput, setWorkerCountInput] = useState('0');
   const [savingWorkers, setSavingWorkers] = useState(false);
-  
+
   // Form states
-  
-  
+
+
   const [reviewData, setReviewData] = useState({
     review_status: '' as 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS' | '',
     review_note: '',
     final_note: ''
   });
-  
+
   const [approvalForm, setApprovalForm] = useState({
     content: '',
     pelaksanaan: '',
@@ -406,10 +406,10 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   useEffect(() => {
     if (implementationDatesHook.dates.startDate && implementationDatesHook.dates.endDate) {
       const pelaksanaanTemplate = `Terhitung mulai tanggal ${formatDate(implementationDatesHook.dates.startDate)} sampai ${formatDate(implementationDatesHook.dates.endDate)}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
-      
-      setApprovalForm(prev => ({ 
-        ...prev, 
-        pelaksanaan: pelaksanaanTemplate 
+
+      setApprovalForm(prev => ({
+        ...prev,
+        pelaksanaan: pelaksanaanTemplate
       }));
     }
   }, [implementationDatesHook.dates.startDate, implementationDatesHook.dates.endDate, formatDate]);
@@ -453,14 +453,14 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
     try {
       setLoading(true);
-      
+
       // Add abort controller to prevent multiple simultaneous requests
       const controller = new AbortController();
-      
+
       const response = await fetch(`/api/reviewer/simloks/${submissionId}`, {
         signal: controller.signal
       });
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           showError('Pengajuan Tidak Ditemukan', 'Pengajuan sudah dihapus oleh vendor');
@@ -504,16 +504,16 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   // Fetch scan history
   const fetchScanHistory = useCallback(async () => {
     if (!submissionId || !isOpen) return;
-    
+
     console.log('[Modal] Fetching scan history for:', submissionId);
-    
+
     try {
       const controller = new AbortController();
-      
+
       const response = await fetch(`/api/submissions/${submissionId}/scans`, {
         signal: controller.signal
       });
-      
+
       if (response.ok) {
         await response.json();
         // Scan history loaded successfully
@@ -637,7 +637,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     // Reset states when opening
     setActiveTab('details');
     setLoading(true);
-    
+
     // Debounce the fetch calls
     const timeoutId = setTimeout(() => {
       fetchSubmissionDetail();
@@ -684,7 +684,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
       return () => clearTimeout(timeoutId);
     }
-    
+
     return undefined;
   }, [isOpen]);
 
@@ -711,7 +711,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   };
 
   const updateWorkerName = (workerId: string, name: string) => {
-    setEditableWorkers(prev => 
+    setEditableWorkers(prev =>
       prev.map(w => w.id === workerId ? { ...w, worker_name: name } : w)
     );
   };
@@ -720,15 +720,15 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     try {
       const formData = new FormData();
       formData.append('photo', file);
-      
+
       const response = await fetch(`/api/reviewer/worker-photos/${workerId}`, {
         method: 'POST',
         body: formData,
       });
-      
+
       if (response.ok) {
         const { photo_url } = await response.json();
-        setEditableWorkers(prev => 
+        setEditableWorkers(prev =>
           prev.map(w => w.id === workerId ? { ...w, worker_photo: photo_url } : w)
         );
         showSuccess('Berhasil', 'Photo berhasil diunggah');
@@ -749,7 +749,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
     try {
       setSavingWorkers(true);
-      
+
       // First, delete workers that were marked for deletion
       if (workersToDelete.length > 0) {
         for (const workerId of workersToDelete) {
@@ -762,7 +762,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
           }
         }
       }
-      
+
       // Then update the worker list
       const response = await fetch(`/api/reviewer/simloks/${submission?.id}`, {
         method: 'PATCH',
@@ -774,10 +774,10 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
           worker_count: editableWorkerCount
         }),
       });
-      
+
       if (response.ok) {
         await response.json();
-        
+
         // Update local submission state to reflect deleted workers
         if (submission) {
           const filteredWorkers = submission.worker_list.filter(w => !workersToDelete.includes(w.id));
@@ -787,7 +787,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
             worker_count: editableWorkerCount
           });
         }
-        
+
         // Clear workers to delete
         setWorkersToDelete([]);
         setIsEditingWorkers(false);
@@ -822,7 +822,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   if (!isOpen || !submissionId) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
       onClick={(e) => {
         // Close modal when clicking backdrop
@@ -831,12 +831,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         }
       }}
     >
-      <div 
+      <div
         className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between  p-6 border-b border-gray-200 flex-shrink-0">
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Detail & Review Pengajuan</h2>
             {submission && (
@@ -862,33 +862,30 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
           <nav className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('details')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'details'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               <DocumentTextIcon className="h-5 w-5 inline mr-2" />
               Detail SIMLOK
             </button>
             <button
               onClick={() => setActiveTab('workers')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'workers'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'workers'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               <UserGroupIcon className="h-5 w-5 inline mr-2" />
               Data Pekerja
             </button>
             <button
               onClick={() => setActiveTab('review')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'review'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'review'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               <CheckCircleIcon className="h-5 w-5 inline mr-2" />
               Review
@@ -910,8 +907,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
               {activeTab === 'review' && (
                 <div className="space-y-8">
                   {/* Review Form */}
-                  <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="bg-white rounded-2xl gap-4 space-y-4 p-6 border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-4 ">
                       <h3 className="text-lg font-bold text-gray-900">Review Pengajuan SIMLOK</h3>
                       {submission.review_status !== 'PENDING_REVIEW' && (
                         <span className="text-sm px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-medium">
@@ -919,208 +916,199 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         </span>
                       )}
                     </div>
-                    
-                    {/* Review Notes */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Catatan untuk Approver <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          value={reviewData.review_note}
-                          onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
-                          rows={4}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                          placeholder="Berikan penjelasan detail mengenai hasil review..."
-                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
-                          required
+
+
+
+                    {/* Implementation Dates */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 relative">
+                      <h4 className="text-base font-medium text-gray-900 mb-4">Jadwal Pelaksanaan</h4>
+                      <div style={{ overflow: 'visible', position: 'relative', zIndex: 10 }}>
+                        <ImprovedDateRangePicker
+                          value={implementationDatesHook.dates}
+                          onChange={implementationDatesHook.updateDates}
+                          disabled={submission.final_status !== 'PENDING_APPROVAL'}
+                          className="mb-4"
                         />
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">
-                          Catatan untuk Vendor <span className="text-red-500">*</span>
-                        </label>
-                        <textarea
-                          value={reviewData.final_note}
-                          onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
-                          rows={4}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                          placeholder="Berikan keterangan yang akan ditampilkan kepada vendor..."
-                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
-                          required
-                        />
-                        <p className="text-xs text-gray-500 mt-2">
-                          Catatan ini akan ditampilkan kepada vendor setelah pengajuan disetujui/ditolak
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Implementation Dates */}
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 relative">
-                    <h4 className="text-base font-medium text-gray-900 mb-4">Jadwal Pelaksanaan</h4>
-                    <div style={{ overflow: 'visible', position: 'relative', zIndex: 10 }}>
-                      <ImprovedDateRangePicker
-                        value={implementationDatesHook.dates}
-                        onChange={implementationDatesHook.updateDates}
-                        disabled={submission.final_status !== 'PENDING_APPROVAL'}
-                        className="mb-4"
-                      />
-                    </div>
-                    
-                    {/* Generated Templates Preview */}
-                    {implementationDatesHook.template.pelaksanaan && (
-                      <div className="mt-6">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Template Pelaksanaan (Auto-generated)
-                          </label>
-                          <div className="p-3 bg-gray-50 border rounded-lg text-sm">
-                            {implementationDatesHook.template.pelaksanaan}
+                      {/* Generated Templates Preview */}
+                      {implementationDatesHook.template.pelaksanaan && (
+                        <div className="mt-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Template Pelaksanaan (Auto-generated)
+                            </label>
+                            <div className="p-3 bg-gray-50 border rounded-lg text-sm">
+                              {implementationDatesHook.template.pelaksanaan}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {/* Pelaksanaan Input Fields */}
-                    {implementationDatesHook.template.pelaksanaan && (
-                      <div className="mt-6 space-y-4">
+                      )}
+
+                      {/* Pelaksanaan Input Fields */}
+                      {implementationDatesHook.template.pelaksanaan && (
+                        <div className="mt-6 space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              5. Pelaksanaan
+                            </label>
+                            <textarea
+                              value={approvalForm.pelaksanaan}
+                              onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
+                              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                                }`}
+                              rows={3}
+                              placeholder="Terhitung mulai tanggal..."
+                              readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              6. Jam Kerja
+                            </label>
+                            <input
+                              type="text"
+                              value={submission?.working_hours || '08:00 WIB - 17:00 WIB'}
+                              readOnly
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Jam kerja diambil dari data vendor (tidak dapat diubah di tahap review)
+                            </p>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              7. Lain-lain (Preview Template)
+                            </label>
+                            <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+                              <div className="text-gray-700 whitespace-pre-line">
+                                {(() => {
+                                  let template = "Izin diberikan berdasarkan:";
+
+                                  // SIMJA section
+                                  if (submission.simja_number && submission.simja_date) {
+                                    template += `\n• Simja Ast Man Facility Management\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
+                                  }
+
+                                  // SIKA section  
+                                  if (submission.sika_number && submission.sika_date) {
+                                    template += `\n• SIKA Pekerjaan Dingin\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
+                                  }
+
+                                  // Head of Security section - akan diisi saat approval dengan tanggal SIMLOK
+                                  template += `\n  Diterima Sr Officer Security III\n  [Tanggal SIMLOK - akan diisi saat approval]`;
+
+                                  return template;
+                                })()}
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data SIMJA, SIKA dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Signer Information */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                      <h4 className="text-base font-medium text-gray-900 mb-4">Data Penandatangan</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            5. Pelaksanaan
-                          </label>
-                          <textarea
-                            value={approvalForm.pelaksanaan}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                              submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                            }`}
-                            rows={3}
-                            placeholder="Terhitung mulai tanggal..."
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Jabatan</label>
+                          <input
+                            type="text"
+                            value={approvalForm.jabatan_signer}
+                            onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                              }`}
                             readOnly={submission.final_status !== 'PENDING_APPROVAL'}
                           />
                         </div>
-                        
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            6. Jam Kerja
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
                           <input
                             type="text"
-                            value={submission?.working_hours || '08:00 WIB - 17:00 WIB'}
-                            readOnly
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                            value={approvalForm.nama_signer}
+                            onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                              }`}
+                            readOnly={submission.final_status !== 'PENDING_APPROVAL'}
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Jam kerja diambil dari data vendor (tidak dapat diubah di tahap review)
-                          </p>
                         </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            7. Lain-lain (Preview Template)
-                          </label>
-                          <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm">
-                            <div className="text-gray-700 whitespace-pre-line">
-                              {(() => {
-                                let template = "Izin diberikan berdasarkan:";
-                                
-                                // SIMJA section
-                                if (submission.simja_number && submission.simja_date) {
-                                  template += `\n• Simja Ast Man Facility Management\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
-                                }
-                                
-                                // SIKA section  
-                                if (submission.sika_number && submission.sika_date) {
-                                  template += `\n• SIKA Pekerjaan Dingin\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
-                                }
-                                
-                                // Head of Security section - akan diisi saat approval dengan tanggal SIMLOK
-                                template += `\n  Diterima Sr Officer Security III\n  [Tanggal SIMLOK - akan diisi saat approval]`;
-                                
-                                return template;
-                              })()}
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-2">
-                            ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data SIMJA, SIKA dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Signer Information */}
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                    <h4 className="text-base font-medium text-gray-900 mb-4">Data Penandatangan</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Jabatan</label>
-                        <input
-                          type="text"
-                          value={approvalForm.jabatan_signer}
-                          onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
-                        <input
-                          type="text"
-                          value={approvalForm.nama_signer}
-                          onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                            submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
-                        />
                       </div>
                     </div>
-                  </div>
 
-                  {/* Content Field - Isi Surat Izin Masuk Lokasi */}
-                  <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                    <h4 className="text-base font-medium text-gray-900 mb-4">Content - Isi Surat Izin Masuk Lokasi</h4>
+                    {/* Content Field - Isi Surat Izin Masuk Lokasi */}
+                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+                      <h4 className="text-base font-medium text-gray-900 mb-4">Content - Isi Surat Izin Masuk Lokasi</h4>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Content
+                          <span className="text-xs text-gray-500 ml-1">(Isi surat izin masuk lokasi)</span>
+                        </label>
+                        <textarea
+                          value={approvalForm.content}
+                          onChange={(e) => setApprovalForm(prev => ({ ...prev, content: e.target.value }))}
+                          rows={4}
+                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                            }`}
+                          placeholder="Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis."
+                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                        />
+                        <p className="text-xs text-gray-500 mt-2">
+                          Isi ketentuan dan syarat-syarat untuk surat izin masuk lokasi
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                  <div className="space-y-4 bg-white rounded-2xl gap-4 p-6 border border-gray-200 shadow-sm">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Content 
-                        <span className="text-xs text-gray-500 ml-1">(Isi surat izin masuk lokasi)</span>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Catatan untuk Approver <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        value={approvalForm.content}
-                        onChange={(e) => setApprovalForm(prev => ({ ...prev, content: e.target.value }))}
+                        value={reviewData.review_note}
+                        onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
                         rows={4}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                        }`}
-                        placeholder="Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis."
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                          }`}
+                        placeholder="Berikan penjelasan detail mengenai hasil review..."
                         readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Catatan untuk Vendor <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={reviewData.final_note}
+                        onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
+                        rows={4}
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                          }`}
+                        placeholder="Berikan keterangan yang akan ditampilkan kepada vendor..."
+                        readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                        required
                       />
                       <p className="text-xs text-gray-500 mt-2">
-                        Isi ketentuan dan syarat-syarat untuk surat izin masuk lokasi
+                        Catatan ini akan ditampilkan kepada vendor setelah pengajuan disetujui/ditolak
                       </p>
                     </div>
                   </div>
-
-
-
                   {/* Review Decision */}
                   <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
                     <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Keputusan Review</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        reviewData.review_status === 'MEETS_REQUIREMENTS'
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 bg-white hover:border-green-300'
-                      }`}>
+                      <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${reviewData.review_status === 'MEETS_REQUIREMENTS'
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 bg-white hover:border-green-300'
+                        }`}>
                         <input
                           type="radio"
                           name="review_status"
@@ -1139,11 +1127,10 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         </div>
                       </label>
 
-                      <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-200 bg-white hover:border-red-300'
-                      }`}>
+                      <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 bg-white hover:border-red-300'
+                        }`}>
                         <input
                           type="radio"
                           name="review_status"
@@ -1176,22 +1163,22 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             <div className="flex items-center justify-center">
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                               <span>
-                                {submission.review_status === 'PENDING_REVIEW' 
-                                  ? 'Mengirim Review...' 
+                                {submission.review_status === 'PENDING_REVIEW'
+                                  ? 'Mengirim Review...'
                                   : 'Memperbarui Review...'}
                               </span>
                             </div>
                           ) : (
                             <span>
-                              {submission.review_status === 'PENDING_REVIEW' 
-                                ? 'Submit Review' 
+                              {submission.review_status === 'PENDING_REVIEW'
+                                ? 'Submit Review'
                                 : 'Update Review'}
                             </span>
                           )}
                         </Button>
                       </div>
                     )}
-                    
+
                     {/* Review Status Info - Show when already reviewed and can still edit */}
                     {submission.review_status !== 'PENDING_REVIEW' && submission.final_status === 'PENDING_APPROVAL' && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -1220,7 +1207,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           <p className="text-sm text-gray-500">
                             Review telah selesai pada {submission.reviewed_at ? new Date(submission.reviewed_at).toLocaleDateString('id-ID', {
                               day: 'numeric',
-                              month: 'long', 
+                              month: 'long',
                               year: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
@@ -1253,8 +1240,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                   </div>
 
                   {/* Informasi Vendor - menggunakan DetailSection seperti admin */}
-                  <DetailSection 
-                    title="Informasi Vendor" 
+                  <DetailSection
+                    title="Informasi Vendor"
                     icon={<BuildingOfficeIcon className="h-5 w-5 text-blue-500" />}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1278,14 +1265,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                       <InfoCard
                         label="Berdasarkan"
                         value={submission.based_on}
-                        className="md:col-span-2"
                       />
                     </div>
                   </DetailSection>
 
                   {/* Informasi Dokumen - sama seperti admin */}
-                  <DetailSection 
-                    title="Informasi Dokumen" 
+                  <DetailSection
+                    title="Informasi Dokumen"
                     icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1299,7 +1285,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <InfoCard
                           label="Tanggal SIMJA"
                           value={formatDate(submission.simja_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+
                         />
                       )}
                       {submission.sika_number && (
@@ -1312,75 +1298,14 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <InfoCard
                           label="Tanggal SIKA"
                           value={formatDate(submission.sika_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+
                         />
                       )}
                       {/* Status dan Tanggal Pengajuan */}
-                      <InfoCard
-                        label="Tanggal Pengajuan"
-                        value={formatDate(submission.created_at)}
-                        icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                      />
-                    </div>
-                  </DetailSection>
 
-                  {/* Detail Pekerjaan - sama seperti admin */}
-                  <DetailSection 
-                    title="Informasi Pekerjaan" 
-                    icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Pekerjaan"
-                        value={submission.job_description}
-                      />
-                      <InfoCard
-                        label="Lokasi Kerja"
-                        value={submission.work_location}
-                      />
-                      <InfoCard
-                        label="Pelaksanaan"
-                        value={submission.implementation || 'Belum diisi'}
-                      />
-                      <InfoCard
-                        label="Jam Kerja"
-                        value={submission.working_hours}
-                      />
-                      <InfoCard
-                        label="Jumlah Pekerja"
-                        value={`${submission.worker_count || 0} orang`}
-                      />
-                      <InfoCard
-                        label="Sarana Kerja"
-                        value={submission.work_facilities}
-                      />
                     </div>
-                   
-                  </DetailSection>
 
-                  {/* Informasi Penandatangan - sama seperti admin */}
-                  <DetailSection 
-                    title="Informasi Penandatangan" 
-                    icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Jabatan Penandatangan"
-                        value={submission.signer_position || '-'}
-                      />
-                      <InfoCard
-                        label="Nama Penandatangan"
-                        value={submission.signer_name || '-'}
-                      />
-                    </div>
-                  </DetailSection>
-
-                  {/* Dokumen Upload - sama seperti admin */}
-                  <DetailSection 
-                    title="Dokumen Upload" 
-                    icon={<DocumentIcon className="h-5 w-5 text-blue-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
                       {/* Dokumen SIKA */}
                       {submission.sika_document_upload && (
                         <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
@@ -1431,6 +1356,41 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                       )}
                     </div>
                   </DetailSection>
+
+                  {/* Detail Pekerjaan - sama seperti admin */}
+                  <DetailSection
+                    title="Informasi Pekerjaan"
+                    icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <InfoCard
+                        label="Pekerjaan"
+                        value={submission.job_description}
+                      />
+                      <InfoCard
+                        label="Lokasi Kerja"
+                        value={submission.work_location}
+                      />
+                      <InfoCard
+                        label="Pelaksanaan"
+                        value={submission.implementation || 'Belum diisi'}
+                      />
+                      <InfoCard
+                        label="Jam Kerja"
+                        value={submission.working_hours}
+                      />
+                      <InfoCard
+                        label="Jumlah Pekerja"
+                        value={`${submission.worker_count || 0} orang`}
+                      />
+                      <InfoCard
+                        label="Sarana Kerja"
+                        value={submission.work_facilities}
+                      />
+                    </div>
+
+                  </DetailSection>
+
                 </div>
               )}
 
@@ -1471,10 +1431,10 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           </Button>
                         )
                       )}
-                      
+
                       {/* Badge Total selalu tampil */}
                       <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                        Total: {isEditingWorkers ? editableWorkerCount : (submission.worker_count || 
+                        Total: {isEditingWorkers ? editableWorkerCount : (submission.worker_count ||
                           (submission.worker_names ? submission.worker_names.split('\n').filter(name => name.trim()).length : submission.worker_list.length)
                         )} pekerja
                       </span>
@@ -1495,24 +1455,24 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           value={workerCountInput}
                           onChange={(e) => {
                             const inputValue = e.target.value;
-                            
+
                             // Allow completely empty input (show placeholder)
                             if (inputValue === '') {
                               setWorkerCountInput('');
                               setEditableWorkerCount(0);
                               return;
                             }
-                            
+
                             // Only allow numeric input - remove any non-numeric characters
                             const cleanValue = inputValue.replace(/\D/g, '');
-                            
+
                             // If after cleaning there's nothing left, make it empty
                             if (cleanValue === '') {
                               setWorkerCountInput('');
                               setEditableWorkerCount(0);
                               return;
                             }
-                            
+
                             const numValue = parseInt(cleanValue, 10);
                             if (!isNaN(numValue) && numValue >= 0 && numValue <= 9999) {
                               setWorkerCountInput(cleanValue);
@@ -1526,16 +1486,16 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                               'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
                               'Home', 'End', 'PageUp', 'PageDown'
                             ];
-                            
+
                             if (allowedKeys.includes(e.key)) {
                               return; // Allow these keys
                             }
-                            
+
                             // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
                             if (e.ctrlKey && ['a', 'c', 'v', 'x', 'z'].includes(e.key.toLowerCase())) {
                               return;
                             }
-                            
+
                             // Only allow numeric keys (0-9)
                             if (!/[0-9]/.test(e.key)) {
                               e.preventDefault();

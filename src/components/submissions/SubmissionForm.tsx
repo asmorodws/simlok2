@@ -10,7 +10,6 @@ import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
-import EnhancedInput from '@/components/form/EnhancedInput';
 import Alert from "../ui/alert/Alert";
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types/submission';
@@ -222,13 +221,12 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="vendor_name"
                     name="vendor_name"
+                    type="text"
                     value={session?.user?.vendor_name || formData.vendor_name || ''}
-                    onChange={(value) => setFormData(prev => ({ ...prev, vendor_name: value }))}
-                    validationType="vendor"
-                    label="Nama Vendor"
+                    onChange={handleChange}
                     required
                     disabled={!!session?.user?.vendor_name}
                     placeholder="Masukkan nama vendor"
@@ -237,27 +235,24 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="officer_name"
                     name="officer_name"
+                    type="text"
                     value={formData.officer_name || ''}
-                    onChange={(value) => setFormData(prev => ({ ...prev, officer_name: value }))}
-                    validationType="name"
-                    label="Nama Petugas"
-                    fieldName="Nama petugas"
+                    onChange={handleChange}
                     required
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <EnhancedInput
+                  <Input
                     id="based_on"
                     name="based_on"
+                    type="text"
                     value={formData.based_on}
-                    onChange={(value) => setFormData(prev => ({ ...prev, based_on: value }))}
-                    validationType="text"
-                    label="Berdasarkan"
+                    onChange={handleChange}
                     required
                     placeholder="Contoh: Surat Izin Kerja No. 123/2024"
                   />
@@ -265,28 +260,24 @@ export default function SubmissionForm() {
 
                 {/* Document Numbers */}
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="simja_number"
                     name="simja_number"
+                    type="text"
                     value={formData.simja_number || ''}
-                    onChange={(value) => setFormData(prev => ({ ...prev, simja_number: value }))}
-                    validationType="document"
-                    documentType="SIMJA"
-                    label="Nomor SIMJA"
+                    onChange={handleChange}
                     required
                     placeholder="Contoh: SIMJA/2024/001"
                   />
                 </div>
 
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="sika_number"
                     name="sika_number"
+                    type="text"
                     value={formData.sika_number || ''}
-                    onChange={(value) => setFormData(prev => ({ ...prev, sika_number: value }))}
-                    validationType="document"
-                    documentType="SIKA"
-                    label="Nomor SIKA"
+                    onChange={handleChange}
                     required
                     placeholder="Contoh: SIKA/2024/001"
                   />
@@ -356,26 +347,24 @@ export default function SubmissionForm() {
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="job_description"
                     name="job_description"
+                    type="text"
                     value={formData.job_description}
-                    onChange={(value) => setFormData(prev => ({ ...prev, job_description: value }))}
-                    validationType="job"
-                    label="Pekerjaan"
+                    onChange={handleChange}
                     required
                     placeholder="Contoh: Instalasi dan pemeliharaan peralatan"
                   />
                 </div>
 
                 <div>
-                  <EnhancedInput
+                  <Input
                     id="work_location"
                     name="work_location"
+                    type="text"
                     value={formData.work_location}
-                    onChange={(value) => setFormData(prev => ({ ...prev, work_location: value }))}
-                    validationType="address"
-                    label="Lokasi Kerja"
+                    onChange={handleChange}
                     required
                     placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
                   />
@@ -522,14 +511,12 @@ export default function SubmissionForm() {
                     
                     {/* Name Input */}
                     <div>
-                      <EnhancedInput
+                      <Input
                         id={`worker_name_${worker.id}`}
                         name={`worker_name_${worker.id}`}
+                        type="text"
                         value={worker.worker_name}
-                        onChange={(value) => updateWorkerName(worker.id, value)}
-                        validationType="name"
-                        label="Nama Lengkap Pekerja"
-                        fieldName="Nama pekerja"
+                        onChange={(e) => updateWorkerName(worker.id, e.target.value)}
                         required
                         placeholder="Masukkan nama lengkap"
                       />

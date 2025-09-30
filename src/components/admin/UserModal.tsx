@@ -6,7 +6,6 @@ import { UserData } from "@/types/user";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/Input";
-import EnhancedInput from "@/components/form/EnhancedInput";
 import Label from "@/components/form/Label";
 import { 
   XMarkIcon,
@@ -221,14 +220,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           <UserIcon className="w-4 h-4 text-gray-500 mr-2" />
                           <Label>Nama Petugas <span className="text-red-500">*</span></Label>
                         </div>
-                        <EnhancedInput
+                        <Input
                           id="nama_petugas"
                           name="nama_petugas"
+                          type="text"
                           value={formData.nama_petugas}
-                          onChange={(value) => setFormData(prev => ({ ...prev, nama_petugas: value }))}
-                          validationType="name"
-                          label=""
-                          fieldName="Nama petugas"
+                          onChange={(e) => handleInputChange("nama_petugas", e.target.value)}
                           required
                           placeholder="Masukkan nama lengkap petugas"
                           className="w-full"
@@ -241,13 +238,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           <EnvelopeIcon className="w-4 h-4 text-gray-500 mr-2" />
                           <Label>Email <span className="text-red-500">*</span></Label>
                         </div>
-                        <EnhancedInput
+                        <Input
                           id="email"
                           name="email"
+                          type="email"
                           value={formData.email}
-                          onChange={(value) => setFormData(prev => ({ ...prev, email: value }))}
-                          validationType="email"
-                          label=""
+                          onChange={(e) => handleInputChange("email", e.target.value)}
                           required
                           placeholder="example@company.com"
                           className="w-full"
@@ -260,13 +256,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                           <PhoneIcon className="w-4 h-4 text-gray-500 mr-2" />
                           <Label>No. Telepon</Label>
                         </div>
-                        <EnhancedInput
+                        <Input
                           id="no_telp"
                           name="no_telp"
+                          type="tel"
                           value={formData.no_telp}
-                          onChange={(value) => setFormData(prev => ({ ...prev, no_telp: value }))}
-                          validationType="phone"
-                          label=""
+                          onChange={(e) => handleInputChange("no_telp", e.target.value)}
                           placeholder="08123456789"
                           className="w-full"
                         />
@@ -361,13 +356,12 @@ export default function UserModal({ isOpen, onClose, onSave, user, mode }: UserM
                             <BuildingOfficeIcon className="w-4 h-4 text-gray-500 mr-2" />
                             <Label>Nama Vendor</Label>
                           </div>
-                          <EnhancedInput
+                          <Input
                             id="nama_vendor"
                             name="nama_vendor"
+                            type="text"
                             value={formData.nama_vendor}
-                            onChange={(value) => setFormData(prev => ({ ...prev, nama_vendor: value }))}
-                            validationType="vendor"
-                            label=""
+                            onChange={(e) => handleInputChange("nama_vendor", e.target.value)}
                             placeholder="PT. Nama Perusahaan"
                             className="w-full"
                           />

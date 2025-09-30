@@ -401,7 +401,7 @@ export default function VendorDashboard() {
                         </Button>
                         {submission.approval_status === 'PENDING' && (
                           <>
-                            <Link href={`/vendor/submissions/edit/${submission.id}`}>
+                            {/* <Link href={`/vendor/submissions/edit/${submission.id}`}>
                               <Button
                                 variant="warning"
                                 size="sm"
@@ -410,7 +410,7 @@ export default function VendorDashboard() {
                               >
                                 Ubah
                               </Button>
-                            </Link>
+                            </Link> */}
                             <Button
                               onClick={() => handleDelete(submission.id)}
                               variant="destructive"
