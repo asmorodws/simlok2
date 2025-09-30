@@ -38,6 +38,7 @@ export async function PATCH(
         vendor_name: true,
         role: true,
         verified_at: true,
+        verification_status: true,
         created_at: true
       }
     });
@@ -54,6 +55,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'User has already been verified' }, { status: 400 });
     }
 
+    if (existingUser.verification_status === 'REJECTED') {
+      return NextResponse.json({ error: 'User has already been rejected' }, { status: 400 });
+    }
+
     const body = await request.json();
     const validatedData = userVerificationSchema.parse(body);
 
@@ -63,12 +68,37 @@ export async function PATCH(
     let notificationType: string;
 
     if (validatedData.status === 'VERIFY') {
+      console.log(`Verifying user ${id} by ${session.user.id}`);
+      
       // Verify the user
       updatedUser = await prisma.user.update({
         where: { id },
         data: {
           verified_at: new Date(),
           verified_by: session.user.id,
+          verification_status: 'VERIFIED'
+        },
+        include: {
+          submissions: {
+            select: { id: true }
+          }
+        }
+      });
+      
+      console.log(`User ${id} verification status updated to:`, updatedUser.verification_status);
+
+      notificationTitle = 'Akun Anda Telah Diverifikasi';
+      notificationMessage = 'Selamat! Akun vendor Anda telah diverifikasi dan sekarang dapat mengajukan permohonan Simlok.';
+      notificationType = 'user_verified';
+    } else {
+      // Reject the user - update status instead of deleting
+      updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+          verification_status: 'REJECTED',
+          rejected_at: new Date(),
+          rejected_by: session.user.id,
+          rejection_reason: validatedData.note || 'No reason provided'
         },
         include: {
           submissions: {
@@ -77,17 +107,9 @@ export async function PATCH(
         }
       });
 
-      notificationTitle = 'Akun Anda Telah Diverifikasi';
-      notificationMessage = 'Selamat! Akun vendor Anda telah diverifikasi dan sekarang dapat mengajukan permohonan Simlok.';
-      notificationType = 'user_verified';
-    } else {
-      // For rejection, we might want to add a rejected_at field in the future
-      // For now, we'll just create a notification
       notificationTitle = 'Akun Anda Ditolak';
       notificationMessage = `Maaf, akun vendor Anda tidak dapat diverifikasi. ${validatedData.note || 'Silakan hubungi admin untuk informasi lebih lanjut.'}`;
       notificationType = 'user_rejected';
-      
-      updatedUser = existingUser;
     }
 
     // Create notification for the user
@@ -102,7 +124,8 @@ export async function PATCH(
           userId: id,
           verificationStatus: validatedData.status,
           verifiedBy: session.user.officer_name,
-          verifiedAt: new Date().toISOString(),
+          verifiedAt: validatedData.status === 'VERIFY' ? new Date().toISOString() : null,
+          rejectedAt: validatedData.status === 'REJECT' ? new Date().toISOString() : null,
           note: validatedData.note
         })
       }
@@ -112,17 +135,25 @@ export async function PATCH(
     const { notifyUserVerificationResult } = await import('@/server/events');
     await notifyUserVerificationResult(id, validatedData.status, validatedData.note);
 
-    return NextResponse.json({ 
+    const responseData = { 
       user: {
         id: updatedUser.id,
         email: updatedUser.email,
         officer_name: updatedUser.officer_name,
         vendor_name: updatedUser.vendor_name,
-        verified_at: validatedData.status === 'VERIFY' ? updatedUser.verified_at : null,
+        verified_at: updatedUser.verified_at,
+        verification_status: updatedUser.verification_status,
+        rejected_at: updatedUser.rejected_at,
+        rejected_by: updatedUser.rejected_by,
+        rejection_reason: updatedUser.rejection_reason,
         verified_by: validatedData.status === 'VERIFY' ? session.user.id : null
       },
       message: `User ${validatedData.status === 'VERIFY' ? 'verified' : 'rejected'} successfully`
-    });
+    };
+    
+    console.log('API Response:', JSON.stringify(responseData, null, 2));
+    
+    return NextResponse.json(responseData);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 

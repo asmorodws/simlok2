@@ -20,6 +20,13 @@ export default function VerificationGuard({ children }: VerificationGuardProps) 
       return;
     }
 
+    // Check if user account has been rejected
+    if (session.user.verification_status === 'REJECTED') {
+      console.log('VerificationGuard - User account rejected, redirecting...');
+      router.push('/verification-rejected');
+      return;
+    }
+
     // Check if user is verified (admin always allowed)
     if (session.user.role !== 'ADMIN' && !session.user.verified_at) {
       console.log('VerificationGuard - User not verified, redirecting...');
@@ -39,6 +46,11 @@ export default function VerificationGuard({ children }: VerificationGuardProps) 
 
   // Don't render if not authenticated
   if (!session) {
+    return null;
+  }
+
+  // Don't render if account is rejected
+  if (session.user.verification_status === 'REJECTED') {
     return null;
   }
 

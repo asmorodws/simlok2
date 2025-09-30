@@ -60,6 +60,7 @@ async function main() {
       vendor_name: null, // kosong untuk admin
       verified_at: new Date(), // admin sudah terverifikasi
       verified_by: "SYSTEM",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Super Admin",
@@ -72,6 +73,7 @@ async function main() {
       vendor_name: null, // kosong untuk super admin
       verified_at: new Date(), // super admin sudah terverifikasi
       verified_by: "SYSTEM",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Reviewer Utama",
@@ -84,6 +86,7 @@ async function main() {
       vendor_name: null, // kosong untuk reviewer
       verified_at: new Date(), // reviewer sudah terverifikasi
       verified_by: "ADMIN",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Approver Utama",
@@ -96,6 +99,7 @@ async function main() {
       vendor_name: null, // kosong untuk approver
       verified_at: new Date(), // approver sudah terverifikasi
       verified_by: "ADMIN",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Verifier Utama",
@@ -108,6 +112,7 @@ async function main() {
       vendor_name: null, // kosong untuk verifier
       verified_at: new Date(), // verifier sudah terverifikasi
       verified_by: "ADMIN",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Vendor A Petugas",
@@ -120,6 +125,7 @@ async function main() {
       vendor_name: "PT. AHMAD VENDOR SERVICES",
       verified_at: new Date(),
       verified_by: "ADMIN",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Vendor B Petugas",
@@ -132,6 +138,7 @@ async function main() {
       vendor_name: "PT. BUANA KONSTRUKSI",
       verified_at: new Date(),
       verified_by: "ADMIN",
+      verification_status: "VERIFIED" as const,
     },
     {
       officer_name: "Vendor C Petugas",
@@ -144,6 +151,36 @@ async function main() {
       vendor_name: "CV. CIPTA MANDIRI",
       verified_at: null, // vendor belum terverifikasi
       verified_by: null,
+      verification_status: "PENDING" as const,
+    },
+    {
+      officer_name: "Vendor D Petugas",
+      email: "vendord@example.com",
+      password: "vendor123",
+      role: "VENDOR" as const,
+      profile_photo: null,
+      address: "Jl. Vendor D No. 8, Medan",
+      phone_number: "081234567895",
+      vendor_name: "PT. DYNAMIC SOLUTIONS",
+      verified_at: null, // vendor belum terverifikasi
+      verified_by: null,
+      verification_status: "PENDING" as const,
+    },
+    {
+      officer_name: "Vendor E Petugas",
+      email: "vendore@example.com",
+      password: "vendor123",
+      role: "VENDOR" as const,
+      profile_photo: null,
+      address: "Jl. Vendor E No. 9, Yogyakarta",
+      phone_number: "081234567896",
+      vendor_name: "CV. EXCELLENT WORKS",
+      verified_at: null, // vendor ditolak
+      verified_by: null,
+      verification_status: "REJECTED" as const,
+      rejected_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 hari lalu
+      rejected_by: "REVIEWER",
+      rejection_reason: "Dokumen tidak lengkap dan tidak sesuai dengan persyaratan yang ditetapkan.",
     },
   ];
 
@@ -167,6 +204,7 @@ async function main() {
         vendor_name: user.vendor_name,
         verified_at: user.verified_at,
         verified_by: user.verified_by,
+        verification_status: user.verification_status,
       },
     });
 

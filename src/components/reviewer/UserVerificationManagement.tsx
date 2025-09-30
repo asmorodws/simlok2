@@ -34,12 +34,17 @@ interface User {
   created_at: string;
   verified_at?: string;
   verified_by?: string;
+  verification_status?: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  rejected_at?: string;
+  rejected_by?: string;
+  rejection_reason?: string;
   role: string;
 }
 
 interface Stats {
   totalPending: number;
   totalVerified: number;
+  totalRejected: number;
   totalUsers: number;
   todayRegistrations: number;
 }
@@ -75,6 +80,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
     totalVerified: 0,
+    totalRejected: 0,
     totalUsers: 0,
     todayRegistrations: 0
   });
@@ -90,7 +96,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
   
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "verified" | "rejected">("all");
   
   // Sorting
   const [sortField, setSortField] = useState<SortField>("created_at");
@@ -200,13 +206,22 @@ export default function UserVerificationManagement({ className = '', refreshTrig
       : <ChevronDownIcon className="w-4 h-4 text-blue-500" />;
   }, [sortField, sortOrder]);
 
-  const formatDate = useCallback((dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString("id-ID", {
-      year: "numeric",
-      month: "short", 
-      day: "numeric"
-    });
+  const formatDate = useCallback((dateString: string | Date | null | undefined) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      return date.toLocaleDateString("id-ID", {
+        year: "numeric",
+        month: "short", 
+        day: "numeric"
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   }, []);
 
 
@@ -228,19 +243,28 @@ export default function UserVerificationManagement({ className = '', refreshTrig
     );
   }, []);
 
-  const getVerificationStatus = useCallback((verified_at?: string | Date | null) => {
-    if (verified_at) {
-      return (
-        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-          Terverifikasi
-        </span>
-      );
+  const getVerificationStatus = useCallback((user: User) => {
+    switch (user.verification_status) {
+      case 'VERIFIED':
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+            Terverifikasi
+          </span>
+        );
+      case 'REJECTED':
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+            Ditolak
+          </span>
+        );
+      case 'PENDING':
+      default:
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning-100 text-warning-800">
+            Menunggu Verifikasi
+          </span>
+        );
     }
-    return (
-      <span className="px-2 py-1 text-xs font-medium rounded-full bg-warning-100 text-warning-800">
-        Menunggu Verifikasi
-      </span>
-    );
   }, []);
 
   const paginationInfo = useMemo(() => ({
@@ -409,12 +433,13 @@ export default function UserVerificationManagement({ className = '', refreshTrig
                     <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getVerificationStatus(user.verified_at)}
-                    {user.verified_by && (
+                    {getVerificationStatus(user)}
+                    
+                    {user.verification_status === 'REJECTED' && user.rejected_by && (
                       <div className="text-xs text-gray-500 mt-1">
-                        oleh: {user.verified_by}
                       </div>
                     )}
+                    
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
@@ -461,7 +486,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Statistics Cards - Dashboard Design */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -482,6 +507,18 @@ export default function UserVerificationManagement({ className = '', refreshTrig
             </div>
             <div className="p-3 bg-green-100 rounded-full">
               <CheckCircleIcon className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border shadow-sm p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
+              <p className="text-2xl font-bold text-red-600 mt-1">{stats.totalRejected}</p>
+            </div>
+            <div className="p-3 bg-red-100 rounded-full">
+              <XCircleIcon className="w-6 h-6 text-red-600" />
             </div>
           </div>
         </div>
@@ -532,7 +569,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
         <select
           value={statusFilter}
           onChange={(e) => {
-            const newValue = e.target.value as "all" | "pending" | "verified";
+            const newValue = e.target.value as "all" | "pending" | "verified" | "rejected";
             setStatusFilter(newValue);
             setCurrentPage(1);
           }}
@@ -541,6 +578,7 @@ export default function UserVerificationManagement({ className = '', refreshTrig
           <option value="all">Semua Status</option>
           <option value="pending">Belum Verifikasi</option>
           <option value="verified">Sudah Verifikasi</option>
+          <option value="rejected">Ditolak</option>
         </select>
         
         <Button
@@ -663,16 +701,25 @@ function UserVerificationModal({
 }: UserVerificationModalProps) {
   if (!isOpen || !user) return null;
 
-  const formatDate = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (dateString: string | Date | null | undefined) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      return date.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   };
 
   const isVerified = !!user.verified_at;
@@ -848,11 +895,7 @@ function UserVerificationModal({
                             <p className="text-base font-medium text-gray-900">
                               {formatDate(user.verified_at)}
                             </p>
-                            {user.verified_by && (
-                              <p className="text-sm text-gray-600 mt-1">
-                                oleh: {user.verified_by}
-                              </p>
-                            )}
+                            
                           </div>
                         </div>
                       )}

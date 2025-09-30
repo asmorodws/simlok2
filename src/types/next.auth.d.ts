@@ -1,5 +1,5 @@
 import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
-import { Role } from "@prisma/client";
+import { Role, VerificationStatus } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -9,6 +9,7 @@ declare module "next-auth" {
       officer_name: string;
       vendor_name?: string | null;
       verified_at?: Date | null;
+      verification_status?: VerificationStatus;
       created_at?: Date;
     } & DefaultSession["user"];
     accessToken?: string;
@@ -19,6 +20,7 @@ declare module "next-auth" {
     officer_name: string;
     vendor_name?: string | null;
     verified_at?: Date | null;
+    verification_status?: VerificationStatus;
     created_at?: Date;
   }
 }
@@ -30,6 +32,7 @@ declare module "next-auth/jwt" {
     officer_name?: string;
     vendor_name?: string | null;
     verified_at?: Date | null;
+    verification_status?: VerificationStatus;
     created_at?: Date;
     accessToken?: string;
   }

@@ -29,6 +29,9 @@ export default function LoginPage() {
         case "CredentialsSignin":
           setError("Email atau password salah");
           break;
+        case "ACCOUNT_REJECTED":
+          setError("Akun Anda telah ditolak oleh administrator. Silakan hubungi admin untuk informasi lebih lanjut.");
+          break;
         case "Configuration":
           setError("Terjadi kesalahan konfigurasi sistem");
           break;

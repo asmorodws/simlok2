@@ -32,6 +32,11 @@ export const authOptions: NextAuthOptions = {
         });
         if (!user || !user.password) return null;
 
+        // Check if user verification status is REJECTED
+        if (user.verification_status === 'REJECTED') {
+          throw new Error('ACCOUNT_REJECTED');
+        }
+
         const ok = await bcrypt.compare(credentials.password, user.password);
         if (!ok) return null;
 
@@ -50,6 +55,7 @@ export const authOptions: NextAuthOptions = {
           officer_name: user.officer_name,
           vendor_name: user.vendor_name,
           verified_at: user.verified_at,
+          verification_status: user.verification_status,
           created_at: user.created_at,
         };
       },
@@ -79,6 +85,7 @@ export const authOptions: NextAuthOptions = {
         token.officer_name = user.officer_name;
         token.vendor_name = user.vendor_name || null;
         token.verified_at = user.verified_at || null;
+        token.verification_status = user.verification_status || 'PENDING';
         if (user.created_at) {
           token.created_at = user.created_at;
         }
@@ -101,12 +108,14 @@ export const authOptions: NextAuthOptions = {
         try {
           const latestUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { verified_at: true, role: true }
+            select: { verified_at: true, role: true, verification_status: true }
           });
           
           if (latestUser) {
             token.verified_at = latestUser.verified_at;
+            token.verification_status = latestUser.verification_status || 'PENDING';
             console.log('JWT callback - refreshed verified_at:', latestUser.verified_at);
+            console.log('JWT callback - refreshed verification_status:', latestUser.verification_status);
           }
         } catch (error) {
           console.error('Error refreshing user verification status:', error);
@@ -126,6 +135,7 @@ export const authOptions: NextAuthOptions = {
         session.user.officer_name = token.officer_name as string;
         session.user.vendor_name = token.vendor_name as string | null;
         session.user.verified_at = token.verified_at as Date | null;
+        session.user.verification_status = token.verification_status as import("@prisma/client").VerificationStatus;
         session.user.created_at = token.created_at as Date;
         console.log('Session callback - session.user.id:', session.user.id); // Debug log
       }

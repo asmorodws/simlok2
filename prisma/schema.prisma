@@ -21,6 +21,10 @@ model User {
   phone_number        String?
   verified_at         DateTime?
   verified_by         String?
+  verification_status VerificationStatus @default(PENDING)
+  rejected_at         DateTime?
+  rejected_by         String?
+  rejection_reason    String?
   isActive            Boolean        @default(true)
   lastActiveAt        DateTime?
   sessionExpiry       DateTime?
@@ -217,6 +221,12 @@ enum Role {
   SUPER_ADMIN
   REVIEWER
   APPROVER
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
 }
 
 enum ReviewStatus {

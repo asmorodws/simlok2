@@ -712,9 +712,6 @@ export default function NotificationsPanel({
               onUserUpdate={(updatedUser: UserData) => {
                 setSelectedVendorUser(updatedUser);
               }}
-              onUserRemove={() => {
-                setSelectedVendorUser(null);
-              }}
             />
           ) : (
             /* Show Admin User Verification Modal for ADMIN/SUPER_ADMIN roles */

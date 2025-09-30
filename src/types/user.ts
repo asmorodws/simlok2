@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role, VerificationStatus } from "@prisma/client";
 
 export interface UserData {
   id: string;
@@ -11,5 +11,9 @@ export interface UserData {
   created_at: string | Date;
   verified_at?: string | Date | null;
   verified_by?: string | null;
+  verification_status?: VerificationStatus;
+  rejected_at?: string | Date | null;
+  rejected_by?: string | null;
+  rejection_reason?: string | null;
   profile_photo?: string | null;
 }

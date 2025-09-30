@@ -25,41 +25,54 @@ interface ReviewerUserVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUserUpdate?: (updatedUser: UserData) => void;
-  onUserRemove?: () => void;
 }
 
 export default function ReviewerUserVerificationModal({
   user,
   isOpen,
   onClose,
-  onUserUpdate,
-  onUserRemove
+  onUserUpdate
 }: ReviewerUserVerificationModalProps) {
   const [processing, setProcessing] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<'approve' | 'reject' | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(user);
   const { showSuccess, showError } = useToast();
 
-  if (!isOpen || !user) return null;
+  // Update local user state when prop changes
+  React.useEffect(() => {
+    setCurrentUser(user);
+  }, [user]);
 
-  const formatDate = (dateString: string | Date) => {
-    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-    return date.toLocaleDateString('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  if (!isOpen || !currentUser) return null;
+
+  const formatDate = (dateString: string | Date | null | undefined) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      if (isNaN(date.getTime())) return 'N/A';
+      
+      return date.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'N/A';
+    }
   };
 
   const handleVerifyUser = async (action: 'approve' | 'reject') => {
-    if (!user) return;
+    if (!currentUser) return;
     
-    setProcessing(user.id);
+    setProcessing(currentUser.id);
     
     try {
-      const response = await fetch(`/api/reviewer/users/${user.id}`, {
+      const response = await fetch(`/api/reviewer/users/${currentUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -75,15 +88,18 @@ export default function ReviewerUserVerificationModal({
       const result = await response.json();
       
       if (action === 'approve' && result.user) {
+        // Update local state immediately
+        setCurrentUser(result.user);
         onUserUpdate?.(result.user);
         showSuccess('Berhasil', 'User berhasil diverifikasi');
-      } else if (action === 'reject') {
-        onUserRemove?.();
+      } else if (action === 'reject' && result.user) {
+        // Update local state for rejection
+        setCurrentUser(result.user);
+        onUserUpdate?.(result.user);
         showSuccess('Berhasil', 'User berhasil ditolak');
       }
 
       setShowConfirmModal(null);
-      onClose();
       
     } catch (error) {
       console.error('Error updating user verification:', error);
@@ -98,7 +114,9 @@ export default function ReviewerUserVerificationModal({
     onClose();
   };
 
-  const isVerified = !!user.verified_at;
+  const isVerified = currentUser.verification_status === 'VERIFIED';
+  const isRejected = currentUser.verification_status === 'REJECTED';
+  const isPending = currentUser.verification_status === 'PENDING' || !currentUser.verification_status;
 
   return (
     <>
@@ -139,24 +157,28 @@ export default function ReviewerUserVerificationModal({
                     <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
                       isVerified 
                         ? 'bg-green-100 text-green-800' 
+                        : isRejected
+                        ? 'bg-red-100 text-red-800'
                         : 'bg-warning-100 text-warning-800'
                     }`}>
                       {isVerified ? (
                         <CheckCircleIcon className="w-4 h-4" />
+                      ) : isRejected ? (
+                        <XCircleIcon className="w-4 h-4" />
                       ) : (
                         <ClockIcon className="w-4 h-4" />
                       )}
-                      {isVerified ? 'Terverifikasi' : 'Menunggu Verifikasi'}
+                      {isVerified ? 'Terverifikasi' : isRejected ? 'Ditolak' : 'Menunggu Verifikasi'}
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      user.role === 'VENDOR' 
+                      currentUser.role === 'VENDOR' 
                         ? 'bg-blue-100 text-blue-800' 
-                        : user.role === 'VERIFIER'
+                        : currentUser.role === 'VERIFIER'
                         ? 'bg-purple-100 text-purple-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       <IdentificationIcon className="w-4 h-4 inline mr-1" />
-                      {user.role}
+                      {currentUser.role}
                     </div>
                   </div>
                 </div>
@@ -179,7 +201,7 @@ export default function ReviewerUserVerificationModal({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
                             <p className="text-base font-medium text-gray-900 break-words">
-                              {user.officer_name}
+                              {currentUser.officer_name}
                             </p>
                           </div>
                         </div>
@@ -191,12 +213,12 @@ export default function ReviewerUserVerificationModal({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-500">Email</p>
                             <p className="text-base font-medium text-gray-900 break-words">
-                              {user.email}
+                              {currentUser.email}
                             </p>
                           </div>
                         </div>
 
-                        {user.phone_number && (
+                        {currentUser.phone_number && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <PhoneIcon className="w-5 h-5 text-orange-600" />
@@ -204,13 +226,13 @@ export default function ReviewerUserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500">No. Telepon</p>
                               <p className="text-base font-medium text-gray-900">
-                                {user.phone_number}
+                                {currentUser.phone_number}
                               </p>
                             </div>
                           </div>
                         )}
 
-                        {user.address && (
+                        {currentUser.address && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <MapPinIcon className="w-5 h-5 text-purple-600" />
@@ -218,7 +240,7 @@ export default function ReviewerUserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500">Alamat</p>
                               <p className="text-base font-medium text-gray-900 break-words">
-                                {user.address}
+                                {currentUser.address}
                               </p>
                             </div>
                           </div>
@@ -236,7 +258,7 @@ export default function ReviewerUserVerificationModal({
                       </h3>
 
                       <div className="space-y-4">
-                        {user.vendor_name && (
+                        {currentUser.vendor_name && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <BuildingOfficeIcon className="w-5 h-5 text-indigo-600" />
@@ -244,7 +266,7 @@ export default function ReviewerUserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
                               <p className="text-base font-medium text-gray-900 break-words">
-                                {user.vendor_name}
+                                {currentUser.vendor_name}
                               </p>
                             </div>
                           </div>
@@ -257,12 +279,12 @@ export default function ReviewerUserVerificationModal({
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-500">Tanggal Daftar</p>
                             <p className="text-base font-medium text-gray-900">
-                              {formatDate(user.created_at)}
+                              {formatDate(currentUser.created_at)}
                             </p>
                           </div>
                         </div>
 
-                        {isVerified && user.verified_at && (
+                        {isVerified && currentUser.verified_at && (
                           <div className="flex items-start">
                             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
                               <ShieldCheckIcon className="w-5 h-5 text-green-600" />
@@ -270,13 +292,28 @@ export default function ReviewerUserVerificationModal({
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-gray-500">Diverifikasi Pada</p>
                               <p className="text-base font-medium text-gray-900">
-                                {formatDate(user.verified_at)}
+                                {formatDate(currentUser.verified_at)}
                               </p>
-                              {user.verified_by && (
+                              {currentUser.verified_by && (
                                 <p className="text-sm text-gray-600 mt-1">
-                                  oleh: {user.verified_by}
+                                  
                                 </p>
                               )}
+                            </div>
+                          </div>
+                        )}
+
+                        {isRejected && currentUser.rejected_at && (
+                          <div className="flex items-start">
+                            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
+                              <XCircleIcon className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-500">Ditolak Pada</p>
+                              <p className="text-base font-medium text-gray-900">
+                                {formatDate(currentUser.rejected_at)}
+                              </p>
+                              
                             </div>
                           </div>
                         )}
@@ -285,8 +322,8 @@ export default function ReviewerUserVerificationModal({
                   </Card>
                 </div>
 
-                {/* Actions for Unverified Users */}
-                {!isVerified && (
+                {/* Actions for Pending Users */}
+                {isPending && (
                   <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -295,13 +332,13 @@ export default function ReviewerUserVerificationModal({
                       </h3>
                       <p className="text-sm text-gray-600 mb-4">
                         Pilih tindakan yang sesuai untuk user ini. Persetujuan akan memberikan akses sistem, 
-                        sedangkan penolakan akan menghapus user dari sistem.
+                        sedangkan penolakan akan mengubah status user menjadi ditolak.
                       </p>
 
                       <div className="flex flex-col sm:flex-row gap-4">
                         <Button
                           onClick={() => setShowConfirmModal('approve')}
-                          disabled={processing === user.id}
+                          disabled={processing === currentUser.id}
                           variant="primary"
                           size="md"
                           className="flex-1"
@@ -311,7 +348,7 @@ export default function ReviewerUserVerificationModal({
                         </Button>
                         <Button
                           onClick={() => setShowConfirmModal('reject')}
-                          disabled={processing === user.id}
+                          disabled={processing === currentUser.id}
                           variant="destructive"
                           size="md"
                           className="flex-1"
@@ -345,6 +382,28 @@ export default function ReviewerUserVerificationModal({
                     </div>
                   </Card>
                 )}
+
+                {/* Rejection Status Info */}
+                {isRejected && (
+                  <Card className="bg-gradient-to-r from-red-50 to-pink-50">
+                    <div className="p-6">
+                      <div className="flex items-start">
+                        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                          <XCircleIcon className="w-6 h-6 text-red-600" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-red-900 mb-2">
+                            User Telah Ditolak
+                          </h4>
+                          <p className="text-red-700">
+                            User ini telah ditolak dan tidak dapat mengakses sistem. User tidak dapat login dan 
+                            perlu menghubungi administrator untuk informasi lebih lanjut.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                )}
               </div>
             </div>
 
@@ -359,13 +418,13 @@ export default function ReviewerUserVerificationModal({
       </div>
 
       {/* Confirmation Modal */}
-      {showConfirmModal && user && (
+      {showConfirmModal && currentUser && (
         <ConfirmationModal
           isOpen={!!showConfirmModal}
           onClose={() => setShowConfirmModal(null)}
-          user={user}
+          user={currentUser}
           action={showConfirmModal}
-          isProcessing={processing === user.id}
+          isProcessing={processing === currentUser.id}
           onConfirm={() => handleVerifyUser(showConfirmModal)}
         />
       )}
@@ -421,7 +480,7 @@ function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConf
                 <div className="text-sm">
                   <p className="font-medium text-red-800 mb-1">Peringatan!</p>
                   <p className="text-red-700">
-                    User akan dihapus dari sistem dan tidak dapat login lagi.
+                    Status user akan diubah menjadi ditolak dan tidak dapat login lagi.
                   </p>
                 </div>
               </div>

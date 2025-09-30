@@ -32,9 +32,11 @@ export async function GET(request: NextRequest) {
 
     // Filter by verification status
     if (status === 'pending') {
-      whereClause.verified_at = null;
+      whereClause.verification_status = 'PENDING';
     } else if (status === 'verified') {
-      whereClause.verified_at = { not: null };
+      whereClause.verification_status = 'VERIFIED';
+    } else if (status === 'rejected') {
+      whereClause.verification_status = 'REJECTED';
     }
 
     // Search by name, vendor name, or email
@@ -61,6 +63,10 @@ export async function GET(request: NextRequest) {
           created_at: true,
           verified_at: true,
           verified_by: true,
+          verification_status: true,
+          rejected_at: true,
+          rejected_by: true,
+          rejection_reason: true,
           role: true
         },
         orderBy: { [sortBy]: sortOrder },
@@ -75,13 +81,19 @@ export async function GET(request: NextRequest) {
       totalPending: await prisma.user.count({
         where: { 
           role: 'VENDOR',
-          verified_at: null 
+          verification_status: 'PENDING'
         }
       }),
       totalVerified: await prisma.user.count({
         where: { 
           role: 'VENDOR',
-          verified_at: { not: null }
+          verification_status: 'VERIFIED'
+        }
+      }),
+      totalRejected: await prisma.user.count({
+        where: { 
+          role: 'VENDOR',
+          verification_status: 'REJECTED'
         }
       }),
       totalUsers: await prisma.user.count({
