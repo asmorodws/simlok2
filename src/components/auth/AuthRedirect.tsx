@@ -17,9 +17,6 @@ export default function AuthRedirect({
 
     if (session?.user?.role) {
       switch (session.user.role) {
-        case "ADMIN":
-          router.replace("/admin");
-          break;
         case "VENDOR":
           router.replace("/vendor");
           break;

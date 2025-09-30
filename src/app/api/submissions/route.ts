@@ -9,7 +9,7 @@ import { notifyAdminNewSubmission } from '@/server/events';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         { work_location: { contains: search } },
         { worker_names: { contains: search } }
       ];
-      
+
       whereClause.OR = searchConditions;
     }
 
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Include statistics for admin requests
-    if (includeStats && session.user.role === 'ADMIN') {
+    if (includeStats && session.user.role === 'SUPER_ADMIN') {
       const statistics = await prisma.submission.groupBy({
         by: ['approval_status'],
         _count: {
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: SubmissionData = await request.json();
-    
+
     // Debug logging for received data
     console.log('POST /api/submissions - Received data:', {
       ...body,
@@ -163,15 +163,15 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     const requiredFields = [
-      'vendor_name', 'based_on', 'officer_name', 'job_description', 
+      'vendor_name', 'based_on', 'officer_name', 'job_description',
       'work_location', 'working_hours', 'work_facilities', 'worker_names'
     ];
 
     for (const field of requiredFields) {
       if (!body[field as keyof SubmissionData]) {
         console.log(`POST /api/submissions - Missing required field: ${field}`);
-        return NextResponse.json({ 
-          error: `Field ${field} is required` 
+        return NextResponse.json({
+          error: `Field ${field} is required`
         }, { status: 400 });
       }
     }
@@ -179,8 +179,8 @@ export async function POST(request: NextRequest) {
     // Validate session user ID
     if (!session.user.id) {
       console.log('POST /api/submissions - Session user ID is missing');
-      return NextResponse.json({ 
-        error: 'User ID not found in session' 
+      return NextResponse.json({
+        error: 'User ID not found in session'
       }, { status: 400 });
     }
 
@@ -191,8 +191,8 @@ export async function POST(request: NextRequest) {
 
     if (!userExists) {
       console.log('POST /api/submissions - User not found in database:', session.user.id);
-      return NextResponse.json({ 
-        error: 'User not found in database' 
+      return NextResponse.json({
+        error: 'User not found in database'
       }, { status: 400 });
     }
 
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     // Generate QR Code (simple implementation)
     const qrData = `${session.user.id}-${Date.now()}`;
-    
+
     try {
       // Create submission first
       const submission = await prisma.submission.create({
@@ -250,8 +250,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(submission, { status: 201 });
     } catch (dbError) {
       console.error('POST /api/submissions - Database error:', dbError);
-      return NextResponse.json({ 
-        error: 'Failed to create submission in database' 
+      return NextResponse.json({
+        error: 'Failed to create submission in database'
       }, { status: 500 });
     }
   } catch (error) {

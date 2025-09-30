@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const scope = searchParams.get('scope') || 
-    (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN' ? 'admin' :
+    ( session.user.role === 'SUPER_ADMIN' ? 'admin' :
      session.user.role === 'REVIEWER' ? 'reviewer' :
      session.user.role === 'APPROVER' ? 'approver' : 'vendor');
   const vendorId = searchParams.get('vendorId') || session.user.id;

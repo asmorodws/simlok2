@@ -28,7 +28,7 @@ export default function VerificationGuard({ children }: VerificationGuardProps) 
     }
 
     // Check if user is verified (admin always allowed)
-    if (session.user.role !== 'ADMIN' && !session.user.verified_at) {
+    if (session.user.role !== 'SUPER_ADMIN' && !session.user.verified_at) {
       console.log('VerificationGuard - User not verified, redirecting...');
       router.push('/verification-pending');
       return;
@@ -55,7 +55,7 @@ export default function VerificationGuard({ children }: VerificationGuardProps) 
   }
 
   // Don't render if not verified (except admin)
-  if (session.user.role !== 'ADMIN' && !session.user.verified_at) {
+  if (session.user.role !== 'SUPER_ADMIN' && !session.user.verified_at) {
     return null;
   }
 

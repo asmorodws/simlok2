@@ -4,6 +4,8 @@ import { prisma } from "./singletons";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { JWT_CONFIG } from "@/utils/jwt-config";
+import { TokenManager } from "@/utils/token-manager";
+
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development',
@@ -40,6 +42,15 @@ export const authOptions: NextAuthOptions = {
         const ok = await bcrypt.compare(credentials.password, user.password);
         if (!ok) return null;
 
+        // Generate refresh token and store it
+        await prisma.refreshToken.create({
+          data: {
+            token: crypto.randomUUID(),
+            userId: user.id,
+            expiresAt: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+          },
+        });
+
         console.log('Auth authorize - returning user:', { 
           id: user.id, 
           email: user.email, 
@@ -63,14 +74,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { 
     strategy: "jwt",
-    // Session expires after configured time (default: 6 hours)
-    maxAge: JWT_CONFIG.SESSION_MAX_AGE,
-    // Update age extends session by this amount each time user is active
-    updateAge: JWT_CONFIG.SESSION_UPDATE_AGE,
-  },
-  jwt: {
-    // JWT expires after configured time (default: 6 hours)
-    maxAge: JWT_CONFIG.JWT_EXPIRE_TIME,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -130,14 +134,43 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id   = token.id as string; // Use the stored user.id instead of token.sub
+        session.user.id = token.id as string;
         session.user.role = token.role as import("@prisma/client").User_role;
         session.user.officer_name = token.officer_name as string;
         session.user.vendor_name = token.vendor_name as string | null;
         session.user.verified_at = token.verified_at as Date | null;
         session.user.verification_status = token.verification_status as import("@prisma/client").VerificationStatus;
         session.user.created_at = token.created_at as Date;
-        console.log('Session callback - session.user.id:', session.user.id); // Debug log
+
+        // Get active refresh token
+        const activeRefreshToken = await prisma.refreshToken.findFirst({
+          where: {
+            userId: token.id as string,
+            expiresAt: { gt: new Date() }
+          },
+          orderBy: { expiresAt: 'desc' }
+        });
+
+        if (activeRefreshToken) {
+          (session.user as any).refreshToken = activeRefreshToken.token;
+        }
+
+        // Update session in database for tracking
+        await prisma.session.upsert({
+          where: {
+            sessionToken: activeRefreshToken?.token || 'temp-token',
+          },
+          create: {
+            sessionToken: activeRefreshToken?.token || 'temp-token',
+            userId: token.id as string,
+            expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+          },
+          update: {
+            expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+          },
+        });
+        
+        console.log('Session callback - session.user.id:', session.user.id);
       }
       return session;
     },
@@ -145,8 +178,14 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user }) {
       console.log(`User ${user.email} signed in at ${new Date()}`);
+      // Clean up expired tokens on sign in
+      await TokenManager.cleanupExpiredTokens();
     },
-    async signOut() {
+    async signOut({ token }) {
+      if (token?.sub) {
+        // Invalidate all refresh tokens on signout
+        await TokenManager.invalidateAllUserTokens(token.sub);
+      }
       console.log(`User signed out at ${new Date()}`);
     },
     async session({ token }) {

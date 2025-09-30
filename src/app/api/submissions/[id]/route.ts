@@ -244,7 +244,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     let newStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | undefined;
 
     // Handle different types of updates based on user role
-    if (session.user.role === 'ADMIN' || session.user.role === 'VERIFIER') {
+    if ( session.user.role === 'VERIFIER') {
       // Admin/Verifier updating approval status
       if (body.status_approval_admin && ['APPROVED', 'REJECTED'].includes(body.status_approval_admin)) {
         console.log('PUT /api/submissions/[id] - Admin/Verifier approval update');
@@ -446,14 +446,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
           error: 'Can only delete pending submissions. Approved or rejected submissions cannot be deleted.' 
         }, { status: 400 });
       }
-    } else if (session.user.role === 'ADMIN') {
-      // Admins can delete any submission, but warn about approved ones
-      if (existingSubmission.approval_status === 'APPROVED') {
-        return NextResponse.json({ 
-          error: 'Cannot delete approved submissions. This would affect issued SIMLOK documents.' 
-        }, { status: 400 });
-      }
-    } else if (session.user.role === 'VERIFIER') {
+    } else  if (session.user.role === 'VERIFIER') {
       // Verifiers can delete pending and rejected submissions
       if (existingSubmission.approval_status === 'APPROVED') {
         return NextResponse.json({ 

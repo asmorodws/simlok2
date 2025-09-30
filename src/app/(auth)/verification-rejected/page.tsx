@@ -38,9 +38,7 @@ export default function VerificationRejectedPage() {
     // Redirect jika user sudah terverifikasi
     if (session?.user?.verified_at) {
       const role = session.user.role;
-      if (role === "ADMIN") {
-        router.push("/admin");
-      } else if (role === "VENDOR") {
+ if (role === "VENDOR") {
         router.push("/vendor");
       } else if (role === "VERIFIER") {
         router.push("/verifier");

@@ -36,7 +36,7 @@ export function useRealTimeNotifications() {
 
     // Determine scope based on user role
     let scope: string;
-    if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') {
+    if ( session.user.role === 'SUPER_ADMIN') {
       scope = 'admin';
     } else if (session.user.role === 'REVIEWER') {
       scope = 'reviewer';
