@@ -97,7 +97,7 @@ export async function PATCH(
         data: {
           verification_status: 'REJECTED',
           rejected_at: new Date(),
-          rejected_by: session.user.id,
+          rejected_by: session.user.officer_name,
           rejection_reason: validatedData.note || 'No reason provided'
         },
         include: {
