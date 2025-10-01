@@ -6,6 +6,8 @@ import {
   XMarkIcon,
   CloudArrowUpIcon,
   PhotoIcon,
+  PencilSquareIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { ImageCompressor } from "@/utils/image-compression";
 import { useToast } from "@/hooks/useToast";
@@ -52,35 +54,28 @@ export default function EnhancedFileUpload({
   const getAcceptTypes = () => {
     switch (uploadType) {
       case "worker-photo":
-        return ".jpg,.jpeg,.png";
+        return ".jpg,.jpeg,.png,.webp";
       case "document":
-        return ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+        return ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp";
       default:
-        return ".pdf,.doc,.docx,.jpg,.jpeg,.png";
+        return ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp";
     }
   };
 
-  const getIcon = () =>
-    uploadType === "worker-photo" ? (
-      <PhotoIcon className="mx-auto h-10 w-10 text-blue-500" />
-    ) : (
-      <DocumentIcon className="mx-auto h-10 w-10 text-blue-500" />
-    );
-
-  const getText = () => {
+  const text = (() => {
     if (uploadType === "worker-photo") {
       return {
         title: "Unggah Foto Pekerja",
         subtitle: "Tarik & letakkan atau klik untuk memilih",
-        formats: "JPG, JPEG, PNG — maks 10MB (dikompres otomatis)",
+        formats: "JPG, JPEG, PNG, WebP — maks 10MB (dikompres otomatis)",
       };
     }
     return {
       title: "Unggah Dokumen",
       subtitle: "Tarik & letakkan atau klik untuk memilih",
-      formats: "PDF, DOC, DOCX, JPG, PNG — maks 8MB",
+      formats: "PDF, DOC, DOCX, JPG, PNG, WebP — maks 8MB",
     };
-  };
+  })();
 
   const fileNameFromUrl = (url: string): string => {
     if (!url) return "";
@@ -154,7 +149,7 @@ export default function EnhancedFileUpload({
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (!file) return; // guard TS: File | undefined
+    if (!file) return; // guard: File | undefined
 
     setError(null);
 
@@ -210,15 +205,22 @@ export default function EnhancedFileUpload({
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     onChange?.("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setError(null);
   };
 
+  const handleReplace = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
   // --- Render ---
-  const text = getText();
   const fileName = fileNameFromUrl(value);
+  const hasFile = Boolean(value);
+  const isImage = uploadType === "worker-photo";
 
   return (
     <div className={`w-full ${className}`}>
@@ -239,7 +241,7 @@ export default function EnhancedFileUpload({
           if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
         }}
         className={[
-          "relative rounded-xl border-2 border-dashed p-6 transition",
+          "relative group rounded-xl border-2 border-dashed p-4 transition",
           disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer",
           dragActive
             ? "border-blue-500 bg-blue-50"
@@ -266,7 +268,7 @@ export default function EnhancedFileUpload({
           onChange={(e) => handleFileSelect(e.target.files)}
         />
 
-        {/* Konten */}
+        {/* ================== STATE: UPLOADING ================== */}
         {uploading ? (
           <div className="text-center">
             <CloudArrowUpIcon className="mx-auto h-10 w-10 text-blue-500 animate-bounce" />
@@ -281,46 +283,113 @@ export default function EnhancedFileUpload({
             </div>
             <div className="mt-1 text-xs text-gray-500">{uploadProgress}%</div>
           </div>
-        ) : value ? (
-          <div className="flex flex-col items-center text-center">
-            {getIcon()}
-            <div className="mt-3 max-w-full">
-              {/* Nama file dengan ellipsis */}
-              <div
-                className="mx-auto max-w-[280px] truncate text-sm font-medium text-gray-900 sm:max-w-[360px]"
-                title={fileName}
-                aria-label={`File terunggah: ${fileName}`}
-              >
-                {fileName || "file-terunggah"}
+        ) : /* ================ STATE: HAS FILE ================ */ hasFile ? (
+          isImage ? (
+            /* FOTO → preview rapih & tidak melebihi komponen */
+            <div
+              className="relative mx-auto flex max-w-full flex-col items-center gap-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full max-w-[360px] overflow-hidden rounded-lg border bg-white">
+                {/* Kotak rasio agar tinggi terkontrol (4:3). Gambar absolute agar tidak overflow */}
+                <div className="relative w-full aspect-[4/3]">
+                  <img
+                    src={value}
+                    alt={workerName ? `Foto ${workerName}` : "Foto pekerja"}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                </div>
+
+                {/* Overlay hover (tetap di dalam kontainer, tidak melebihi) */}
+                <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/45 group-hover:flex">
+                  <div className="pointer-events-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleReplace}
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-gray-700 shadow hover:bg-white"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Ganti
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-red-600 shadow hover:bg-white"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                      Hapus
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="mt-2 flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove();
-                  }}
-                  className="inline-flex items-center rounded-md border border-red-300 bg-red-50 px-3 py-1 text-xs font-medium text-red-700 transition-colors hover:bg-red-100"
+
+              {/* filename + helper */}
+              <div className="text-center">
+                <div
+                  className="mx-auto max-w-[280px] truncate text-sm font-medium text-gray-900 sm:max-w-[360px]"
+                  title={fileName}
                 >
-                  <XMarkIcon className="mr-1 h-3 w-3" />
-                  Hapus
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                  className="inline-flex items-center rounded-md border border-blue-300 bg-white px-3 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50"
-                >
-                  Ganti File
-                </button>
+                  {fileName || "foto-terunggah"}
+                </div>
+                {workerName && (
+                  <div className="mt-0.5 text-[11px] text-gray-500">
+                    Untuk: <span className="font-medium">{workerName}</span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            /* DOKUMEN → kartu file */
+            <div
+              className="relative mx-auto flex max-w-full flex-col items-center gap-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative flex w-full max-w-[420px] items-center gap-3 rounded-lg border bg-white p-3">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-gray-50">
+                  <DocumentIcon className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div
+                    className="truncate text-sm font-medium text-gray-900"
+                    title={fileName}
+                  >
+                    {fileName || "file-terunggah"}
+                  </div>
+                  <div className="truncate text-xs text-gray-500">{value}</div>
+                </div>
+
+                {/* Overlay hover */}
+                <div className="absolute inset-0 hidden items-center justify-center bg-black/40 group-hover:flex">
+                  <div className="pointer-events-auto flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleReplace}
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-gray-700 shadow hover:bg-white"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" />
+                      Ganti
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-red-600 shadow hover:bg-white"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
         ) : (
+          /* ================ STATE: EMPTY ================ */
           <div className="text-center">
-            {getIcon()}
+            {uploadType === "worker-photo" ? (
+              <PhotoIcon className="mx-auto h-10 w-10 text-blue-500" />
+            ) : (
+              <DocumentIcon className="mx-auto h-10 w-10 text-blue-500" />
+            )}
             <p className="mt-3 text-sm font-medium text-gray-900">{text.title}</p>
             <p className="mt-1 text-xs text-gray-600">{text.subtitle}</p>
             <p className="mt-1 text-xs text-gray-400">{text.formats}</p>

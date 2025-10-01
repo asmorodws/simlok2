@@ -5,39 +5,51 @@ import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import Link from "next/link";
 import { UserData } from "@/types/user";
-import { UserIcon, CheckCircleIcon, ClockIcon } from "@heroicons/react/24/outline";
+import { UserIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVerificationModal";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
     totalUsers: 0,
-    pendingVerifications: 0,
+    totalPending: 0,
+    totalVerified: 0,
+    totalRejected: 0,
+    todayRegistrations: 0,
+    pendingVerifications: 0, // Legacy compatibility
     recentUsers: [] as UserData[]
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showUserVerificationModal, setShowUserVerificationModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch('/api/admin/dashboard-stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard statistics');
+      }
+      const data = await response.json();
+      setStats({
+        totalUsers: data.totalUsers,
+        totalPending: data.totalPending,
+        totalVerified: data.totalVerified,
+        totalRejected: data.totalRejected,
+        todayRegistrations: data.todayRegistrations,
+        pendingVerifications: data.pendingVerifications, // Legacy compatibility
+        recentUsers: data.recentUsers
+      });
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError('Gagal memuat statistik dashboard');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchDashboardStats() {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/admin/dashboard-stats');
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard statistics');
-        }
-        const data = await response.json();
-        setStats({
-          totalUsers: data.totalUsers,
-          pendingVerifications: data.pendingVerifications,
-          recentUsers: data.recentUsers
-        });
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-        setError('Gagal memuat statistik dashboard');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchDashboardStats();
   }, []);
 
@@ -48,6 +60,19 @@ export default function SuperAdminDashboard() {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const handleUserUpdate = (updatedUser: UserData) => {
+    // Update the specific user in recent users list
+    setStats(prev => ({
+      ...prev,
+      recentUsers: prev.recentUsers.map(user => 
+        user.id === updatedUser.id ? updatedUser : user
+      )
+    }));
+    
+    // Refresh dashboard stats to get updated counts
+    fetchDashboardStats();
   };
 
   return (
@@ -64,58 +89,26 @@ export default function SuperAdminDashboard() {
           </div>
           
           {/* Statistik Dashboard */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-blue-100 mr-4">
-                  <UserIcon className="h-6 w-6 text-blue-600" />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total User</p>
+                  <h3 className="text-sm font-medium text-gray-500">Menunggu Verifikasi</h3>
                   {loading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
                   ) : (
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
+                    <p className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPending}</p>
                   )}
                 </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-green-100 mr-4">
-                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">User Terverifikasi</p>
-                  {loading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-gray-900">{stats.totalUsers - stats.pendingVerifications}</p>
-                  )}
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <ClockIcon className="w-6 h-6 text-amber-600" />
                 </div>
               </div>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center">
-                <div className="p-3 rounded-full bg-yellow-100 mr-4">
-                  <ClockIcon className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Menunggu Verifikasi</p>
-                  {loading ? (
-                    <div className="h-6 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-gray-900">{stats.pendingVerifications}</p>
-                  )}
-                </div>
-              </div>
-              {stats.pendingVerifications > 0 && (
+              {stats.totalPending > 0 && !loading && (
                 <div className="mt-4">
                   <Link
                     href="/super-admin/users?tab=pending"
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                    className="text-sm text-amber-600 hover:text-amber-800 font-medium flex items-center"
                   >
                     Verifikasi sekarang
                     <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,6 +117,70 @@ export default function SuperAdminDashboard() {
                   </Link>
                 </div>
               )}
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Terverifikasi</h3>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-green-600 mt-1">{stats.totalVerified}</p>
+                  )}
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-red-600 mt-1">{stats.totalRejected}</p>
+                  )}
+                </div>
+                <div className="p-3 bg-red-100 rounded-full">
+                  <XCircleIcon className="w-6 h-6 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Total User</h3>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalUsers}</p>
+                  )}
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <UserIcon className="w-6 h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Registrasi Hari Ini</h3>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
+                  ) : (
+                    <p className="text-2xl font-bold text-purple-600 mt-1">{stats.todayRegistrations}</p>
+                  )}
+                </div>
+                <div className="p-3 bg-purple-100 rounded-full">
+                  <UserIcon className="w-6 h-6 text-purple-600" />
+                </div>
+              </div>
             </div>
           </div>
           
@@ -189,9 +246,13 @@ export default function SuperAdminDashboard() {
                           {formatDate(user.created_at)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {user.verified_at ? (
+                          {user.verified_at || user.verification_status === 'VERIFIED' ? (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
                               Terverifikasi
+                            </span>
+                          ) : user.rejection_reason || user.verification_status === 'REJECTED' ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                              Ditolak
                             </span>
                           ) : (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
@@ -200,12 +261,15 @@ export default function SuperAdminDashboard() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Link
-                            href={`/super-admin/users?view=${user.id}`}
+                          <button
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setShowUserVerificationModal(true);
+                            }}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             Detail
-                          </Link>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -227,39 +291,20 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
           
-          {/* Card untuk akses cepat ke fitur */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Link 
-              href="/super-admin/users" 
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Manajemen User</h2>
-              <p className="text-gray-600 mb-4">
-                Kelola semua pengguna sistem SIMLOK
-              </p>
-              <ul className="list-disc ml-5 text-gray-600 mb-4">
-                <li>Menambah user baru dengan berbagai role</li>
-                <li>Mengedit informasi user yang sudah ada</li>
-                <li>Menghapus user yang tidak diperlukan</li>
-              </ul>
-            </Link>
-
-            <Link 
-              href="/super-admin/users?tab=pending" 
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Approval Vendor Baru</h2>
-              <p className="text-gray-600 mb-4">
-                Verifikasi pendaftaran vendor baru
-              </p>
-              <ul className="list-disc ml-5 text-gray-600 mb-4">
-                <li>Melihat detail vendor yang mendaftar</li>
-                <li>Menyetujui pendaftaran yang valid</li>
-                <li>Menolak pendaftaran yang tidak sesuai</li>
-              </ul>
-            </Link>
-          </div>
+         
+        
         </div>
+
+        {/* Modal User Verification */}
+        <ReviewerUserVerificationModal
+          user={selectedUser}
+          isOpen={showUserVerificationModal}
+          onClose={() => {
+            setShowUserVerificationModal(false);
+            setSelectedUser(null);
+          }}
+          onUserUpdate={handleUserUpdate}
+        />
       </SidebarLayout>
     </RoleGate>
   );

@@ -39,6 +39,8 @@ export async function PATCH(
         role: true,
         verified_at: true,
         verification_status: true,
+        rejection_reason: true,
+        rejected_at: true,
         created_at: true
       }
     });
@@ -51,11 +53,13 @@ export async function PATCH(
       return NextResponse.json({ error: 'Only vendor users can be verified' }, { status: 400 });
     }
 
-    if (existingUser.verified_at) {
+    // Check if user is already verified
+    if (existingUser.verified_at || existingUser.verification_status === 'VERIFIED') {
       return NextResponse.json({ error: 'User has already been verified' }, { status: 400 });
     }
 
-    if (existingUser.verification_status === 'REJECTED') {
+    // Check if user is already rejected
+    if (existingUser.rejection_reason || existingUser.verification_status === 'REJECTED') {
       return NextResponse.json({ error: 'User has already been rejected' }, { status: 400 });
     }
 
