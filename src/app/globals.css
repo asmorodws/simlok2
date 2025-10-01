@@ -779,3 +779,11 @@ span.flatpickr-weekday,
 .pdf-viewer-container * {
   color: black !important;
 }
+
+/* Hide Edge/IE built-in password reveal & clear buttons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}

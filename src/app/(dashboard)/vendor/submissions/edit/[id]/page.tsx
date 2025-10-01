@@ -27,8 +27,6 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
   return (
     <SidebarLayout title="Vendor Panel" titlePage="Ubah Pengajuan SIMLOK">
       <div className="space-y-6">
-      
-        
         <EditSubmissionForm submissionId={id} />
       </div>
     </SidebarLayout>

@@ -52,26 +52,26 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
   const menuConfig: MenuConfig = {
     SUPER_ADMIN: [
       { label: "Dashboard", href: "/super-admin", icon: HomeIcon },
-      { label: "User Management", href: "/super-admin/users", icon: UsersIcon },
+      { label: "Kelola User", href: "/super-admin/users", icon: UsersIcon },
     ],
     REVIEWER: [
       { label: "Dashboard", href: "/reviewer", icon: HomeIcon },
       { label: "Review Pengajuan", href: "/reviewer/submissions", icon: ClipboardDocumentListIcon },
       { label: "Verifikasi User", href: "/reviewer/users", icon: UsersIcon },
-      { label: "Scan History", href: "/reviewer/scan-history", icon: QrCodeIcon },
+      { label: "Riwayat Scan", href: "/reviewer/scan-history", icon: QrCodeIcon },
     ],
     APPROVER: [
       { label: "Dashboard", href: "/approver", icon: HomeIcon },
       { label: "Persetujuan", href: "/approver/submissions", icon: ClipboardDocumentListIcon },
-      { label: "Scan History", href: "/approver/scan-history", icon: QrCodeIcon },
+      { label: "Riwayat Scan", href: "/approver/scan-history", icon: QrCodeIcon },
     ],
     VENDOR: [
       { label: "Dashboard", href: "/vendor", icon: HomeIcon },
-      { label: "Submissions", href: "/vendor/submissions", icon: ClipboardDocumentListIcon },
+      { label: "Pengajuan Simlok", href: "/vendor/submissions", icon: ClipboardDocumentListIcon },
     ],
     VERIFIER: [
       { label: "Dashboard", href: "/verifier", icon: HomeIcon },
-      { label: "History", href: "/verifier/history", icon: ClockIcon },
+      { label: "Riwayat Scan", href: "/verifier/history", icon: ClockIcon },
     ],
   };
 

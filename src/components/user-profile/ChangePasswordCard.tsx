@@ -6,20 +6,33 @@ import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import { useToast } from "@/hooks/useToast";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 export default function ChangePasswordCard() {
   const { isOpen, openModal, closeModal } = useModal();
   const { showSuccess, showError } = useToast();
+
   const [passwords, setPasswords] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
   const [errors, setErrors] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
+
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const toggleShow = (field: "current" | "new" | "confirm") => {
+    setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -27,7 +40,6 @@ export default function ChangePasswordCard() {
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     setErrors((prev) => ({
       ...prev,
       [name]: "",
@@ -72,9 +84,7 @@ export default function ChangePasswordCard() {
       try {
         const response = await fetch("/api/user/change-password", {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             currentPassword: passwords.currentPassword,
             newPassword: passwords.newPassword,
@@ -86,23 +96,23 @@ export default function ChangePasswordCard() {
           throw new Error(error);
         }
 
-        // Reset form and close modal on success
         closeModal();
         setPasswords({
           currentPassword: "",
           newPassword: "",
           confirmPassword: "",
         });
-        
-        // Show success message
-        showSuccess('Berhasil', 'Password berhasil diubah');
-        closeModal();
+        showSuccess("Berhasil", "Password berhasil diubah");
       } catch (error) {
         console.error("Error changing password:", error);
-        showError('Error', error instanceof Error ? error.message : "Gagal mengubah password");
+        showError(
+          "Error",
+          error instanceof Error ? error.message : "Gagal mengubah password"
+        );
         setErrors((prev) => ({
           ...prev,
-          currentPassword: error instanceof Error ? error.message : "Gagal mengubah password",
+          currentPassword:
+            error instanceof Error ? error.message : "Gagal mengubah password",
         }));
       }
     }
@@ -139,37 +149,79 @@ export default function ChangePasswordCard() {
             </p>
           </div>
           <form className="flex flex-col gap-5">
+            {/* Password Saat Ini */}
             <div>
               <Label>Password Saat Ini</Label>
-              <Input
-                type="password"
-                name="currentPassword"
-                value={passwords.currentPassword}
-                onChange={handleChange}
-                error={errors.currentPassword}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword.current ? "text" : "password"}
+                  name="currentPassword"
+                  value={passwords.currentPassword}
+                  onChange={handleChange}
+                  error={errors.currentPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleShow("current")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword.current ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
+            {/* Password Baru */}
             <div>
               <Label>Password Baru</Label>
-              <Input
-                type="password"
-                name="newPassword"
-                value={passwords.newPassword}
-                onChange={handleChange}
-                error={errors.newPassword}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword.new ? "text" : "password"}
+                  name="newPassword"
+                  value={passwords.newPassword}
+                  onChange={handleChange}
+                  error={errors.newPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleShow("new")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword.new ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
+            {/* Konfirmasi Password Baru */}
             <div>
               <Label>Konfirmasi Password Baru</Label>
-              <Input
-                type="password"
-                name="confirmPassword"
-                value={passwords.confirmPassword}
-                onChange={handleChange}
-                error={errors.confirmPassword}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword.confirm ? "text" : "password"}
+                  name="confirmPassword"
+                  value={passwords.confirmPassword}
+                  onChange={handleChange}
+                  error={errors.confirmPassword}
+                />
+                <button
+                  type="button"
+                  onClick={() => toggleShow("confirm")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword.confirm ? (
+                    <EyeSlashIcon className="w-5 h-5" />
+                  ) : (
+                    <EyeIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3 mt-6 lg:justify-end">

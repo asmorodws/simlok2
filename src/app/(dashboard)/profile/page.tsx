@@ -31,7 +31,7 @@ export default async function Profile() {
   }
 
   return (
-    <SidebarLayout title="SIMLOK" titlePage="Ubah Profil">
+    <SidebarLayout title="Dashboard" titlePage="Ubah Profil">
       <div className="rounded-2xl border border-gray-200 bg-white p-5 lg:p-6">
         <div className="space-y-6">
           <UserInfoCard user={user} />

@@ -1,10 +1,11 @@
 "use client";
-import React, { useState } from "react";
 
+import React, { useState } from "react";
 import Input from "../form/Input";
 import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
+import ConfirmationModal from "../common/ConfirmationModal";
 
 interface UserInfoCardProps {
   user: {
@@ -14,164 +15,261 @@ interface UserInfoCardProps {
     vendor_name: string | null;
     phone_number: string | null;
     address: string | null;
-    role: string;
-  }
+    role: string; // gunakan enum jika ada
+  };
 }
 
 export default function UserInfoCard({ user }: UserInfoCardProps) {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const [errors, setErrors] = useState({
     officer_name: "",
     vendor_name: "",
     phone_number: "",
     address: "",
-    email: ""
+    email: "",
   });
+
   const [formData, setFormData] = useState({
-    officer_name: user.officer_name,
-    vendor_name: user.vendor_name || "",
-    phone_number: user.phone_number || "",
-    address: user.address || "",
-    email: user.email
+    officer_name: user.officer_name ?? "",
+    vendor_name: user.vendor_name ?? "",
+    phone_number: user.phone_number ?? "",
+    address: user.address ?? "",
+    email: user.email ?? "",
   });
+
+  const validateEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const validateForm = () => {
-    // Validasi berdasarkan role
-    if (user.role === 'VENDOR') {
-      // Untuk vendor, hanya validasi vendor_name yang wajib
-      return formData.vendor_name.trim();
-    } else {
-      // Untuk role lain (VERIFIER, ADMIN, etc), validasi semua field kecuali vendor_name
-      return formData.officer_name.trim() && 
-             formData.email.trim() && 
-             formData.phone_number.trim() && 
-             formData.address.trim();
+    if (user.role === "VENDOR") {
+      return (
+        formData.vendor_name.trim() &&
+        formData.email.trim() &&
+        formData.phone_number.trim() &&
+        formData.address.trim()
+      );
     }
+    return (
+      formData.officer_name.trim() &&
+      formData.email.trim() &&
+      formData.phone_number.trim() &&
+      formData.address.trim()
+    );
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    
-    // Validasi alamat: hanya huruf, angka, spasi, koma, titik, tanda hubung
-    if (name === 'address') {
+
+    if (name === "address") {
+      // Izinkan huruf, angka, spasi, koma, titik, garis miring, dash
       if (/^[a-zA-Z0-9\s,./-]*$/.test(value)) {
-        setFormData(prev => ({
-          ...prev,
-          [name]: value
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
       }
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
-    
-    // Clear error when user starts typing
+
     if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  const handleSave = async () => {
-    if (!validateForm()) {
-      return;
-    }
-    
+  const handleSaveConfirm = async () => {
     try {
       setIsLoading(true);
+
+      const newErrors = {
+        officer_name: "",
+        vendor_name: "",
+        phone_number: "",
+        address: "",
+        email: "",
+      };
+
+      // Validasi berdasarkan role
+      if (user.role === "VENDOR") {
+        if (!formData.vendor_name.trim()) {
+          newErrors.vendor_name = "Nama vendor wajib diisi";
+        }
+      } else {
+        if (!formData.officer_name.trim()) {
+          newErrors.officer_name = "Nama petugas wajib diisi";
+        }
+      }
+
+      // Validasi umum
+      if (!formData.phone_number.trim()) newErrors.phone_number = "Nomor telepon wajib diisi";
+      if (!formData.address.trim()) newErrors.address = "Alamat wajib diisi";
+      if (!formData.email.trim() || !validateEmail(formData.email.trim()))
+        newErrors.email = "Format email tidak valid";
+
+      const hasErrors = Object.values(newErrors).some((e) => e !== "");
+      if (hasErrors) {
+        setErrors(newErrors);
+        const first = Object.values(newErrors).find((e) => e !== "");
+        if (first) showError("Error", first);
+        setIsLoading(false);
+        return;
+      }
+
+      // Kirim field sesuai role + email
+      const dataToSend =
+        user.role === "VENDOR"
+          ? {
+              vendor_name: formData.vendor_name.trim(),
+              phone_number: formData.phone_number.trim(),
+              address: formData.address.trim(),
+              email: formData.email.trim(), // ✅ email ikut dikirim
+            }
+          : {
+              officer_name: formData.officer_name.trim(),
+              phone_number: formData.phone_number.trim(),
+              address: formData.address.trim(),
+              email: formData.email.trim(), // ✅ email ikut dikirim
+            };
+
       const response = await fetch("/api/users/profile", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
       });
 
+      const text = await response.text();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Gagal memperbarui profil");
+        // pesan error dari server (mis. 400 validasi, 409 email duplikat)
+        throw new Error(text || "Gagal memperbarui profil");
       }
 
       showSuccess("Berhasil", "Profil berhasil diperbarui");
       setIsEditing(false);
+      setShowConfirmModal(false);
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      showError("Error", "Gagal memperbarui profil");
+      showError("Error", error?.message ?? "Gagal memperbarui profil");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSave = () => {
+    setErrors({
+      officer_name: "",
+      vendor_name: "",
+      phone_number: "",
+      address: "",
+      email: "",
+    });
+
+    if (!validateEmail(formData.email.trim())) {
+      setErrors((prev) => ({ ...prev, email: "Format email tidak valid" }));
+      showError("Error", "Format email tidak valid");
+      return;
+    }
+
+    if (!validateForm()) {
+      showError("Error", "Mohon isi semua field yang wajib diisi");
+      return;
+    }
+
+    setShowConfirmModal(true);
+  };
+
   return (
-    <div className="p-5 border border-gray-200 rounded-2xl lg:p-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <h4 className="text-lg font-semibold text-gray-800">
-            Informasi Pribadi
-          </h4>
+    <>
+      <div className="p-5 border border-gray-200 rounded-2xl lg:p-6">
+        <div className="flex flex-col gap-6">
+          <div className="flex items-center justify-between">
+            <h4 className="text-lg font-semibold text-gray-800">
+              Informasi Pribadi
+            </h4>
 
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
-              </svg>
-              Ubah
-            </button>
-          ) : (
-            <div className="flex gap-2">
+            {!isEditing ? (
               <button
-                onClick={() => {
-                  setFormData({
-                    officer_name: user.officer_name,
-                    vendor_name: user.vendor_name || "",
-                    phone_number: user.phone_number || "",
-                    address: user.address || "",
-                    email: user.email
-                  });
-                  setIsEditing(false);
-                }}
-                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
               >
-                Batal
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+                Ubah
               </button>
-              <button
-                onClick={handleSave}
-                disabled={isLoading}
-                className="inline-flex items-center rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
-              </button>
-            </div>
-          )}
-        </div>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setFormData({
+                      officer_name: user.officer_name ?? "",
+                      vendor_name: user.vendor_name ?? "",
+                      phone_number: user.phone_number ?? "",
+                      address: user.address ?? "",
+                      email: user.email ?? "",
+                    });
+                    setIsEditing(false);
+                  }}
+                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isLoading}
+                  className="inline-flex items-center rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+            )}
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Nama Petugas - Hide for VENDOR role */}
-          {user.role !== 'VENDOR' && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Nama Vendor - khusus VENDOR */}
+            {user.role === "VENDOR" && (
+              <div className="lg:col-span-2">
+                <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
+                {isEditing ? (
+                  <Input
+                    id="vendor_name"
+                    name="vendor_name"
+                    type="text"
+                    value={formData.vendor_name}
+                    onChange={handleChange}
+                    placeholder="PT. Nama Perusahaan"
+                    required
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="mt-1 text-base text-gray-900">
+                    {user.vendor_name || "-"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Nama Petugas - untuk semua role (editable jika bukan vendor, tampil readonly jika vendor) */}
             <div>
               <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
-              {isEditing ? (
-                <Input 
+              {isEditing  ? (
+                <Input
                   id="officer_name"
                   name="officer_name"
                   type="text"
@@ -182,17 +280,17 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   className="mt-1"
                 />
               ) : (
-                <p className="mt-1 text-base text-gray-900">{user.officer_name}</p>
+                <p className="mt-1 text-base text-gray-900">
+                  {user.officer_name || "-"}
+                </p>
               )}
             </div>
-          )}
 
-          {/* Email - Hide for VENDOR role */}
-          {user.role !== 'VENDOR' && (
+            {/* Email - semua role */}
             <div>
               <p className="text-sm font-medium text-gray-500">Email</p>
               {isEditing ? (
-                <Input 
+                <Input
                   id="email"
                   name="email"
                   type="email"
@@ -200,20 +298,19 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   onChange={handleChange}
                   placeholder="email@perusahaan.com"
                   required
+                  error={errors.email}
                   className="mt-1"
                 />
               ) : (
                 <p className="mt-1 text-base text-gray-900">{user.email}</p>
               )}
             </div>
-          )}
 
-          {/* Nomor Telepon - Hide for VENDOR role */}
-          {user.role !== 'VENDOR' && (
+            {/* Nomor Telepon */}
             <div>
               <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
               {isEditing ? (
-                <Input 
+                <Input
                   id="phone_number"
                   name="phone_number"
                   type="tel"
@@ -224,35 +321,13 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   className="mt-1"
                 />
               ) : (
-                <p className="mt-1 text-base text-gray-900">{user.phone_number || "-"}</p>
+                <p className="mt-1 text-base text-gray-900">
+                  {user.phone_number || "-"}
+                </p>
               )}
             </div>
-          )}
 
-          {/* Nama Vendor - Show for VENDOR role only */}
-          {user.role === "VENDOR" && (
-            <div className="lg:col-span-2">
-              <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
-              {isEditing ? (
-                <Input 
-                  id="vendor_name"
-                  name="vendor_name"
-                  type="text"
-                  value={formData.vendor_name}
-                  onChange={handleChange}
-                  placeholder="PT. Nama Perusahaan"
-                  required
-                  className="mt-1"
-                />
-              ) : (
-                <p className="mt-1 text-base text-gray-900">{user.vendor_name || "-"}</p>
-              )}
-            </div>
-          )}
-
-
-          {/* Alamat - Hide for VENDOR role */}
-          {user.role !== 'VENDOR' && (
+            {/* Alamat */}
             <div className="lg:col-span-2">
               <p className="text-sm font-medium text-gray-500">Alamat</p>
               {isEditing ? (
@@ -265,15 +340,24 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   error={errors.address}
                 />
               ) : (
-                <p className="mt-1 text-base text-gray-900 whitespace-pre-line">{user.address || "-"}</p>
+                <p className="mt-1 text-base text-gray-900 whitespace-pre-line">
+                  {user.address || "-"}
+                </p>
               )}
             </div>
-          )}
-
+          </div>
         </div>
       </div>
 
-
-    </div>
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleSaveConfirm}
+        title="Konfirmasi Perubahan"
+        message="Apakah Anda yakin ingin menyimpan perubahan pada profil?"
+        confirmText="Simpan"
+        cancelText="Batal"
+      />
+    </>
   );
 }
