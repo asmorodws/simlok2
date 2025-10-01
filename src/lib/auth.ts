@@ -43,13 +43,13 @@ export const authOptions: NextAuthOptions = {
         if (!ok) return null;
 
         // Generate refresh token and store it
-        await prisma.refreshToken.create({
-          data: {
-            token: crypto.randomUUID(),
-            userId: user.id,
-            expiresAt: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
-          },
-        });
+        // await prisma.refreshToken.create({
+        //   data: {
+        //     token: crypto.randomUUID(),
+        //     userId: user.id,
+        //     expiresAt: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+        //   },
+        // });
 
         console.log('Auth authorize - returning user:', { 
           id: user.id, 
@@ -143,32 +143,32 @@ export const authOptions: NextAuthOptions = {
         session.user.created_at = token.created_at as Date;
 
         // Get active refresh token
-        const activeRefreshToken = await prisma.refreshToken.findFirst({
-          where: {
-            userId: token.id as string,
-            expiresAt: { gt: new Date() }
-          },
-          orderBy: { expiresAt: 'desc' }
-        });
+        // const activeRefreshToken = await prisma.refreshToken.findFirst({
+        //   where: {
+        //     userId: token.id as string,
+        //     expiresAt: { gt: new Date() }
+        //   },
+        //   orderBy: { expiresAt: 'desc' }
+        // });
 
-        if (activeRefreshToken) {
-          (session.user as any).refreshToken = activeRefreshToken.token;
-        }
+        // if (activeRefreshToken) {
+        //   (session.user as any).refreshToken = activeRefreshToken.token;
+        // }
 
         // Update session in database for tracking
-        await prisma.session.upsert({
-          where: {
-            sessionToken: activeRefreshToken?.token || 'temp-token',
-          },
-          create: {
-            sessionToken: activeRefreshToken?.token || 'temp-token',
-            userId: token.id as string,
-            expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
-          },
-          update: {
-            expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
-          },
-        });
+        // await prisma.session.upsert({
+        //   where: {
+        //     sessionToken: activeRefreshToken?.token || 'temp-token',
+        //   },
+        //   create: {
+        //     sessionToken: activeRefreshToken?.token || 'temp-token',
+        //     userId: token.id as string,
+        //     expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+        //   },
+        //   update: {
+        //     expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
+        //   },
+        // });
         
         console.log('Session callback - session.user.id:', session.user.id);
       }

@@ -15,8 +15,8 @@ export default function AuthRedirect({
   useEffect(() => {
     if (status === "loading") return; // tunggu dulu
 
-    if (session?.user?.role) {
-      switch (session.user.role) {
+    if (session?.user?.role && session.accessToken) {
+      switch (session.user.role ) {
         case "VENDOR":
           router.replace("/vendor");
           break;

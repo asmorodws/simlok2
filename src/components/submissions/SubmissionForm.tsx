@@ -501,7 +501,7 @@ export default function SubmissionForm() {
                             </button>
                           </div>
                         ) : (
-                          <div className="w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center bg-gray-50">
+                          <div className="w-full h-50  rounded-lg flex flex-col items-center justify-center bg-gray-50">
                             <EnhancedFileUpload
                               id={`worker_photo_${worker.id}`}
                               name={`worker_photo_${worker.id}`}
