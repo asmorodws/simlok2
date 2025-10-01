@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import UserVerificationManagement from "@/components/reviewer/UserVerificationManagement";
+import UserVerificationManagement from "@/components/admin/UserVerificationManagement";
 import PageLoader from "@/components/ui/PageLoader";
 
 export default function UserVerificationPage() {

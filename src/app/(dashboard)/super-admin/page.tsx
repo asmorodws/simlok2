@@ -7,6 +7,8 @@ import Link from "next/link";
 import { UserData } from "@/types/user";
 import { UserIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVerificationModal";
+import EditUserModal from "@/components/admin/EditUserModal";
+import DeleteUserModal from "@/components/admin/DeleteUserModal";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -21,13 +23,25 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showUserVerificationModal, setShowUserVerificationModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
+
+  // === Simple in-file button styles (tanpa komponen terpisah) ===
+  const btnBase =
+    "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs px-3 py-1.5";
+  const btnDetail =
+    `${btnBase} text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-400`;
+  const btnEdit =
+    `${btnBase} text-gray-800 bg-white border border-gray-300 hover:bg-gray-100 focus-visible:ring-gray-400`;
+  const btnHapus =
+    `${btnBase} text-white bg-red-600 hover:bg-red-700 focus-visible:ring-red-600`;
 
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('/api/admin/dashboard-stats');
+      const response = await fetch('/api/admin/dashboard-stats', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard statistics');
       }
@@ -63,15 +77,20 @@ export default function SuperAdminDashboard() {
   };
 
   const handleUserUpdate = (updatedUser: UserData) => {
-    // Update the specific user in recent users list
     setStats(prev => ({
       ...prev,
-      recentUsers: prev.recentUsers.map(user => 
+      recentUsers: prev.recentUsers.map(user =>
         user.id === updatedUser.id ? updatedUser : user
       )
     }));
-    
-    // Refresh dashboard stats to get updated counts
+    fetchDashboardStats();
+  };
+
+  const handleUserDelete = (deletedUserId: string) => {
+    setStats(prev => ({
+      ...prev,
+      recentUsers: prev.recentUsers.filter(user => user.id !== deletedUserId)
+    }));
     fetchDashboardStats();
   };
 
@@ -87,7 +106,7 @@ export default function SuperAdminDashboard() {
               Kelola seluruh user sistem SIMLOK dengan fitur CRUD lengkap.
             </p>
           </div>
-          
+
           {/* Statistik Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="bg-white rounded-xl border shadow-sm p-6">
@@ -183,14 +202,14 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           {/* Tabel User Terbaru */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">User Terbaru</h2>
               <p className="text-sm text-gray-600">Daftar 5 user yang baru mendaftar</p>
             </div>
-            
+
             {loading ? (
               <div className="p-6 space-y-4">
                 {[...Array(5)].map((_, index) => (
@@ -234,9 +253,8 @@ export default function SuperAdminDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-
                             user.role === 'VENDOR' ? 'bg-blue-100 text-blue-800' :
-                            user.role === 'VERIFIER' ? 'bg-green-100 text-green-800' : 
+                            user.role === 'VERIFIER' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {user.role}
@@ -261,15 +279,38 @@ export default function SuperAdminDashboard() {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowUserVerificationModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Detail
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowUserVerificationModal(true);
+                              }}
+                              className={btnDetail}
+                              title="Lihat Detail"
+                            >
+                              Detail
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowEditUserModal(true);
+                              }}
+                              className={btnEdit}
+                              title="Edit User"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowDeleteUserModal(true);
+                              }}
+                              className={btnHapus}
+                              title="Delete User"
+                            >
+                              Hapus
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -277,7 +318,7 @@ export default function SuperAdminDashboard() {
                 </table>
               </div>
             )}
-            
+
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
               <Link
                 href="/super-admin/users"
@@ -290,9 +331,9 @@ export default function SuperAdminDashboard() {
               </Link>
             </div>
           </div>
+
+          {/* Card untuk akses cepat ke fitur */}
           
-         
-        
         </div>
 
         {/* Modal User Verification */}
@@ -304,6 +345,28 @@ export default function SuperAdminDashboard() {
             setSelectedUser(null);
           }}
           onUserUpdate={handleUserUpdate}
+        />
+
+        {/* Modal Edit User */}
+        <EditUserModal
+          user={selectedUser}
+          isOpen={showEditUserModal}
+          onClose={() => {
+            setShowEditUserModal(false);
+            setSelectedUser(null);
+          }}
+          onUserUpdate={handleUserUpdate}
+        />
+
+        {/* Modal Delete User */}
+        <DeleteUserModal
+          user={selectedUser}
+          isOpen={showDeleteUserModal}
+          onClose={() => {
+            setShowDeleteUserModal(false);
+            setSelectedUser(null);
+          }}
+          onUserDelete={handleUserDelete}
         />
       </SidebarLayout>
     </RoleGate>
