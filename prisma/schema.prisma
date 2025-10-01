@@ -187,6 +187,8 @@ model NotificationRead {
   @@index([vendor_id])
 }
 
+
+
 /// ----------  QR SCAN TRACKING  ----------
 model QrScan {
   id            String     @id @default(cuid())

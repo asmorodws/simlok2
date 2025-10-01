@@ -1,187 +1,77 @@
-/**
- * POST /api/v1/notifications/[id]/read
- * Mark a specific notification as read
- */
+// src/app/api/v1/notifications/[id]/read/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { Cache, CacheNamespaces } from "@/lib/cache";
+import { resolveAudience } from "@/lib/notificationAudience";
 
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/singletons';
-import { Cache, CacheNamespaces } from '@/lib/cache';
-import { eventsPublisher } from '@/server/eventsPublisher';
-import { 
-  withErrorHandling, 
-  apiSuccess, 
-  apiError,
-  getAuthenticatedSession,
-  handleOptions,
-} from '@/lib/api-utils';
+const notifCacheKey = (aud: { readerKey: "user" | "vendor"; readerId: string }) =>
+  `list:${aud.readerKey}:${aud.readerId}`;
 
-async function markAsRead(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
-    const notificationId = id;
-
-    console.log('🏷️ Mark as read request for notification:', notificationId);
-
-    // Check authentication
-    const { session, error: authError } = await getAuthenticatedSession();
-    if (authError) {
-      console.log('❌ Authentication failed:', authError);
-      return authError;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
+    const userId = session.user.id;
+    const role   = session.user.role || "VENDOR";
+    const id     = params.id;
+    if (!id) return NextResponse.json({ success: false, error: "id is required" }, { status: 400 });
 
-    console.log('👤 User attempting to mark as read:', {
-      id: session.user.id,
-      role: session.user.role,
-      name: session.user.officer_name
-    });
+    const audience = resolveAudience(req, role, userId);
 
-    // Get notification
-    const notification = await prisma.notification.findUnique({
-      where: { id: notificationId },
-    });
-
-    if (!notification) {
-      console.log('❌ Notification not found:', notificationId);
-      return apiError('Notification not found', 404);
-    }
-
-    console.log('📋 Found notification:', {
-      id: notification.id,
-      scope: notification.scope,
-      type: notification.type,
-      title: notification.title
-    });
-
-    // Check permissions
-    if (notification.scope === 'admin' && !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      console.log('❌ Admin access denied for role:', session.user.role);
-      return apiError('Access denied', 403);
-    }
-
-    if (notification.scope === 'vendor') {
-      if (session.user.role !== 'VENDOR' || notification.vendor_id !== session.user.id) {
-        console.log('❌ Vendor access denied:', { userRole: session.user.role, vendorId: notification.vendor_id, userId: session.user.id });
-        return apiError('Access denied', 403);
-      }
-    }
-
-    if (notification.scope === 'reviewer' && !['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      console.log('❌ Reviewer access denied for role:', session.user.role);
-      return apiError('Access denied', 403);
-    }
-
-    if (notification.scope === 'approver' && !['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      console.log('❌ Approver access denied for role:', session.user.role);
-      return apiError('Access denied', 403);
-    }
-
-    console.log('✅ Permission check passed');
-
-    // Check if already read
-    const existingRead = await prisma.notificationRead.findFirst({
+    // Validasi notifikasi sesuai audience (optional tapi bagus)
+    const notif = await prisma.notification.findFirst({
       where: {
-        notification_id: notificationId,
-        ...(notification.scope === 'vendor' 
-          ? { vendor_id: session.user.id }
-          : { user_id: session.user.id } // For admin, reviewer, approver
-        ),
+        id,
+        scope: audience.scope,
+        ...(audience.readerKey === "vendor" ? { vendor_id: audience.readerId } : {}),
       },
+      select: { id: true },
     });
-
-    if (existingRead) {
-      console.log('ℹ️ Notification already marked as read');
-      return apiSuccess({ message: 'Already marked as read' });
+    if (!notif) {
+      return NextResponse.json({ success: false, error: "Notification not found" }, { status: 404 });
     }
 
-    console.log('📝 Creating read record...');
-
-    // Use upsert to handle duplicate read attempts gracefully
-    if (notification.scope === 'vendor') {
+    // Upsert read marker sesuai unique constraint yang benar
+    if (audience.readerKey === "user") {
       await prisma.notificationRead.upsert({
-        where: {
-          notification_id_vendor_id: {
-            notification_id: notificationId,
-            vendor_id: session.user.id
-          }
-        },
-        update: {
-          read_at: new Date()
-        },
-        create: {
-          notification_id: notificationId,
-          vendor_id: session.user.id
-        }
+        where: { notification_id_user_id: { notification_id: id, user_id: audience.readerId } },
+        create: { notification_id: id, user_id: audience.readerId },
+        update: {},
       });
     } else {
       await prisma.notificationRead.upsert({
-        where: {
-          notification_id_user_id: {
-            notification_id: notificationId,
-            user_id: session.user.id
-          }
-        },
-        update: {
-          read_at: new Date()
-        },
-        create: {
-          notification_id: notificationId,
-          user_id: session.user.id
-        }
+        where: { notification_id_vendor_id: { notification_id: id, vendor_id: audience.readerId } },
+        create: { notification_id: id, vendor_id: audience.readerId },
+        update: {},
       });
     }
 
-    console.log('✅ Read record created successfully');
+    await Cache.invalidateByPrefix(notifCacheKey(audience), CacheNamespaces.NOTIFICATIONS);
 
-    // Invalidate cache - use proper method
-    // const vendorId = notification.scope === 'vendor' ? session.user.id : null;
-    // const cacheKey = `notifications:${notification.scope}:${vendorId || 'all'}:start:50`;
-    
-    // Use the correct invalidation method
-    await Cache.invalidateByPrefix(`notifications:${notification.scope}`, CacheNamespaces.NOTIFICATIONS);
-
-    console.log('💾 Cache invalidated for notification read:', {
-      scope: notification.scope,
-      userId: session.user.id,
-      notificationId,
-      pattern: `notifications:${notification.scope}`
-    });
-
-    // Get updated unread count and emit event
+    // Hitung ulang unread
     const unreadCount = await prisma.notification.count({
       where: {
-        scope: notification.scope,
-        ...(notification.scope === 'vendor' ? { vendor_id: session.user.id } : {}),
-        reads: {
-          none: notification.scope === 'vendor' 
-            ? { vendor_id: session.user.id }
-            : { user_id: session.user.id }, // For admin, reviewer, approver
-        },
+        scope: audience.scope,
+        ...(audience.readerKey === "vendor" ? { vendor_id: audience.readerId } : {}),
+        reads: audience.readerKey === "user"
+          ? { none: { user_id: audience.readerId } }
+          : { none: { vendor_id: audience.readerId } },
       },
     });
 
-    console.log('📊 Updated unread count:', unreadCount);
-
-    // Emit unread count update
-    eventsPublisher.notificationUnreadCount({
-      scope: notification.scope,
-      vendorId: notification.scope === 'vendor' ? session.user.id : undefined,
-      unreadCount,
-      count: unreadCount,
-    });
-
-    return apiSuccess({
-      message: 'Notification marked as read',
-      unreadCount,
-    });
-
-  } catch (error) {
-    console.error('💥 Error in markAsRead:', error);
-    return apiError('Internal server error', 500);
+    const res = NextResponse.json({ success: true, data: { unreadCount } });
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
+    return res;
+  } catch (e: any) {
+    console.error("POST /api/v1/notifications/[id]/read error:", e);
+    const res = NextResponse.json({ success: false, error: e.message || "Server error" }, { status: 500 });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   }
 }
-
-export const POST = withErrorHandling(markAsRead);
-export const OPTIONS = handleOptions;

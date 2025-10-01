@@ -1,3 +1,6 @@
+// src/store/notifications.ts
+'use client';
+
 import { create } from 'zustand';
 
 export interface Notification {
@@ -18,20 +21,65 @@ interface NotificationsState {
   cursor: string | null;
 }
 
+type Scope = 'admin' | 'vendor' | 'reviewer' | 'approver';
+
+interface ReloadParams {
+  scope?: Scope | undefined;
+  vendorId?: string | undefined;
+  cursor?: string | null;
+  pageSize?: number;
+  search?: string;
+  filter?: 'all' | 'unread' | 'read';
+}
+
+interface MarkAllParams {
+  scope?: Scope | undefined;
+  vendorId?: string | undefined;
+  refetch?: boolean;
+}
+
+interface MarkOneParams {
+  scope?: Scope | undefined;
+  vendorId?: string | undefined;
+  refetch?: boolean;
+}
+
 interface NotificationsActions {
   setItems: (items: Notification[]) => void;
   addItem: (item: Notification) => void;
   removeNotifications: (submissionId: string) => void;
   setUnreadCount: (count: number) => void;
-  markAsRead: (id: string) => Promise<void>;
-  markAllAsRead: (scope?: string, vendorId?: string) => Promise<void>;
+  markAsRead: (id: string, params?: MarkOneParams) => Promise<void>;
+  markAllAsRead: (params?: MarkAllParams) => Promise<void>;
   setLoading: (loading: boolean) => void;
   setHasMore: (hasMore: boolean) => void;
   setCursor: (cursor: string | null) => void;
+  reload: (params?: ReloadParams) => Promise<void>;
   reset: () => void;
 }
 
 export type NotificationsStore = NotificationsState & NotificationsActions;
+
+// ===== util fetch JSON (no-store + cache buster) =====
+async function fetchJSON<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const busted = `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+  const res = await fetch(busted, {
+    headers: {
+      'content-type': 'application/json',
+      ...(init.headers || {}),
+    },
+    ...init,
+  });
+  if (!res.ok) {
+    let msg = `Request failed: ${res.status}`;
+    try {
+      const j = await res.json();
+      msg = (j as any)?.error || msg;
+    } catch {}
+    throw new Error(msg);
+  }
+  return res.json() as Promise<T>;
+}
 
 const initialState: NotificationsState = {
   items: [],
@@ -41,148 +89,147 @@ const initialState: NotificationsState = {
   cursor: null,
 };
 
-export const useNotificationsStore = create<NotificationsStore>((set) => ({
+export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
   ...initialState,
 
   setItems: (items) => set({ items }),
 
-  addItem: (item) => set((state) => ({
-    items: [item, ...state.items],
-    unreadCount: item.isRead ? state.unreadCount : state.unreadCount + 1,
-  })),
+  addItem: (item) =>
+    set((state) => ({
+      items: [item, ...state.items],
+      unreadCount: item.isRead ? state.unreadCount : state.unreadCount + 1,
+    })),
 
-  removeNotifications: (submissionId) => set((state) => {
-    // Filter out notifications that reference the deleted submission
-    const filteredItems = state.items.filter(item => {
-      // Check if notification data contains the submission ID
-      if (item.data) {
-        try {
-          const data = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
-          if (data.submissionId === submissionId || data.submission_id === submissionId) {
-            return false; // Remove this notification
-          }
-        } catch (e) {
-          // If parsing fails, check message/title
+  removeNotifications: (submissionId) =>
+    set((state) => {
+      const filteredItems = state.items.filter((item) => {
+        if (item.data) {
+          try {
+            const data =
+              typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+            if (data.submissionId === submissionId || data.submission_id === submissionId) {
+              return false;
+            }
+          } catch {}
         }
-      }
-      
-      // Check message and title for submission ID
-      const hasIdInMessage = item.message.includes(submissionId);
-      const hasIdInTitle = item.title.includes(submissionId);
-      
-      return !hasIdInMessage && !hasIdInTitle; // Keep if ID not found
-    });
-    
-    // Calculate how many unread notifications were removed
-    const removedUnreadCount = state.items.filter(item => {
-      if (item.isRead) return false; // Skip already read notifications
-      
-      // Check if this notification references the deleted submission
-      if (item.data) {
-        try {
-          const data = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
-          if (data.submissionId === submissionId || data.submission_id === submissionId) {
-            return true; // This unread notification will be removed
-          }
-        } catch (e) {
-          // If parsing fails, check message/title
+        const hasIdInMessage = item.message.includes(submissionId);
+        const hasIdInTitle = item.title.includes(submissionId);
+        return !hasIdInMessage && !hasIdInTitle;
+      });
+
+      const removedUnreadCount = state.items.filter((item) => {
+        if (item.isRead) return false;
+        if (item.data) {
+          try {
+            const data =
+              typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+            if (data.submissionId === submissionId || data.submission_id === submissionId) {
+              return true;
+            }
+          } catch {}
         }
-      }
-      
-      const hasIdInMessage = item.message.includes(submissionId);
-      const hasIdInTitle = item.title.includes(submissionId);
-      
-      return hasIdInMessage || hasIdInTitle; // Count if ID found
-    }).length;
-    
-    console.log(`Removing ${state.items.length - filteredItems.length} notifications for submission ${submissionId}`);
-    console.log(`Reducing unread count by ${removedUnreadCount}`);
-    
-    return {
-      items: filteredItems,
-      unreadCount: Math.max(0, state.unreadCount - removedUnreadCount),
-    };
-  }),
+        const hasIdInMessage = item.message.includes(submissionId);
+        const hasIdInTitle = item.title.includes(submissionId);
+        return hasIdInMessage || hasIdInTitle;
+      }).length;
+
+      return {
+        items: filteredItems,
+        unreadCount: Math.max(0, state.unreadCount - removedUnreadCount),
+      };
+    }),
 
   setUnreadCount: (count) => set({ unreadCount: count }),
 
-  markAsRead: async (id) => {
-    // Update local state optimistically
+  // ====== READ SINGLE (optimistic + guarded decrement + scoped refetch) ======
+  markAsRead: async (id, params) => {
+    const { refetch = true, scope, vendorId } = params || {};
+
+    const before = get().items.find((n) => n.id === id);
+    const wasUnread = before ? !before.isRead : false;
+
+    // Optimistic
     set((state) => ({
-      items: state.items.map(item => 
+      items: state.items.map((item) =>
         item.id === id ? { ...item, isRead: true } : item
       ),
-      unreadCount: Math.max(0, state.unreadCount - 1),
+      unreadCount: wasUnread ? Math.max(0, state.unreadCount - 1) : state.unreadCount,
     }));
 
-    // Make API call to update server
     try {
-      const response = await fetch(`/api/v1/notifications/${id}/read`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const result = await fetchJSON<{ success: boolean; data?: { unreadCount?: number } }>(
+        `/api/v1/notifications/${id}/read`,
+        { method: 'POST' }
+      );
 
-      if (response.ok) {
-        const result = await response.json();
-        // Update unread count from server response
-        if (result.data?.unreadCount !== undefined) {
-          set({ unreadCount: result.data.unreadCount });
-        }
-        console.log('✅ Notification marked as read on server:', id);
-      } else {
-        console.error('❌ Failed to mark notification as read on server:', response.statusText);
-        // Revert optimistic update on failure
+      if (result?.data?.unreadCount !== undefined) {
+        set({ unreadCount: Math.max(0, result.data.unreadCount) });
+      }
+
+      if (refetch) {
+        setTimeout(() => {
+          if (scope) {
+            get().reload({ scope, ...(scope === 'vendor' && vendorId ? { vendorId } : {}) });
+          } else {
+            get().reload();
+          }
+        }, 200);
+      }
+    } catch (error) {
+      console.error('💥 Error markAsRead:', error);
+      if (wasUnread) {
         set((state) => ({
-          items: state.items.map(item => 
+          items: state.items.map((item) =>
             item.id === id ? { ...item, isRead: false } : item
           ),
           unreadCount: state.unreadCount + 1,
         }));
       }
-    } catch (error) {
-      console.error('💥 Error marking notification as read:', error);
-      // Revert optimistic update on error
-      set((state) => ({
-        items: state.items.map(item => 
-          item.id === id ? { ...item, isRead: false } : item
-        ),
-        unreadCount: state.unreadCount + 1,
-      }));
     }
   },
 
-  markAllAsRead: async (scope?: string, vendorId?: string) => {
-    // Update local state optimistically
+  // ====== READ ALL (optimistic + scoped refetch) ======
+  markAllAsRead: async (params) => {
+    const { scope, vendorId, refetch = true } = params || {};
+
+    const unreadBefore = get().items.filter((n) => !n.isRead).length;
+
     set((state) => ({
-      items: state.items.map(item => ({ ...item, isRead: true })),
-      unreadCount: 0,
+      items: state.items.map((item) => ({ ...item, isRead: true })),
+      unreadCount: Math.max(0, state.unreadCount - unreadBefore),
     }));
 
-    // Make API call to update server
     try {
-      const response = await fetch('/api/v1/notifications/read-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scope,
-          vendorId,
-        }),
-      });
+      const result = await fetchJSON<{ success: boolean; data?: { unreadCount?: number } }>(
+        `/api/v1/notifications/read-all`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ scope, vendorId }),
+        }
+      );
 
-      if (response.ok) {
-        await response.json(); // Consume response
-        console.log('✅ All notifications marked as read on server');
-        // Ensure unread count is 0
-        set({ unreadCount: 0 });
+      if (result?.success && result?.data?.unreadCount !== undefined) {
+        set({ unreadCount: Math.max(0, result.data.unreadCount) });
       } else {
-        console.error('❌ Failed to mark all notifications as read on server:', response.statusText);
+        set({ unreadCount: 0 });
+      }
+
+      if (refetch) {
+        setTimeout(() => {
+          if (scope) {
+            get().reload({ scope, ...(scope === 'vendor' && vendorId ? { vendorId } : {}) });
+          } else {
+            get().reload();
+          }
+        }, 200);
       }
     } catch (error) {
-      console.error('💥 Error marking all notifications as read:', error);
+      console.error('💥 Error markAllAsRead:', error);
+      if (scope) {
+        get().reload({ scope, ...(scope === 'vendor' && vendorId ? { vendorId } : {}) });
+      } else {
+        get().reload();
+      }
     }
   },
 
@@ -191,6 +238,55 @@ export const useNotificationsStore = create<NotificationsStore>((set) => ({
   setHasMore: (hasMore) => set({ hasMore }),
 
   setCursor: (cursor) => set({ cursor }),
+
+  // ====== Reload daftar (no-store + cache buster) + scoped ======
+  reload: async (params) => {
+    const {
+      scope = 'vendor',
+      vendorId,
+      cursor = null,
+      pageSize = 20,
+      search,
+      filter = 'all',
+    } = params || {};
+
+    try {
+      set({ loading: true });
+
+      const query = new URLSearchParams();
+      if (scope) query.set('scope', scope);
+      if (scope === 'vendor' && vendorId) query.set('vendorId', vendorId);
+      if (cursor) query.set('cursor', cursor);
+      if (pageSize) query.set('pageSize', String(pageSize));
+      if (search) query.set('search', search);
+      if (filter) query.set('filter', filter);
+
+      const res = await fetchJSON<{
+        success: boolean;
+        data: {
+          data: Notification[];
+          pagination?: { nextCursor?: string | null; hasMore?: boolean };
+        };
+      }>(`/api/v1/notifications?${query.toString()}`);
+
+      const list = res?.data?.data ?? [];
+      const nextCursor = res?.data?.pagination?.nextCursor ?? null;
+      const hasMore = !!res?.data?.pagination?.hasMore;
+
+      const newUnread = list.filter((n) => !n.isRead).length;
+
+      set({
+        items: list,
+        cursor: nextCursor,
+        hasMore,
+        unreadCount: newUnread,
+        loading: false,
+      });
+    } catch (e) {
+      console.error('💥 reload notifications failed:', e);
+      set({ loading: false });
+    }
+  },
 
   reset: () => set(initialState),
 }));

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/useToast';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 import RoleGate from '@/components/security/RoleGate';
-import { 
-  BellIcon, 
+import {
+  BellIcon,
   CheckIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -21,8 +21,9 @@ import {
 import Button from '@/components/ui/button/Button';
 import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
+import { fetchJSON } from '@/lib/fetchJson'; // NEW
 
-// Interface untuk notification
+// Interface untuk notification (disesuaikan dari project_dump)
 interface Notification {
   id: string;
   type: string;
@@ -35,7 +36,7 @@ interface Notification {
   vendorId?: string;
 }
 
-// Interface untuk submission (dari AdminSubmissionDetailModal)
+// Interface untuk submission (disesuaikan dari project_dump)
 interface Submission {
   id: string;
   approval_status: string;
@@ -77,6 +78,23 @@ interface Submission {
   };
 }
 
+// NEW: tipe respons API v1 list
+type NotifListResponse = {
+  success: boolean;
+  data: {
+    data: Notification[];
+    pagination?: any;
+  };
+};
+
+// NEW: helper anti-race: versi state
+function useVersion() {
+  const v = useRef(0);
+  const bump = () => ++v.current;
+  const isStale = (snapshot: number) => snapshot !== v.current;
+  return { current: () => v.current, bump, isStale };
+}
+
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
   const { showError } = useToast();
@@ -86,384 +104,221 @@ export default function NotificationsPage() {
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fetch notifications based on user role
+  // NEW: versi untuk cegah race condition saat refetch beruntun
+  const version = useVersion();
+
+  // NEW: refetch util yang no-store + query buster
+  const refetch = async (scope: string) => {
+    const snap = version.current();
+    setLoading(true);
+    try {
+      const res = await fetchJSON<NotifListResponse>(`/api/v1/notifications?scope=${scope}`);
+      if (version.isStale(snap)) return; // ada refetch lebih baru, abaikan respons lama
+      setNotifications(res?.data?.data ?? []);
+    } catch (e) {
+      console.error('💥 Refetch notifications error:', e);
+    } finally {
+      if (!version.isStale(snap)) setLoading(false);
+    }
+  };
+
+  // Fetch awal
   useEffect(() => {
-    const fetchNotifications = async () => {
+    const run = async () => {
       if (!session?.user?.id) return;
-      
-      setLoading(true);
-      try {
-        // Convert role to lowercase scope
-        let scope = session.user.role.toLowerCase();
-        
-        // Handle SUPER_ADMIN case - they can see admin notifications
-        if (session.user.role === 'SUPER_ADMIN') {
-          scope = 'admin';
-        }
-        
-        console.log('🔍 Fetching notifications for scope:', scope, 'user role:', session.user.role);
-        
-        const response = await fetch(`/api/v1/notifications?scope=${scope}&limit=50`);
-        
-        console.log('📡 Notifications API response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📋 Notifications API v1 response:', data);
-          console.log('📅 First notification createdAt:', data.data?.data?.[0]?.createdAt);
-          console.log('📊 Total notifications received:', data.data?.data?.length || 0);
-          
-          // API v1 returns nested structure: {success: true, data: {data: [...], pagination: {...}}}
-          setNotifications(data.data?.data || []);
-        } else {
-          const errorData = await response.text();
-          console.error('❌ Notifications API error:', response.status, errorData);
-        }
-      } catch (error) {
-        console.error('💥 Error fetching notifications:', error);
-      } finally {
-        setLoading(false);
-      }
+      let scope = session.user.role.toLowerCase();
+      if (session.user.role === 'SUPER_ADMIN') scope = 'admin';
+
+      version.bump(); // NEW: tandai versi baru
+      await refetch(scope);
     };
 
-    if (status === 'authenticated') {
-      fetchNotifications();
-    }
+    if (status === 'authenticated') run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, session?.user?.role, status]);
 
-  // Safely calculate unread count
+  // Hitung unread dari state lokal
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0;
 
-  const markAsRead = async (notificationId: string) => {
-    try {
-      console.log('🏷️ Marking notification as read:', notificationId);
-      
-      const response = await fetch(`/api/v1/notifications/${notificationId}/read`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+  // NEW: debounce kecil untuk refetch setelah aksi tulis
+  const SLOW_BACKEND_COMPENSATION_MS = 200; // 150–300ms biasanya cukup
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Mark as read response:', result);
-        
-        // Update local state immediately for better UX
-        setNotifications(prev => prev.map(notification => 
-          notification.id === notificationId ? { ...notification, isRead: true } : notification
-        ));
-        
-        console.log('🔄 Local state updated, notification should now appear as read');
-      } else {
-        const errorData = await response.text();
-        console.error('❌ Failed to mark as read:', response.status, errorData);
-      }
+  const markAsRead = async (notificationId: string) => {
+    // Optimistic update: langsung set local state
+    setNotifications(prev =>
+      prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
+    );
+
+    try {
+      await fetchJSON(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+      // Jadwalkan refetch singkat agar sinkron dgn server & cache invalidation
+      let scope = session?.user?.role?.toLowerCase() || 'vendor';
+      if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
+
+      version.bump(); // versi baru sebelum refetch
+      setTimeout(() => refetch(scope), SLOW_BACKEND_COMPENSATION_MS);
     } catch (error) {
       console.error('💥 Error marking notification as read:', error);
+      // Rollback jika gagal
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, isRead: false } : n))
+      );
+      showError('Gagal', 'Tidak dapat menandai notifikasi sebagai dibaca');
     }
   };
 
   const markAllAsRead = async () => {
+    // Optimistic all
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+
     try {
-      console.log('🏷️ Marking all notifications as read for scope:', session?.user?.role);
-      
-      const scope = session?.user?.role;
-      const response = await fetch('/api/v1/notifications/read-all', {
+      const scopeBody = session?.user?.role;
+      await fetchJSON('/api/v1/notifications/read-all', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ scope }),
+        body: JSON.stringify({ scope: scopeBody }),
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ Mark all as read response:', result);
-        
-        // Update local state
-        setNotifications(prev => prev.map(notification => ({ ...notification, isRead: true })));
-        
-        console.log('🔄 All notifications marked as read in local state');
-      } else {
-        const errorData = await response.text();
-        console.error('❌ Failed to mark all as read:', response.status, errorData);
-      }
+      // Jadwalkan refetch
+      let scope = session?.user?.role?.toLowerCase() || 'vendor';
+      if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
+
+      version.bump();
+      setTimeout(() => refetch(scope), SLOW_BACKEND_COMPENSATION_MS);
     } catch (error) {
-      console.error('💥 Error marking all notifications as read:', error);
+      console.error('💥 Error marking all as read:', error);
+      showError('Gagal', 'Tidak dapat menandai semua notifikasi sebagai dibaca');
+      // (opsional) refetch penuh untuk koreksi state
+      let scope = session?.user?.role?.toLowerCase() || 'vendor';
+      if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
+      version.bump();
+      refetch(scope);
     }
   };
 
-    const formatTimeAgo = (dateString: string): string => {
-    if (!dateString) {
-      return 'Tidak diketahui';
-    }
+  // === Util UI yang sudah ada (dipertahankan) ===
 
+  const formatTimeAgo = (dateString: string): string => {
+    if (!dateString) return 'Tidak diketahui';
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Tanggal tidak valid';
-    }
-
+    if (isNaN(date.getTime())) return 'Tanggal tidak valid';
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) {
-      return 'Baru saja';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes} menit yang lalu`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours} jam yang lalu`;
-    } else if (diffInSeconds < 604800) {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days} hari yang lalu`;
-    } else {
-      return date.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-    }
+    if (diffInSeconds < 60) return 'Baru saja';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const getNotificationIcon = (type: string) => {
     const iconClass = "w-5 h-5";
     switch (type) {
-      case 'submission_approved':
-        return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
-      case 'submission_rejected':
-        return <XMarkIcon className={`${iconClass} text-red-600`} />;
-      case 'submission_pending':
-        return <ClockIcon className={`${iconClass} text-amber-600`} />;
-      case 'status_change':
-        return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
-      case 'new_submission':
-        return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
-      case 'new_vendor':
-        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
-      case 'vendor_verified':
-        return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
-      case 'user_registered':
-        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
-      default:
-        return <BellIcon className={`${iconClass} text-gray-600`} />;
+      case 'submission_approved': return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
+      case 'submission_rejected': return <XMarkIcon className={`${iconClass} text-red-600`} />;
+      case 'submission_pending': return <ClockIcon className={`${iconClass} text-amber-600`} />;
+      case 'status_change': return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
+      case 'new_submission': return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
+      case 'new_vendor': return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
+      case 'vendor_verified': return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
+      case 'user_registered': return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
+      default: return <BellIcon className={`${iconClass} text-gray-600`} />;
     }
   };
 
+  const submissionTypes = ['submission_approved','submission_rejected','submission_pending','new_submission','status_change'];
+
   const hasSubmissionData = (notification: Notification) => {
-    // Cek berdasarkan type notification
-    const submissionTypes = [
-      'submission_approved', 
-      'submission_rejected', 
-      'submission_pending',
-      'new_submission',
-      'status_change'
-    ];
-    
-    if (submissionTypes.includes(notification.type)) {
-      return true;
-    }
-    
-    // Cek di dalam data
+    if (submissionTypes.includes(notification.type)) return true;
     if (notification.data) {
-      let parsedData;
-      if (typeof notification.data === 'string') {
-        try {
-          parsedData = JSON.parse(notification.data);
-        } catch {
-          return notification.data.includes('submissionId');
-        }
-      } else {
-        parsedData = notification.data;
-      }
-      
-      if (parsedData && parsedData.submissionId) {
-        return true;
+      try {
+        const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+        if (parsed?.submissionId) return true;
+      } catch {
+        if (typeof notification.data === 'string' && notification.data.includes('submissionId')) return true;
       }
     }
-    
-    // Cek di message atau title
-    const submissionKeywords = ['pengajuan', 'submission', 'simlok'];
     const text = `${notification.title} ${notification.message}`.toLowerCase();
-    
-    return submissionKeywords.some(keyword => text.includes(keyword));
+    return ['pengajuan', 'submission', 'simlok'].some(k => text.includes(k));
   };
 
   const hasVendorData = (notification: Notification) => {
-    console.log('🔍 Checking hasVendorData for:', notification);
-    
-    // Cek berdasarkan type notification
-    const vendorTypes = [
-      'new_vendor',
-      'vendor_verified',
-      'vendor_registered'
-    ];
-    
-    if (vendorTypes.includes(notification.type)) {
-      console.log('✅ Found vendor type:', notification.type);
-      return true;
-    }
-    
-    // Cek di dalam data
+    const vendorTypes = ['new_vendor','vendor_verified','vendor_registered'];
+    if (vendorTypes.includes(notification.type)) return true;
     if (notification.data) {
-      let parsedData;
-      if (typeof notification.data === 'string') {
-        try {
-          parsedData = JSON.parse(notification.data);
-          console.log('📊 Parsed vendor data:', parsedData);
-        } catch {
-          const hasVendorId = notification.data.includes('vendorId');
-          console.log('🔤 String contains vendorId:', hasVendorId);
-          return hasVendorId;
-        }
-      } else {
-        parsedData = notification.data;
-        console.log('📊 Direct vendor data:', parsedData);
-      }
-      
-      if (parsedData && parsedData.vendorId) {
-        console.log('🎯 Found vendorId in data:', parsedData.vendorId);
-        return true;
+      try {
+        const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+        if (parsed?.vendorId) return true;
+      } catch {
+        if (typeof notification.data === 'string' && notification.data.includes('vendorId')) return true;
       }
     }
-    
-    // Cek di message atau title
-    const vendorKeywords = ['vendor', 'perusahaan', 'pendaftaran vendor'];
     const text = `${notification.title} ${notification.message}`.toLowerCase();
-    const hasKeyword = vendorKeywords.some(keyword => text.includes(keyword));
-    
-    console.log('🔍 Text search result:', hasKeyword, 'for text:', text);
-    
-    return hasKeyword;
+    return ['vendor', 'perusahaan', 'pendaftaran vendor'].some(k => text.includes(k));
   };
 
   const handleViewDetail = async (notification: Notification) => {
-    console.log('🔍 handleViewDetail called with notification:', notification);
-    console.log('🔍 notification.type:', notification.type);
-    console.log('🔍 notification.data:', notification.data);
-    
-    // Mark as read when viewing
-    if (!notification.isRead) {
-      await markAsRead(notification.id);
-    }
+    if (!notification.isRead) await markAsRead(notification.id);
 
-    // Check if it's a vendor notification
     const isVendorNotification = hasVendorData(notification);
-    console.log('👤 Is vendor notification:', isVendorNotification);
-    
     if (isVendorNotification) {
-      console.log('📋 Processing vendor notification - feature not available');
       showError('Info', 'Detail vendor tidak tersedia saat ini');
       return;
     }
+    if (!hasSubmissionData(notification)) return;
 
-    // Handle submission notifications
-    if (!hasSubmissionData(notification)) {
-      console.log('❌ No submission data found');
-      return;
-    }
-    
     try {
-      // Extract submission ID from notification data
       let submissionId = '';
-      
-      console.log('📋 Processing submission notification.data:', notification.data);
-      
-      // Parse dari data JSON jika ada
       if (notification.data) {
-        let parsedData;
-        if (typeof notification.data === 'string') {
-          try {
-            parsedData = JSON.parse(notification.data);
-            console.log('✅ Parsed submission data:', parsedData);
-          } catch {
-            // Jika tidak bisa parse JSON, coba extract dari string
+        try {
+          const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+          if (parsed?.submissionId) submissionId = parsed.submissionId;
+        } catch {
+          if (typeof notification.data === 'string') {
             const match = notification.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
-            if (match && match[1]) submissionId = match[1];
-            console.log('🔤 String match result for submission:', match);
+            if (match?.[1]) submissionId = match[1];
           }
-        } else {
-          parsedData = notification.data;
-          console.log('📊 Direct submission data:', parsedData);
-        }
-        
-        if (parsedData && parsedData.submissionId) {
-          submissionId = parsedData.submissionId;
-          console.log('🎯 Found submissionId in parsedData:', submissionId);
         }
       }
-      
-      // Jika belum ketemu, coba extract dari message atau title
       if (!submissionId) {
-        console.log('🔍 Trying to extract from message/title...');
         const patterns = [
           /ID[:\s]*([a-zA-Z0-9_-]+)/,
           /submission[:\s]*([a-zA-Z0-9_-]+)/i,
           /pengajuan[:\s]*([a-zA-Z0-9_-]+)/i,
-          /([a-zA-Z0-9_-]{20,})/  // Pattern untuk ID yang panjang
+          /([a-zA-Z0-9_-]{20,})/
         ];
-        
-        for (const pattern of patterns) {
-          const messageMatch = notification.message.match(pattern);
-          const titleMatch = notification.title.match(pattern);
-          
-          console.log(`🔎 Pattern ${pattern} - Message match:`, messageMatch, 'Title match:', titleMatch);
-          
-          if (messageMatch && messageMatch[1]) {
-            submissionId = messageMatch[1];
-            console.log('✅ Found in message:', submissionId);
-            break;
-          }
-          if (titleMatch && titleMatch[1]) {
-            submissionId = titleMatch[1];
-            console.log('✅ Found in title:', submissionId);
-            break;
-          }
+        for (const p of patterns) {
+          const msg = notification.message.match(p);
+          const ttl = notification.title.match(p);
+          if (msg?.[1]) { submissionId = msg[1]; break; }
+          if (ttl?.[1]) { submissionId = ttl[1]; break; }
         }
       }
-
-      console.log('🔑 Final submission ID:', submissionId);
-
-      if (submissionId) {
-        console.log('🌐 Fetching submission details...');
-        // Fetch submission details
-        const response = await fetch(`/api/submissions/${submissionId}`);
-        if (response.ok) {
-          const submission = await response.json();
-          console.log('✅ Submission loaded:', submission);
-          setSelectedSubmission(submission);
-        } else {
-          console.error('❌ Failed to fetch submission:', response.statusText);
-          showError('Error', 'Gagal memuat detail submission');
-        }
-      } else {
-        console.warn('⚠️ No submission ID found in notification');
+      if (!submissionId) {
         showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
+        return;
       }
+
+      const submission = await fetchJSON<Submission>(`/api/submissions/${submissionId}`);
+      setSelectedSubmission(submission);
     } catch (error) {
       console.error('💥 Error handling notification detail:', error);
       showError('Error', 'Terjadi kesalahan saat memuat detail');
     }
   };
 
-  // Add truncate function
-  const truncateText = (text: string, maxLength: number = 100) => {
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-  };
+  const truncateText = (text: string, maxLength: number = 100) =>
+    text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 
-  // Filter notifications
-  const filteredNotifications = Array.isArray(notifications) ? notifications
-    .filter((notification: Notification) => {
-      if (filter === 'unread') return !notification.isRead;
-      if (filter === 'read') return notification.isRead;
-      return true;
-    })
-    .filter((notification: Notification) => {
-      if (!searchTerm) return true;
-      return notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    }) : [];
+  const filteredNotifications = Array.isArray(notifications)
+    ? notifications
+        .filter((n) => (filter === 'unread' ? !n.isRead : filter === 'read' ? n.isRead : true))
+        .filter((n) =>
+          !searchTerm
+            ? true
+            : n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              n.message.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+    : [];
 
   if (status === 'loading') {
     return (
@@ -479,7 +334,6 @@ export default function NotificationsPage() {
     <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR", "APPROVER", "REVIEWER"]}>
       <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
-          
           {/* Header */}
           <div className="flex items-center justify-between rounded-xl border bg-white p-3 md:p-4 shadow-sm">
             <div className="flex items-center space-x-3">
@@ -494,15 +348,13 @@ export default function NotificationsPage() {
                 )}
               </div>
               <div>
-                <h1 className="text-base md:text-lg font-semibold text-gray-900">
-                  {session?.user?.role === 'SUPER_ADMIN' ? 'Notifikasi' : 'Notifikasi'}
-                </h1>
+                <h1 className="text-base md:text-lg font-semibold text-gray-900">Notifikasi</h1>
                 <p className="text-sm text-gray-500">
                   {loading ? 'Memuat...' : unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua sudah dibaca'}
                 </p>
               </div>
             </div>
-            
+
             {unreadCount > 0 && !loading && (
               <Button
                 onClick={markAllAsRead}
@@ -521,7 +373,6 @@ export default function NotificationsPage() {
           {/* Toolbar */}
           <div className="rounded-xl border bg-white p-3 md:p-4 shadow-sm">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-              {/* Search */}
               <div className="md:col-span-7">
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -536,18 +387,14 @@ export default function NotificationsPage() {
                 </div>
               </div>
 
-              {/* Filters */}
               <div className="md:col-span-5 flex gap-2 md:justify-end">
-                {/* Read State Filter */}
                 <div className="flex rounded-lg border border-gray-300 bg-white p-1">
                   {(['all', 'unread', 'read'] as const).map((filterOption) => (
                     <button
                       key={filterOption}
                       onClick={() => setFilter(filterOption)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        filter === filterOption
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'text-gray-600 hover:text-gray-900:text-gray-200'
+                        filter === filterOption ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900:text-gray-200'
                       }`}
                     >
                       {filterOption === 'all' && 'Semua'}
@@ -560,7 +407,7 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          {/* Notifications List */}
+          {/* List */}
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             {filteredNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -571,14 +418,13 @@ export default function NotificationsPage() {
                   {searchTerm ? 'Tidak ada hasil' : 'Tidak ada notifikasi'}
                 </h3>
                 <p className="text-sm text-gray-500 text-center max-w-sm">
-                  {searchTerm 
+                  {searchTerm
                     ? `Tidak ditemukan notifikasi yang cocok dengan "${searchTerm}"`
-                    : 'Anda akan melihat notifikasi baru di sini ketika ada aktivitas'
-                  }
+                    : 'Anda akan melihat notifikasi baru di sini ketika ada aktivitas'}
                 </p>
                 {!searchTerm && (
                   <Button
-                    onClick={() => window.location.href = '/dashboard'}
+                    onClick={() => (window.location.href = '/dashboard')}
                     variant="outline"
                     size="sm"
                     className="mt-4"
@@ -589,91 +435,58 @@ export default function NotificationsPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {filteredNotifications.map((notification: any) => {
+                {filteredNotifications.map((notification) => {
                   const isUnread = !notification.isRead;
                   const fullTimestamp = new Date(notification.createdAt).toLocaleString('id-ID');
-                  
+
                   return (
                     <div
                       key={notification.id}
                       className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50:bg-gray-800/50 focus-within:ring-2 focus-within:ring-blue-500/30 ${
-                        isUnread 
-                          ? 'bg-blue-50/50 border-l-2 border-blue-500/50' 
-                          : ''
-                      } ${
-                        hasSubmissionData(notification) || hasVendorData(notification) ? 'cursor-pointer' : ''
-                      }`}
+                        isUnread ? 'bg-blue-50/50 border-l-2 border-blue-500/50' : ''
+                      } ${hasSubmissionData(notification) || hasVendorData(notification) ? 'cursor-pointer' : ''}`}
                       onClick={() => {
-                        console.log('🖱️ Notification clicked:', notification);
-                        console.log('📋 hasSubmissionData:', hasSubmissionData(notification));
-                        console.log('👤 hasVendorData:', hasVendorData(notification));
-                        
                         if (hasSubmissionData(notification) || hasVendorData(notification)) {
                           handleViewDetail(notification);
-                        } else {
-                          console.log('❌ No action taken - neither submission nor vendor data found');
                         }
                       }}
                       role="listitem"
                     >
-                      {/* Unread indicator dot */}
-                      {isUnread && (
-                        <div className="absolute left-2 top-2.5 h-2 w-2 rounded-full bg-blue-600"></div>
-                      )}
+                      {isUnread && <div className="absolute left-2 top-2.5 h-2 w-2 rounded-full bg-blue-600"></div>}
 
-                      {/* Icon */}
                       <div className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center ml-2">
                         {getNotificationIcon(notification.type)}
                       </div>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
-                            <h3 
-                              className={`text-sm md:text-base leading-tight ${
-                                isUnread 
-                                  ? 'font-semibold text-gray-900' 
-                                  : 'font-medium text-gray-800'
-                              }`}
-                              style={{ 
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
-                              }}
+                            <h3
+                              className={`text-sm md:text-base leading-tight ${isUnread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}
+                              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
                               {truncateText(notification.title, 80)}
                             </h3>
-                            <p 
+                            <p
                               className="mt-0.5 text-xs md:text-sm text-gray-600 leading-relaxed"
-                              style={{ 
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
-                              }}
+                              style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
                               {truncateText(notification.message, 120)}
                             </p>
                           </div>
-                          
-                          <span 
-                            className="text-[11px] md:text-xs text-gray-500 whitespace-nowrap ml-3"
-                            title={fullTimestamp}
-                          >
+
+                          <span className="text-[11px] md:text-xs text-gray-500 whitespace-nowrap ml-3" title={fullTimestamp}>
                             {formatTimeAgo(notification.createdAt)}
                           </span>
                         </div>
 
-                        {/* Actions */}
                         {(hasSubmissionData(notification) || hasVendorData(notification)) && (
                           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <button className="inline-flex items-center text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
-                              {hasVendorData(notification) ? 'Lihat detail' : 'Lihat detail'}
+                              Lihat detail
                               <ArrowRightIcon className="w-3 h-3 ml-1" />
                             </button>
-                            
+
                             {isUnread && (
                               <button
                                 onClick={async (e) => {
@@ -697,26 +510,23 @@ export default function NotificationsPage() {
               </div>
             )}
 
-            {/* Footer */}
             {filteredNotifications.length > 0 && (
               <div className="flex items-center justify-between text-sm text-gray-500 p-3 border-t border-gray-100 bg-gray-50/50">
                 <span>
                   Menampilkan {filteredNotifications.length} dari {Array.isArray(notifications) ? notifications.length : 0} notifikasi
                 </span>
-                {/* Future: Load more functionality */}
               </div>
             )}
           </div>
         </div>
 
-      {/* Modals */}
-      {selectedSubmission && (
-        <SubmissionDetailModal
-          submission={selectedSubmission}
-          isOpen={!!selectedSubmission}
-          onClose={() => setSelectedSubmission(null)}
-        />
-      )}
+        {selectedSubmission && (
+          <SubmissionDetailModal
+            submission={selectedSubmission}
+            isOpen={!!selectedSubmission}
+            onClose={() => setSelectedSubmission(null)}
+          />
+        )}
       </SidebarLayout>
     </RoleGate>
   );

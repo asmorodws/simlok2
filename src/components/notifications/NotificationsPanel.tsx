@@ -1,3 +1,4 @@
+// src/components/notifications/NotificationsPanel.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { 
@@ -25,9 +26,7 @@ interface NotificationsPanelProps {
   onClose: () => void;
 }
 
-export default function NotificationsPanel({
-  onClose
-}: NotificationsPanelProps) {
+export default function NotificationsPanel({ onClose }: NotificationsPanelProps) {
   const { data: session } = useSession();
   const { 
     items: notifications, 
@@ -37,12 +36,22 @@ export default function NotificationsPanel({
   } = useNotificationsStore();
   const { showError, showWarning } = useToast();
 
+  // NEW: helper scope & vendorId dari session (selalu konsisten dgn API)
+  const getScopeAndVendor = () => {
+    if (!session?.user) return { scope: 'vendor' as const, vendorId: undefined as string | undefined };
+    const role = session.user.role;
+    if (role === 'SUPER_ADMIN') return { scope: 'admin' as const, vendorId: undefined };
+    if (role === 'APPROVER')    return { scope: 'approver' as const, vendorId: undefined };
+    if (role === 'REVIEWER')    return { scope: 'reviewer' as const, vendorId: undefined };
+    // VENDOR
+    return { scope: 'vendor' as const, vendorId: session.user.id };
+  };
+
   // Debug: log notifications data
   console.log('NotificationsPanel - notifications:', notifications);
   console.log('NotificationsPanel - notifications length:', notifications?.length);
   console.log('NotificationsPanel - unreadCount:', unreadCount);
   
-  // Debug each notification
   if (notifications && notifications.length > 0) {
     notifications.slice(0, 3).forEach((notif, index) => {
       console.log(`Notification ${index}:`, {
@@ -96,7 +105,6 @@ export default function NotificationsPanel({
       
       if (notification.data) {
         try {
-          // Check if data is already an object or needs parsing
           const parsedData = typeof notification.data === 'string' 
             ? JSON.parse(notification.data) 
             : notification.data;
@@ -108,13 +116,10 @@ export default function NotificationsPanel({
         }
       }
 
-      // Jika tidak ada submissionId, coba extract dari message atau title
       if (!submissionId) {
-        // Cari pattern ID dalam message atau title
         const idPattern = /ID[:\s]+([a-zA-Z0-9]+)/i;
         const messageMatch = notification.message.match(idPattern);
         const titleMatch = notification.title.match(idPattern);
-        
         submissionId = messageMatch?.[1] || titleMatch?.[1];
         console.log('Extracted submissionId from text:', submissionId);
       }
@@ -133,25 +138,21 @@ export default function NotificationsPanel({
       } else if (session?.user?.role === 'REVIEWER') {
         apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
       } else if (session?.user?.role === 'SUPER_ADMIN') {
-        // Use submissions endpoint for super admin - admin endpoints no longer exist
         apiEndpoint = `/api/submissions/${submissionId}`;
       }
 
-      // Fetch detail submission
       const response = await fetch(apiEndpoint);
       
       if (response.status === 404) {
-        // Submission tidak ditemukan (mungkin sudah dihapus)
         console.warn('Submission not found:', submissionId);
         showWarning(
           'Pengajuan Tidak Ditemukan',
           'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
         );
-        
-        // Mark notification as read karena sudah dicoba akses
         if (!notification.isRead) {
           console.log('Marking notification as read (submission not found):', notification.id);
-          await markAsRead(notification.id);
+          const { scope, vendorId } = getScopeAndVendor();
+          await markAsRead(notification.id, { scope, vendorId });
         }
         return;
       }
@@ -163,23 +164,20 @@ export default function NotificationsPanel({
       const responseData = await response.json();
       console.log('Submission data fetched:', responseData);
       
-      // Handle different response structures based on role
       const submissionData = responseData.submission || responseData;
       
       setSelectedSubmission(submissionData);
       setSelectedSubmissionId(submissionId);
       setIsDetailModalOpen(true);
 
-      // Mark notification as read
       if (!notification.isRead) {
         console.log('Marking notification as read:', notification.id);
-        await markAsRead(notification.id);
+        const { scope, vendorId } = getScopeAndVendor();
+        await markAsRead(notification.id, { scope, vendorId });
       }
 
     } catch (error) {
       console.error('Error viewing submission detail:', error);
-      
-      // Tampilkan pesan error yang user-friendly
       if (error instanceof Error) {
         if (error.message.includes('404')) {
           showWarning(
@@ -227,7 +225,6 @@ export default function NotificationsPanel({
 
       console.log('🔍 Fetching vendor data for ID:', vendorId);
       
-      // Admin endpoints no longer exist - vendor user functionality disabled for now
       if (session?.user?.role === 'REVIEWER') {
         try {
           const response = await fetch(`/api/reviewer/users/${vendorId}`);
@@ -253,20 +250,18 @@ export default function NotificationsPanel({
           showError('Error', 'Gagal memuat detail vendor');
         }
       } else {
-        console.log('Vendor user functionality disabled for SUPER_ADMIN - admin endpoints removed');
+        console.log('Vendor user functionality disabled for this role');
         showWarning('Info', 'Fitur detail vendor tidak tersedia untuk role ini saat ini');
       }
 
-      // Mark notification as read
       if (!notification.isRead) {
         console.log('Marking notification as read (vendor detail):', notification.id);
-        await markAsRead(notification.id);
+        const { scope, vendorId: vId } = getScopeAndVendor();
+        await markAsRead(notification.id, { scope, vendorId: vId });
       }
 
     } catch (err) {
       console.error('❌ Error fetching vendor details:', err);
-      
-      // Tampilkan pesan error yang user-friendly
       if (err instanceof Error) {
         if (err.message.includes('404')) {
           showWarning(
@@ -345,8 +340,6 @@ export default function NotificationsPanel({
 
   const getEnhancedMessage = useCallback((notification: Notification) => {
     const { type, message, title } = notification;
-    
-    // Create enhanced messages with clear status information
     switch (type) {
       case 'submission_approved':
         return {
@@ -367,10 +360,8 @@ export default function NotificationsPanel({
           action: 'Lihat detail'
         };
       case 'status_change':
-        // Use the server-provided title and message, but make status clear
         let enhancedTitle = title;
         let enhancedMessage = message;
-        
         if (title.includes('Disetujui')) {
           enhancedTitle = 'Pengajuan Disetujui';
           enhancedMessage = 'Selamat! Pengajuan Simlok Anda telah disetujui dan dapat digunakan.';
@@ -378,7 +369,6 @@ export default function NotificationsPanel({
           enhancedTitle = 'Pengajuan Ditolak';
           enhancedMessage = 'Pengajuan Simlok Anda ditolak. Silakan periksa catatan dan lakukan perbaikan.';
         }
-        
         return {
           title: truncateText(enhancedTitle, 50),
           message: truncateText(enhancedMessage),
@@ -409,29 +399,21 @@ export default function NotificationsPanel({
 
   const hasSubmissionData = (notification: Notification) => {
     console.log('hasSubmissionData check for:', notification);
-    
-    // Check if this is a vendor notification
     if (notification.type === 'user_registered' || notification.type === 'new_vendor' || notification.type === 'new_user_verification') {
       return true;
     }
-    
-    // Check if notification contains submission data that can be viewed
     const hasSubmissionType = notification.type.includes('submission') || notification.type === 'status_change';
-    
     let hasSubmissionId = false;
     if (notification.data) {
       if (typeof notification.data === 'string') {
         hasSubmissionId = notification.data.includes('submissionId');
       } else if (typeof notification.data === 'object') {
-        hasSubmissionId = notification.data.submissionId || notification.data.submission_id;
+        hasSubmissionId = (notification.data as any).submissionId || (notification.data as any).submission_id;
       }
     }
-    
     const hasIdInMessage = notification.message.includes('ID');
     const hasIdInTitle = notification.title.includes('ID');
-    
     const result = hasSubmissionType || hasSubmissionId || hasIdInMessage || hasIdInTitle;
-    
     console.log('hasSubmissionData result:', {
       notification: notification.id,
       type: notification.type,
@@ -441,7 +423,6 @@ export default function NotificationsPanel({
       hasIdInTitle,
       result
     });
-    
     return result;
   };
 
@@ -450,18 +431,14 @@ export default function NotificationsPanel({
   return (
     <>
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Floating Panel */}
       <div 
-        className="absolute right-0 top-12 w-[min(420px,90vw)] bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
+        className="absolute right-0 top-12 w=[min(420px,90vw)] md:w-[420px] w-[90vw] bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-label="Panel notifikasi"
       >
-        
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0 bg-gray-50/50">
           <div className="flex items-center space-x-3">
@@ -474,21 +451,18 @@ export default function NotificationsPanel({
               )}
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">
-                Notifikasi
-              </h3>
-              {unreadCount > 0 && (
-                <p className="text-xs text-gray-500">
-                  {unreadCount} belum dibaca
-                </p>
-              )}
+              <h3 className="text-sm font-semibold text-gray-900">Notifikasi</h3>
+              {unreadCount > 0 && <p className="text-xs text-gray-500">{unreadCount} belum dibaca</p>}
             </div>
           </div>
           
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
               <Button
-                onClick={markAllAsRead}
+                onClick={() => {
+                  const { scope, vendorId } = getScopeAndVendor();
+                  markAllAsRead({ scope, vendorId });
+                }}
                 variant="outline"
                 size="sm"
                 className="text-xs px-3 py-1.5 hover:bg-blue-50 hover:border-blue-300 transition-colors"
@@ -514,9 +488,7 @@ export default function NotificationsPanel({
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                 <InboxIcon className="w-8 h-8 text-gray-400" />
               </div>
-              <h4 className="text-sm font-medium text-gray-900 mb-2">
-                Tidak ada notifikasi
-              </h4>
+              <h4 className="text-sm font-medium text-gray-900 mb-2">Tidak ada notifikasi</h4>
               <p className="text-xs text-gray-500 text-center leading-relaxed">
                 Anda akan melihat notifikasi baru di sini ketika ada aktivitas
               </p>
@@ -533,12 +505,8 @@ export default function NotificationsPanel({
                     key={`notification-${notification.id}-${notification.createdAt}`}
                     role="listitem"
                     className={`group relative transition-all duration-200 hover:bg-gray-50:bg-gray-800/50 ${
-                      isUnread 
-                        ? 'bg-blue-50/50' 
-                        : 'bg-white'
-                    } ${
-                      hasSubmissionData(notification) ? 'cursor-pointer' : ''
-                    }`}
+                      isUnread ? 'bg-blue-50/50' : 'bg-white'
+                    } ${hasSubmissionData(notification) ? 'cursor-pointer' : ''}`}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -547,51 +515,40 @@ export default function NotificationsPanel({
                       }
                     }}
                   >
-                    {/* Unread indicator dot */}
                     {isUnread && (
                       <div className="absolute left-3 top-6 w-2 h-2 rounded-full bg-blue-600"></div>
                     )}
                     
                     <div className="p-3 pl-7">
                       <div className="flex items-start space-x-3">
-                        {/* Icon */}
                         <div className="flex-shrink-0">
                           <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
                             {getNotificationIcon(notification.type)}
                           </div>
                         </div>
 
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
-                          {/* Header with time */}
                           <div className="flex items-start justify-between mb-1">
                             <h4 
                               className={`text-sm leading-tight ${
-                                isUnread 
-                                  ? 'font-semibold text-gray-900' 
-                                  : 'font-medium text-gray-800'
+                                isUnread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'
                               }`}
                               style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
                               {enhancedInfo.title}
                             </h4>
-                            <span 
-                              className="text-[11px] text-gray-500 whitespace-nowrap ml-2"
-                              title={fullTimestamp}
-                            >
+                            <span className="text-[11px] text-gray-500 whitespace-nowrap ml-2" title={fullTimestamp}>
                               {formatTimeAgo(notification.createdAt)}
                             </span>
                           </div>
                           
-                          {/* Message */}
-                          <p 
+                          <p
                             className="text-xs text-gray-600 leading-relaxed mb-2"
                             style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                           >
                             {enhancedInfo.message}
                           </p>
 
-                          {/* Actions */}
                           <div className="flex items-center justify-between">
                             {hasSubmissionData(notification) && (
                               <button className="inline-flex items-center text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
@@ -604,7 +561,8 @@ export default function NotificationsPanel({
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  await markAsRead(notification.id);
+                                  const { scope, vendorId } = getScopeAndVendor();
+                                  await markAsRead(notification.id, { scope, vendorId });
                                 }}
                                 className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50:bg-blue-900/20 transition-colors"
                                 aria-label="Tandai sebagai dibaca"
@@ -631,7 +589,7 @@ export default function NotificationsPanel({
               <span className="text-gray-500">
                 {Math.min(notifications.length, 10)} dari {notifications.length}
               </span>
-              {notifications.length && (
+              {!!notifications.length && (
                 <a
                   href="/dashboard/notifications"
                   className="inline-flex items-center text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors"
@@ -654,7 +612,6 @@ export default function NotificationsPanel({
               onClose={handleCloseDetailModal}
               submissionId={selectedSubmissionId}
               onApprovalSubmitted={() => {
-                // Refresh or handle approval completion
                 handleCloseDetailModal();
               }}
             />
@@ -666,21 +623,12 @@ export default function NotificationsPanel({
               onClose={handleCloseDetailModal}
               submissionId={selectedSubmissionId}
               onReviewSubmitted={() => {
-                // Refresh or handle review completion
                 handleCloseDetailModal();
               }}
             />
           )}
           
-          {session?.user?.role === 'SUPER_ADMIN' && (
-            <SubmissionDetailModal
-              submission={selectedSubmission}
-              isOpen={isDetailModalOpen}
-              onClose={handleCloseDetailModal}
-            />
-          )}
-          
-          {session?.user?.role === 'VENDOR' && (
+          {(session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'VENDOR') && (
             <SubmissionDetailModal
               submission={selectedSubmission}
               isOpen={isDetailModalOpen}
@@ -693,7 +641,6 @@ export default function NotificationsPanel({
       {/* User Verification Modal for Vendor Details */}
       {selectedVendorUser && (
         <>
-          {/* Show Reviewer User Verification Modal for REVIEWER role */}
           {session?.user?.role === 'REVIEWER' ? (
             <ReviewerUserVerificationModal
               isOpen={!!selectedVendorUser}
@@ -707,10 +654,7 @@ export default function NotificationsPanel({
               }}
             />
           ) : (
-            /* No admin modal available for SUPER_ADMIN roles - show basic info */
-            <div>
-              {/* Super Admin functionality not implemented yet */}
-            </div>
+            <div />
           )}
         </>
       )}

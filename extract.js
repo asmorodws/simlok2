@@ -3,14 +3,15 @@
 /**
  * Script: extract.js
  * Fungsi: Ekstrak struktur folder + isi file project Next.js ke JSON
+ * Target khusus: folder `src`
  * Format output: project_dump.json
  */
 
 const fs = require("fs");
 const path = require("path");
 
-// Folder root project
-const rootDir = process.cwd();
+// Folder root project → langsung ke folder src
+const rootDir = path.join(process.cwd(), "src");
 
 // Ekstensi file yang diambil
 const allowedExt = [".js", ".jsx", ".ts", ".tsx", ".json", ".css", ".md"];
@@ -50,12 +51,12 @@ function readDirRecursive(dir) {
 // Jalankan ekstraksi
 function extractProject() {
   const structure = {
-    root: path.basename(rootDir),
+    root: "src",
     children: readDirRecursive(rootDir),
   };
 
   fs.writeFileSync("project_dump.json", JSON.stringify(structure, null, 2), "utf8");
-  console.log("✅ Ekstraksi selesai → project_dump.json");
+  console.log("✅ Ekstraksi folder src selesai → project_dump.json");
 }
 
 // Run

@@ -1,208 +1,130 @@
-/**
- * GET /api/v1/notifications
- * Get paginated notifications for admin or vendor
- */
+// src/app/api/v1/notifications/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { Cache, CacheNamespaces } from "@/lib/cache";
+import { resolveAudience } from "@/lib/notificationAudience";
 
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/singletons';
-import { Cache, CacheNamespaces, CacheTTL } from '@/lib/cache';
-import { 
-  withErrorHandling, 
-  apiSuccess, 
-  apiError, 
-  validateQueryParams,
-  getAuthenticatedSession,
-  handleOptions,
-} from '@/lib/api-utils';
-import { NotificationsQuerySchema, NotificationDto } from '@/shared/dto';
+const NOTIF_LIST_TTL_SECONDS = 60;
+const notifCacheKey = (aud: { readerKey: "user" | "vendor"; readerId: string }) =>
+  `list:${aud.readerKey}:${aud.readerId}`;
 
-async function getNotifications(req: NextRequest) {
-  // Validate query parameters
-  const { data: query, error: validationError } = validateQueryParams(req, NotificationsQuerySchema);
-  if (validationError || !query) {
-    return apiError(validationError || 'Invalid query parameters', 400);
-  }
+export async function GET(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+    const userId = session.user.id;
+    const role   = session.user.role || "VENDOR";
 
-  // Check authentication
-  const { session, error: authError } = await getAuthenticatedSession();
-  if (authError) return authError;
+    // audience (scope + siapa yang membaca)
+    const audience = resolveAudience(req, role, userId);
 
-  // Validate permissions
-  console.log('🔐 Validating permissions for scope:', query.scope, 'user role:', session.user.role);
+    const sp = new URL(req.url).searchParams;
+    const page     = Math.max(1, parseInt(sp.get("page") || "1", 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(sp.get("pageSize") || "20", 10)));
+    const search   = sp.get("search") || undefined;
+    const filter   = (sp.get("filter") as "all" | "unread" | "read") || "all";
 
-  if (query.scope === 'admin' && !['SUPER_ADMIN'].includes(session.user.role)) {
-    console.log('❌ Access denied for admin scope. User role:', session.user.role);
-    return apiError('Access denied', 403);
-  }
-
-  if (query.scope === 'vendor' && !['VENDOR', 'SUPER_ADMIN'].includes(session.user.role)) {
-    return apiError('Access denied', 403);
-  }
-
-  if (query.scope === 'reviewer' && !['REVIEWER', 'SUPER_ADMIN'].includes(session.user.role)) {
-    console.log('❌ Access denied for reviewer scope. User role:', session.user.role);
-    return apiError('Access denied', 403);
-  }
-
-  if (query.scope === 'approver' && !['APPROVER', 'SUPER_ADMIN'].includes(session.user.role)) {
-    console.log('❌ Access denied for approver scope. User role:', session.user.role);
-    return apiError('Access denied', 403);
-  }
-
-  // For vendor scope, use session user ID if vendorId not provided
-  const vendorId = query.scope === 'vendor' 
-    ? (query.vendorId || session.user.id)
-    : query.vendorId;
-
-  // Build cache key
-  const cacheKey = `notifications:${query.scope}:${vendorId || 'all'}:${query.cursor || 'start'}:${query.limit}`;
-  console.log('🔑 Cache key:', cacheKey);
-
-  // Try to get from cache first - but skip cache if there are any read status changes
-  const cached = await Cache.getJSON<{ notifications: NotificationDto[]; hasMore: boolean; nextCursor: string | null }>(
-    cacheKey, 
-    { namespace: CacheNamespaces.NOTIFICATIONS, ttl: CacheTTL.SHORT }
-  );
-
-  if (cached) {
-    console.log('📦 Returning cached result (may not reflect latest read status)');
-    return apiSuccess({
-      data: cached.notifications,
-      pagination: {
-        nextCursor: cached.nextCursor,
-        hasMore: cached.hasMore,
-      }
+    const cacheKey = `${notifCacheKey(audience)}:scope=${audience.scope}:p=${page}:s=${pageSize}:f=${filter}:q=${search || ""}`;
+    const cached = await Cache.getJSON<{ data: any[]; pagination: any }>(cacheKey, {
+      namespace: CacheNamespaces.NOTIFICATIONS,
     });
-  } else {
-    console.log('🔄 Cache miss, fetching from database');
-  }
+    if (cached) {
+      const res = NextResponse.json({ success: true, data: cached });
+      res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      res.headers.set("Pragma", "no-cache");
+      res.headers.set("Expires", "0");
+      return res;
+    }
 
-  // Build where clause
-  const whereClause: any = {
-    scope: query.scope,
-  };
+    // WHERE dasar: scope sesuai audience
+    const where: any = { scope: audience.scope };
+    // Untuk scope 'vendor' batasi vendor_id (notifikasi ke vendor tsb)
+    if (audience.readerKey === "vendor") where.vendor_id = audience.readerId;
 
-  console.log('🔍 Building where clause for scope:', query.scope);
+    if (search) {
+      where.OR = [
+        { title:   { contains: search, mode: "insensitive" } },
+        { message: { contains: search, mode: "insensitive" } },
+      ];
+    }
 
-  if (query.scope === 'vendor' && vendorId) {
-    whereClause.vendor_id = vendorId;
-    console.log('📋 Adding vendor_id filter:', vendorId);
-  }
+    // Filter read/unread berbasis relasi reads (bukan menyembunyikan notif)
+    if (filter === "unread") {
+      where.reads = audience.readerKey === "user"
+        ? { none:  { user_id: audience.readerId } }
+        : { none:  { vendor_id: audience.readerId } };
+    } else if (filter === "read") {
+      where.reads = audience.readerKey === "user"
+        ? { some:  { user_id: audience.readerId } }
+        : { some:  { vendor_id: audience.readerId } };
+    }
 
-  // Handle cursor pagination
-  if (query.cursor) {
-    whereClause.id = {
-      lt: query.cursor, // Get notifications before this cursor
-    };
-  }
+    const [rows, total] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { created_at: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          scope: true,
+          vendor_id: true,
+          type: true,
+          title: true,
+          message: true,
+          data: true,
+          created_at: true,
+          reads: {
+            where: audience.readerKey === "user"
+              ? { user_id: audience.readerId }
+              : { vendor_id: audience.readerId },
+            select: { id: true },
+          },
+        },
+      }),
+      prisma.notification.count({ where }),
+    ]);
 
-  console.log('🎯 Final where clause:', whereClause);
+    const data = rows.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      data: n.data ?? null,
+      createdAt: n.created_at.toISOString(),
+      isRead: n.reads.length > 0,
+      scope: n.scope,
+      vendorId: n.vendor_id ?? null,
+    }));
 
-  // Get notifications with read status
-  const notifications = await prisma.notification.findMany({
-    where: whereClause,
-    include: {
-      reads: {
-        where: query.scope === 'vendor' 
-          ? { vendor_id: vendorId }
-          : { user_id: session.user.id }, // For admin, reviewer, approver
+    const result = {
+      data,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize) || 1,
       },
-    },
-    orderBy: {
-      created_at: 'desc',
-    },
-    take: query.limit + 1, // Get one extra to check if there are more
-  });
+    };
 
-  console.log('📊 Found notifications count:', notifications.length);
-  console.log('� Read status debug for first 3 notifications:');
-  notifications.slice(0, 3).forEach((n, index) => {
-    console.log(`  ${index + 1}. ${n.title}`);
-    console.log(`     ID: ${n.id}`);
-    console.log(`     Reads count: ${n.reads.length}`);
-    console.log(`     User ID filter: ${session.user.id}`);
-    // if (n.reads.length > 0) {
-    //   console.log(`     Read by: ${n.reads[0].user_id || n.reads[0].vendor_id}`);
-    // }
-  });
+    await Cache.setJSON(cacheKey, result, {
+      namespace: CacheNamespaces.NOTIFICATIONS,
+      ttl: NOTIF_LIST_TTL_SECONDS,
+    });
 
-  // Filter out notifications that reference non-existent submissions
-  const validNotifications = [];
-  for (const notification of notifications) {
-    let isValid = true;
-    
-    // Check if notification data contains a submissionId
-    if (notification.data) {
-      try {
-        const data = JSON.parse(notification.data);
-        if (data.submissionId) {
-          // Verify that the submission still exists
-          const submissionExists = await prisma.submission.findUnique({
-            where: { id: data.submissionId },
-            select: { id: true }
-          });
-          
-          if (!submissionExists) {
-            isValid = false;
-            // Optionally clean up this orphaned notification
-            console.log(`Found orphaned notification ${notification.id} for deleted submission ${data.submissionId}`);
-          }
-        }
-      } catch (error) {
-        // If data parsing fails, keep the notification (might not be submission-related)
-        console.warn(`Failed to parse notification data for notification ${notification.id}:`, error);
-      }
-    }
-    
-    if (isValid) {
-      validNotifications.push(notification);
-    }
+    const res = NextResponse.json({ success: true, data: result });
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.headers.set("Pragma", "no-cache");
+    res.headers.set("Expires", "0");
+    return res;
+  } catch (e: any) {
+    console.error("GET /api/v1/notifications error:", e);
+    const res = NextResponse.json({ success: false, error: e.message || "Server error" }, { status: 500 });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   }
-
-  // Check if there are more notifications
-  const hasMore = validNotifications.length > query.limit;
-  const notificationsList = hasMore ? validNotifications.slice(0, -1) : validNotifications;
-  const nextCursor = hasMore ? notificationsList[notificationsList.length - 1]?.id : null;
-
-  // Format response
-  const formattedNotifications: NotificationDto[] = notificationsList.map(notification => ({
-    id: notification.id,
-    scope: notification.scope,
-    vendorId: notification.vendor_id,
-    type: notification.type,
-    title: notification.title,
-    message: notification.message,
-    data: notification.data,
-    createdAt: notification.created_at.toISOString(),
-    isRead: notification.reads.length > 0,
-  }));
-
-  console.log('✅ Formatted notifications count:', formattedNotifications.length);
-  console.log('� Read status summary:');
-  const readCount = formattedNotifications.filter(n => n.isRead).length;
-  const unreadCount = formattedNotifications.filter(n => !n.isRead).length;
-  console.log(`   Read: ${readCount}, Unread: ${unreadCount}`);
-  console.log('�📤 Returning response with hasMore:', hasMore, 'nextCursor:', nextCursor);
-
-  // Cache the result with shorter TTL to ensure read status freshness
-  await Cache.setJSON(
-    cacheKey,
-    {
-      notifications: formattedNotifications,
-      hasMore,
-      nextCursor,
-    },
-    { namespace: CacheNamespaces.NOTIFICATIONS, ttl: 30 } // Shorter TTL for read status freshness
-  );
-
-  return apiSuccess({
-    data: formattedNotifications,
-    pagination: {
-      nextCursor,
-      hasMore,
-    }
-  });
 }
-
-export const GET = withErrorHandling(getNotifications);
-export const OPTIONS = handleOptions;

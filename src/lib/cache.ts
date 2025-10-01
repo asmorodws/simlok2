@@ -1,7 +1,6 @@
-/**
+/** 
  * Redis Cache Helper with namespacing and TTL support
  */
-
 import { redisPub as redis } from './singletons';
 
 const CACHE_PREFIX = 'app:v1';
@@ -17,9 +16,7 @@ export class Cache {
     return `${CACHE_PREFIX}${ns}:${key}`;
   }
 
-  /**
-   * Get JSON value from cache
-   */
+  /** Get JSON value from cache */
   static async getJSON<T = any>(key: string, options: CacheOptions = {}): Promise<T | null> {
     try {
       const fullKey = this.getKey(key, options.namespace);
@@ -31,24 +28,20 @@ export class Cache {
     }
   }
 
-  /**
-   * Set JSON value in cache with optional TTL
-   */
+  /** Set JSON value in cache with optional TTL */
   static async setJSON(
-    key: string, 
-    value: any, 
+    key: string,
+    value: any,
     options: CacheOptions = {}
   ): Promise<boolean> {
     try {
       const fullKey = this.getKey(key, options.namespace);
       const serialized = JSON.stringify(value);
-      
       if (options.ttl) {
         await redis.setex(fullKey, options.ttl, serialized);
       } else {
         await redis.set(fullKey, serialized);
       }
-      
       return true;
     } catch (error) {
       console.warn('Cache.setJSON error:', error);
@@ -56,9 +49,7 @@ export class Cache {
     }
   }
 
-  /**
-   * Get string value from cache
-   */
+  /** Get string value from cache */
   static async get(key: string, options: CacheOptions = {}): Promise<string | null> {
     try {
       const fullKey = this.getKey(key, options.namespace);
@@ -69,23 +60,19 @@ export class Cache {
     }
   }
 
-  /**
-   * Set string value in cache with optional TTL
-   */
+  /** Set string value in cache with optional TTL */
   static async set(
-    key: string, 
-    value: string, 
+    key: string,
+    value: string,
     options: CacheOptions = {}
   ): Promise<boolean> {
     try {
       const fullKey = this.getKey(key, options.namespace);
-      
       if (options.ttl) {
         await redis.setex(fullKey, options.ttl, value);
       } else {
         await redis.set(fullKey, value);
       }
-      
       return true;
     } catch (error) {
       console.warn('Cache.set error:', error);
@@ -93,9 +80,7 @@ export class Cache {
     }
   }
 
-  /**
-   * Delete a key from cache
-   */
+  /** Delete a key from cache */
   static async del(key: string, options: CacheOptions = {}): Promise<boolean> {
     try {
       const fullKey = this.getKey(key, options.namespace);
@@ -107,16 +92,14 @@ export class Cache {
     }
   }
 
-  /**
-   * Invalidate cache by prefix pattern
-   */
+  /** Invalidate cache by prefix pattern */
   static async invalidateByPrefix(prefix: string, namespace?: string): Promise<number> {
     try {
       const pattern = this.getKey(`${prefix}*`, namespace);
       const keys = await redis.keys(pattern);
-      
-      if (keys.length === 0) return 0;
-      
+      if (!keys || keys.length === 0) return 0;
+
+      // FIX di sini: sebelumnya salah ".keys"
       await redis.del(...keys);
       return keys.length;
     } catch (error) {
@@ -125,9 +108,7 @@ export class Cache {
     }
   }
 
-  /**
-   * Check if key exists
-   */
+  /** Check if key exists */
   static async exists(key: string, options: CacheOptions = {}): Promise<boolean> {
     try {
       const fullKey = this.getKey(key, options.namespace);
@@ -139,19 +120,14 @@ export class Cache {
     }
   }
 
-  /**
-   * Increment a numeric value
-   */
+  /** Increment a numeric value (+ optional TTL for new key) */
   static async incr(key: string, options: CacheOptions = {}): Promise<number> {
     try {
       const fullKey = this.getKey(key, options.namespace);
       const result = await redis.incr(fullKey);
-      
-      // Set TTL if specified and this is a new key
       if (options.ttl && result === 1) {
         await redis.expire(fullKey, options.ttl);
       }
-      
       return result;
     } catch (error) {
       console.warn('Cache.incr error:', error);
@@ -159,9 +135,7 @@ export class Cache {
     }
   }
 
-  /**
-   * Set TTL for existing key
-   */
+  /** Set TTL for existing key */
   static async expire(key: string, ttl: number, options: CacheOptions = {}): Promise<boolean> {
     try {
       const fullKey = this.getKey(key, options.namespace);
