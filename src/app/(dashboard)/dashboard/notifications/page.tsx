@@ -112,7 +112,8 @@ export default function NotificationsPage() {
     const snap = version.current();
     setLoading(true);
     try {
-      const res = await fetchJSON<NotifListResponse>(`/api/v1/notifications?scope=${scope}`);
+      // Always fetch ALL notifications, then filter on frontend
+      const res = await fetchJSON<NotifListResponse>(`/api/v1/notifications?scope=${scope}&filter=all&pageSize=100`);
       if (version.isStale(snap)) return; // ada refetch lebih baru, abaikan respons lama
       setNotifications(res?.data?.data ?? []);
     } catch (e) {
@@ -139,30 +140,54 @@ export default function NotificationsPage() {
   // Hitung unread dari state lokal
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0;
 
-  // NEW: debounce kecil untuk refetch setelah aksi tulis
-  const SLOW_BACKEND_COMPENSATION_MS = 200; // 150–300ms biasanya cukup
+  // State untuk mencegah multiple API calls bersamaan
+  const [markingAsRead, setMarkingAsRead] = useState(new Set<string>());
 
   const markAsRead = async (notificationId: string) => {
-    // Optimistic update: langsung set local state
-    setNotifications(prev =>
-      prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
-    );
+    // Cegah multiple calls untuk notification yang sama
+    if (markingAsRead.has(notificationId)) {
+      console.log('⚠️ Already marking notification as read:', notificationId);
+      return;
+    }
+
+    // Cek apakah sudah read
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification?.isRead) {
+      console.log('ℹ️ Notification already read:', notificationId);
+      return;
+    }
 
     try {
-      await fetchJSON(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
-      // Jadwalkan refetch singkat agar sinkron dgn server & cache invalidation
-      let scope = session?.user?.role?.toLowerCase() || 'vendor';
-      if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
+      // Tandai sebagai sedang diproses
+      setMarkingAsRead(prev => new Set([...prev, notificationId]));
+      
+      // Optimistic update
+      setNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
+      );
 
-      version.bump(); // versi baru sebelum refetch
-      setTimeout(() => refetch(scope), SLOW_BACKEND_COMPENSATION_MS);
+      // API call
+      console.log('📤 Marking notification as read:', notificationId);
+      await fetchJSON(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+      
+      console.log('✅ Successfully marked as read:', notificationId);
+      
     } catch (error) {
       console.error('💥 Error marking notification as read:', error);
-      // Rollback jika gagal
+      
+      // Rollback optimistic update
       setNotifications(prev =>
         prev.map(n => (n.id === notificationId ? { ...n, isRead: false } : n))
       );
+      
       showError('Gagal', 'Tidak dapat menandai notifikasi sebagai dibaca');
+    } finally {
+      // Hilangkan dari processing set
+      setMarkingAsRead(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
     }
   };
 
@@ -182,7 +207,7 @@ export default function NotificationsPage() {
       if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
 
       version.bump();
-      setTimeout(() => refetch(scope), SLOW_BACKEND_COMPENSATION_MS);
+      setTimeout(() => refetch(scope), 300);
     } catch (error) {
       console.error('💥 Error marking all as read:', error);
       showError('Gagal', 'Tidak dapat menandai semua notifikasi sebagai dibaca');
@@ -224,85 +249,124 @@ export default function NotificationsPage() {
     }
   };
 
+  // Define notification types
   const submissionTypes = ['submission_approved','submission_rejected','submission_pending','new_submission','status_change'];
+  const vendorTypes = ['user_registered', 'new_vendor', 'new_user_verification', 'vendor_verified', 'vendor_registered'];
 
   const hasSubmissionData = (notification: Notification) => {
+    // Check if it's a submission-related notification
     if (submissionTypes.includes(notification.type)) return true;
+    
+    // Check for submission ID in data
     if (notification.data) {
       try {
         const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
-        if (parsed?.submissionId) return true;
+        if (parsed?.submissionId || parsed?.submission_id) return true;
       } catch {
         if (typeof notification.data === 'string' && notification.data.includes('submissionId')) return true;
       }
     }
+    
+    // Check message content for submission-related keywords
     const text = `${notification.title} ${notification.message}`.toLowerCase();
     return ['pengajuan', 'submission', 'simlok'].some(k => text.includes(k));
   };
 
   const hasVendorData = (notification: Notification) => {
-    const vendorTypes = ['new_vendor','vendor_verified','vendor_registered'];
+    // Check if it's specifically a vendor management notification
     if (vendorTypes.includes(notification.type)) return true;
+    
+    // Check for vendor ID in data
     if (notification.data) {
       try {
         const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
-        if (parsed?.vendorId) return true;
+        if (parsed?.vendorId || parsed?.userId) return true;
       } catch {
         if (typeof notification.data === 'string' && notification.data.includes('vendorId')) return true;
       }
     }
+    
+    // Only return true for very specific vendor management keywords
     const text = `${notification.title} ${notification.message}`.toLowerCase();
-    return ['vendor', 'perusahaan', 'pendaftaran vendor'].some(k => text.includes(k));
+    return ['pendaftaran vendor', 'vendor baru mendaftar', 'verifikasi vendor'].some(k => text.includes(k));
   };
 
   const handleViewDetail = async (notification: Notification) => {
     if (!notification.isRead) await markAsRead(notification.id);
 
-    const isVendorNotification = hasVendorData(notification);
-    if (isVendorNotification) {
-      showError('Info', 'Detail vendor tidak tersedia saat ini');
+    console.log('🔍 Handling notification detail:', {
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      isVendor: hasVendorData(notification),
+      isSubmission: hasSubmissionData(notification)
+    });
+
+    // Handle vendor notifications
+    if (hasVendorData(notification)) {
+      console.log('📝 Vendor notification detected:', notification.type);
+      showError('Info', 'Detail vendor tidak tersedia di halaman ini. Gunakan panel notifikasi untuk detail vendor.');
       return;
     }
-    if (!hasSubmissionData(notification)) return;
 
-    try {
-      let submissionId = '';
-      if (notification.data) {
-        try {
-          const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
-          if (parsed?.submissionId) submissionId = parsed.submissionId;
-        } catch {
-          if (typeof notification.data === 'string') {
-            const match = notification.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
-            if (match?.[1]) submissionId = match[1];
+    // Handle submission notifications
+    if (hasSubmissionData(notification)) {
+      console.log('📋 Submission notification detected:', notification.type);
+      
+      try {
+        let submissionId = '';
+        
+        // Extract submission ID from data
+        if (notification.data) {
+          try {
+            const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+            submissionId = parsed?.submissionId || parsed?.submission_id || '';
+            console.log('📤 Extracted submissionId from data:', submissionId);
+          } catch {
+            if (typeof notification.data === 'string') {
+              const match = notification.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
+              if (match?.[1]) submissionId = match[1];
+            }
           }
         }
-      }
-      if (!submissionId) {
-        const patterns = [
-          /ID[:\s]*([a-zA-Z0-9_-]+)/,
-          /submission[:\s]*([a-zA-Z0-9_-]+)/i,
-          /pengajuan[:\s]*([a-zA-Z0-9_-]+)/i,
-          /([a-zA-Z0-9_-]{20,})/
-        ];
-        for (const p of patterns) {
-          const msg = notification.message.match(p);
-          const ttl = notification.title.match(p);
-          if (msg?.[1]) { submissionId = msg[1]; break; }
-          if (ttl?.[1]) { submissionId = ttl[1]; break; }
+        
+        // Extract from message/title if not found in data
+        if (!submissionId) {
+          const patterns = [
+            /ID[:\s]*([a-zA-Z0-9_-]+)/,
+            /submission[:\s]*([a-zA-Z0-9_-]+)/i,
+            /pengajuan[:\s]*([a-zA-Z0-9_-]+)/i,
+            /([a-zA-Z0-9_-]{20,})/
+          ];
+          for (const p of patterns) {
+            const msg = notification.message.match(p);
+            const ttl = notification.title.match(p);
+            if (msg?.[1]) { submissionId = msg[1]; break; }
+            if (ttl?.[1]) { submissionId = ttl[1]; break; }
+          }
+          console.log('📤 Extracted submissionId from text:', submissionId);
         }
-      }
-      if (!submissionId) {
-        showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
-        return;
-      }
+        
+        if (!submissionId) {
+          console.warn('⚠️ No submission ID found in notification');
+          showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
+          return;
+        }
 
-      const submission = await fetchJSON<Submission>(`/api/submissions/${submissionId}`);
-      setSelectedSubmission(submission);
-    } catch (error) {
-      console.error('💥 Error handling notification detail:', error);
-      showError('Error', 'Terjadi kesalahan saat memuat detail');
+        console.log('🚀 Fetching submission details for ID:', submissionId);
+        const submission = await fetchJSON<Submission>(`/api/submissions/${submissionId}`);
+        setSelectedSubmission(submission);
+        
+      } catch (error) {
+        console.error('💥 Error handling submission detail:', error);
+        showError('Error', 'Terjadi kesalahan saat memuat detail submission');
+      }
+      return;
     }
+
+    // Handle other notifications (system, general info, etc.)
+    console.log('ℹ️ General notification - no specific action');
+    showError('Info', 'Notifikasi ini tidak memiliki detail khusus untuk ditampilkan');
   };
 
   const truncateText = (text: string, maxLength: number = 100) =>
@@ -407,6 +471,13 @@ export default function NotificationsPage() {
           </div>
 
           {/* List */}
+          {/* 
+            LOGIKA NOTIFIKASI: 
+            - Semua notifikasi tetap ditampilkan walaupun sudah dibaca
+            - Filter "read", "unread", dan "all" hanya mengatur tampilan
+            - Indikator visual membedakan yang sudah/belum dibaca
+            - Notifikasi yang sudah dibaca tetap bisa diakses dan dilihat
+          */}
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             {filteredNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -414,12 +485,23 @@ export default function NotificationsPage() {
                   <InboxIcon className="w-8 h-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchTerm ? 'Tidak ada hasil' : 'Tidak ada notifikasi'}
+                  {searchTerm 
+                    ? 'Tidak ada hasil' 
+                    : filter === 'unread' 
+                      ? 'Tidak ada notifikasi belum dibaca'
+                      : filter === 'read'
+                        ? 'Tidak ada notifikasi yang sudah dibaca'
+                        : 'Tidak ada notifikasi'
+                  }
                 </h3>
                 <p className="text-sm text-gray-500 text-center max-w-sm">
                   {searchTerm
                     ? `Tidak ditemukan notifikasi yang cocok dengan "${searchTerm}"`
-                    : 'Anda akan melihat notifikasi baru di sini ketika ada aktivitas'}
+                    : filter === 'unread'
+                      ? 'Semua notifikasi Anda sudah dibaca'
+                      : filter === 'read'
+                        ? 'Belum ada notifikasi yang dibaca'
+                        : 'Anda akan melihat notifikasi baru di sini ketika ada aktivitas'}
                 </p>
                 {!searchTerm && (
                   <Button
@@ -441,19 +523,24 @@ export default function NotificationsPage() {
                   return (
                     <div
                       key={notification.id}
-                      className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50:bg-gray-800/50 focus-within:ring-2 focus-within:ring-blue-500/30 ${
-                        isUnread ? 'bg-blue-50/50 border-l-2 border-blue-500/50' : ''
+                      className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500/30 ${
+                        isUnread ? 'bg-blue-50/70 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
                       } ${hasSubmissionData(notification) || hasVendorData(notification) ? 'cursor-pointer' : ''}`}
                       onClick={() => {
-                        if (hasSubmissionData(notification) || hasVendorData(notification)) {
-                          handleViewDetail(notification);
-                        }
+                        // Always try to handle detail, let the function decide what to do
+                        handleViewDetail(notification);
                       }}
                       role="listitem"
                     >
-                      {isUnread && <div className="absolute left-2 top-2.5 h-2 w-2 rounded-full bg-blue-600"></div>}
+                      {isUnread && (
+                        <div className="absolute left-1 top-1/2 transform -translate-y-1/2 h-3 w-3 rounded-full bg-blue-600 shadow-sm">
+                          <div className="absolute inset-0 rounded-full bg-blue-400 animate-pulse"></div>
+                        </div>
+                      )}
 
-                      <div className="shrink-0 h-9 w-9 rounded-full bg-gray-100 flex items-center justify-center ml-2">
+                      <div className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center ml-2 transition-colors ${
+                        isUnread ? 'bg-blue-100' : 'bg-gray-100'
+                      }`}>
                         {getNotificationIcon(notification.type)}
                       </div>
 
@@ -513,6 +600,10 @@ export default function NotificationsPage() {
               <div className="flex items-center justify-between text-sm text-gray-500 p-3 border-t border-gray-100 bg-gray-50/50">
                 <span>
                   Menampilkan {filteredNotifications.length} dari {Array.isArray(notifications) ? notifications.length : 0} notifikasi
+                  {filter !== 'all' && ` (filter: ${filter === 'unread' ? 'belum dibaca' : 'sudah dibaca'})`}
+                </span>
+                <span className="text-xs text-gray-400">
+                  💡 Semua notifikasi tetap tersimpan
                 </span>
               </div>
             )}

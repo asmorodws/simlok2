@@ -47,22 +47,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
     return { scope: 'vendor' as const, vendorId: session.user.id };
   };
 
-  // Debug: log notifications data
-  console.log('NotificationsPanel - notifications:', notifications);
-  console.log('NotificationsPanel - notifications length:', notifications?.length);
-  console.log('NotificationsPanel - unreadCount:', unreadCount);
-  
-  if (notifications && notifications.length > 0) {
-    notifications.slice(0, 3).forEach((notif, index) => {
-      console.log(`Notification ${index}:`, {
-        id: notif.id,
-        type: notif.type,
-        title: notif.title,
-        message: notif.message,
-        data: notif.data,
-        isRead: notif.isRead,
-        createdAt: notif.createdAt
-      });
+  // Debug: log notifications data in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('NotificationsPanel state:', {
+      total: notifications?.length || 0,
+      unreadCount,
+      readCount: notifications?.filter(n => n.isRead).length || 0,
+      sample: notifications?.slice(0, 2).map(n => ({ id: n.id, title: n.title, isRead: n.isRead }))
     });
   }
   
@@ -150,9 +141,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
         );
         if (!notification.isRead) {
-          console.log('Marking notification as read (submission not found):', notification.id);
-          const { scope, vendorId } = getScopeAndVendor();
-          await markAsRead(notification.id, { scope, vendorId });
+          try {
+            console.log('Marking notification as read (submission not found):', notification.id);
+            const { scope, vendorId } = getScopeAndVendor();
+            await markAsRead(notification.id, { scope, vendorId });
+          } catch (error) {
+            console.error('Error marking notification as read:', error);
+          }
         }
         return;
       }
@@ -171,9 +166,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       setIsDetailModalOpen(true);
 
       if (!notification.isRead) {
-        console.log('Marking notification as read:', notification.id);
-        const { scope, vendorId } = getScopeAndVendor();
-        await markAsRead(notification.id, { scope, vendorId });
+        try {
+          console.log('Marking notification as read:', notification.id);
+          const { scope, vendorId } = getScopeAndVendor();
+          await markAsRead(notification.id, { scope, vendorId });
+        } catch (error) {
+          console.error('Error marking notification as read:', error);
+        }
       }
 
     } catch (error) {
@@ -255,9 +254,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       }
 
       if (!notification.isRead) {
-        console.log('Marking notification as read (vendor detail):', notification.id);
-        const { scope, vendorId: vId } = getScopeAndVendor();
-        await markAsRead(notification.id, { scope, vendorId: vId });
+        try {
+          console.log('Marking notification as read (vendor detail):', notification.id);
+          const { scope, vendorId: vId } = getScopeAndVendor();
+          await markAsRead(notification.id, { scope, vendorId: vId });
+        } catch (error) {
+          console.error('Error marking notification as read:', error);
+        }
       }
 
     } catch (err) {
@@ -459,9 +462,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
               <Button
-                onClick={() => {
-                  const { scope, vendorId } = getScopeAndVendor();
-                  markAllAsRead({ scope, vendorId });
+                onClick={async () => {
+                  try {
+                    const { scope, vendorId } = getScopeAndVendor();
+                    await markAllAsRead({ scope, vendorId });
+                  } catch (error) {
+                    console.error('Error marking all notifications as read:', error);
+                  }
                 }}
                 variant="outline"
                 size="sm"
@@ -504,8 +511,10 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                   <div
                     key={`notification-${notification.id}-${notification.createdAt}`}
                     role="listitem"
-                    className={`group relative transition-all duration-200 hover:bg-gray-50:bg-gray-800/50 ${
-                      isUnread ? 'bg-blue-50/50' : 'bg-white'
+                    className={`group relative transition-all duration-200 hover:bg-gray-50 border-l-4 ${
+                      isUnread 
+                        ? 'bg-blue-50/70 border-blue-500' 
+                        : 'bg-white border-transparent hover:border-gray-200'
                     } ${hasSubmissionData(notification) ? 'cursor-pointer' : ''}`}
                     onClick={(e) => {
                       e.preventDefault();
@@ -516,13 +525,17 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                     }}
                   >
                     {isUnread && (
-                      <div className="absolute left-3 top-6 w-2 h-2 rounded-full bg-blue-600"></div>
+                      <div className="absolute left-1 top-1/2 transform -translate-y-1/2 w-3 h-3 rounded-full bg-blue-600 shadow-sm">
+                        <div className="absolute inset-0 rounded-full bg-blue-400 animate-pulse"></div>
+                      </div>
                     )}
                     
                     <div className="p-3 pl-7">
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
-                          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                            isUnread ? 'bg-blue-100' : 'bg-gray-100'
+                          }`}>
                             {getNotificationIcon(notification.type)}
                           </div>
                         </div>
@@ -561,8 +574,12 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  const { scope, vendorId } = getScopeAndVendor();
-                                  await markAsRead(notification.id, { scope, vendorId });
+                                  try {
+                                    const { scope, vendorId } = getScopeAndVendor();
+                                    await markAsRead(notification.id, { scope, vendorId });
+                                  } catch (error) {
+                                    console.error('Error marking notification as read:', error);
+                                  }
                                 }}
                                 className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50:bg-blue-900/20 transition-colors"
                                 aria-label="Tandai sebagai dibaca"

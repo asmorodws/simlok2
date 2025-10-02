@@ -68,7 +68,8 @@ export default function NotificationsBell() {
 
       const params = new URLSearchParams({
         scope,
-        limit: '10'
+        limit: '20',
+        filter: 'all'  // Always get ALL notifications
       });
 
       // Add vendorId only for vendor scope
