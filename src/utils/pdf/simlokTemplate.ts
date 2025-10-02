@@ -766,36 +766,66 @@ async function drawWorkerCard(
 
   // Load and draw photo if available
   if (worker.worker_photo) {
+    console.log(`DrawWorkerCard: Processing worker ${worker.worker_name} with photo: ${worker.worker_photo}`);
     const photoImage = await loadWorkerPhoto(doc, worker.worker_photo);
+    
     if (photoImage) {
-      // Calculate dimensions to maintain aspect ratio
-      const imgDims = photoImage.scale(1);
-      const imgAspectRatio = imgDims.width / imgDims.height;
-      const frameAspectRatio = photoWidth / photoHeight;
-      
-      let drawWidth = photoWidth - 10; // 5px padding on each side
-      let drawHeight = photoHeight - 10;
-      let drawX = x + 5;
-      let drawY = y - photoHeight + 5;
-      
-      // Adjust dimensions to fit within frame while maintaining aspect ratio
-      if (imgAspectRatio > frameAspectRatio) {
-        // Image is wider, fit to width
-        drawHeight = drawWidth / imgAspectRatio;
-        drawY = y - (photoHeight + drawHeight) / 2;
-      } else {
-        // Image is taller, fit to height
-        drawWidth = drawHeight * imgAspectRatio;
-        drawX = x + (photoWidth - drawWidth) / 2;
+      try {
+        console.log(`DrawWorkerCard: Successfully loaded photo for ${worker.worker_name}, drawing image...`);
+        
+        // Calculate dimensions to maintain aspect ratio
+        const imgDims = photoImage.scale(1);
+        const imgAspectRatio = imgDims.width / imgDims.height;
+        const frameAspectRatio = photoWidth / photoHeight;
+        
+        let drawWidth = photoWidth - 10; // 5px padding on each side
+        let drawHeight = photoHeight - 10;
+        let drawX = x + 5;
+        let drawY = y - photoHeight + 5;
+        
+        // Adjust dimensions to fit within frame while maintaining aspect ratio
+        if (imgAspectRatio > frameAspectRatio) {
+          // Image is wider, fit to width
+          drawHeight = drawWidth / imgAspectRatio;
+          drawY = y - (photoHeight + drawHeight) / 2;
+        } else {
+          // Image is taller, fit to height
+          drawWidth = drawHeight * imgAspectRatio;
+          drawX = x + (photoWidth - drawWidth) / 2;
+        }
+        
+        console.log(`DrawWorkerCard: Drawing image for ${worker.worker_name} at position (${drawX}, ${drawY}) with size ${drawWidth}x${drawHeight}`);
+        
+        page.drawImage(photoImage, {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight,
+        });
+        
+        console.log(`DrawWorkerCard: Successfully drawn photo for ${worker.worker_name}`);
+      } catch (error) {
+        console.error(`DrawWorkerCard: Error drawing photo for ${worker.worker_name}:`, error);
+        
+        // Draw error placeholder
+        page.drawText("Error", { 
+          x: x + photoWidth/2 - 15, 
+          y: y - photoHeight/2 + 10, 
+          size: 10, 
+          font: font,
+          color: rgb(0.8, 0.2, 0.2) 
+        });
+        page.drawText("loading", { 
+          x: x + photoWidth/2 - 18, 
+          y: y - photoHeight/2 - 5, 
+          size: 10, 
+          font: font,
+          color: rgb(0.8, 0.2, 0.2) 
+        });
       }
-      
-      page.drawImage(photoImage, {
-        x: drawX,
-        y: drawY,
-        width: drawWidth,
-        height: drawHeight,
-      });
     } else {
+      console.warn(`DrawWorkerCard: Photo image is null/undefined for worker ${worker.worker_name}`);
+      
       // Draw placeholder text if photo couldn't be loaded
       page.drawText("Foto tidak", { 
         x: x + photoWidth/2 - 25, 

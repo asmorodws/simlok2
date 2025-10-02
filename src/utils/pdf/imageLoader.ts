@@ -55,6 +55,10 @@ class ImageCache {
   has(key: string): boolean {
     return this.cache.has(key);
   }
+
+  get size(): number {
+    return this.cache.size;
+  }
 }
 
 // Singleton cache instance
@@ -71,14 +75,20 @@ async function loadBase64Image(
   try {
     // Convert base64 to buffer
     const imageBuffer = Buffer.from(base64Data, 'base64');
+    console.log(`LoadBase64Image: Original image size: ${imageBuffer.length} bytes`);
     
     // Optimize image
     const optimizedBuffer = await optimizeImage(imageBuffer);
+    console.log(`LoadBase64Image: Optimized image size: ${optimizedBuffer.length} bytes`);
     
     // Embed in PDF
-    return isPng
+    console.log(`LoadBase64Image: Embedding ${isPng ? 'PNG' : 'JPG'} image in PDF`);
+    const result = isPng
       ? await pdfDoc.embedPng(optimizedBuffer)
       : await pdfDoc.embedJpg(optimizedBuffer);
+    
+    console.log(`LoadBase64Image: Successfully embedded image in PDF`);
+    return result;
   } catch (error) {
     console.warn('Failed to process base64 image:', error);
     return null;
@@ -102,12 +112,19 @@ async function loadFileImage(
 
     // Read and optimize image
     const imageBuffer = fs.readFileSync(filePath);
+    console.log(`LoadFileImage: Original image size: ${imageBuffer.length} bytes`);
+    
     const optimizedBuffer = await optimizeImage(imageBuffer);
+    console.log(`LoadFileImage: Optimized image size: ${optimizedBuffer.length} bytes`);
 
     // Embed in PDF
-    return isPng
+    console.log(`LoadFileImage: Embedding ${isPng ? 'PNG' : 'JPG'} image in PDF`);
+    const result = isPng
       ? await pdfDoc.embedPng(optimizedBuffer)
       : await pdfDoc.embedJpg(optimizedBuffer);
+    
+    console.log(`LoadFileImage: Successfully embedded image in PDF`);
+    return result;
   } catch (error) {
     console.warn('Failed to process file image:', error);
     return null;
@@ -199,7 +216,7 @@ export async function loadWorkerPhoto(
             console.warn('LoadWorkerPhoto: Invalid API path structure:', { userId, category, filename });
             finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
           } else {
-            // Map API categories to actual directory names
+            // Map API categories to actual directory names - harus sama dengan mapping di API endpoint files
             const categoryFolders: Record<string, string> = {
               sika: 'dokumen-sika',
               simja: 'dokumen-simja',
@@ -222,6 +239,33 @@ export async function loadWorkerPhoto(
       }
 
       console.log('LoadWorkerPhoto: Resolved file path:', finalPath);
+      
+      // Add existence check with detailed logging
+      const fs = await import('fs');
+      if (!fs.existsSync(finalPath)) {
+        console.warn('LoadWorkerPhoto: File does not exist at resolved path:', finalPath);
+        
+        // Try alternative paths for debugging
+        const alternativePaths = [
+          path.join(process.cwd(), 'public', photoPath),
+          path.join(process.cwd(), 'public', 'uploads', photoPath),
+          photoPath.startsWith('/') ? path.join(process.cwd(), 'public', photoPath.substring(1)) : path.join(process.cwd(), 'public', photoPath)
+        ];
+        
+        for (const altPath of alternativePaths) {
+          if (fs.existsSync(altPath)) {
+            console.log('LoadWorkerPhoto: Found file at alternative path:', altPath);
+            finalPath = altPath;
+            break;
+          }
+        }
+        
+        if (!fs.existsSync(finalPath)) {
+          console.error('LoadWorkerPhoto: File not found at any path. Tried:', [finalPath, ...alternativePaths]);
+          return null;
+        }
+      }
+      
       resultImage = await loadFileImage(pdfDoc, finalPath, isPng);
     }
 
@@ -229,9 +273,12 @@ export async function loadWorkerPhoto(
     if (resultImage) {
       try {
         const imgDims = resultImage.scale(1);
+        console.log(`LoadWorkerPhoto: Image dimensions for ${photoPath}: ${imgDims.width}x${imgDims.height}`);
+        
         if (imgDims.width > 0 && imgDims.height > 0) {
-          console.log('LoadWorkerPhoto: Successfully loaded and cached image:', photoPath);
+          console.log(`LoadWorkerPhoto: Successfully loaded and cached image: ${photoPath} (${imgDims.width}x${imgDims.height})`);
           imageCache.set(photoPath, resultImage);
+          console.log(`LoadWorkerPhoto: Image cached. Cache size now: ${imageCache.size}`);
           return resultImage;
         } else {
           console.warn('LoadWorkerPhoto: Skipping invalid image with zero dimensions:', photoPath);
@@ -243,7 +290,7 @@ export async function loadWorkerPhoto(
       }
     }
 
-    console.warn('LoadWorkerPhoto: Failed to load image:', photoPath);
+    console.warn('LoadWorkerPhoto: Failed to load image (resultImage is null):', photoPath);
     return null;
   } catch (error) {
     console.warn('LoadWorkerPhoto: Error loading worker photo:', error);

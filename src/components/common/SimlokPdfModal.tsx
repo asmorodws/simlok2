@@ -86,9 +86,13 @@ export default function SimlokPdfModal({
         // Kalau endpoint protected, pakai credentials: 'include'
         // dan mode 'same-origin' (default) supaya cookie terkirim
         const res = await fetch(apiUrl, {
-          method: 'GET',
           credentials: 'include',
-          cache: 'no-store', // Force no caching
+          cache: 'no-store', // Prevent caching of PDF requests
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'x-pdf-generation': 'true', // Mark as PDF generation request
+          }
         });
 
         if (!res.ok) {
@@ -145,17 +149,36 @@ export default function SimlokPdfModal({
     try {
       setError(null);
 
-      // Jika kita sudah punya blob URL, kita bisa fetch ulang BLOB-nya dari URL asli
-      // atau langsung pakai fetch API lagi supaya dapat file fresh.
-      // Lebih konsisten: refetch dari endpoint (agar bukan blob object sementara).
+      // Option 1: Use existing blob URL if available (more efficient and consistent)
+      if (pdfUrl && !loading) {
+        console.log('SimlokPdfModal: Using existing PDF blob for download');
+        
+        const a = document.createElement('a');
+        a.href = pdfUrl; // Use the same blob URL as preview
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+
+      // Option 2: Fetch fresh PDF if no blob URL available
+      console.log('SimlokPdfModal: Fetching fresh PDF for download');
+      
       const t = Date.now();
       const apiUrl = `/api/submissions/${encodeURIComponent(
         submissionId
-      )}?format=pdf&t=${t}`;
+      )}?format=pdf&t=${t}&clearCache=true`;
 
       const res = await fetch(apiUrl, {
         method: 'GET',
         credentials: 'include',
+        cache: 'no-store', // Prevent caching of PDF requests
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'x-pdf-generation': 'true', // Mark as PDF generation request
+        }
       });
       if (!res.ok) throw new Error('Gagal mendownload PDF');
 

@@ -34,7 +34,8 @@ export async function GET(
       userRole: session.user.role,
       category,
       filename,
-      canAccess
+      canAccess,
+      isPdfGenerationContext: _request.headers.get('x-pdf-generation') === 'true'
     });
       
     if (!canAccess) {
@@ -91,12 +92,27 @@ export async function GET(
         break;
     }
 
+    // Debug logging for PDF generation context
+    const isFromPdf = _request.headers.get('x-pdf-generation') === 'true';
+    const cacheControl = isFromPdf 
+      ? 'no-cache, no-store, must-revalidate' 
+      : 'private, max-age=3600'; // Cache for 1 hour for regular requests
+
+    console.log('File serving response:', {
+      filePath,
+      fileSize: fileBuffer.length,
+      contentType,
+      isFromPdf,
+      cacheControl
+    });
+
     // Return file with proper headers
     return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `inline; filename="${filename}"`,
-        'Cache-Control': 'private, max-age=3600', // Cache for 1 hour
+        'Cache-Control': cacheControl,
+        'Pragma': isFromPdf ? 'no-cache' : 'public',
       },
     });
 

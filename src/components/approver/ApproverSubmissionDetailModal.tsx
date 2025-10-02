@@ -1033,7 +1033,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                               </div>
                               <p className="text-xs text-gray-600 mt-2 flex items-center">
                                 <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                                Nomor otomatis dibuat berdasarkan urutan bulanan
+                                Nomor otomatis dibuat oleh sistem
                               </p>
                             </div>
                             <div>
