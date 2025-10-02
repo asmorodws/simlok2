@@ -88,7 +88,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
               </div>
             </div>
             
-            <div className="flex items-start p-4 bg-blue-50 rounded-lg border border-blue-200">
+            {/* <div className="flex items-start p-4 bg-blue-50 rounded-lg border border-blue-200">
               <svg className="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -96,7 +96,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
                 <p className="font-medium">Catatan Data Submission:</p>
                 <p>Semua submission yang dibuat oleh user ini akan tetap dipertahankan dalam sistem untuk menjaga integritas data historis.</p>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="space-y-3">
@@ -131,11 +131,11 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            {/* <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
                 <span className="font-medium">Catatan:</span> Semua data terkait user ini termasuk submission dan riwayat aktivitas akan ikut terhapus.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
 

@@ -112,7 +112,7 @@ export default function UserVerificationManagement({
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
 
-      const res = await fetch(`/api/reviewer/users?${params.toString()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Gagal mengambil data user');
@@ -390,7 +390,7 @@ export default function UserVerificationManagement({
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
+              {users.filter(user => user.vendor_name !== "[DELETED VENDOR]").map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{user.officer_name}</div>
