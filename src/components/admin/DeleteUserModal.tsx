@@ -31,7 +31,17 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
         throw new Error(errorData.message || 'Gagal menghapus user');
       }
 
-      showSuccess('Berhasil', 'User berhasil dihapus');
+      // const result = await response.json();
+      
+      // if (result.preservedSubmissions && result.preservedSubmissions > 0) {
+      //   showSuccess(
+      //     'User berhasil dihapus', 
+      //     `${result.preservedSubmissions} submission telah dipertahankan dalam sistem`
+      //   );
+      // } else {
+      //   showSuccess('Berhasil', 'User berhasil dihapus');
+      // }
+      
       onUserDelete(user.id);
       onClose();
       
@@ -69,12 +79,22 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
 
         {/* Content */}
         <div className="p-6">
-          <div className="mb-4">
-            <div className="flex items-center p-4 bg-red-50 rounded-lg border border-red-200">
-              <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
+          <div className="mb-4 space-y-3">
+            <div className="flex items-start p-4 bg-red-50 rounded-lg border border-red-200">
+              <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-red-700">
                 <p className="font-medium">Peringatan!</p>
                 <p>Tindakan ini akan menghapus user secara permanen dan tidak dapat dibatalkan.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <svg className="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-700">
+                <p className="font-medium">Catatan Data Submission:</p>
+                <p>Semua submission yang dibuat oleh user ini akan tetap dipertahankan dalam sistem untuk menjaga integritas data historis.</p>
               </div>
             </div>
           </div>
