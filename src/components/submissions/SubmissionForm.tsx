@@ -109,7 +109,6 @@ export default function SubmissionForm() {
     setDesiredCount(initial);
     setWorkerCountInput(String(initial));
     setFormData((prev) => ({ ...prev, worker_count: initial }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // -------------------------------

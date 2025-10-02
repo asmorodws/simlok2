@@ -268,7 +268,8 @@ export default function UserVerificationManagement({
       const newS = updated.verification_status || 'PENDING';
       if (oldS === newS) return prev;
 
-      let { totalPending, totalVerified, totalRejected, totalUsers, todayRegistrations } = prev;
+      let { totalPending, totalVerified, totalRejected } = prev;
+      const { totalUsers, todayRegistrations } = prev;
       if (oldS === 'PENDING') totalPending = Math.max(0, totalPending - 1);
       if (oldS === 'VERIFIED') totalVerified = Math.max(0, totalVerified - 1);
       if (oldS === 'REJECTED') totalRejected = Math.max(0, totalRejected - 1);

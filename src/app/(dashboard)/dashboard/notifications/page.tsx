@@ -134,7 +134,6 @@ export default function NotificationsPage() {
     };
 
     if (status === 'authenticated') run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id, session?.user?.role, status]);
 
   // Hitung unread dari state lokal

@@ -324,10 +324,11 @@ async function main() {
         approved_at: null, // belum diapprove
         qrcode: '', // akan diisi setelah diapprove
         created_at: createdDate,
-        simja_number: submissionCount % 2 === 0 ? `SIMJA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
-        simja_date: submissionCount % 2 === 0 ? new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000) : null,
-        sika_number: submissionCount % 3 === 0 ? `SIKA/2024/${String(submissionCount + 1).padStart(3, '0')}` : null,
-        sika_date: submissionCount % 3 === 0 ? new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000) : null,
+        // Semua submission memiliki nomor dan tanggal SIKA dan SIMJA
+        simja_number: `SIMJA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
+        simja_date: new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000), // 0-10 hari sebelum created_at
+        sika_number: `SIKA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
+        sika_date: new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000), // 0-15 hari sebelum created_at
         simlok_number: null, // akan diisi setelah diapprove
         simlok_date: null, // akan diisi setelah diapprove
         implementation_start_date: null, // akan diisi setelah diapprove
@@ -370,89 +371,13 @@ async function main() {
   console.log("   ✓ Approver dapat melakukan final approval setelah review");
   console.log("   ✓ QR codes akan dibuat setelah approval final");
 
-  // Create sample notifications untuk submission baru saja
-  console.log("🔔 Membuat sample notifications...");
-  
-  // Create vendor registration notifications
-  const unverifiedVendors = Object.values(createdUsers).filter((user: any) => user.role === 'VENDOR' && !user.verified_at);
-  
-  for (const vendor of unverifiedVendors) {
-    const vendorData = vendor as any;
-    
-    // Create admin notification for new vendor registration
-    await prisma.notification.create({
-      data: {
-        scope: 'admin',
-        vendor_id: null,
-        type: 'new_vendor',
-        title: 'Pendaftaran Vendor Baru',
-        message: `Vendor baru mendaftar: ${vendorData.vendor_name}`,
-        data: JSON.stringify({
-          vendorId: vendorData.id,
-          vendorName: vendorData.vendor_name,
-          officerName: vendorData.officer_name,
-        }),
-        created_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random dalam 7 hari terakhir
-      },
-    });
-  }
-
-  // Create submission notifications untuk submissions yang baru dibuat
-  const recentSubmissions = await prisma.submission.findMany({
-    where: {
-      created_at: {
-        gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 hari terakhir
-      },
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  for (const submission of recentSubmissions.slice(0, 5)) { // Ambil 5 submission terbaru
-    // Create admin notification for new submission
-    await prisma.notification.create({
-      data: {
-        scope: 'admin',
-        vendor_id: null,
-        type: 'new_submission',
-        title: 'Pengajuan Baru',
-        message: `Pengajuan baru dari ${submission.vendor_name}: ${submission.job_description}`,
-        data: JSON.stringify({
-          submissionId: submission.id,
-          vendorName: submission.vendor_name,
-          jobDescription: submission.job_description,
-        }),
-        created_at: submission.created_at,
-      },
-    });
-
-    // Create reviewer notification for pending review
-    await prisma.notification.create({
-      data: {
-        scope: 'reviewer',
-        vendor_id: null,
-        type: 'pending_review',
-        title: 'Pengajuan Menunggu Review',
-        message: `Pengajuan dari ${submission.vendor_name} menunggu review: ${submission.job_description}`,
-        data: JSON.stringify({
-          submissionId: submission.id,
-          vendorName: submission.vendor_name,
-          jobDescription: submission.job_description,
-        }),
-        created_at: submission.created_at,
-      },
-    });
-  }
-
-  console.log("   ✓ Sample notifications berhasil dibuat");
+  console.log("🔔 Tidak membuat notification seed data");
   console.log("");
   console.log("✅ Seeding selesai dengan sukses!");
   console.log("");
   console.log("📊 Ringkasan data yang dibuat:");
   console.log(`   👥 ${Object.keys(createdUsers).length} users (termasuk super admin, reviewer, approver, verifier, vendor)`);
   console.log(`   📋 ${submissionCount} submissions (semua dengan status PENDING_REVIEW & PENDING_APPROVAL)`);
-  console.log(`   🔔 Sample notifications untuk testing workflow`);
   console.log("");
   console.log("🎯 Workflow yang dapat ditest:");
   console.log("   1. Login sebagai Reviewer untuk melakukan review submissions");
