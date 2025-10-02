@@ -295,6 +295,56 @@ export default function SubmissionDetailModal({
                     />
                   )}
                 </div>
+                <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
+                  {submission.sika_document_upload && (
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                          <p className="text-sm text-gray-500">File tersedia</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                        className="flex items-center space-x-2"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                        <span>Lihat</span>
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {submission.simja_document_upload && (
+                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                          <p className="text-sm text-gray-500">File tersedia</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                        className="flex items-center space-x-2"
+                      >
+                        <EyeIcon className="w-4 h-4" />
+                        <span>Lihat</span>
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {!submission.sika_document_upload && !submission.simja_document_upload && (
+                    <div className="col-span-2 text-center py-8 text-gray-500">
+                      <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p>Belum ada dokumen yang diupload</p>
+                    </div>
+                  )}
+                </div>
               </DetailSection>
 
               {/* Informasi Pekerjaan */}
@@ -361,62 +411,7 @@ export default function SubmissionDetailModal({
                 )}
               </DetailSection>
 
-              {/* Upload Dokumen */}
-              <DetailSection 
-                title="Dokumen Upload" 
-                icon={<DocumentIcon className="h-5 w-5 text-red-500" />}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {submission.sika_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-900">Dokumen SIKA</p>
-                          <p className="text-sm text-gray-500">File tersedia</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
-                        className="flex items-center space-x-2"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        <span>Lihat</span>
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {submission.simja_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-900">Dokumen SIMJA</p>
-                          <p className="text-sm text-gray-500">File tersedia</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
-                        className="flex items-center space-x-2"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        <span>Lihat</span>
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {!submission.sika_document_upload && !submission.simja_document_upload && (
-                    <div className="col-span-2 text-center py-8 text-gray-500">
-                      <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p>Belum ada dokumen yang diupload</p>
-                    </div>
-                  )}
-                </div>
-              </DetailSection>
+           
 
               {/* Informasi Penanda Tangan */}
               {/* {(submission.signer_position || submission.signer_name) && (

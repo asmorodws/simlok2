@@ -40,6 +40,24 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef<boolean>(false); // Track if scanning is active
   const scanIdRef = useRef<number>(0); // Unique ID for each scan session
+  const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Track cleanup timeout
+
+  // Debug utility to check camera status
+  const debugCameraStatus = useCallback(() => {
+    console.log('=== CAMERA DEBUG STATUS ===');
+    console.log('Stream active:', !!streamRef.current);
+    console.log('Video element srcObject:', !!videoRef.current?.srcObject);
+    console.log('Scanning active:', scanningRef.current);
+    console.log('IsScanning state:', isScanning);
+    console.log('Code reader active:', !!codeReaderRef.current);
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track, index) => {
+        console.log(`Track ${index}: ${track.kind}, state: ${track.readyState}, enabled: ${track.enabled}`);
+      });
+    }
+    console.log('=========================');
+  }, [isScanning]);
 
   const resetScannerState = useCallback(() => {
     console.log('=== RESETTING SCANNER STATE ===');
@@ -62,14 +80,52 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
     }
 
     return () => {
-      console.log('=== SCANNER CLEANUP ===');
-      stopScanner();
+      console.log('=== SCANNER CLEANUP (UNMOUNT) ===');
+      // Aggressive cleanup on unmount
+      setIsScanning(false);
+      scanningRef.current = false;
+      
+      // Force stop all media tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          if (track.readyState === 'live') {
+            track.stop();
+          }
+        });
+        streamRef.current = null;
+      }
+      
+      // Clear video element
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      // Clear code reader
+      codeReaderRef.current = null;
+      
+      // Clear any pending timeouts
+      if (cleanupTimeoutRef.current) {
+        clearTimeout(cleanupTimeoutRef.current);
+        cleanupTimeoutRef.current = null;
+      }
+      
+      console.log('Scanner cleanup completed');
     };
   }, [isOpen, resetScannerState]);
 
   const initializeScanner = async () => {
     try {
       console.log('=== INITIALIZING SCANNER ===');
+      
+      // Prevent multiple initialization
+      if (streamRef.current || isScanning) {
+        console.log('Scanner already initialized or initializing, skipping...');
+        return;
+      }
+      
+      // Clean up any existing resources first
+      stopScanner();
+      
       setError(null);
       setScanResult(null); // Clear any previous scan results
       setIsModalOpen(false); // Ensure modal is closed
@@ -217,39 +273,78 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
 
   const stopCamera = () => {
     console.log('=== STOPPING CAMERA ===');
+    
+    // Stop all video tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
+      console.log('Stopping media stream tracks...');
+      streamRef.current.getTracks().forEach((track, index) => {
+        console.log(`Stopping track ${index}: ${track.kind} (${track.readyState})`);
         track.stop();
-        console.log('Camera track stopped');
+        console.log(`Track ${index} stopped, new state: ${track.readyState}`);
       });
       streamRef.current = null;
+    }
+    
+    // Clear video element source
+    if (videoRef.current) {
+      console.log('Clearing video element...');
+      videoRef.current.srcObject = null;
+      videoRef.current.load(); // Force reload to clear any cached source
+      console.log('Video element cleared');
     }
   };
 
   const stopScanner = () => {
     console.log('=== STOPPING SCANNER ===');
-    setIsScanning(false);
-    scanningRef.current = false; // Stop scanning process
     
+    // First stop scanning flag to prevent new scan attempts
+    setIsScanning(false);
+    scanningRef.current = false;
+    
+    // Stop the code reader properly
     if (codeReaderRef.current) {
       try {
-        // Create a new instance to completely reset the scanner
+        console.log('Destroying code reader...');
+        // Simply clear the reference to stop all operations
         codeReaderRef.current = null;
-        console.log('Code reader cleared');
+        console.log('Code reader reference cleared');
       } catch (error) {
-        console.log('Error clearing code reader:', error);
+        console.log('Error clearing code reader reference:', error);
       }
     }
     
+    // Stop camera after code reader cleanup
     stopCamera();
+    
+    console.log('Scanner stop completed');
   };
 
   const handleClose = () => {
     console.log('=== CLOSING SCANNER ===');
+    
+    // Debug camera status before closing
+    debugCameraStatus();
+    
+    // Clear any pending cleanup timeouts
+    if (cleanupTimeoutRef.current) {
+      clearTimeout(cleanupTimeoutRef.current);
+      cleanupTimeoutRef.current = null;
+    }
+    
+    // Stop scanner first
     stopScanner();
+    
+    // Reset all states
     setScanResult(null);
     setError(null);
-    onClose();
+    setIsModalOpen(false);
+    
+    // Wait a bit to ensure cleanup is complete before calling onClose
+    cleanupTimeoutRef.current = setTimeout(() => {
+      console.log('Calling onClose after cleanup');
+      debugCameraStatus(); // Debug after cleanup
+      onClose();
+    }, 100);
   };
 
   const handleModalClose = () => {
@@ -259,14 +354,22 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
     setError(null);
     
     // Restart scanning after modal closes if scanner is still open
-    if (isOpen && videoRef.current) {
+    if (isOpen && videoRef.current && streamRef.current) {
       console.log('=== RESTARTING SCANNER AFTER MODAL CLOSE ===');
       // Add delay to ensure state is properly reset and avoid race conditions
       setTimeout(() => {
-        setIsScanning(true);
-        scanningRef.current = false; // Reset scanning state
-        startScanning();
-      }, 300); // Increased delay for more stability
+        // Double check if scanner is still open and stream is still active
+        if (isOpen && streamRef.current && !scanningRef.current) {
+          console.log('Restarting scan process...');
+          setIsScanning(true);
+          scanningRef.current = false; // Reset scanning state
+          startScanning();
+        } else {
+          console.log('Scanner closed or already scanning, skipping restart');
+        }
+      }, 500); // Increased delay for more stability
+    } else {
+      console.log('Scanner not available for restart - isOpen:', isOpen, 'videoRef:', !!videoRef.current, 'stream:', !!streamRef.current);
     }
   };
 
@@ -319,9 +422,16 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
               </div>
 
               <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-600">
-                  {isScanning ? 'Scanning for barcode/QR code...' : 'Camera ready'}
-                </p>
+                <div className="text-sm text-gray-600">
+                  <p>{isScanning ? 'Scanning for barcode/QR code...' : 'Camera ready'}</p>
+                  {process.env.NODE_ENV === 'development' && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Stream: {streamRef.current ? '✅' : '❌'} | 
+                      Scanner: {scanningRef.current ? '🔄' : '⏹️'} | 
+                      Tracks: {streamRef.current?.getTracks().length || 0}
+                    </p>
+                  )}
+                </div>
                 
                 <div className="flex gap-2">
                   {!isScanning ? (
