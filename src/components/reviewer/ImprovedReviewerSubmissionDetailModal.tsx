@@ -1648,7 +1648,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white">
           <div>
-            {submission?.review_status !== 'PENDING_REVIEW' && !isEditingWorkers && (
+            {submission?.review_status !== 'PENDING_REVIEW' && (
               <Button onClick={() => setIsPdfModalOpen(true)} variant="primary" size="sm">
                 <DocumentTextIcon className="w-4 h-4 mr-2" />
                 Lihat Preview PDF SIMLOK

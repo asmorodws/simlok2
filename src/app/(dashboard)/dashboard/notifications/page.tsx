@@ -21,9 +21,9 @@ import {
 import Button from '@/components/ui/button/Button';
 import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
-import { fetchJSON } from '@/lib/fetchJson'; // NEW
+import { fetchJSON } from '@/lib/fetchJson';
 
-// Interface untuk notification (disesuaikan dari project_dump)
+// ---- Types ----
 interface Notification {
   id: string;
   type: string;
@@ -36,7 +36,6 @@ interface Notification {
   vendorId?: string;
 }
 
-// Interface untuk submission (disesuaikan dari project_dump)
 interface Submission {
   id: string;
   approval_status: string;
@@ -78,7 +77,6 @@ interface Submission {
   };
 }
 
-// NEW: tipe respons API v1 list
 type NotifListResponse = {
   success: boolean;
   data: {
@@ -87,7 +85,7 @@ type NotifListResponse = {
   };
 };
 
-// NEW: helper anti-race: versi state
+// ---- anti-race util ----
 function useVersion() {
   const v = useRef(0);
   const bump = () => ++v.current;
@@ -103,115 +101,74 @@ export default function NotificationsPage() {
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-
-  // NEW: versi untuk cegah race condition saat refetch beruntun
   const version = useVersion();
 
-  // NEW: refetch util yang no-store + query buster
   const refetch = async (scope: string) => {
     const snap = version.current();
     setLoading(true);
     try {
-      // Always fetch ALL notifications, then filter on frontend
       const res = await fetchJSON<NotifListResponse>(`/api/v1/notifications?scope=${scope}&filter=all&pageSize=100`);
-      if (version.isStale(snap)) return; // ada refetch lebih baru, abaikan respons lama
+      if (version.isStale(snap)) return;
       setNotifications(res?.data?.data ?? []);
     } catch (e) {
-      console.error('💥 Refetch notifications error:', e);
+      console.error('Refetch notifications error:', e);
     } finally {
       if (!version.isStale(snap)) setLoading(false);
     }
   };
 
-  // Fetch awal
   useEffect(() => {
     const run = async () => {
       if (!session?.user?.id) return;
       let scope = session.user.role.toLowerCase();
       if (session.user.role === 'SUPER_ADMIN') scope = 'admin';
-
-      version.bump(); // NEW: tandai versi baru
+      version.bump();
       await refetch(scope);
     };
-
     if (status === 'authenticated') run();
   }, [session?.user?.id, session?.user?.role, status]);
 
-  // Hitung unread dari state lokal
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.isRead).length : 0;
 
-  // State untuk mencegah multiple API calls bersamaan
   const [markingAsRead, setMarkingAsRead] = useState(new Set<string>());
 
   const markAsRead = async (notificationId: string) => {
-    // Cegah multiple calls untuk notification yang sama
-    if (markingAsRead.has(notificationId)) {
-      console.log('⚠️ Already marking notification as read:', notificationId);
-      return;
-    }
-
-    // Cek apakah sudah read
+    if (markingAsRead.has(notificationId)) return;
     const notification = notifications.find(n => n.id === notificationId);
-    if (notification?.isRead) {
-      console.log('ℹ️ Notification already read:', notificationId);
-      return;
-    }
+    if (notification?.isRead) return;
 
     try {
-      // Tandai sebagai sedang diproses
       setMarkingAsRead(prev => new Set([...prev, notificationId]));
-      
-      // Optimistic update
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
-      );
-
-      // API call
-      console.log('📤 Marking notification as read:', notificationId);
+      setNotifications(prev => prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n)));
       await fetchJSON(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
-      
-      console.log('✅ Successfully marked as read:', notificationId);
-      
     } catch (error) {
-      console.error('💥 Error marking notification as read:', error);
-      
-      // Rollback optimistic update
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, isRead: false } : n))
-      );
-      
+      console.error('Error marking as read:', error);
+      setNotifications(prev => prev.map(n => (n.id === notificationId ? { ...n, isRead: false } : n)));
       showError('Gagal', 'Tidak dapat menandai notifikasi sebagai dibaca');
     } finally {
-      // Hilangkan dari processing set
       setMarkingAsRead(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(notificationId);
-        return newSet;
+        const s = new Set(prev);
+        s.delete(notificationId);
+        return s;
       });
     }
   };
 
   const markAllAsRead = async () => {
-    // Optimistic all
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-
     try {
       const scopeBody = session?.user?.role;
       await fetchJSON('/api/v1/notifications/read-all', {
         method: 'POST',
         body: JSON.stringify({ scope: scopeBody }),
       });
-
-      // Jadwalkan refetch
       let scope = session?.user?.role?.toLowerCase() || 'vendor';
       if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
-
       version.bump();
       setTimeout(() => refetch(scope), 300);
     } catch (error) {
-      console.error('💥 Error marking all as read:', error);
+      console.error('Error mark all read:', error);
       showError('Gagal', 'Tidak dapat menandai semua notifikasi sebagai dibaca');
-      // (opsional) refetch penuh untuk koreksi state
       let scope = session?.user?.role?.toLowerCase() || 'vendor';
       if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
       version.bump();
@@ -219,23 +176,22 @@ export default function NotificationsPage() {
     }
   };
 
-  // === Util UI yang sudah ada (dipertahankan) ===
-
+  // ---- UI helpers ----
   const formatTimeAgo = (dateString: string): string => {
     if (!dateString) return 'Tidak diketahui';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return 'Tanggal tidak valid';
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (diffInSeconds < 60) return 'Baru saja';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} menit yang lalu`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} jam yang lalu`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} hari yang lalu`;
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return 'Baru saja';
+    if (diff < 3600) return `${Math.floor(diff / 60)} menit yang lalu`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} jam yang lalu`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)} hari yang lalu`;
     return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const getNotificationIcon = (type: string) => {
-    const iconClass = "w-5 h-5";
+    const iconClass = 'w-5 h-5';
     switch (type) {
       case 'submission_approved': return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
       case 'submission_rejected': return <XMarkIcon className={`${iconClass} text-red-600`} />;
@@ -249,88 +205,59 @@ export default function NotificationsPage() {
     }
   };
 
-  // Define notification types
   const submissionTypes = ['submission_approved','submission_rejected','submission_pending','new_submission','status_change'];
   const vendorTypes = ['user_registered', 'new_vendor', 'new_user_verification', 'vendor_verified', 'vendor_registered'];
 
-  const hasSubmissionData = (notification: Notification) => {
-    // Check if it's a submission-related notification
-    if (submissionTypes.includes(notification.type)) return true;
-    
-    // Check for submission ID in data
-    if (notification.data) {
+  const hasSubmissionData = (n: Notification) => {
+    if (submissionTypes.includes(n.type)) return true;
+    if (n.data) {
       try {
-        const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+        const parsed = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
         if (parsed?.submissionId || parsed?.submission_id) return true;
       } catch {
-        if (typeof notification.data === 'string' && notification.data.includes('submissionId')) return true;
+        if (typeof n.data === 'string' && n.data.includes('submissionId')) return true;
       }
     }
-    
-    // Check message content for submission-related keywords
-    const text = `${notification.title} ${notification.message}`.toLowerCase();
-    return ['pengajuan', 'submission', 'simlok'].some(k => text.includes(k));
+    const text = `${n.title} ${n.message}`.toLowerCase();
+    return ['pengajuan','submission','simlok'].some(k => text.includes(k));
   };
 
-  const hasVendorData = (notification: Notification) => {
-    // Check if it's specifically a vendor management notification
-    if (vendorTypes.includes(notification.type)) return true;
-    
-    // Check for vendor ID in data
-    if (notification.data) {
+  const hasVendorData = (n: Notification) => {
+    if (vendorTypes.includes(n.type)) return true;
+    if (n.data) {
       try {
-        const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+        const parsed = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
         if (parsed?.vendorId || parsed?.userId) return true;
       } catch {
-        if (typeof notification.data === 'string' && notification.data.includes('vendorId')) return true;
+        if (typeof n.data === 'string' && n.data.includes('vendorId')) return true;
       }
     }
-    
-    // Only return true for very specific vendor management keywords
-    const text = `${notification.title} ${notification.message}`.toLowerCase();
-    return ['pendaftaran vendor', 'vendor baru mendaftar', 'verifikasi vendor'].some(k => text.includes(k));
+    const text = `${n.title} ${n.message}`.toLowerCase();
+    return ['pendaftaran vendor','vendor baru mendaftar','verifikasi vendor'].some(k => text.includes(k));
   };
 
-  const handleViewDetail = async (notification: Notification) => {
-    if (!notification.isRead) await markAsRead(notification.id);
+  const handleViewDetail = async (n: Notification) => {
+    if (!n.isRead) await markAsRead(n.id);
 
-    console.log('🔍 Handling notification detail:', {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      isVendor: hasVendorData(notification),
-      isSubmission: hasSubmissionData(notification)
-    });
-
-    // Handle vendor notifications
-    if (hasVendorData(notification)) {
-      console.log('📝 Vendor notification detected:', notification.type);
+    if (hasVendorData(n)) {
       showError('Info', 'Detail vendor tidak tersedia di halaman ini. Gunakan panel notifikasi untuk detail vendor.');
       return;
     }
 
-    // Handle submission notifications
-    if (hasSubmissionData(notification)) {
-      console.log('📋 Submission notification detected:', notification.type);
-      
+    if (hasSubmissionData(n)) {
       try {
         let submissionId = '';
-        
-        // Extract submission ID from data
-        if (notification.data) {
+        if (n.data) {
           try {
-            const parsed = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+            const parsed = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
             submissionId = parsed?.submissionId || parsed?.submission_id || '';
-            console.log('📤 Extracted submissionId from data:', submissionId);
           } catch {
-            if (typeof notification.data === 'string') {
-              const match = notification.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
-              if (match?.[1]) submissionId = match[1];
+            if (typeof n.data === 'string') {
+              const m = n.data.match(/submissionId[:\s]*([a-zA-Z0-9_-]+)/);
+              if (m?.[1]) submissionId = m[1];
             }
           }
         }
-        
-        // Extract from message/title if not found in data
         if (!submissionId) {
           const patterns = [
             /ID[:\s]*([a-zA-Z0-9_-]+)/,
@@ -339,43 +266,35 @@ export default function NotificationsPage() {
             /([a-zA-Z0-9_-]{20,})/
           ];
           for (const p of patterns) {
-            const msg = notification.message.match(p);
-            const ttl = notification.title.match(p);
-            if (msg?.[1]) { submissionId = msg[1]; break; }
-            if (ttl?.[1]) { submissionId = ttl[1]; break; }
+            const m1 = n.message.match(p);
+            const m2 = n.title.match(p);
+            if (m1?.[1]) { submissionId = m1[1]; break; }
+            if (m2?.[1]) { submissionId = m2[1]; break; }
           }
-          console.log('📤 Extracted submissionId from text:', submissionId);
         }
-        
         if (!submissionId) {
-          console.warn('⚠️ No submission ID found in notification');
           showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
           return;
         }
-
-        console.log('🚀 Fetching submission details for ID:', submissionId);
         const submission = await fetchJSON<Submission>(`/api/submissions/${submissionId}`);
         setSelectedSubmission(submission);
-        
       } catch (error) {
-        console.error('💥 Error handling submission detail:', error);
+        console.error('Error loading submission detail:', error);
         showError('Error', 'Terjadi kesalahan saat memuat detail submission');
       }
       return;
     }
 
-    // Handle other notifications (system, general info, etc.)
-    console.log('ℹ️ General notification - no specific action');
     showError('Info', 'Notifikasi ini tidak memiliki detail khusus untuk ditampilkan');
   };
 
-  const truncateText = (text: string, maxLength: number = 100) =>
+  const truncateText = (text: string, maxLength = 100) =>
     text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 
   const filteredNotifications = Array.isArray(notifications)
     ? notifications
-        .filter((n) => (filter === 'unread' ? !n.isRead : filter === 'read' ? n.isRead : true))
-        .filter((n) =>
+        .filter(n => (filter === 'unread' ? !n.isRead : filter === 'read' ? n.isRead : true))
+        .filter(n =>
           !searchTerm
             ? true
             : n.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -438,7 +357,7 @@ export default function NotificationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
               <div className="md:col-span-7">
                 <div className="relative">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Cari notifikasi…"
@@ -457,7 +376,7 @@ export default function NotificationsPage() {
                       key={filterOption}
                       onClick={() => setFilter(filterOption)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                        filter === filterOption ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900:text-gray-200'
+                        filter === filterOption ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900'
                       }`}
                     >
                       {filterOption === 'all' && 'Semua'}
@@ -471,13 +390,6 @@ export default function NotificationsPage() {
           </div>
 
           {/* List */}
-          {/* 
-            LOGIKA NOTIFIKASI: 
-            - Semua notifikasi tetap ditampilkan walaupun sudah dibaca
-            - Filter "read", "unread", dan "all" hanya mengatur tampilan
-            - Indikator visual membedakan yang sudah/belum dibaca
-            - Notifikasi yang sudah dibaca tetap bisa diakses dan dilihat
-          */}
           <div className="rounded-xl border bg-white shadow-sm overflow-hidden">
             {filteredNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-6">
@@ -516,32 +428,27 @@ export default function NotificationsPage() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {filteredNotifications.map((notification) => {
-                  const isUnread = !notification.isRead;
-                  const fullTimestamp = new Date(notification.createdAt).toLocaleString('id-ID');
+                {filteredNotifications.map((n) => {
+                  const isUnread = !n.isRead;
+                  const fullTimestamp = new Date(n.createdAt).toLocaleString('id-ID');
 
                   return (
                     <div
-                      key={notification.id}
-                      className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500/30 ${
-                        isUnread ? 'bg-blue-50/70 border-l-4 border-blue-500' : 'border-l-4 border-transparent'
-                      } ${hasSubmissionData(notification) || hasVendorData(notification) ? 'cursor-pointer' : ''}`}
-                      onClick={() => {
-                        // Always try to handle detail, let the function decide what to do
-                        handleViewDetail(notification);
-                      }}
+                      key={n.id}
+                      className={`relative flex items-start gap-3 p-3 md:p-4 transition-all duration-200 hover:bg-gray-50 focus-within:ring-2 focus-within:ring-blue-500/30
+                        border-l-4
+                        ${isUnread ? 'border-l-blue-600 bg-white' : 'border-l-transparent bg-white'}
+                        ${hasSubmissionData(n) || hasVendorData(n) ? 'cursor-pointer' : ''}
+                      `}
+                      onClick={() => handleViewDetail(n)}
                       role="listitem"
                     >
-                      {isUnread && (
-                        <div className="absolute left-1 top-1/2 transform -translate-y-1/2 h-3 w-3 rounded-full bg-blue-600 shadow-sm">
-                          <div className="absolute inset-0 rounded-full bg-blue-400 animate-pulse"></div>
-                        </div>
-                      )}
+                      {/* HAPUS dot biru agar hanya strip kiri yang jadi indikator */}
+                      {/* <div className="absolute left-1 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-blue-600" /> */}
 
-                      <div className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center ml-2 transition-colors ${
-                        isUnread ? 'bg-blue-100' : 'bg-gray-100'
-                      }`}>
-                        {getNotificationIcon(notification.type)}
+                      {/* Avatar ikon: selalu abu-abu */}
+                      <div className="shrink-0 h-9 w-9 rounded-full flex items-center justify-center ml-2 bg-gray-100">
+                        {getNotificationIcon(n.type)}
                       </div>
 
                       <div className="flex-1 min-w-0">
@@ -551,22 +458,22 @@ export default function NotificationsPage() {
                               className={`text-sm md:text-base leading-tight ${isUnread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'}`}
                               style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
-                              {truncateText(notification.title, 80)}
+                              {truncateText(n.title, 80)}
                             </h3>
                             <p
                               className="mt-0.5 text-xs md:text-sm text-gray-600 leading-relaxed"
                               style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
                             >
-                              {truncateText(notification.message, 120)}
+                              {truncateText(n.message, 120)}
                             </p>
                           </div>
 
                           <span className="text-[11px] md:text-xs text-gray-500 whitespace-nowrap ml-3" title={fullTimestamp}>
-                            {formatTimeAgo(notification.createdAt)}
+                            {formatTimeAgo(n.createdAt)}
                           </span>
                         </div>
 
-                        {(hasSubmissionData(notification) || hasVendorData(notification)) && (
+                        {(hasSubmissionData(n) || hasVendorData(n)) && (
                           <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                             <button className="inline-flex items-center text-xs text-blue-600 font-medium hover:text-blue-700 transition-colors">
                               Lihat detail
@@ -578,9 +485,9 @@ export default function NotificationsPage() {
                                 onClick={async (e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  await markAsRead(notification.id);
+                                  await markAsRead(n.id);
                                 }}
-                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50:bg-blue-900/20 transition-colors"
+                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                                 aria-label="Tandai sebagai dibaca"
                               >
                                 <CheckIcon className="w-3 h-3" />

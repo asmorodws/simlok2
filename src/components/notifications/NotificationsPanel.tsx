@@ -1,8 +1,8 @@
 // src/components/notifications/NotificationsPanel.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { 
-  BellIcon, 
+import {
+  BellIcon,
   XMarkIcon,
   CheckIcon,
   CheckCircleIcon,
@@ -28,15 +28,15 @@ interface NotificationsPanelProps {
 
 export default function NotificationsPanel({ onClose }: NotificationsPanelProps) {
   const { data: session } = useSession();
-  const { 
-    items: notifications, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead 
+  const {
+    items: notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead
   } = useNotificationsStore();
   const { showError, showWarning } = useToast();
 
-  // NEW: helper scope & vendorId dari session (selalu konsisten dgn API)
+  // Helper scope & vendorId dari session
   const getScopeAndVendor = () => {
     if (!session?.user) return { scope: 'vendor' as const, vendorId: undefined as string | undefined };
     const role = session.user.role;
@@ -47,34 +47,20 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
     return { scope: 'vendor' as const, vendorId: session.user.id };
   };
 
-  // Debug: log notifications data in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('NotificationsPanel state:', {
-      total: notifications?.length || 0,
-      unreadCount,
-      readCount: notifications?.filter(n => n.isRead).length || 0,
-      sample: notifications?.slice(0, 2).map(n => ({ id: n.id, title: n.title, isRead: n.isRead }))
-    });
-  }
-  
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  
+
   // State for vendor verification modal
   const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
 
-  // Close panel when clicking outside
+  // Close panel on ESC & lock scroll
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
-
     document.addEventListener('keydown', handleEscape);
     document.body.style.overflow = 'hidden';
-
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
@@ -83,206 +69,111 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
 
   const handleViewDetail = async (notification: Notification) => {
     try {
-      console.log('handleViewDetail called with notification:', notification);
-      
-      // Handle vendor notifications
-      if (notification.type === 'user_registered' || notification.type === 'new_vendor' || notification.type === 'new_user_verification') {
+      // Vendor detail types
+      if (
+        notification.type === 'user_registered' ||
+        notification.type === 'new_vendor' ||
+        notification.type === 'new_user_verification'
+      ) {
         await handleVendorDetail(notification);
         return;
       }
-      
-      // Parse data dari notification untuk mendapatkan submission ID
-      let submissionId = null;
-      
+
+      // Extract submissionId
+      let submissionId: string | null = null;
       if (notification.data) {
         try {
-          const parsedData = typeof notification.data === 'string' 
-            ? JSON.parse(notification.data) 
+          const parsed = typeof notification.data === 'string'
+            ? JSON.parse(notification.data)
             : notification.data;
-          submissionId = parsedData.submissionId || parsedData.submission_id;
-          console.log('Extracted submissionId from data:', submissionId);
-        } catch (e) {
-          console.error('Error parsing notification data:', e);
-          console.log('Raw notification.data:', notification.data);
+          submissionId = parsed.submissionId || parsed.submission_id || null;
+        } catch {
+          // ignore
         }
       }
-
       if (!submissionId) {
         const idPattern = /ID[:\s]+([a-zA-Z0-9]+)/i;
-        const messageMatch = notification.message.match(idPattern);
-        const titleMatch = notification.title.match(idPattern);
-        submissionId = messageMatch?.[1] || titleMatch?.[1];
-        console.log('Extracted submissionId from text:', submissionId);
+        submissionId =
+          notification.message.match(idPattern)?.[1] ||
+          notification.title.match(idPattern)?.[1] ||
+          null;
       }
+      if (!submissionId) return;
 
-      if (!submissionId) {
-        console.warn('No submission ID found in notification:', notification);
-        return;
-      }
-
-      console.log('Fetching submission details for ID:', submissionId);
-
-      // Determine API endpoint based on user role
+      // Endpoint by role
       let apiEndpoint = `/api/submissions/${submissionId}`;
-      if (session?.user?.role === 'APPROVER') {
-        apiEndpoint = `/api/approver/simloks/${submissionId}`;
-      } else if (session?.user?.role === 'REVIEWER') {
-        apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
-      } else if (session?.user?.role === 'SUPER_ADMIN') {
-        apiEndpoint = `/api/submissions/${submissionId}`;
-      }
+      if (session?.user?.role === 'APPROVER') apiEndpoint = `/api/approver/simloks/${submissionId}`;
+      else if (session?.user?.role === 'REVIEWER') apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
+      else if (session?.user?.role === 'SUPER_ADMIN') apiEndpoint = `/api/submissions/${submissionId}`;
 
       const response = await fetch(apiEndpoint);
-      
       if (response.status === 404) {
-        console.warn('Submission not found:', submissionId);
-        showWarning(
-          'Pengajuan Tidak Ditemukan',
-          'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
-        );
+        showWarning('Pengajuan Tidak Ditemukan', 'Pengajuan pada notifikasi ini sudah tidak tersedia atau dihapus.');
         if (!notification.isRead) {
           try {
-            console.log('Marking notification as read (submission not found):', notification.id);
             const { scope, vendorId } = getScopeAndVendor();
             await markAsRead(notification.id, { scope, vendorId });
-          } catch (error) {
-            console.error('Error marking notification as read:', error);
-          }
+          } catch {}
         }
         return;
       }
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch submission details: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Failed to fetch submission details: ${response.status}`);
+      const payload = await response.json();
+      const submissionData = payload.submission || payload;
 
-      const responseData = await response.json();
-      console.log('Submission data fetched:', responseData);
-      
-      const submissionData = responseData.submission || responseData;
-      
       setSelectedSubmission(submissionData);
       setSelectedSubmissionId(submissionId);
       setIsDetailModalOpen(true);
 
       if (!notification.isRead) {
         try {
-          console.log('Marking notification as read:', notification.id);
           const { scope, vendorId } = getScopeAndVendor();
           await markAsRead(notification.id, { scope, vendorId });
-        } catch (error) {
-          console.error('Error marking notification as read:', error);
-        }
+        } catch {}
       }
-
     } catch (error) {
-      console.error('Error viewing submission detail:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('404')) {
-          showWarning(
-            'Pengajuan Tidak Ditemukan',
-            'Pengajuan yang dirujuk dalam notifikasi ini sudah tidak tersedia atau telah dihapus.'
-          );
-        } else {
-          showError(
-            'Gagal Memuat Detail',
-            'Terjadi kesalahan saat memuat detail pengajuan. Silakan coba lagi.'
-          );
-        }
+      if (error instanceof Error && error.message.includes('404')) {
+        showWarning('Pengajuan Tidak Ditemukan', 'Pengajuan pada notifikasi ini sudah tidak tersedia atau dihapus.');
       } else {
-        showError(
-          'Gagal Memuat Detail',
-          'Terjadi kesalahan saat memuat detail pengajuan. Silakan coba lagi.'
-        );
+        showError('Gagal Memuat Detail', 'Terjadi kesalahan saat memuat detail pengajuan. Silakan coba lagi.');
       }
     }
   };
 
   const handleVendorDetail = async (notification: Notification) => {
     try {
-      console.log('handleVendorDetail called with notification:', notification);
-      
-      let vendorId = null;
-      
+      let vendorId: string | null = null;
       if (notification.data) {
         try {
-          const parsedData = typeof notification.data === 'string' 
-            ? JSON.parse(notification.data) 
+          const parsed = typeof notification.data === 'string'
+            ? JSON.parse(notification.data)
             : notification.data;
-          vendorId = parsedData.vendorId || parsedData.userId || parsedData.user_id;
-          console.log('Extracted vendorId from data:', vendorId);
-        } catch (e) {
-          console.error('Error parsing notification data:', e);
-          console.log('Raw notification.data:', notification.data);
-        }
+          vendorId = parsed.vendorId || parsed.userId || parsed.user_id || null;
+        } catch {}
       }
+      if (!vendorId) return;
 
-      if (!vendorId) {
-        console.warn('No vendor ID found in notification:', notification);
-        return;
-      }
-
-      console.log('🔍 Fetching vendor data for ID:', vendorId);
-      
       if (session?.user?.role === 'REVIEWER') {
-        try {
-          const response = await fetch(`/api/reviewer/users/${vendorId}`);
-          
-          if (response.status === 404) {
-            console.warn('User not found:', vendorId);
-            showWarning(
-              'Data Vendor Tidak Ditemukan',
-              'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
-            );
-            return;
-          }
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          console.log('✅ Vendor user data loaded:', data);
-          setSelectedVendorUser(data.user);
-        } catch (error) {
-          console.error('❌ Error fetching vendor details:', error);
-          showError('Error', 'Gagal memuat detail vendor');
+        const response = await fetch(`/api/reviewer/users/${vendorId}`);
+        if (response.status === 404) {
+          showWarning('Data Vendor Tidak Ditemukan', 'Data vendor pada notifikasi ini sudah tidak tersedia.');
+          return;
         }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setSelectedVendorUser(data.user);
       } else {
-        console.log('Vendor user functionality disabled for this role');
-        showWarning('Info', 'Fitur detail vendor tidak tersedia untuk role ini saat ini');
+        showWarning('Info', 'Fitur detail vendor tidak tersedia untuk role ini.');
       }
 
       if (!notification.isRead) {
         try {
-          console.log('Marking notification as read (vendor detail):', notification.id);
           const { scope, vendorId: vId } = getScopeAndVendor();
           await markAsRead(notification.id, { scope, vendorId: vId });
-        } catch (error) {
-          console.error('Error marking notification as read:', error);
-        }
+        } catch {}
       }
-
     } catch (err) {
-      console.error('❌ Error fetching vendor details:', err);
-      if (err instanceof Error) {
-        if (err.message.includes('404')) {
-          showWarning(
-            'Data Vendor Tidak Ditemukan',
-            'Data vendor yang dirujuk dalam notifikasi ini sudah tidak tersedia.'
-          );
-        } else {
-          showError(
-            'Gagal Memuat Detail Vendor',
-            'Gagal memuat detail vendor. Silakan coba lagi.'
-          );
-        }
-      } else {
-        showError(
-          'Gagal Memuat Detail Vendor',
-          'Gagal memuat detail vendor. Silakan coba lagi.'
-        );
-      }
+      showError('Gagal Memuat Detail Vendor', 'Gagal memuat detail vendor. Silakan coba lagi.');
     }
   };
 
@@ -295,29 +186,16 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) {
-      return 'Baru saja';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `${minutes}m`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `${hours}j`;
-    } else if (diffInSeconds < 604800) {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `${days}h`;
-    } else {
-      return date.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'short'
-      });
-    }
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return 'Baru saja';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}j`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}h`;
+    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
   };
 
   const getNotificationIcon = (type: string) => {
-    const iconClass = "w-5 h-5";
+    const iconClass = 'w-5 h-5';
     switch (type) {
       case 'submission_approved':
         return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
@@ -331,17 +209,17 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
         return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
       case 'user_registered':
       case 'new_vendor':
+      case 'new_user_verification':
         return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
       default:
         return <BellIcon className={`${iconClass} text-gray-500`} />;
     }
   };
 
-  const truncateText = (text: string, maxLength: number = 80) => {
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-  };
+  const truncateText = (text: string, maxLength = 80) =>
+    text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 
-  const getEnhancedMessage = useCallback((notification: Notification) => {
+  const getEnhancedMessage = (notification: Notification) => {
     const { type, message, title } = notification;
     switch (type) {
       case 'submission_approved':
@@ -362,7 +240,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           message: truncateText('Pengajuan Simlok Anda sedang dalam proses review lebih lanjut.'),
           action: 'Lihat detail'
         };
-      case 'status_change':
+      case 'status_change': {
         let enhancedTitle = title;
         let enhancedMessage = message;
         if (title.includes('Disetujui')) {
@@ -377,6 +255,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           message: truncateText(enhancedMessage),
           action: 'Lihat detail'
         };
+      }
       case 'new_submission':
         return {
           title: 'Pengajuan Baru Masuk',
@@ -398,11 +277,14 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           action: 'Lihat detail'
         };
     }
-  }, []);
+  };
 
   const hasSubmissionData = (notification: Notification) => {
-    console.log('hasSubmissionData check for:', notification);
-    if (notification.type === 'user_registered' || notification.type === 'new_vendor' || notification.type === 'new_user_verification') {
+    if (
+      notification.type === 'user_registered' ||
+      notification.type === 'new_vendor' ||
+      notification.type === 'new_user_verification'
+    ) {
       return true;
     }
     const hasSubmissionType = notification.type.includes('submission') || notification.type === 'status_change';
@@ -411,22 +293,13 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       if (typeof notification.data === 'string') {
         hasSubmissionId = notification.data.includes('submissionId');
       } else if (typeof notification.data === 'object') {
-        hasSubmissionId = (notification.data as any).submissionId || (notification.data as any).submission_id;
+        hasSubmissionId =
+          (notification.data as any).submissionId || (notification.data as any).submission_id;
       }
     }
     const hasIdInMessage = notification.message.includes('ID');
     const hasIdInTitle = notification.title.includes('ID');
-    const result = hasSubmissionType || hasSubmissionId || hasIdInMessage || hasIdInTitle;
-    console.log('hasSubmissionData result:', {
-      notification: notification.id,
-      type: notification.type,
-      hasSubmissionType,
-      hasSubmissionId,
-      hasIdInMessage,
-      hasIdInTitle,
-      result
-    });
-    return result;
+    return hasSubmissionType || hasSubmissionId || hasIdInMessage || hasIdInTitle;
   };
 
   if (!notifications) return null;
@@ -437,8 +310,8 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Floating Panel */}
-      <div 
-        className="absolute right-0 top-12 w=[min(420px,90vw)] md:w-[420px] w-[90vw] bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
+      <div
+        className="absolute right-0 top-12 w-[90vw] md:w-[420px] bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-[70vh] flex flex-col overflow-hidden"
         role="dialog"
         aria-label="Panel notifikasi"
       >
@@ -458,7 +331,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
               {unreadCount > 0 && <p className="text-xs text-gray-500">{unreadCount} belum dibaca</p>}
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             {unreadCount > 0 && (
               <Button
@@ -480,7 +353,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
             )}
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-gray-200:bg-gray-700 rounded-md transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
               aria-label="Tutup panel"
             >
               <XMarkIcon className="w-4 h-4 text-gray-500 hover:text-gray-700" />
@@ -506,16 +379,17 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                 const enhancedInfo = getEnhancedMessage(notification);
                 const isUnread = !notification.isRead;
                 const fullTimestamp = new Date(notification.createdAt).toLocaleString('id-ID');
-                
+
                 return (
                   <div
                     key={`notification-${notification.id}-${notification.createdAt}`}
                     role="listitem"
-                    className={`group relative transition-all duration-200 hover:bg-gray-50 border-l-4 ${
-                      isUnread 
-                        ? 'bg-blue-50/70 border-blue-500' 
-                        : 'bg-white border-transparent hover:border-gray-200'
-                    } ${hasSubmissionData(notification) ? 'cursor-pointer' : ''}`}
+                    className={`group relative transition-all duration-200 hover:bg-gray-50
+  border-l-4
+  ${isUnread ? 'border-l-blue-600 bg-white' : 'border-l-transparent bg-white'}
+  ${hasSubmissionData(notification) ? 'cursor-pointer' : ''}
+`}
+
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -524,29 +398,28 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                       }
                     }}
                   >
-                    {isUnread && (
-                      <div className="absolute left-1 top-1/2 transform -translate-y-1/2 w-3 h-3 rounded-full bg-blue-600 shadow-sm">
-                        <div className="absolute inset-0 rounded-full bg-blue-400 animate-pulse"></div>
-                      </div>
-                    )}
-                    
                     <div className="p-3 pl-7">
                       <div className="flex items-start space-x-3">
                         <div className="flex-shrink-0">
-                          <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                            isUnread ? 'bg-blue-100' : 'bg-gray-100'
-                          }`}>
+                          {/* Netral: selalu abu-abu agar tidak ada highlight biru lain */}
+                          <div className="w-9 h-9 rounded-full flex items-center justify-center transition-colors bg-gray-100">
                             {getNotificationIcon(notification.type)}
                           </div>
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-1">
-                            <h4 
+                            <h4
                               className={`text-sm leading-tight ${
                                 isUnread ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'
                               }`}
-                              style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                              style={{
+                                lineClamp: 2,
+                                WebkitLineClamp: 2,
+                                display: '-webkit-box',
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
                             >
                               {enhancedInfo.title}
                             </h4>
@@ -554,10 +427,16 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                               {formatTimeAgo(notification.createdAt)}
                             </span>
                           </div>
-                          
+
                           <p
                             className="text-xs text-gray-600 leading-relaxed mb-2"
-                            style={{ lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                            style={{
+                              lineClamp: 2,
+                              WebkitLineClamp: 2,
+                              display: '-webkit-box',
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
                           >
                             {enhancedInfo.message}
                           </p>
@@ -568,7 +447,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                                 {enhancedInfo.action}
                               </button>
                             )}
-                            
+
                             {isUnread && (
                               <button
                                 onClick={async (e) => {
@@ -581,7 +460,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
                                     console.error('Error marking notification as read:', error);
                                   }
                                 }}
-                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50:bg-blue-900/20 transition-colors"
+                                className="inline-flex items-center text-xs text-gray-500 hover:text-blue-600 font-medium px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                                 aria-label="Tandai sebagai dibaca"
                               >
                                 <CheckIcon className="w-3 h-3 mr-1" />
@@ -633,7 +512,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
               }}
             />
           )}
-          
+
           {session?.user?.role === 'REVIEWER' && (
             <ReviewerSubmissionDetailModal
               isOpen={isDetailModalOpen}
@@ -644,7 +523,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
               }}
             />
           )}
-          
+
           {(session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'VENDOR') && (
             <SubmissionDetailModal
               submission={selectedSubmission}
@@ -662,7 +541,6 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
             <ReviewerUserVerificationModal
               isOpen={!!selectedVendorUser}
               onClose={() => {
-                console.log('🚪 Closing reviewer user verification modal');
                 setSelectedVendorUser(null);
               }}
               user={selectedVendorUser}
