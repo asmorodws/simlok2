@@ -152,7 +152,7 @@ export default function VendorSubmissionsContent() {
             </p>
           </div>
           <div className="mt-4 sm:mt-0 flex gap-2">
-            <Button 
+            {/* <Button 
               onClick={async () => {
                 try {
                   await forceRefresh();
@@ -165,7 +165,7 @@ export default function VendorSubmissionsContent() {
               disabled={loading}
             >
               {loading ? 'Memuat...' : '🔄 Refresh'}
-            </Button>
+            </Button> */}
             <Link href="/vendor/submissions/create">
               <Button variant="primary" size="md">
                 <PlusIcon className="w-5 h-5 mr-2" />
