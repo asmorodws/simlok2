@@ -355,7 +355,7 @@ export default function EnhancedFileUpload({
                   >
                     {fileName || "file-terunggah"}
                   </div>
-                  <div className="truncate text-xs text-gray-500">{value}</div>
+                  {/* <div className="truncate text-xs text-gray-500">{value}</div> */}
                 </div>
 
                 {/* Overlay hover */}

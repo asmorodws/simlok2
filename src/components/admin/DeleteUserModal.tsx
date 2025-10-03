@@ -13,7 +13,7 @@ interface DeleteUserModalProps {
 }
 
 export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }: DeleteUserModalProps) {
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {

@@ -2,15 +2,48 @@ import { create } from 'zustand';
 
 interface Submission {
   id: string;
-  title: string;
-  status: string;
-  vendor_id: string;
+  job_description: string;
+  work_location: string;
+  approval_status: string;
+  review_status?: string;
+  review_note?: string | null;
+  final_note?: string | null;
+  final_status?: string;
+  reviewed_at?: string | null;
+  approved_at?: string | null;
+  simlok_number?: string | null;
+  simlok_date?: string | null;
   created_at: string;
-  updated_at: string;
-  vendor?: {
-    company_name: string;
+  vendor_name: string;
+  officer_name: string;
+  based_on: string;
+  working_hours: string;
+  implementation?: string | null;
+  work_facilities: string;
+  worker_names: string;
+  content?: string | null;
+  notes?: string | null;
+  simja_number?: string | null;
+  simja_date?: string | null;
+  sika_number?: string | null;
+  sika_date?: string | null;
+  other_notes?: string | null;
+  sika_document_upload?: string | null;
+  simja_document_upload?: string | null;
+  qrcode?: string | null;
+  signer_position?: string | null;
+  signer_name?: string | null;
+  user: {
+    id: string;
+    officer_name: string;
+    email: string;
+    vendor_name: string;
   };
-  [key: string]: any;
+  approved_by_user?: {
+    id: string;
+    officer_name: string;
+    email: string;
+  } | null;
 }
 
 interface SubmissionStore {
@@ -57,10 +90,14 @@ interface SubmissionStore {
   fetchAdminStats: () => Promise<void>;
   fetchLatestSubmissions: () => Promise<void>;
   
-  // CRUD operations
+    // CRUD operations
   updateSubmissionStatus: (id: string, status: string) => Promise<void>;
   deleteSubmission: (id: string) => Promise<void>;
-}
+  
+  // Force refresh
+  forceRefresh: () => Promise<void>;
+};
+
 
 export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   submissions: [],
@@ -158,19 +195,52 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
         ...(params.status && { status: params.status }),
       });
       
-      const response = await fetch(`/api/vendor/submissions?${searchParams}`);
+      // Add cache busting timestamp
+      searchParams.append('_t', Date.now().toString());
+      
+      const url = `/api/vendor/submissions?${searchParams}`;
+      console.log('Store: Fetching vendor submissions from:', url);
+      console.log('Store: Request params:', params);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include', // Include cookies for session
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) {
-        throw new Error('Failed to fetch vendor submissions');
+        console.error('Store: API response not ok:', response.status, response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Store: Error response data:', errorData);
+        
+        if (response.status === 401) {
+          // Session expired or not authenticated
+          console.error('Store: Authentication error - redirecting to login');
+          window.location.href = '/login';
+          return;
+        }
+        
+        throw new Error(`Failed to fetch vendor submissions: ${response.status} - ${errorData.error || response.statusText}`);
       }
       
       const data = await response.json();
+      console.log('Store: API response data:', data);
+      console.log('Store: Submissions count:', data.submissions?.length || 0);
+      console.log('Store: Sample submission data:', data.submissions?.[0]);
+      console.log('Store: Pagination:', data.pagination);
+      
       set({ 
         submissions: data.submissions || [],
         totalPages: data.pagination?.pages || 1,
         filteredTotal: data.pagination?.total || 0,
         loading: false 
       });
+      
+      console.log('Store: State updated successfully');
     } catch (error) {
+      console.error('Store: Error in fetchVendorSubmissions:', error);
       set({ 
         error: error instanceof Error ? error.message : 'Failed to fetch submissions',
         loading: false 
@@ -264,4 +334,18 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
       throw error;
     }
   },
+  
+  forceRefresh: async () => {
+    const { searchTerm, sortField, sortOrder, currentPage } = get();
+    const params = {
+      page: currentPage,
+      limit: 10,
+      sortBy: sortField,
+      sortOrder,
+      ...(searchTerm?.trim() && { search: searchTerm.trim() })
+    };
+    
+    console.log('Store: Force refreshing with params:', params);
+    await get().fetchVendorSubmissions(params);
+  }
 }));

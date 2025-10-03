@@ -23,6 +23,9 @@ export default function LoginPage() {
       password,
     });
 
+
+
+
     if (res?.error) {
       // Convert NextAuth error codes to user-friendly messages
       switch (res.error) {

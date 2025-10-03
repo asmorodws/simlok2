@@ -25,8 +25,11 @@ interface Submission {
   id: string;
   approval_status: string;
   review_status?: string;
-  review_note?: string;
-  final_note?: string;
+  review_note?: string | null;
+  final_note?: string | null;
+  final_status?: string;
+  reviewed_at?: string | null;
+  approved_at?: string | null;
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -43,8 +46,8 @@ interface Submission {
   simlok_number?: string;
   simlok_date?: string | null;
   worker_names: string;
-  content: string;
-  notes?: string;
+  content?: string | null;
+  notes?: string | null;
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;
@@ -57,11 +60,11 @@ interface Submission {
     email: string;
     vendor_name: string;
   };
-  approvedByUser?: {
+  approved_by_user?: {
     id: string;
     officer_name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface SubmissionDetailModalProps {
@@ -104,6 +107,14 @@ export default function SubmissionDetailModal({
   }, [isOpen, onClose]);
 
   if (!isOpen || !submission) return null;
+
+  // Debug logging for development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('SubmissionDetailModal: Received submission data:', submission);
+    console.log('SubmissionDetailModal: Working hours:', submission.working_hours);
+    console.log('SubmissionDetailModal: User data:', submission.user);
+    console.log('SubmissionDetailModal: Approved by user:', submission.approved_by_user);
+  }
 
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
@@ -168,7 +179,6 @@ export default function SubmissionDetailModal({
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 p-6 flex-shrink-0">
             <div className="flex items-center space-x-3">
-
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
                 <p className="text-sm text-gray-500 mt-1">
@@ -451,10 +461,10 @@ export default function SubmissionDetailModal({
                     label="Status"
                     value={getStatusBadge(submission.approval_status)}
                   />
-                  {submission.approvedByUser && (
+                  {submission.approved_by_user && (
                     <InfoCard
                       label="Disetujui oleh"
-                      value={submission.approvedByUser.officer_name}
+                      value={submission.approved_by_user.officer_name}
                     />
                   )}
 

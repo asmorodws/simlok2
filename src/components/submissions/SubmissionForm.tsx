@@ -24,18 +24,21 @@ interface Worker {
   worker_photo: string;
 }
 
-// (helper) ambil nama file dari URL kalau ada
-// function getFilenameFromUrl(url: string) {
-//   try {
-//     const u = new URL(url);
-//     const pathname = u.pathname;
-//     const last = pathname.split('/').filter(Boolean).pop();
-//     return last ?? 'file';
-//   } catch {
-//     const parts = url.split('?')[0]?.split('#')[0]?.split('/');
-//     return parts?.pop() || 'file';
-//   }
-// }
+// ===============================
+// DRAFT PERSISTENCE
+// ===============================
+const STORAGE_KEY = 'simlok:submissionFormDraft.v1';
+const DRAFT_VERSION = 1;
+
+type DraftShape = {
+  v: number;
+  formData: SubmissionData;
+  workers: Worker[];
+  desiredCount: number;
+  workerCountInput: string;
+  showBulk: boolean;
+  bulkNames: string;
+};
 
 // ===============================
 // Component
@@ -92,7 +95,39 @@ export default function SubmissionForm() {
     simja_document_upload: '',
   });
 
-  // Prefill vendor/officer dari session
+  // ===============================
+  // PERSISTENCE: LOAD DRAFT (on mount)
+  // ===============================
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed: DraftShape = JSON.parse(raw);
+      if (!parsed || parsed.v !== DRAFT_VERSION) return;
+
+      // Restore state dari draft
+      setFormData(parsed.formData);
+      setWorkers(parsed.workers?.length ? parsed.workers : [{ id: `${Date.now()}`, worker_name: '', worker_photo: '' }]);
+      setDesiredCount(parsed.desiredCount ?? parsed.workers?.length ?? 1);
+      setWorkerCountInput(parsed.workerCountInput ?? String(parsed.workers?.length ?? 1));
+      setShowBulk(Boolean(parsed.showBulk));
+      setBulkNames(parsed.bulkNames ?? '');
+
+      // Info kecil (opsional)
+      setAlert({
+        variant: 'info',
+        title: 'Draft Dipulihkan',
+        message: 'Data terakhir yang belum tersimpan berhasil dipulihkan.',
+      });
+      setTimeout(() => setAlert(null), 4000);
+    } catch (e) {
+      console.warn('Gagal memulihkan draft:', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Prefill vendor/officer dari session (tidak override draft user jika sudah ada)
   useEffect(() => {
     if (session?.user) {
       setFormData((prev) => ({
@@ -103,21 +138,62 @@ export default function SubmissionForm() {
     }
   }, [session]);
 
-  // Sync awal: 1 baris => input "1", desiredCount = 1
+  // Sync awal: kalau tidak ada draft, set default 1 baris
   useEffect(() => {
+    // Jika workerCountInput sudah berasal dari draft, lewati init
+    if (workerCountInput !== '1' || workers.length !== 1) return;
     const initial = workers.length || 1;
     setDesiredCount(initial);
     setWorkerCountInput(String(initial));
     setFormData((prev) => ({ ...prev, worker_count: initial }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // -------------------------------
-  // Derived
-  // -------------------------------
+  // ===============================
+  // PERSISTENCE: SAVE (debounced)
+  // ===============================
+  const saveTimer = useRef<number | null>(null);
+  const saveDraft = (payload: DraftShape) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Gagal menyimpan draft:', e);
+    }
+  };
 
-  // effectiveDesired = angka yang dipakai UI untuk cek mismatch:
-  // - kalau input kosong, jangan anggap mismatch (pakai panjang workers supaya pesan tidak mengganggu saat user menghapus)
-  // - kalau ada angka valid, pakai desiredCount
+  const scheduleSave = () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    // debounce 500ms
+    saveTimer.current = window.setTimeout(() => {
+      const draft: DraftShape = {
+        v: DRAFT_VERSION,
+        formData,
+        workers,
+        desiredCount,
+        workerCountInput,
+        showBulk,
+        bulkNames,
+      };
+      saveDraft(draft);
+    }, 500) as unknown as number;
+  };
+
+  // Trigger save saat state terkait berubah
+  useEffect(() => {
+    scheduleSave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, []);
+
+  // ===============================
+  // Derived
+  // ===============================
   const effectiveDesired = workerCountInput === '' ? workers.length : desiredCount;
 
   const rowsMismatch = useMemo(
@@ -189,7 +265,6 @@ export default function SubmissionForm() {
     setWorkers((prev) => [...prev, newWorker]);
     setDesiredCount((n) => {
       const next = n + 1;
-      // sinkronkan tampilan input juga
       setWorkerCountInput(String(next));
       return next;
     });
@@ -199,7 +274,6 @@ export default function SubmissionForm() {
   const removeWorker = (id: string) => {
     setWorkers((prev) => {
       const nextArr = prev.filter((w) => w.id !== id);
-      // jaga minimal 1
       const nextLen = Math.max(1, nextArr.length);
       setDesiredCount(nextLen);
       setWorkerCountInput(String(nextLen));
@@ -215,16 +289,13 @@ export default function SubmissionForm() {
     setWorkers((prev) => prev.map((w) => (w.id === id ? { ...w, worker_photo: url } : w)));
   };
 
-  // Sesuaikan jumlah baris dengan angka efektif dari input/user
   const applyDesiredCount = () => {
-    // jika input kosong, anggap tidak ada perubahan (biarkan sama)
     const count =
       workerCountInput === ''
         ? workers.length
         : Math.max(1, Math.min(9999, Number(desiredCount || 1)));
 
     if (count > workers.length) {
-      // tambah baris kosong
       const delta = count - workers.length;
       const toAdd: Worker[] = Array.from({ length: delta }).map(() => ({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -234,11 +305,9 @@ export default function SubmissionForm() {
       setWorkers((prev) => [...prev, ...toAdd]);
       focusLastAdded();
     } else if (count < workers.length) {
-      // kurangi baris dari belakang
       setWorkers((prev) => prev.slice(0, count));
     }
 
-    // pastikan displayed input & desired sinkron ke count final
     setDesiredCount(count);
     setWorkerCountInput(String(count));
   };
@@ -276,7 +345,6 @@ export default function SubmissionForm() {
     setIsLoading(true);
 
     try {
-      // Validasi jumlah min 1
       if (workers.length === 0) {
         setAlert({
           variant: 'error',
@@ -287,7 +355,6 @@ export default function SubmissionForm() {
         return;
       }
 
-      // Jika user sedang mengosongkan input, jangan izinkan submit
       if (workerCountInput === '') {
         setAlert({
           variant: 'warning',
@@ -299,7 +366,6 @@ export default function SubmissionForm() {
         return;
       }
 
-      // Peringatan mismatch jumlah baris vs input worker_count
       if (workers.length !== desiredCount) {
         setAlert({
           variant: 'warning',
@@ -311,7 +377,6 @@ export default function SubmissionForm() {
         return;
       }
 
-      // Validasi isi
       const invalidNames = workers.filter((w) => !w.worker_name.trim()).length;
       const invalidPhotos = workers.filter((w) => !w.worker_photo.trim()).length;
 
@@ -328,12 +393,11 @@ export default function SubmissionForm() {
         return;
       }
 
-      // Format untuk DB
       const workerNames = workers.map((w) => w.worker_name.trim()).join('\n');
 
       const payload: SubmissionData & { workers: Worker[] } = {
         ...formData,
-        worker_count: desiredCount, // kirim angka yang diinput user (valid)
+        worker_count: desiredCount,
         worker_names: workerNames,
         workers,
       };
@@ -348,6 +412,9 @@ export default function SubmissionForm() {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.error || 'Failed to create submission');
       }
+
+      // === PERSISTENCE: Clear draft setelah submit sukses ===
+      localStorage.removeItem(STORAGE_KEY);
 
       showSuccess('Berhasil!', 'Pengajuan SIMLOK berhasil dibuat!');
       router.push('/vendor/submissions');
@@ -375,6 +442,8 @@ export default function SubmissionForm() {
       <Card>
         <div className="p-6">
           <form onSubmit={handleSubmit} className="space-y-8">
+            
+
             {/* ================= Vendor ================= */}
             <div className="p-6 rounded-lg">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">
@@ -587,7 +656,6 @@ export default function SubmissionForm() {
                   <div className="flex-1 min-w-[180px]">
                     <Label htmlFor="worker_count">Jumlah Pekerja</Label>
 
-                    {/* INPUT TEXT: editable, bisa kosong, filter angka */}
                     <input
                       id="worker_count"
                       name="worker_count"
@@ -595,22 +663,15 @@ export default function SubmissionForm() {
                       value={workerCountInput}
                       onChange={(e) => {
                         const inputValue = e.target.value;
-
-                        // Izinkan kosong
                         if (inputValue === '') {
                           setWorkerCountInput('');
-                          // jangan ubah desiredCount; biarkan angka valid terakhir tersimpan
                           return;
                         }
-
-                        // Hanya angka
                         const clean = inputValue.replace(/\D/g, '');
                         if (clean === '') {
                           setWorkerCountInput('');
                           return;
                         }
-
-                        // Batas aman
                         const num = Math.max(1, Math.min(9999, parseInt(clean, 10)));
                         setWorkerCountInput(clean);
                         setDesiredCount(num);
@@ -626,7 +687,6 @@ export default function SubmissionForm() {
                         if (!/[0-9]/.test(e.key)) e.preventDefault();
                       }}
                       onBlur={() => {
-                        // kalau kosong saat blur → set ke panjang workers supaya tidak bikin mismatch permanen
                         if (workerCountInput === '') {
                           const fallback = workers.length || 1;
                           setDesiredCount(fallback);
@@ -658,6 +718,14 @@ export default function SubmissionForm() {
                         Sesuaikan
                       </Button>
                     )}
+                    <Button
+                      type="button"
+                      variant={showBulk ? 'destructive' : 'outline'}
+                      onClick={() => setShowBulk((s) => !s)}
+                      className="whitespace-nowrap"
+                    >
+                      {showBulk ? 'Tutup Tambah Cepat' : 'Tambah Cepat'}
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -693,7 +761,6 @@ export default function SubmissionForm() {
                 <div className="divide-y divide-gray-100">
                   {workers.map((w, idx) => {
                     const ok = !!w.worker_name.trim() && !!w.worker_photo.trim();
-                    // const filename = w.worker_photo ? getFilenameFromUrl(w.worker_photo) : '';
                     return (
                       <div key={w.id} className="grid grid-cols-12 items-center text-sm">
                         <div className="col-span-1 px-3 py-3 text-gray-500">{idx + 1}</div>
@@ -706,6 +773,7 @@ export default function SubmissionForm() {
                             value={w.worker_name}
                             onChange={(e) => updateWorkerName(w.id, e.target.value)}
                             placeholder="Nama lengkap pekerja"
+
                           />
                           <div className="mt-1">{statusPill(ok)}</div>
                         </div>
