@@ -39,6 +39,7 @@ export interface SubmissionRow extends Record<string, unknown> {
   work_location: string;
   work_hours: string;
   approval_status: string;
+  review_status: string;
   simlok_number?: string;
   created_at: string;
 }
@@ -249,10 +250,10 @@ export function SubmissionsTable({
       header: 'Aksi',
       cell: (row) => (
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => onView(row)}>
+          <Button size="sm" variant="info" onClick={() => onView(row)}>
             Lihat
           </Button>
-          {onDelete && (
+          {onDelete && row.approval_status == "PENDING" &&  (
             <Button size="sm" variant="destructive" onClick={() => onDelete(row.id)}>
               Hapus
             </Button>
