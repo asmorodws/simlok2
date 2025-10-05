@@ -14,7 +14,7 @@ import { useSubmissionStore } from "@/store/useSubmissionStore";
 import { useSocket } from "@/components/common/RealtimeUpdates";
 import { useToast } from "@/hooks/useToast";
 
-import SubmissionsTable from "@/components/submissions/SubmissionsTable";
+import { SubmissionsTable } from "@/components/submissions/SubmissionsTable";
 import SubmissionsCardView from "@/components/submissions/SubmissionsCardView";
 
 export default function VendorDashboard() {

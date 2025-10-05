@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -365,8 +365,121 @@ async function main() {
 
   console.log(`   ✓ ${submissionCount} submissions berhasil dibuat`);
 
-  // All submissions remain PENDING for review and final approval
-  console.log("📋 Semua submissions dibuat dengan status PENDING_REVIEW dan PENDING_APPROVAL");
+  // Update some submissions to APPROVED status so we can create QR scans for them
+  console.log("🔄 Mengupdate beberapa submissions menjadi APPROVED untuk testing QR scan...");
+  
+  const reviewerUser = createdUsers['reviewer@example.com'];
+  const approverUser = createdUsers['approver@example.com'];
+  const verifierUser = createdUsers['verifier@example.com'];
+  
+  // Get first 5 submissions to be approved
+  const submissionsToApprove = await prisma.submission.findMany({
+    take: 5,
+    orderBy: { created_at: 'asc' }
+  });
+
+  const approvedSubmissions: any[] = [];
+  
+  for (const submission of submissionsToApprove) {
+    const reviewedAt = new Date(new Date(submission.created_at).getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000); // 0-7 hari setelah created
+    const approvedAt = new Date(reviewedAt.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000); // 0-3 hari setelah reviewed
+    
+    const updatedSubmission = await prisma.submission.update({
+      where: { id: submission.id },
+      data: {
+        review_status: 'MEETS_REQUIREMENTS',
+        final_status: 'APPROVED',
+        approval_status: 'APPROVED',
+        review_note: 'Semua dokumen lengkap dan memenuhi persyaratan keselamatan kerja.',
+        final_note: 'Disetujui untuk pelaksanaan. Pastikan mengikuti protokol keselamatan.',
+        reviewed_by_id: reviewerUser.id,
+        reviewed_at: reviewedAt,
+        approved_by_final_id: approverUser.id,
+        approved_at: approvedAt,
+        simlok_number: `SIMLOK/2024/${String(approvedSubmissions.length + 1).padStart(4, '0')}`,
+        simlok_date: approvedAt,
+        implementation_start_date: new Date(approvedAt.getTime() + 2 * 24 * 60 * 60 * 1000), // 2 hari setelah approval
+        implementation_end_date: new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 hari setelah approval
+        signer_position: 'Manager Operasional',
+        signer_name: 'Dr. Ir. Budi Santoso, M.T.',
+        qrcode: `QR-${submission.id.slice(-8).toUpperCase()}-2024`,
+        content: `Pelaksanaan pekerjaan ${submission.job_description} di lokasi ${submission.work_location}. Berlaku mulai ${new Date(approvedAt.getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')} sampai ${new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}.`,
+        implementation: `Pekerjaan dilaksanakan sesuai jadwal kerja ${submission.working_hours} dengan menggunakan fasilitas ${submission.work_facilities}. Semua pekerja wajib menggunakan APD lengkap dan mengikuti protokol keselamatan kerja.`,
+        other_notes: 'Laporkan progress mingguan kepada supervisor. Hubungi emergency hotline 119 jika terjadi kecelakaan kerja.'
+      }
+    });
+    
+    approvedSubmissions.push(updatedSubmission);
+  }
+
+  console.log(`   ✓ ${approvedSubmissions.length} submissions berhasil diupdate menjadi APPROVED`);
+
+  // Create QR scan data
+  console.log("� Membuat sample QR scans...");
+  
+  const scanLocations = [
+    'Gerbang Utama Plant 1',
+    'Area Produksi Lantai 2',
+    'Gudang Material',
+    'Kantor Site Manager',
+    'Area Parkir Kontraktor',
+    'Pos Keamanan',
+    'Ruang Meeting',
+    'Area Workshop',
+    'Kantin Karyawan',
+    'Toilet Umum'
+  ];
+
+  // const scanNotes = [
+  //   'Scan masuk shift pagi - semua pekerja hadir',
+  //   'Pemeriksaan rutin tengah hari',
+  //   'Scan keluar untuk istirahat makan siang',
+  //   'Kembali dari istirahat - lanjut kerja',
+  //   'Scan akhir shift - pekerjaan selesai',
+  //   'Pemeriksaan keamanan area kerja',
+  //   'Verifikasi peralatan kerja',
+  //   'Scan darurat - pemeriksaan insiden',
+  //   'Scan rutin supervisor',
+  //   'Pemeriksaan akhir hari'
+  // ];
+
+  let qrScanCount = 0;
+  
+  for (const submission of approvedSubmissions) {
+    // Each approved submission gets 3-8 QR scans
+    const numScans = Math.floor(Math.random() * 6) + 3; // 3-8 scans
+    
+    const submissionStartDate = new Date(submission.implementation_start_date || submission.approved_at || submission.created_at);
+    
+    for (let i = 0; i < numScans; i++) {
+      // Create scan dates between implementation start and now
+      const maxDaysFromStart = Math.min(30, Math.floor((Date.now() - submissionStartDate.getTime()) / (24 * 60 * 60 * 1000)));
+      const scanDate = new Date(submissionStartDate.getTime() + Math.random() * maxDaysFromStart * 24 * 60 * 60 * 1000);
+      
+      // Add some time variation during the day (work hours)
+      scanDate.setHours(Math.floor(Math.random() * 10) + 7, Math.floor(Math.random() * 60)); // 07:00 - 16:59
+      
+      const qrScanData = {
+        submission_id: submission.id,
+        scanned_by: verifierUser.id,
+        scanned_at: scanDate,
+        scanner_name: verifierUser.officer_name,
+        scan_location: scanLocations[Math.floor(Math.random() * scanLocations.length)] || null,
+
+      };
+
+      await prisma.qrScan.create({
+        data: qrScanData,
+      });
+      
+      qrScanCount++;
+    }
+  }
+
+  console.log(`   ✓ ${qrScanCount} QR scans berhasil dibuat`);
+
+  // All remaining submissions stay PENDING for review and final approval
+  console.log("📋 Sisa submissions tetap dengan status PENDING_REVIEW dan PENDING_APPROVAL");
   console.log("   ✓ Reviewer dapat melakukan review submissions");
   console.log("   ✓ Approver dapat melakukan final approval setelah review");
   console.log("   ✓ QR codes akan dibuat setelah approval final");
@@ -377,13 +490,17 @@ async function main() {
   console.log("");
   console.log("📊 Ringkasan data yang dibuat:");
   console.log(`   👥 ${Object.keys(createdUsers).length} users (termasuk super admin, reviewer, approver, verifier, vendor)`);
-  console.log(`   📋 ${submissionCount} submissions (semua dengan status PENDING_REVIEW & PENDING_APPROVAL)`);
+  console.log(`   📋 ${submissionCount} submissions total:`);
+  console.log(`      - ${approvedSubmissions.length} submissions APPROVED (dengan QR code)`);
+  console.log(`      - ${submissionCount - approvedSubmissions.length} submissions PENDING (untuk testing review & approval)`);
+  console.log(`   📱 ${qrScanCount} QR scans (untuk submissions yang sudah APPROVED)`);
   console.log("");
   console.log("🎯 Workflow yang dapat ditest:");
-  console.log("   1. Login sebagai Reviewer untuk melakukan review submissions");
-  console.log("   2. Login sebagai Approver untuk melakukan final approval");
-  console.log("   3. Login sebagai Verifier untuk melakukan QR scan (setelah approval)");
+  console.log("   1. Login sebagai Reviewer untuk melakukan review submissions PENDING");
+  console.log("   2. Login sebagai Approver untuk melakukan final approval submissions");
+  console.log("   3. Login sebagai Verifier untuk melakukan QR scan pada submissions APPROVED");
   console.log("   4. Login sebagai Vendor untuk melihat status submissions");
+  console.log("   5. Lihat riwayat QR scan pada submissions yang sudah APPROVED");
   console.log("");
 }
 

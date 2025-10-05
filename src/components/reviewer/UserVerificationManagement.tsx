@@ -6,15 +6,23 @@ import { useToast } from '@/hooks/useToast';
 import ReviewerUserVerificationModal from '@/components/reviewer/ReviewerUserVerificationModal';
 import {
   MagnifyingGlassIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  ChevronUpDownIcon,
   CheckCircleIcon,
   XCircleIcon,
   UserIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import type { UserData } from '@/types/user';
+import UserTable from '@/components/users/UserTable';
+
+// Debounce helper
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 interface Stats {
   totalPending: number;
@@ -31,16 +39,6 @@ interface UserVerificationManagementProps {
 
 type SortField = keyof UserData;
 type SortOrder = 'asc' | 'desc';
-
-// Debounce helper
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debouncedValue;
-}
 
 export default function UserVerificationManagement({
   className = '',
@@ -69,11 +67,11 @@ export default function UserVerificationManagement({
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
 
-  // Sorting
+  // Sorting (disambungkan ke UserTable.onSortChange)
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Modal: gunakan ReviewerUserVerificationModal
+  // Modal
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
 
@@ -139,18 +137,6 @@ export default function UserVerificationManagement({
     }
   }, [loading, isInputFocused]);
 
-  const handleSort = useCallback(
-    (field: SortField) => {
-      if (sortField === field) {
-        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-      } else {
-        setSortField(field);
-        setSortOrder('asc');
-      }
-    },
-    [sortField, sortOrder]
-  );
-
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
     setIsInputFocused(true);
@@ -163,18 +149,6 @@ export default function UserVerificationManagement({
     setSortField('created_at');
     setSortOrder('desc');
   }, []);
-
-  const getSortIcon = useCallback(
-    (field: SortField) => {
-      if (sortField !== field) return <ChevronUpDownIcon className="w-4 h-4 text-gray-400" />;
-      return sortOrder === 'asc' ? (
-        <ChevronUpIcon className="w-4 h-4 text-blue-500" />
-      ) : (
-        <ChevronDownIcon className="w-4 h-4 text-blue-500" />
-      );
-    },
-    [sortField, sortOrder]
-  );
 
   const formatDate = useCallback((dateString: string | Date | null | undefined) => {
     if (!dateString) return 'N/A';
@@ -213,12 +187,11 @@ export default function UserVerificationManagement({
     }
   }, []);
 
-  // === Modal wiring (gunakan ReviewerUserVerificationModal) ===
+  // Modal wiring
   const openModal = (user: UserData) => {
     setSelectedUser(user);
     setShowVerificationModal(true);
   };
-
   const closeModal = () => {
     setShowVerificationModal(false);
     setSelectedUser(null);
@@ -254,132 +227,14 @@ export default function UserVerificationManagement({
     showSuccess('Berhasil', 'Status verifikasi diperbarui');
   };
 
-  const paginationInfo = useMemo(
-    () => ({
-      currentPage,
-      totalPages,
-      total: totalUsersCount,
-      startItem: (currentPage - 1) * limit + 1,
-      endItem: Math.min(currentPage * limit, totalUsersCount),
-    }),
-    [currentPage, totalPages, totalUsersCount, limit]
-  );
-
-  // ==== Render table content ====
-  const tableContent = useMemo(() => {
-    if (error) {
-      return (
-        <div className="text-center py-12">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="text-red-800">{error}</div>
-            <Button onClick={fetchUsers} variant="destructive" size="sm" className="mt-2">
-              Coba Lagi
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    if (users.length === 0 && !loading) {
-      return (
-        <div className="text-center py-12">
-          <div className="text-gray-500">Tidak ada user yang ditemukan</div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  onClick={() => handleSort('officer_name')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Nama Petugas</span>
-                    {getSortIcon('officer_name')}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('email')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Email</span>
-                    {getSortIcon('email')}
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('role')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Role</span>
-                    {getSortIcon('role')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor/Kontak</th>
-                <th
-                  onClick={() => handleSort('created_at')}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Tgl Dibuat</span>
-                    {getSortIcon('created_at')}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-              </tr>
-            </thead>
-
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{user.officer_name}</div>
-                    {user.address && <div className="text-sm text-gray-500 truncate max-w-xs">{user.address}</div>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getRoleBadge(user.role)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{user.vendor_name ?? '-'}</div>
-                    {user.phone_number && <div className="text-sm text-gray-500">{user.phone_number}</div>}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{getVerificationStatus(user)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end">
-                      <Button onClick={() => openModal(user)} variant="info" size="sm" className="px-3 py-1.5 whitespace-nowrap">
-                        Lihat
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {loading && (
-          <div className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-          </div>
-        )}
-      </div>
-    );
-  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus]);
+  // Info paging (untuk teks ringkas bawah)
+  const startItem = useMemo(() => (currentPage - 1) * limit + 1, [currentPage, limit]);
+  const endItem = useMemo(() => Math.min(currentPage * limit, totalUsersCount), [currentPage, limit, totalUsersCount]);
 
   if (loading && users.length === 0) {
     return (
       <div className={`space-y-6 ${className}`}>
+        {/* Skeleton */}
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/4 mb-4" />
           <div className="space-y-3">
@@ -495,65 +350,36 @@ export default function UserVerificationManagement({
         </Button>
       </div>
 
-      {/* Tabel */}
-      <div className="relative">{tableContent}</div>
+      {/* Tabel: gunakan UserTable (adapter ReusableTable) */}
+      <UserTable
+        data={users}
+        sortBy={sortField}
+        sortOrder={sortOrder}
+        onSortChange={(field, order) => {
+          setSortField(field as SortField);
+          setSortOrder(order as SortOrder);
+        }}
+        page={currentPage}
+        pages={totalPages}
+        limit={limit}
+        total={totalUsersCount}
+        onPageChange={(p) => setCurrentPage(p)}
+        formatDate={formatDate}
+        getRoleBadge={getRoleBadge}
+        getVerificationStatus={getVerificationStatus}
+        onOpenVerify={openModal}
+        emptyTitle={error ? 'Gagal memuat data' : 'Tidak ada user yang ditemukan'}
+        emptyDescription={error ? error : 'Coba ubah kata kunci atau filter.'}
+      />
 
-      {/* Pagination */}
+      {/* Info paging (opsional tampilan ringkas) */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Menampilkan {paginationInfo.startItem} - {paginationInfo.endItem} dari {paginationInfo.total} user
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Sebelumnya
-            </button>
-
-            <div className="flex items-center space-x-1">
-              {[...Array(totalPages)].map((_, i) => {
-                const page = i + 1;
-                if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-2 border text-sm font-medium rounded-md ${
-                        currentPage === page
-                          ? 'bg-blue-500 border-blue-500 text-white'
-                          : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                } else if (page === currentPage - 2 || page === currentPage + 2) {
-                  return (
-                    <span key={page} className="text-gray-500">
-                      …
-                    </span>
-                  );
-                }
-                return null;
-              })}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Selanjutnya
-            </button>
-          </div>
+        <div className="text-sm text-gray-700">
+          Menampilkan {startItem} - {endItem} dari {totalUsersCount} user
         </div>
       )}
 
-      {/* Modal verifikasi — pakai komponenmu */}
+      {/* Modal verifikasi — komponenmu */}
       <ReviewerUserVerificationModal
         user={selectedUser}
         isOpen={showVerificationModal}

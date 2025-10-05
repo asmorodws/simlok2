@@ -196,7 +196,7 @@ model QrScan {
   scanned_by    String
   scanned_at    DateTime   @default(now())
   scanner_name  String?
-  notes         String?
+  // notes         String?
   scan_location String?
   user          User       @relation("QrScannedBy", fields: [scanned_by], references: [id], onDelete: Cascade)
   submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)

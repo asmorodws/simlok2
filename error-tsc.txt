@@ -1,0 +1,28 @@
+src/components/dashboard/VendorDashboard.tsx(138,11): error TS2322: Type '{ submissions: { id: any; job_description: any; officer_name: any; work_location: any; work_hours: any; approval_status: any; simlok_number: any; created_at: any; }[]; loading: boolean; onView: (submissionRow: any) => void; onDelete: (id: string) => Promise<...>; formatDate: (date: string) => string; }' is not assignable to type 'IntrinsicAttributes & ReusableTableProps<Record<string, unknown>>'.
+  Property 'submissions' does not exist on type 'IntrinsicAttributes & ReusableTableProps<Record<string, unknown>>'.
+src/components/reviewer/ReviewerDashboard.tsx(10,37): error TS6133: 'ClockIcon' is declared but its value is never read.
+src/components/reviewer/ReviewerDashboard.tsx(10,48): error TS6133: 'CheckCircleIcon' is declared but its value is never read.
+src/components/reviewer/ReviewerDashboard.tsx(10,65): error TS6133: 'ExclamationTriangleIcon' is declared but its value is never read.
+src/components/reviewer/ReviewerDashboard.tsx(24,10): error TS6133: 'stats' is declared but its value is never read.
+src/components/reviewer/ReviewerSubmissionsManagement.tsx(25,58): error TS2503: Cannot find namespace 'JSX'.
+src/components/reviewer/ReviewerSubmissionsManagement.tsx(27,10): error TS6133: 'loading' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(6,20): error TS6133: 'ClipboardDocumentListIcon' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(45,3): error TS6133: 'data' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(46,3): error TS6133: 'sortBy' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(47,3): error TS6133: 'sortOrder' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(48,3): error TS6133: 'onSortChange' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(49,3): error TS6133: 'pagination' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(54,9): error TS6133: 'columns' is declared but its value is never read.
+src/components/reviewer/ReviewerTable.tsx(54,25): error TS2344: Type 'ReviewerSubmission' does not satisfy the constraint 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'ReviewerSubmission'.
+src/components/reviewer/ReviewerTable.tsx(55,24): error TS2344: Type 'ReviewerSubmission' does not satisfy the constraint 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'ReviewerSubmission'.
+src/components/reviewer/ReviewerTable.tsx(118,12): error TS2375: Type '{ approved: boolean; scanCount: number; lastScannedAt: string | null | undefined; }' is not assignable to type '{ approved: boolean; scanCount: number; lastScannedAt?: string | null; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'lastScannedAt' are incompatible.
+    Type 'string | null | undefined' is not assignable to type 'string | null'.
+      Type 'undefined' is not assignable to type 'string | null'.
+src/components/reviewer/ReviewerTable.tsx(153,20): error TS2344: Type 'ReviewerSubmission' does not satisfy the constraint 'Record<string, unknown>'.
+  Index signature for type 'string' is missing in type 'ReviewerSubmission'.
+src/components/submissions/SubmissionsCardView.tsx(7,15): error TS2614: Module '"./SubmissionsTable"' has no exported member 'SubmissionRow'. Did you mean to use 'import SubmissionRow from "./SubmissionsTable"' instead?
+src/components/vendor/VendorSubmissionsContent.tsx(353,13): error TS2322: Type '{ submissions: { id: any; job_description: any; officer_name: any; work_location: any; work_hours: any; approval_status: any; simlok_number: any; created_at: any; }[]; loading: false; onView: (submissionRow: any) => void; onDelete: (id: string) => Promise<...>; formatDate: (date: string) => string; }' is not assignable to type 'IntrinsicAttributes & ReusableTableProps<Record<string, unknown>>'.
+  Property 'submissions' does not exist on type 'IntrinsicAttributes & ReusableTableProps<Record<string, unknown>>'.

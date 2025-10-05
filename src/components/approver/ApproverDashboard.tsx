@@ -2,61 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  EyeIcon,
   ClipboardDocumentListIcon,
   CheckCircleIcon,
   ChartBarIcon,
-  ClockIcon
-} from "@heroicons/react/24/outline";
+  ClockIcon,
+} from '@heroicons/react/24/outline';
 
-import Button from '@/components/ui/button/Button';
 import Alert from '@/components/ui/alert/Alert';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import StatsCardsLoader from '@/components/ui/StatsCardsLoader';
 import TableLoader from '@/components/ui/TableLoader';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import Link from 'next/link';
-
-interface Submission {
-  id: string;
-  approval_status: string;
-  review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
-  vendor_name: string;
-  based_on: string;
-  officer_name: string;
-  job_description: string;
-  work_location: string;
-  implementation: string | null;
-  working_hours: string;
-  other_notes?: string;
-  work_facilities: string;
-  simja_number?: string;
-  simja_date?: string | null;
-  sika_number?: string;
-  sika_date?: string | null;
-  simlok_number?: string;
-  simlok_date?: string | null;
-  worker_names: string;
-  content: string;
-  notes?: string;
-  review_note?: string;
-  final_note?: string;
-  sika_document_upload?: string;
-  simja_document_upload?: string;
-  qrcode?: string;
-  created_at: string;
-  updated_at?: string;
-  reviewed_at?: string | null;
-  approved_at?: string | null;
-  reviewed_by?: string | null;
-  approved_by?: string | null;
-  workers: Array<{
-    id: string;
-    worker_name: string;
-    worker_photo: string | null;
-  }>;
-}
+import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
 
 interface DashboardStats {
   total: number;
@@ -67,7 +25,7 @@ interface DashboardStats {
 }
 
 export default function ApproverDashboard() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [submissions, setSubmissions] = useState<ApproverSubmission[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     pending_approval_meets: 0,
@@ -83,16 +41,22 @@ export default function ApproverDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Fetch stats dan 10 submission terakhir untuk dashboard
-      const response = await fetch('/api/approver/simloks?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc');
-      if (!response.ok) {
-        throw new Error('Gagal mengambil data dashboard');
-      }
-      
+      const response = await fetch(
+        '/api/approver/simloks?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc'
+      );
+      if (!response.ok) throw new Error('Gagal mengambil data dashboard');
+
       const data = await response.json();
-      setSubmissions(data.submissions);
-      setStats(data.statistics);
+      setSubmissions((data.submissions ?? []) as ApproverSubmission[]);
+      setStats(
+        data.statistics ?? {
+          total: 0,
+          pending_approval_meets: 0,
+          pending_approval_not_meets: 0,
+          approved: 0,
+          rejected: 0,
+        }
+      );
       setError(null);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -108,37 +72,29 @@ export default function ApproverDashboard() {
 
   // Socket untuk real-time updates
   const socket = useSocket();
-  
   useEffect(() => {
     if (!socket) return;
 
-    // Join approver room
     socket.emit('join', { role: 'APPROVER' });
 
     const handleNotificationNew = (notification: any) => {
-      console.log('New notification received for approver:', notification);
-      if (notification.type === 'reviewed_submission_approval') {
+      if (notification?.type === 'reviewed_submission_approval') {
         fetchDashboardData();
       }
     };
 
     const handleStatsUpdate = (statsUpdate: any) => {
-      console.log('Stats update received for approver:', statsUpdate);
-      if (statsUpdate.scope === 'approver') {
+      if (statsUpdate?.scope === 'approver') {
         fetchDashboardData();
       }
     };
 
     const handleSubmissionReviewed = () => {
-      console.log('Submission reviewed - updating approver dashboard');
       fetchDashboardData();
     };
 
-    // Listen for new notifications (including reviewed submissions)
     socket.on('notification:new', handleNotificationNew);
-    // Listen for stats updates
     socket.on('stats:update', handleStatsUpdate);
-    // Listen for specific submission review events
     socket.on('submission:reviewed', handleSubmissionReviewed);
 
     return () => {
@@ -163,40 +119,12 @@ export default function ApproverDashboard() {
     handleCloseModal();
   };
 
-  const getStatusBadge = (status: string, type: 'review' | 'final') => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    
-    if (type === 'review') {
-      switch (status) {
-        case 'PENDING_REVIEW':
-          return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Menunggu Review</span>;
-        case 'MEETS_REQUIREMENTS':
-          return <span className={`${baseClasses} bg-green-100 text-green-800`}>Memenuhi Syarat</span>;
-        case 'NOT_MEETS_REQUIREMENTS':
-          return <span className={`${baseClasses} bg-red-100 text-red-800`}>Tidak Memenuhi Syarat</span>;
-        default:
-          return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>;
-      }
-    } else {
-      switch (status) {
-        case 'PENDING_APPROVAL':
-          return <span className={`${baseClasses} bg-amber-100 text-amber-800`}>Menunggu Persetujuan</span>;
-        case 'APPROVED':
-          return <span className={`${baseClasses} bg-green-100 text-green-800`}>Disetujui</span>;
-        case 'REJECTED':
-          return <span className={`${baseClasses} bg-red-100 text-red-800`}>Ditolak</span>;
-        default:
-          return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>;
-      }
-    }
-  };
-
   if (loading) {
     return (
       <div className="space-y-6">
         <StatsCardsLoader count={4} />
         <div className="bg-white shadow rounded-lg overflow-hidden">
-          <TableLoader rows={5} columns={4} />
+          <TableLoader rows={5} columns={6} />
         </div>
       </div>
     );
@@ -205,11 +133,9 @@ export default function ApproverDashboard() {
   return (
     <div className="space-y-6">
       {/* Error Alert */}
-      {error && (
-        <Alert variant="error" title="Error" message={error} className="mb-6" />
-      )}
+      {error && <Alert variant="error" title="Error" message={error} className="mb-6" />}
 
-      {/* Statistics Cards - Dashboard Design */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between">
@@ -222,7 +148,7 @@ export default function ApproverDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -236,7 +162,7 @@ export default function ApproverDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -248,7 +174,7 @@ export default function ApproverDashboard() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-xl border shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -262,7 +188,7 @@ export default function ApproverDashboard() {
         </div>
       </div>
 
-      {/* Recent Submissions */}
+      {/* Recent Submissions (tabel reusable, tampilan seragam dgn Reviewer) */}
       <div className="bg-white rounded-xl border shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between">
@@ -270,7 +196,7 @@ export default function ApproverDashboard() {
               <h2 className="text-lg font-semibold text-gray-900">Pengajuan Terbaru</h2>
               <p className="text-sm text-gray-500 mt-1">10 pengajuan terakhir untuk persetujuan</p>
             </div>
-            <Link 
+            <Link
               href="/approver/submissions"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
             >
@@ -278,83 +204,15 @@ export default function ApproverDashboard() {
             </Link>
           </div>
         </div>
-        
-        {submissions.length === 0 ? (
-          <div className="text-center py-12">
-            <ClipboardDocumentListIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ada pengajuan</h3>
-            <p className="mt-1 text-sm text-gray-500">Belum ada pengajuan yang perlu disetujui</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Vendor
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deskripsi Pekerjaan
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status Review
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status Persetujuan
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tanggal
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {submissions.map((submission) => (
-                  <tr key={submission.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {submission.vendor_name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {submission.officer_name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {submission.job_description}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {submission.work_location}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(submission.review_status, 'review')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(submission.final_status, 'final')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(submission.created_at).toLocaleDateString('id-ID')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Button
-                        onClick={() => handleViewDetail(submission.id)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <EyeIcon className="h-4 w-4 mr-1" />
-                        Detail
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+
+        <ApproverTable
+          data={submissions}
+          sortBy="created_at"
+          sortOrder="desc"
+          onOpenDetail={handleViewDetail}
+          emptyTitle="Tidak ada pengajuan"
+          emptyDescription="Belum ada pengajuan yang perlu disetujui"
+        />
       </div>
 
       {/* Modal */}

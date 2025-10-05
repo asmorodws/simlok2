@@ -6,7 +6,7 @@ import { MagnifyingGlassIcon, FunnelIcon, DocumentTextIcon, PlusIcon } from "@he
 import Link from "next/link";
 import { useSubmissionStore } from "@/store/useSubmissionStore";
 import { useToast } from "@/hooks/useToast";
-import SubmissionsTable from "@/components/submissions/SubmissionsTable";
+import { SubmissionsTable } from "@/components/submissions/SubmissionsTable";
 import SubmissionsCardView from "@/components/submissions/SubmissionsCardView";
 import SubmissionDetailModal from "./SubmissionDetailModal";
 import ConfirmModal from "../ui/modal/ConfirmModal";

@@ -8,7 +8,7 @@ import Button from '@/components/ui/button/Button';
 
 export type SortOrder = 'asc' | 'desc';
 
-export interface Column<T extends Record<string, unknown>> {
+export interface Column<T extends object> {
   key: string;
   header: ReactNode | string;
   cell: (row: T) => ReactNode;
@@ -32,18 +32,7 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-export interface SubmissionRow extends Record<string, unknown> {
-  id: string;
-  job_description: string;
-  officer_name: string;
-  work_location: string;
-  work_hours: string;
-  approval_status: string;
-  simlok_number?: string;
-  created_at: string;
-}
-
-interface ReusableTableProps<T extends Record<string, unknown>> {
+export interface ReusableTableProps<T extends object> {
   columns: Column<T>[];
   data: T[];
   sortBy?: string;
@@ -55,7 +44,7 @@ interface ReusableTableProps<T extends Record<string, unknown>> {
   rowKey?: (row: T, index: number) => string;
 }
 
-export default function ReusableTable<T extends Record<string, unknown>>({
+export default function ReusableTable<T extends object>({
   columns,
   data,
   sortBy,
@@ -85,7 +74,9 @@ export default function ReusableTable<T extends Record<string, unknown>>({
       {data.length === 0 ? (
         <div className="text-center py-16">
           {empty?.icon}
-          <h3 className="text-lg font-medium text-gray-900 mb-2">{empty?.title ?? 'Tidak ada data'}</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {empty?.title ?? 'Tidak ada data'}
+          </h3>
           {empty?.description && (
             <p className="text-gray-500 max-w-md mx-auto">{empty.description}</p>
           )}
@@ -190,94 +181,5 @@ export default function ReusableTable<T extends Record<string, unknown>>({
         </>
       )}
     </div>
-  );
-}
-
-// SubmissionsTable component that wraps ReusableTable for submissions
-interface SubmissionsTableProps {
-  submissions: SubmissionRow[];
-  loading: boolean;
-  onView: (submission: SubmissionRow) => void;
-  onDelete?: (id: string) => void;
-  formatDate?: (date: string) => string;
-}
-
-export function SubmissionsTable({
-  submissions,
-  loading,
-  onView,
-  onDelete,
-  formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID')
-}: SubmissionsTableProps) {
-  const columns: Column<SubmissionRow>[] = [
-    {
-      key: 'job_description',
-      header: 'Deskripsi Pekerjaan',
-      cell: (row) => <span className="font-medium">{row.job_description}</span>,
-      sortable: true,
-    },
-    {
-      key: 'work_location',
-      header: 'Lokasi Kerja',
-      cell: (row) => <span>{row.work_location}</span>,
-      sortable: true,
-    },
-    {
-      key: 'approval_status',
-      header: 'Status',
-      cell: (row) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          row.approval_status === 'APPROVED' 
-            ? 'bg-green-100 text-green-800'
-            : row.approval_status === 'REJECTED'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {row.approval_status}
-        </span>
-      ),
-      sortable: true,
-    },
-    {
-      key: 'created_at',
-      header: 'Tanggal Dibuat',
-      cell: (row) => <span>{formatDate(row.created_at)}</span>,
-      sortable: true,
-    },
-    {
-      key: 'actions',
-      header: 'Aksi',
-      cell: (row) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => onView(row)}>
-            Lihat
-          </Button>
-          {onDelete && (
-            <Button size="sm" variant="destructive" onClick={() => onDelete(row.id)}>
-              Hapus
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ];
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  return (
-    <ReusableTable
-      columns={columns}
-      data={submissions}
-      empty={{
-        title: 'Tidak ada pengajuan',
-        description: 'Belum ada pengajuan yang dibuat'
-      }}
-    />
   );
 }

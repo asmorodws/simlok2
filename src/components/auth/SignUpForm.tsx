@@ -80,7 +80,7 @@ const SignUpForm: FC<Props> = ({
             SIMLOK
           </h1>
           <p className="text-xl text-white font-light tracking-wide leading-relaxed">
-            Sistem Informasi Manajemen Lokasi Kerja Pertamina
+            Surat Izin Masuk Lokasi
           </p>
         </div>
       </div>

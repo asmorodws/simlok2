@@ -3,23 +3,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   MagnifyingGlassIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  ChevronUpDownIcon,
-  EyeIcon,
   XMarkIcon,
   ClipboardDocumentListIcon,
   CheckCircleIcon,
   UserGroupIcon,
   DocumentCheckIcon,
-  UserIcon,
-} from "@heroicons/react/24/outline";
+} from '@heroicons/react/24/outline';
 
 import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
 import Alert from '@/components/ui/alert/Alert';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
+import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
 
 interface Submission {
   id: string;
@@ -88,27 +83,30 @@ interface SubmissionsResponse {
 }
 
 // Empty State Component
-function EmptyState({ hasFilters, onClearFilters }: { hasFilters: boolean; onClearFilters: () => void }) {
+function EmptyState({
+  hasFilters,
+  onClearFilters,
+}: {
+  hasFilters: boolean;
+  onClearFilters: () => void;
+}) {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-12 text-center">
         <div className="mx-auto h-24 w-24 text-gray-300 mb-6">
           <DocumentCheckIcon className="h-full w-full" />
         </div>
-        
+
         {hasFilters ? (
           <>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Tidak ada data yang sesuai dengan filter
             </h3>
             <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              Tidak ditemukan pengajuan yang sesuai dengan kriteria pencarian atau filter yang Anda terapkan.
+              Tidak ditemukan pengajuan yang sesuai dengan kriteria pencarian atau filter yang Anda
+              terapkan.
             </p>
-            <Button
-              onClick={onClearFilters}
-              variant="outline"
-              className="mx-auto"
-            >
+            <Button onClick={onClearFilters} variant="outline" className="mx-auto">
               <XMarkIcon className="h-4 w-4 mr-2" />
               Hapus Filter
             </Button>
@@ -119,7 +117,8 @@ function EmptyState({ hasFilters, onClearFilters }: { hasFilters: boolean; onCle
               Belum ada pengajuan untuk disetujui
             </h3>
             <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              Saat ini belum ada pengajuan Simlok yang telah direview dan memerlukan persetujuan final dari Anda.
+              Saat ini belum ada pengajuan Simlok yang telah direview dan memerlukan persetujuan
+              final dari Anda.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
               <div className="bg-blue-50 p-4 rounded-lg text-center">
@@ -145,31 +144,31 @@ function EmptyState({ hasFilters, onClearFilters }: { hasFilters: boolean; onCle
   );
 }
 
-// Loading State Component  
+// Loading State Component
 function LoadingState() {
   return (
     <div className="space-y-6">
       {/* Loading Filters */}
       <div className="bg-white p-6 rounded-lg shadow animate-pulse">
         <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 h-10 bg-gray-200 rounded"></div>
-          <div className="sm:w-48 h-10 bg-gray-200 rounded"></div>
+          <div className="flex-1 h-10 bg-gray-200 rounded" />
+          <div className="sm:w-48 h-10 bg-gray-200 rounded" />
         </div>
       </div>
-      
+
       {/* Loading Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="p-6">
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center space-x-4">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                <div className="h-4 bg-gray-200 rounded w-48"></div>
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-8 bg-gray-200 rounded w-16"></div>
+                <div className="h-4 bg-gray-200 rounded w-24" />
+                <div className="h-4 bg-gray-200 rounded w-32" />
+                <div className="h-4 bg-gray-200 rounded w-48" />
+                <div className="h-4 bg-gray-200 rounded w-20" />
+                <div className="h-4 bg-gray-200 rounded w-20" />
+                <div className="h-4 bg-gray-200 rounded w-24" />
+                <div className="h-8 bg-gray-200 rounded w-16" />
               </div>
             ))}
           </div>
@@ -180,18 +179,20 @@ function LoadingState() {
 }
 
 export default function ApproverSubmissionsManagement() {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [submissions, setSubmissions] = useState<ApproverSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+
+  // Modal state (pakai ID agar selaras dengan ApproverTable)
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  
-  // Filters and pagination
+
+  // Filters & sorting & pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('');
   const [finalStatusFilter, setFinalStatusFilter] = useState<string>('');
-  const [sortBy, setSortBy] = useState('reviewed_at');
+  const [sortBy, setSortBy] = useState<string>('reviewed_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [pagination, setPagination] = useState({
@@ -218,14 +219,14 @@ export default function ApproverSubmissionsManagement() {
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
-      const response = await fetch(`/api/approver/simloks?${params}`);
-      if (!response.ok) {
-        throw new Error('Gagal mengambil data pengajuan');
-      }
+      const response = await fetch(`/api/approver/simloks?${params.toString()}`);
+      if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
 
       const data: SubmissionsResponse = await response.json();
-      setSubmissions(data.submissions);
+      // Kita tidak menggunakan field worker_list di tabel, jadi cast aman:
+      setSubmissions((data.submissions as unknown) as ApproverSubmission[]);
       setPagination(data.pagination);
+      setError(null);
     } catch (err) {
       console.error('Error fetching submissions:', err);
       setError('Gagal memuat data pengajuan');
@@ -242,11 +243,9 @@ export default function ApproverSubmissionsManagement() {
   useEffect(() => {
     if (!socket) return;
 
-    // Join approver room
     socket.emit('join', { role: 'APPROVER' });
 
     const handleSubmissionUpdate = () => {
-      console.log('Submission update received, refreshing approver submissions');
       fetchSubmissions();
     };
 
@@ -261,51 +260,7 @@ export default function ApproverSubmissionsManagement() {
     };
   }, [socket, fetchSubmissions]);
 
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-    setCurrentPage(1);
-  };
 
-  const getSortIcon = (field: string) => {
-    if (sortBy !== field) return <ChevronUpDownIcon className="h-4 w-4" />;
-    return sortOrder === 'asc' 
-      ? <ChevronUpIcon className="h-4 w-4" />
-      : <ChevronDownIcon className="h-4 w-4" />;
-  };
-
-  const getReviewStatusBadge = (status: string) => {
-    switch (status) {
-      case 'MEETS_REQUIREMENTS':
-        return <Badge variant="success">Memenuhi Syarat</Badge>;
-      case 'NOT_MEETS_REQUIREMENTS':
-        return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
-      default:
-        return <Badge variant="default">{status}</Badge>;
-    }
-  };
-
-  const getFinalStatusBadge = (status: string) => {
-    switch (status) {
-      case 'PENDING_APPROVAL':
-        return <Badge variant="warning">Menunggu Persetujuan</Badge>;
-      case 'APPROVED':
-        return <Badge variant="success">Disetujui</Badge>;
-      case 'REJECTED':
-        return <Badge variant="destructive">Ditolak</Badge>;
-      default:
-        return <Badge variant="default">{status}</Badge>;
-    }
-  };
-
-  const handleViewDetails = (submission: Submission) => {
-    setSelectedSubmission(submission);
-    setShowDetailModal(true);
-  };
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -316,14 +271,15 @@ export default function ApproverSubmissionsManagement() {
 
   const handleCloseModal = () => {
     setShowDetailModal(false);
-    setSelectedSubmission(null);
+    setSelectedSubmissionId(null);
   };
 
   const handleApprovalSubmitted = () => {
     fetchSubmissions(); // Refresh data after approval
+    handleCloseModal();
   };
 
-  const hasFilters = searchTerm || reviewStatusFilter || finalStatusFilter;
+  const hasFilters = Boolean(searchTerm || reviewStatusFilter || finalStatusFilter);
 
   if (loading && submissions.length === 0) {
     return <LoadingState />;
@@ -398,214 +354,45 @@ export default function ApproverSubmissionsManagement() {
         </div>
       </div>
 
-      {error && (
-        <Alert variant="error" title="Error" message={error} />
-      )}
+      {error && <Alert variant="error" title="Error" message={error} />}
 
-      {/* Show empty state if no submissions */}
+      {/* Empty vs Table */}
       {!loading && submissions.length === 0 ? (
-        <EmptyState hasFilters={hasFilters ? true : false} onClearFilters={clearFilters} />
+        <EmptyState hasFilters={hasFilters} onClearFilters={clearFilters} />
       ) : (
-        <div>
-          {/* Submissions Table - Unified Design */}
-          <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleSort('reviewed_at')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Tanggal Review</span>
-                    {getSortIcon('reviewed_at')}
-                  </div>
-                </th>
-                <th 
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                  onClick={() => handleSort('vendor_name')}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Vendor & PJ</span>
-                    {getSortIcon('vendor_name')}
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Pekerjaan & Lokasi
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status Review
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status Final
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reviewer
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {submissions.map((submission) => (
-                <tr key={submission.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {submission.reviewed_at 
-                        ? new Date(submission.reviewed_at).toLocaleDateString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric'
-                          })
-                        : '-'
-                      }
-                    </div>
-                    {submission.reviewed_at && (
-                      <div className="text-xs text-gray-500">
-                        {new Date(submission.reviewed_at).toLocaleTimeString('id-ID', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="max-w-44">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={submission.vendor_name}>
-                        {submission.vendor_name}
-                      </div>
-                      <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
-                        <UserIcon className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate" title={submission.officer_name}>{submission.officer_name}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="max-w-52">
-                      <div className="text-sm font-medium text-gray-900 truncate" title={submission.job_description}>
-                        {submission.job_description}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1 truncate" title={submission.work_location}>
-                         {submission.work_location}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {getReviewStatusBadge(submission.review_status)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {getFinalStatusBadge(submission.final_status)}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 max-w-28">
-                      <span className="truncate block" title={submission.reviewed_by_user?.officer_name || '-'}>
-                        {submission.reviewed_by_user?.officer_name || '-'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                    <Button
-                      onClick={() => handleViewDetails(submission)}
-                      size="sm"
-                      variant={submission.final_status === 'PENDING_APPROVAL' ? 'primary' : 'outline'}
-                      className="inline-flex items-center"
-                    >
-                      <EyeIcon className="h-4 w-4 mr-1" />
-                      {submission.final_status === 'PENDING_APPROVAL' ? 'Setujui' : 'Lihat'}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>        {/* Enhanced Pagination */}
-        {pagination.pages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <Button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                variant="outline"
-                size="sm"
-              >
-                Sebelumnya
-              </Button>
-              <Button
-                onClick={() => setCurrentPage(Math.min(pagination.pages, currentPage + 1))}
-                disabled={currentPage === pagination.pages}
-                variant="outline"
-                size="sm"
-              >
-                Selanjutnya
-              </Button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Menampilkan{' '}
-                  <span className="font-medium">
-                    {(currentPage - 1) * pagination.limit + 1}
-                  </span>{' '}
-                  sampai{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * pagination.limit, pagination.total)}
-                  </span>{' '}
-                  dari{' '}
-                  <span className="font-medium">{pagination.total}</span> pengajuan
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <Button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-r-none"
-                  >
-                    Sebelumnya
-                  </Button>
-                  
-                  {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        variant={currentPage === pageNum ? "primary" : "outline"}
-                        size="sm"
-                        className="rounded-none"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                  
-                  <Button
-                    onClick={() => setCurrentPage(Math.min(pagination.pages, currentPage + 1))}
-                    disabled={currentPage === pagination.pages}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-l-none"
-                  >
-                    Selanjutnya
-                  </Button>
-                </nav>
-              </div>
-            </div>
-          </div>
-        )}
-        </div>
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+          {/* TABEL REUSABLE: sama seperti reviewer */}
+          <ApproverTable
+            data={submissions}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={(field, order) => {
+              setSortBy(String(field));
+              setSortOrder(order);
+              setCurrentPage(1);
+            }}
+            page={pagination.page}
+            pages={pagination.pages}
+            limit={pagination.limit}
+            total={pagination.total}
+            onPageChange={(p) => setCurrentPage(p)}
+            onOpenDetail={(id) => {
+              setSelectedSubmissionId(id);
+              setShowDetailModal(true);
+            }}
+            emptyTitle={hasFilters ? 'Tidak ada data sesuai filter' : 'Tidak ada pengajuan'}
+            emptyDescription={
+              hasFilters ? 'Coba hapus atau ubah filter pencarian.' : 'Belum ada pengajuan yang perlu disetujui.'
+            }
+          />
         </div>
       )}
 
-      {/* New Detail Modal */}
+      {/* Detail Modal */}
       <ApproverSubmissionDetailModal
         isOpen={showDetailModal}
         onClose={handleCloseModal}
-        submissionId={selectedSubmission?.id || ''}
+        submissionId={selectedSubmissionId ?? ''}
         onApprovalSubmitted={handleApprovalSubmitted}
       />
     </div>
