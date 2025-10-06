@@ -283,12 +283,17 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
   const handleSubmitApproval = async () => {
     if (!approvalData.approval_status) {
-      showError('Error', 'Pilih status persetujuan terlebih dahulu');
+      showError('Status Persetujuan Belum Dipilih', 'Silakan pilih status persetujuan terlebih dahulu sebelum mengirim.');
       return;
     }
 
     if (approvalData.approval_status === 'APPROVED' && !approvalData.simlok_number.trim()) {
-      showError('Error', 'Nomor SIMLOK wajib diisi untuk approval');
+      showError('Nomor SIMLOK Belum Diisi', 'Nomor SIMLOK wajib diisi untuk menyetujui pengajuan.');
+      return;
+    }
+
+    if (approvalData.approval_status === 'APPROVED' && !approvalData.simlok_date.trim()) {
+      showError('Tanggal SIMLOK Belum Diisi', 'Tanggal SIMLOK wajib diisi untuk menyetujui pengajuan.');
       return;
     }
 

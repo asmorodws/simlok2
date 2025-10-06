@@ -543,17 +543,37 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   // Handle review submission
   const handleSubmitReview = useCallback(async () => {
     if (!reviewData.review_status) {
-      showError('Error', 'Pilih status review terlebih dahulu');
+      showError('Status Review Belum Dipilih', 'Silakan pilih status review terlebih dahulu sebelum mengirim.');
       return;
     }
 
     if (!reviewData.review_note.trim()) {
-      showError('Error', 'Catatan review wajib diisi');
+      showError('Catatan Review Belum Diisi', 'Catatan untuk approver wajib diisi sebelum mengirim review.');
       return;
     }
 
     if (!reviewData.final_note.trim()) {
-      showError('Error', 'Catatan untuk vendor wajib diisi');
+      showError('Catatan Vendor Belum Diisi', 'Catatan untuk vendor wajib diisi sebelum mengirim review.');
+      return;
+    }
+
+    // Validasi tanggal implementasi wajib
+    if (!implementationDatesHook.dates.startDate || !implementationDatesHook.dates.startDate.trim()) {
+      showError('Tanggal Mulai Belum Diisi', 'Tanggal mulai pelaksanaan wajib diisi sebelum mengirim review.');
+      return;
+    }
+
+    if (!implementationDatesHook.dates.endDate || !implementationDatesHook.dates.endDate.trim()) {
+      showError('Tanggal Selesai Belum Diisi', 'Tanggal selesai pelaksanaan wajib diisi sebelum mengirim review.');
+      return;
+    }
+
+    // Validasi bahwa tanggal selesai tidak boleh lebih awal dari tanggal mulai
+    const startDate = new Date(implementationDatesHook.dates.startDate);
+    const endDate = new Date(implementationDatesHook.dates.endDate);
+    
+    if (endDate < startDate) {
+      showError('Tanggal Tidak Valid', 'Tanggal selesai pelaksanaan tidak boleh lebih awal dari tanggal mulai.');
       return;
     }
 

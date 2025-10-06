@@ -8,7 +8,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 
-import Alert from '@/components/ui/alert/Alert';
+import { useToast } from '@/hooks/useToast';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import StatsCardsLoader from '@/components/ui/StatsCardsLoader';
 import TableLoader from '@/components/ui/TableLoader';
@@ -34,7 +34,7 @@ export default function ApproverDashboard() {
     rejected: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -57,10 +57,9 @@ export default function ApproverDashboard() {
           rejected: 0,
         }
       );
-      setError(null);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError('Gagal memuat data dashboard');
+      showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
     } finally {
       setLoading(false);
     }
@@ -132,9 +131,6 @@ export default function ApproverDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Error Alert */}
-      {error && <Alert variant="error" title="Error" message={error} className="mb-6" />}
-
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border shadow-sm p-6">

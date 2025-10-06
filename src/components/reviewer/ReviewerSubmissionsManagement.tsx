@@ -6,7 +6,7 @@ import {
   ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import Button from '@/components/ui/button/Button';
-import Alert from '@/components/ui/alert/Alert';
+import { useToast } from '@/hooks/useToast';
 import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
 import ExportFilterModal, { ExportFilters } from './ExportFilterModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
@@ -25,7 +25,7 @@ interface SubmissionsResponse {
 export default function ReviewerSubmissionsManagement() {
   const [submissions, setSubmissions] = useState<ReviewerSubmission[]>([]);
   const [_loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<ReviewerSubmission | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
@@ -61,10 +61,9 @@ export default function ReviewerSubmissionsManagement() {
       const data: SubmissionsResponse = await response.json();
       setSubmissions(data.submissions ?? []);
       setPagination(data.pagination);
-      setError(null);
     } catch (err) {
       console.error(err);
-      setError('Gagal memuat data pengajuan');
+      showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -120,7 +119,7 @@ export default function ReviewerSubmissionsManagement() {
       setShowExportModal(false);
     } catch (e) {
       console.error(e);
-      setError('Gagal mengekspor data ke Excel');
+      showError('Gagal Mengekspor Data', 'Tidak dapat mengekspor data ke Excel. Silakan coba lagi.');
     } finally {
       setExportLoading(false);
     }
@@ -186,8 +185,6 @@ export default function ReviewerSubmissionsManagement() {
           </div>
         </div>
       </div>
-
-      {error && <Alert variant="error" title="Error" message={error} />}
 
       <ReviewerTable
         mode="management"

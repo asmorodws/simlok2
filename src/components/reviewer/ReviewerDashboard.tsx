@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import ReviewerTable, { ReviewerSubmission } from '@/components/reviewer/ReviewerTable';
 import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
-import Alert from '@/components/ui/alert/Alert';
+import { useToast } from '@/hooks/useToast';
 import PageLoader from '@/components/ui/PageLoader';
 // import Button from '@/components/ui/button/Button';
 import Link from 'next/link';
@@ -35,7 +35,7 @@ export default function ReviewerDashboard() {
     totalVerifiedUsers: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
 
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,10 +57,9 @@ export default function ReviewerDashboard() {
           totalVerifiedUsers: 0,
         }
       );
-      setError(null);
     } catch (err) {
       console.error(err);
-      setError('Gagal memuat data dashboard');
+      showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
     } finally {
       setLoading(false);
     }
@@ -103,8 +102,6 @@ export default function ReviewerDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {error && <Alert variant="error" title="Error" message={error} className="mb-6" />}
-
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border shadow-sm p-6">

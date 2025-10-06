@@ -11,7 +11,6 @@ import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
-import Alert from '../ui/alert/Alert';
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types/submission';
 
@@ -52,11 +51,6 @@ export default function SubmissionForm() {
   const { showSuccess, showError } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [alert, setAlert] = useState<{
-    variant: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-  } | null>(null);
 
   // menandai adanya draft
   const [hasDraft, setHasDraft] = useState(false);
@@ -123,12 +117,7 @@ export default function SubmissionForm() {
 
       setHasDraft(true);
 
-      setAlert({
-        variant: 'info',
-        title: 'Draft Dipulihkan',
-        message: 'Data terakhir yang belum tersimpan berhasil dipulihkan.',
-      });
-      setTimeout(() => setAlert(null), 4000);
+      showSuccess('Draft Dipulihkan', 'Data terakhir yang belum tersimpan berhasil dipulihkan dari penyimpanan lokal.');
     } catch (e) {
       console.warn('Gagal memulihkan draft:', e);
     }
@@ -202,11 +191,6 @@ export default function SubmissionForm() {
   const rowsMismatch = useMemo(
     () => workers.length !== effectiveDesired,
     [workers.length, effectiveDesired]
-  );
-
-  const allWorkersValid = useMemo(
-    () => workers.every((w) => w.worker_name.trim() && w.worker_photo.trim()),
-    [workers]
   );
 
   // Tampilkan tombol hapus draft hanya jika:
@@ -407,12 +391,7 @@ export default function SubmissionForm() {
       setShowBulk(false);
       setBulkNames('');
 
-      setAlert({
-        variant: 'success',
-        title: 'Draft Dihapus',
-        message: 'Semua data draft berhasil dihapus. Form dikembalikan ke kondisi awal.',
-      });
-      setTimeout(() => setAlert(null), 3000);
+      showSuccess('Draft Berhasil Dihapus', 'Semua data draft telah dihapus dan form dikembalikan ke kondisi awal.');
     } finally {
       setIsDeletingDraft(false);
       setIsDeleteModalOpen(false);
@@ -427,34 +406,59 @@ export default function SubmissionForm() {
     setIsLoading(true);
 
     try {
+      // Validasi nomor dokumen wajib
+      if (!formData.sika_number || !formData.sika_number.trim()) {
+        showError('Nomor Dokumen Tidak Lengkap', 'Nomor SIKA wajib diisi sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!formData.simja_number || !formData.simja_number.trim()) {
+        showError('Nomor Dokumen Tidak Lengkap', 'Nomor SIMJA wajib diisi sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Validasi tanggal wajib
+      if (!formData.sika_date || !formData.sika_date.trim()) {
+        showError('Tanggal Tidak Lengkap', 'Tanggal SIKA wajib diisi sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!formData.simja_date || !formData.simja_date.trim()) {
+        showError('Tanggal Tidak Lengkap', 'Tanggal SIMJA wajib diisi sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Validasi dokumen wajib
+      if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
+        showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
+        showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
+
       if (workers.length === 0) {
-        setAlert({
-          variant: 'error',
-          title: 'Error',
-          message: 'Minimal harus ada satu pekerja.',
-        });
+        showError('Data Pekerja Tidak Lengkap', 'Minimal harus ada satu pekerja dalam pengajuan.');
         setIsLoading(false);
         return;
       }
 
       if (workerCountInput === '') {
-        setAlert({
-          variant: 'warning',
-          title: 'Jumlah Pekerja Kosong',
-          message:
-            'Isi angka pada "Jumlah Pekerja" atau klik Sesuaikan agar sesuai dengan baris yang ada.',
-        });
+        showError('Jumlah Pekerja Kosong', 'Silakan isi jumlah pekerja atau klik tombol "Sesuaikan" untuk menyesuaikan dengan jumlah baris.');
         setIsLoading(false);
         return;
       }
 
       if (workers.length !== desiredCount) {
-        setAlert({
-          variant: 'warning',
-          title: 'Jumlah Tidak Sinkron',
-          message:
-            'Jumlah baris pekerja tidak sama dengan input "Jumlah Pekerja". Klik "Sesuaikan" atau perbarui angkanya.',
-        });
+        showError('Jumlah Pekerja Tidak Sesuai', 'Jumlah baris pekerja tidak sama dengan input "Jumlah Pekerja". Klik "Sesuaikan" untuk menyamakan jumlahnya.');
         setIsLoading(false);
         return;
       }
@@ -463,14 +467,11 @@ export default function SubmissionForm() {
       const invalidPhotos = workers.filter((w) => !w.worker_photo.trim()).length;
 
       if (invalidNames > 0 || invalidPhotos > 0) {
-        setAlert({
-          variant: 'error',
-          title: 'Form Pekerja Belum Lengkap',
-          message:
-            invalidNames > 0
-              ? 'Ada nama pekerja yang kosong. Lengkapi semua nama.'
-              : 'Semua pekerja harus memiliki foto. Lengkapi foto pekerja.',
-        });
+        const errorMessage = invalidNames > 0
+          ? 'Ada nama pekerja yang kosong. Silakan lengkapi semua nama pekerja.'
+          : 'Semua pekerja harus memiliki foto. Silakan unggah foto untuk semua pekerja.';
+        
+        showError('Data Pekerja Belum Lengkap', errorMessage);
         setIsLoading(false);
         return;
       }
@@ -499,19 +500,17 @@ export default function SubmissionForm() {
       localStorage.removeItem(STORAGE_KEY);
       setHasDraft(false);
 
-      showSuccess('Berhasil', 'Pengajuan SIMLOK berhasil dibuat');
+      showSuccess('Pengajuan Berhasil Dibuat', 'Pengajuan SIMLOK Anda telah berhasil disimpan dan akan segera diproses.');
       router.push('/vendor/submissions');
     } catch (error) {
       console.error('Error creating submission:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to create submission. Please try again.';
-      showError('Error', errorMessage);
-      setAlert({
-        variant: 'error',
-        title: 'Error',
-        message: errorMessage,
-      });
-      setTimeout(() => setAlert(null), 5000);
+      const errorMessage = error instanceof Error 
+        ? (error.message.includes('Failed to create submission') 
+           ? 'Gagal membuat pengajuan. Silakan coba lagi.' 
+           : error.message)
+        : 'Terjadi kesalahan saat menyimpan pengajuan. Silakan coba lagi.';
+      
+      showError('Gagal Membuat Pengajuan', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -642,7 +641,10 @@ export default function SubmissionForm() {
 
                 {/* Upload dokumen */}
                 <div className="space-y-2">
-                  <Label htmlFor="simja_document_upload">UPLOAD DOKUMEN SIMJA</Label>
+                  <Label htmlFor="simja_document_upload">
+                    UPLOAD DOKUMEN SIMJA
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <EnhancedFileUpload
                       id="simja_document_upload"
@@ -652,13 +654,16 @@ export default function SubmissionForm() {
                       uploadType="document"
                       label=""
                       description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
-                      required
+                      required={false}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sika_document_upload">UPLOAD DOKUMEN SIKA</Label>
+                  <Label htmlFor="sika_document_upload">
+                    UPLOAD DOKUMEN SIKA
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <EnhancedFileUpload
                       id="sika_document_upload"
@@ -666,7 +671,7 @@ export default function SubmissionForm() {
                       value={formData.sika_document_upload || ''}
                       onChange={handleFileUpload('sika_document_upload')}
                       uploadType="document"
-                      required
+                      required={false}
                       label=""
                       description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
                     />
@@ -872,6 +877,7 @@ export default function SubmissionForm() {
                             onChange={(e) => updateWorkerName(w.id, e.target.value)}
                             placeholder="Nama lengkap pekerja"
 
+
                           />
                           <div className="mt-1">{statusPill(ok)}</div>
                         </div>
@@ -921,13 +927,6 @@ export default function SubmissionForm() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                title={
-                  !allWorkersValid
-                    ? 'Lengkapi nama dan foto semua pekerja'
-                    : rowsMismatch
-                      ? 'Jumlah baris tidak sama dengan jumlah pekerja. Sesuaikan dulu.'
-                      : ''
-                }
               >
                 {isLoading ? 'Menyimpan...' : 'Buat Pengajuan'}
               </Button>
@@ -935,9 +934,6 @@ export default function SubmissionForm() {
           </form>
         </div>
       </Card>
-
-      {/* Alert */}
-      {alert && <Alert variant={alert.variant} title={alert.title} message={alert.message} />}
 
       {/* Modal Konfirmasi Hapus Draft */}
       <ConfirmModal

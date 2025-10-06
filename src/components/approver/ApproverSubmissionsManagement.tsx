@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import Button from '@/components/ui/button/Button';
-import Alert from '@/components/ui/alert/Alert';
+import { useToast } from '@/hooks/useToast';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
@@ -148,7 +148,7 @@ function EmptyState({
 export default function ApproverSubmissionsManagement() {
   const [submissions, setSubmissions] = useState<ApproverSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { showError } = useToast();
 
   // Modal state (pakai ID agar selaras dengan ApproverTable)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
@@ -193,10 +193,9 @@ export default function ApproverSubmissionsManagement() {
       // Kita tidak menggunakan field worker_list di tabel, jadi cast aman:
       setSubmissions((data.submissions as unknown) as ApproverSubmission[]);
       setPagination(data.pagination);
-      setError(null);
     } catch (err) {
       console.error('Error fetching submissions:', err);
-      setError('Gagal memuat data pengajuan');
+      showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -320,8 +319,6 @@ export default function ApproverSubmissionsManagement() {
           </div>
         </div>
       </div>
-
-      {error && <Alert variant="error" title="Error" message={error} />}
 
       {/* Empty vs Table */}
       {!loading && submissions.length === 0 ? (
