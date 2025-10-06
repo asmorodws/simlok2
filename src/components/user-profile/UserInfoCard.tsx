@@ -49,7 +49,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
   const validateForm = () => {
     if (user.role === "VENDOR") {
       return (
-        formData.vendor_name.trim() &&
+        // vendor_name tidak perlu divalidasi karena tidak bisa diubah
         formData.email.trim() &&
         formData.phone_number.trim() &&
         formData.address.trim()
@@ -96,8 +96,10 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
 
       // Validasi berdasarkan role
       if (user.role === "VENDOR") {
-        if (!formData.vendor_name.trim()) {
-          newErrors.vendor_name = "Nama vendor wajib diisi";
+        // Vendor tidak perlu validasi vendor_name karena tidak bisa diubah
+        // Tetapi tetap perlu validasi officer_name
+        if (!formData.officer_name.trim()) {
+          newErrors.officer_name = "Nama petugas wajib diisi";
         }
       } else {
         if (!formData.officer_name.trim()) {
@@ -124,16 +126,17 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       const dataToSend =
         user.role === "VENDOR"
           ? {
-              vendor_name: formData.vendor_name.trim(),
+              // vendor_name: tidak dikirim karena tidak bisa diubah
+              officer_name: formData.officer_name.trim(),
               phone_number: formData.phone_number.trim(),
               address: formData.address.trim(),
-              email: formData.email.trim(), // ✅ email ikut dikirim
+              email: formData.email.trim(),
             }
           : {
               officer_name: formData.officer_name.trim(),
               phone_number: formData.phone_number.trim(),
               address: formData.address.trim(),
-              email: formData.email.trim(), // ✅ email ikut dikirim
+              email: formData.email.trim(),
             };
 
       const response = await fetch("/api/users/profile", {

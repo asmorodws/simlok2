@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/singletons";
 import { z } from "zod";
 
 const commonSchema = z.object({
@@ -10,10 +10,11 @@ const commonSchema = z.object({
   email: z.string().trim().email("Format email tidak valid"),
 });
 
-// Karena kita tidak ingin mengizinkan ubah vendor_name lewat endpoint ini,
-// kita hapus vendor_name dari schema vendor
-const vendorSchema = commonSchema;  // sama dengan commonSchema
-// Untuk officer, schema termasuk officer_name
+// Schema untuk vendor - sama seperti officer tetapi tidak bisa ubah vendor_name
+const vendorSchema = commonSchema.extend({
+  officer_name: z.string().trim().min(1, "Nama petugas wajib diisi"),
+});
+// Schema untuk officer - sama seperti vendor
 const officerSchema = commonSchema.extend({
   officer_name: z.string().trim().min(1, "Nama petugas wajib diisi"),
 });
@@ -48,10 +49,11 @@ export async function PUT(req: Request) {
       }
       parsed = res.data;
 
-      // Update: JANGAN ubah vendor_name di sini
+      // Update: JANGAN ubah vendor_name di sini, tetapi officer_name boleh diubah
       const updatedUser = await prisma.user.update({
         where: { id: session.user.id },
         data: {
+          officer_name: parsed.officer_name,
           phone_number: parsed.phone_number,
           address: parsed.address,
           email: parsed.email,
@@ -68,6 +70,7 @@ export async function PUT(req: Request) {
         },
       });
 
+
       return NextResponse.json(updatedUser);
     } else {
       // non-vendor
@@ -76,15 +79,16 @@ export async function PUT(req: Request) {
         const first = res.error.issues[0];
         return new NextResponse(first?.message ?? "Validasi gagal", { status: 400 });
       }
-      parsed = res.data;
+      // Type assertion: parsed is officerSchema type here
+      const parsedOfficer = res.data;
 
       const updatedUser = await prisma.user.update({
         where: { id: session.user.id },
         data: {
-          officer_name: parsed.officer_name,
-          phone_number: parsed.phone_number,
-          address: parsed.address,
-          email: parsed.email,
+          officer_name: parsedOfficer.officer_name,
+          phone_number: parsedOfficer.phone_number,
+          address: parsedOfficer.address,
+          email: parsedOfficer.email,
           // vendor_name: tidak disentuh
         },
         select: {
@@ -97,6 +101,7 @@ export async function PUT(req: Request) {
           role: true,
         },
       });
+
 
       return NextResponse.json(updatedUser);
     }
