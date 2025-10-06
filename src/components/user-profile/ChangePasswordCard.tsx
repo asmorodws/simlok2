@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import Button from "@/components/ui/button/Button";
@@ -30,103 +30,124 @@ export default function ChangePasswordCard() {
     confirm: false,
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const toggleShow = (field: "current" | "new" | "confirm") => {
     setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPasswords((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
+    // biarkan spasi tengah; hapus spasi ujung agar tidak bikin salah ketik
+    const sanitized = value.replace(/\s+$/g, "");
+    setPasswords((prev) => ({ ...prev, [name]: sanitized }));
+    setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const validatePasswords = () => {
-    let isValid = true;
-    const newErrors = {
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    };
+  // Aturan kompleksitas kata sandi baru
+  const cekKompleksitas = (pwd: string): string | "" => {
+    if (!pwd) return "Kata sandi baru wajib diisi.";
+    if (pwd.length < 8) return "Kata sandi baru minimal 8 karakter.";
+    if (!/[a-z]/.test(pwd)) return "Kata sandi baru harus mengandung huruf kecil.";
+    if (!/[A-Z]/.test(pwd)) return "Kata sandi baru harus mengandung huruf besar.";
+    if (!/[0-9]/.test(pwd)) return "Kata sandi baru harus mengandung angka.";
+    return "";
+  };
+
+  const validate = () => {
+    let ok = true;
+    const next = { currentPassword: "", newPassword: "", confirmPassword: "" };
 
     if (!passwords.currentPassword) {
-      newErrors.currentPassword = "Password saat ini wajib diisi";
-      isValid = false;
+      next.currentPassword = "Kata sandi saat ini wajib diisi.";
+      ok = false;
     }
 
-    if (!passwords.newPassword) {
-      newErrors.newPassword = "Password baru wajib diisi";
-      isValid = false;
-    } else if (passwords.newPassword.length < 8) {
-      newErrors.newPassword = "Password minimal 8 karakter";
-      isValid = false;
+    const eNew = cekKompleksitas(passwords.newPassword);
+    if (eNew) {
+      next.newPassword = eNew;
+      ok = false;
+    } else if (passwords.newPassword === passwords.currentPassword) {
+      next.newPassword = "Kata sandi baru tidak boleh sama dengan kata sandi saat ini.";
+      ok = false;
     }
 
     if (!passwords.confirmPassword) {
-      newErrors.confirmPassword = "Silakan konfirmasi password baru Anda";
-      isValid = false;
+      next.confirmPassword = "Konfirmasi kata sandi baru wajib diisi.";
+      ok = false;
     } else if (passwords.newPassword !== passwords.confirmPassword) {
-      newErrors.confirmPassword = "Password tidak cocok";
-      isValid = false;
+      next.confirmPassword = "Konfirmasi tidak sama dengan kata sandi baru.";
+      ok = false;
     }
 
-    setErrors(newErrors);
-    return isValid;
+    setErrors(next);
+    return ok;
   };
 
+  // Hint ringkas di bawah input "Kata sandi baru"
+  const hintKompleksitas = useMemo(() => {
+    if (!passwords.newPassword) return "Minimal 8 karakter.";
+    const msg = cekKompleksitas(passwords.newPassword);
+    return msg || "Kombinasi kuat.";
+  }, [passwords.newPassword]);
+
+  const canSubmit = useMemo(() => {
+    // cepat: cek dasar supaya tombol utama tidak aktif saat kosong
+    return (
+      passwords.currentPassword.length > 0 &&
+      passwords.newPassword.length >= 8 &&
+      passwords.confirmPassword.length > 0
+    );
+  }, [passwords]);
+
   const handleSave = async () => {
-    if (validatePasswords()) {
-      try {
-        const response = await fetch("/api/user/change-password", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            currentPassword: passwords.currentPassword,
-            newPassword: passwords.newPassword,
-          }),
-        });
+    if (!validate()) return;
 
-        if (!response.ok) {
-          const error = await response.text();
-          throw new Error(error);
-        }
+    try {
+      setIsSaving(true);
+      const res = await fetch("/api/user/change-password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: passwords.currentPassword,
+          newPassword: passwords.newPassword,
+        }),
+      });
 
-        closeModal();
-        setPasswords({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-        showSuccess("Berhasil", "Password berhasil diubah");
-      } catch (error) {
-        console.error("Error changing password:", error);
-        showError(
-          "Error",
-          error instanceof Error ? error.message : "Gagal mengubah password"
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(
+          text?.trim() ||
+            "Gagal mengubah kata sandi. Pastikan kata sandi saat ini benar, lalu coba lagi."
         );
-        setErrors((prev) => ({
-          ...prev,
-          currentPassword:
-            error instanceof Error ? error.message : "Gagal mengubah password",
-        }));
       }
+
+      closeModal();
+      setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setErrors({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      showSuccess("Berhasil", "Kata sandi Anda telah diperbarui.");
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Terjadi kesalahan saat mengubah kata sandi.";
+      showError("Gagal", msg);
+      setErrors((prev) => ({ ...prev, currentPassword: msg }));
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const onCloseModal = () => {
+    if (isSaving) return; // cegah menutup saat proses
+    closeModal();
   };
 
   return (
-    <div className="p-5 border border-gray-200 rounded-2xl lg:p-6">
+    <div className="rounded-2xl border border-gray-200 p-5 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h4 className="text-lg font-semibold text-gray-800 lg:mb-2">
-            Pengaturan Password
-          </h4>
+          <h4 className="text-lg font-semibold text-gray-800 lg:mb-2">Pengaturan kata sandi</h4>
           <p className="text-sm text-gray-500">
-            Ubah password Anda untuk menjaga keamanan akun
+            Ubah kata sandi Anda untuk menjaga keamanan akun.
           </p>
         </div>
 
@@ -134,24 +155,31 @@ export default function ChangePasswordCard() {
           onClick={openModal}
           className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 hover:text-gray-800 lg:inline-flex lg:w-auto"
         >
-          Ubah Password
+          Ubah kata sandi
         </button>
       </div>
 
-      <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[500px] m-4">
-        <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white p-4 lg:p-8">
-          <div className="pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800">
-              Ubah Password
-            </h4>
-            <p className="mb-6 text-sm text-gray-500">
-              Silakan masukkan password saat ini dan pilih password baru.
+      <Modal isOpen={isOpen} onClose={onCloseModal} className="m-4 max-w-[520px]">
+        <div className="no-scrollbar relative w-full overflow-y-auto rounded-3xl bg-white p-5 lg:p-8">
+          {/* Header */}
+          <div className="pb-4">
+            <h4 className="text-2xl font-semibold text-gray-800">Ubah kata sandi</h4>
+            <p className="mt-1 text-sm text-gray-500">
+              Masukkan kata sandi saat ini dan pilih kata sandi baru.
             </p>
           </div>
-          <form className="flex flex-col gap-5">
-            {/* Password Saat Ini */}
+
+          {/* Form */}
+          <form
+            className="flex flex-col gap-5"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!isSaving) handleSave();
+            }}
+          >
+            {/* Kata sandi saat ini */}
             <div>
-              <Label>Password Saat Ini</Label>
+              <Label>Kata sandi saat ini</Label>
               <div className="relative">
                 <Input
                   type={showPassword.current ? "text" : "password"}
@@ -159,24 +187,23 @@ export default function ChangePasswordCard() {
                   value={passwords.currentPassword}
                   onChange={handleChange}
                   error={errors.currentPassword}
+                  placeholder="Masukkan kata sandi saat ini"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => toggleShow("current")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword.current ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                 >
-                  {showPassword.current ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
+                  {showPassword.current ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Password Baru */}
+            {/* Kata sandi baru */}
             <div>
-              <Label>Password Baru</Label>
+              <Label>Kata sandi baru</Label>
               <div className="relative">
                 <Input
                   type={showPassword.new ? "text" : "password"}
@@ -184,24 +211,34 @@ export default function ChangePasswordCard() {
                   value={passwords.newPassword}
                   onChange={handleChange}
                   error={errors.newPassword}
+                  placeholder="Minimal 8 karakter dengan kombinasi"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => toggleShow("new")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword.new ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                 >
-                  {showPassword.new ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
+                  {showPassword.new ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
+              <p
+                className={`mt-1 text-xs ${
+                  errors.newPassword
+                    ? "text-red-600"
+                    : hintKompleksitas === "Kombinasi kuat."
+                    ? "text-green-700"
+                    : "text-amber-600"
+                }`}
+              >
+                {errors.newPassword || hintKompleksitas}
+              </p>
             </div>
 
-            {/* Konfirmasi Password Baru */}
+            {/* Konfirmasi kata sandi baru */}
             <div>
-              <Label>Konfirmasi Password Baru</Label>
+              <Label>Konfirmasi kata sandi baru</Label>
               <div className="relative">
                 <Input
                   type={showPassword.confirm ? "text" : "password"}
@@ -209,27 +246,27 @@ export default function ChangePasswordCard() {
                   value={passwords.confirmPassword}
                   onChange={handleChange}
                   error={errors.confirmPassword}
+                  placeholder="Ketik ulang kata sandi baru"
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
                   onClick={() => toggleShow("confirm")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showPassword.confirm ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                 >
-                  {showPassword.confirm ? (
-                    <EyeSlashIcon className="w-5 h-5" />
-                  ) : (
-                    <EyeIcon className="w-5 h-5" />
-                  )}
+                  {showPassword.confirm ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
+            {/* Aksi */}
+            <div className="mt-3 flex items-center gap-3 lg:justify-end">
+              <Button size="sm" variant="outline" onClick={onCloseModal} disabled={isSaving}>
                 Batal
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Perbarui Password
+              <Button size="sm" onClick={handleSave} disabled={!canSubmit || isSaving}>
+                {isSaving ? "Menyimpan..." : "Perbarui kata sandi"}
               </Button>
             </div>
           </form>

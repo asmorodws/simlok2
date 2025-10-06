@@ -28,7 +28,7 @@ export async function PUT(req: Request) {
     // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
-      return new NextResponse("Invalid current password", { status: 400 });
+      return new NextResponse("Kata sandi saat ini tidak valid", { status: 400 });
     }
 
     // Hash new password
