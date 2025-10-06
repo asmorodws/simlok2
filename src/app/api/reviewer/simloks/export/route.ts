@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (finalStatus && ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
-      whereClause.final_status = finalStatus;
+      whereClause.approval_status = finalStatus;
     }
 
     if (search) {
@@ -73,11 +73,10 @@ export async function GET(request: NextRequest) {
         based_on: true,
         approval_status: true,
         review_status: true,
-        final_status: true,
         content: true,
         notes: true,
-        review_note: true,
-        final_note: true,
+        note_for_approver: true,
+        note_for_vendor: true,
         simja_number: true,
         simja_date: true,
         sika_number: true,
@@ -181,9 +180,9 @@ export async function GET(request: NextRequest) {
         'Daftar Pekerja': workerNames,
         'Jumlah Pekerja': submission.worker_list.length,
         'Status Review': formatStatus(submission.review_status),
-        'Status Final': formatStatus(submission.final_status),
-        'Catatan Review': submission.review_note || '-',
-        'Catatan Final': submission.final_note || '-',
+        'Status Final': formatStatus(submission.approval_status),
+        'Catatan Review': submission.note_for_approver || '-',
+        'Catatan Final': submission.note_for_vendor || '-',
         'Reviewer': submission.reviewed_by_user?.officer_name || '-',
         'Email Reviewer': submission.reviewed_by_user?.email || '-',
         'Approver': submission.approved_by_final_user?.officer_name || '-',

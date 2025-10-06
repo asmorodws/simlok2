@@ -113,7 +113,7 @@ export async function notifyAdminNewSubmission(submissionId: string) {
 
     // Update stats
     const totalPending = await prisma.submission.count({
-      where: { approval_status: 'PENDING' }
+      where: { approval_status: 'PENDING_APPROVAL' }
     });
 
     eventsPublisher.statsUpdate({
@@ -219,7 +219,7 @@ export async function notifyAdminNewVendor(vendorId: string) {
 export async function notifyVendorStatusChange(
   vendorId: string, 
   submissionId: string, 
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'
 ) {
   try {
     // Get submission details
@@ -232,7 +232,7 @@ export async function notifyVendorStatusChange(
     }
 
     const statusText = {
-      PENDING: 'Menunggu Persetujuan',
+      PENDING_APPROVAL: 'Menunggu Persetujuan',
       APPROVED: 'Disetujui',
       REJECTED: 'Ditolak'
     }[status];
@@ -321,7 +321,7 @@ export async function notifyVendorStatusChange(
 
     const stats = {
       totalSubmissions: vendorSubmissions.length,
-      pendingSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'PENDING').length,
+      pendingSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'PENDING_APPROVAL').length,
       approvedSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'APPROVED').length,
       rejectedSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'REJECTED').length
     };
@@ -568,7 +568,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
           jobDescription: submission.job_description,
           reviewedBy: submission.reviewed_by_user?.officer_name,
           reviewStatus: submission.review_status,
-          reviewNote: submission.review_note
+          reviewNote: submission.note_for_approver
         })
       }
     });
@@ -611,7 +611,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
     const totalPendingFinal = await prisma.submission.count({
       where: { 
         review_status: 'MEETS_REQUIREMENTS',
-        final_status: 'PENDING_APPROVAL'
+        approval_status: 'PENDING_APPROVAL'
       }
     });
 
@@ -736,7 +736,7 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
     }
 
     // Only notify if submission is approved
-    if (submission.final_status !== 'APPROVED') {
+    if (submission.approval_status !== 'APPROVED') {
       return;
     }
 
@@ -756,7 +756,7 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
           officerName: submission.officer_name,
           jobDescription: submission.job_description,
           approvedBy: submission.approved_by_final_user?.officer_name,
-          finalStatus: submission.final_status,
+          finalStatus: submission.approval_status,
           simlokNumber: submission.simlok_number,
           approvedAt: submission.approved_at
         })
@@ -791,7 +791,7 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
 
     // Update reviewer stats
     const totalApproved = await prisma.submission.count({
-      where: { final_status: 'APPROVED' }
+      where: { approval_status: 'APPROVED' }
     });
 
     eventsPublisher.statsUpdate({

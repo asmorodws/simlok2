@@ -30,9 +30,8 @@ import DatePicker from '@/components/form/DatePicker';
 
 interface SubmissionDetail {
   id: string;
-  approval_status: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
   vendor_phone?: string;
   based_on: string;
@@ -56,10 +55,10 @@ interface SubmissionDetail {
   worker_names: string;
   content: string;
   notes?: string;
-  review_note?: string;
+  note_for_approver?: string;
   reviewed_by_name?: string;
   reviewed_by_email?: string;
-  final_note?: string;
+  note_for_vendor?: string;
   approved_by_name?: string;
   approved_by_email?: string;
   sika_document_upload?: string;
@@ -193,9 +192,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
   // Approval form state
   const [approvalData, setApprovalData] = useState({
-    final_status: '' as 'APPROVED' | 'REJECTED' | '',
+    approval_status: '' as 'APPROVED' | 'REJECTED' | '',
     simlok_number: '',
-    simlok_date: ''
+    simlok_date: '',
+    note_for_vendor: ''
   });
 
   const fetchSubmissionDetail = async () => {
@@ -223,15 +223,16 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       
       // Initialize approval data
       setApprovalData({
-        final_status: data.submission.final_status === 'PENDING_APPROVAL' ? '' : data.submission.final_status,
+        approval_status: data.submission.approval_status === 'PENDING_APPROVAL' ? '' : data.submission.approval_status,
         simlok_number: data.submission.simlok_number || '',
         simlok_date: (data.submission.simlok_date 
           ? new Date(data.submission.simlok_date).toISOString().split('T')[0] 
-          : '') as string
+          : '') as string,
+        note_for_vendor: data.submission.note_for_vendor || ''
       });
       
       // Auto-fill SIMLOK data jika status APPROVED dan belum ada nomor SIMLOK
-      if (data.submission.final_status === 'APPROVED' && !data.submission.simlok_number) {
+      if (data.submission.approval_status === 'APPROVED' && !data.submission.simlok_number) {
         const simlokNumber = await generateSimlokNumber();
         setApprovalData(prev => ({
           ...prev,
@@ -281,12 +282,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   };
 
   const handleSubmitApproval = async () => {
-    if (!approvalData.final_status) {
+    if (!approvalData.approval_status) {
       showError('Error', 'Pilih status persetujuan terlebih dahulu');
       return;
     }
 
-    if (approvalData.final_status === 'APPROVED' && !approvalData.simlok_number.trim()) {
+    if (approvalData.approval_status === 'APPROVED' && !approvalData.simlok_number.trim()) {
       showError('Error', 'Nomor SIMLOK wajib diisi untuk approval');
       return;
     }
@@ -300,9 +301,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          final_status: approvalData.final_status,
-          simlok_number: approvalData.final_status === 'APPROVED' ? approvalData.simlok_number.trim() : undefined,
-          simlok_date: approvalData.final_status === 'APPROVED' && approvalData.simlok_date ? approvalData.simlok_date : undefined,
+          approval_status: approvalData.approval_status,
+          simlok_number: approvalData.approval_status === 'APPROVED' ? approvalData.simlok_number.trim() : undefined,
+          simlok_date: approvalData.approval_status === 'APPROVED' && approvalData.simlok_date ? approvalData.simlok_date : undefined,
+          note_for_vendor: approvalData.note_for_vendor.trim() || undefined,
         }),
       });
 
@@ -322,7 +324,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
       const data = await response.json();
       setSubmission(data.submission);
-      showSuccess('Berhasil', `Pengajuan berhasil ${approvalData.final_status === 'APPROVED' ? 'disetujui' : 'ditolak'}`);
+      showSuccess('Berhasil', `Pengajuan berhasil ${approvalData.approval_status === 'APPROVED' ? 'disetujui' : 'ditolak'}`);
       onApprovalSubmitted();
       
     } catch (err: any) {
@@ -333,7 +335,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     }
   };
 
-  const canApprove = submission && submission.final_status === 'PENDING_APPROVAL';
+  const canApprove = submission && submission.approval_status === 'PENDING_APPROVAL';
 
   // Handle status change with auto-fill
   const handleStatusChange = async (status: 'APPROVED' | 'REJECTED') => {
@@ -342,7 +344,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       const simlokNumber = await generateSimlokNumber();
       setApprovalData(prev => ({
         ...prev,
-        final_status: status,
+        approval_status: status,
         simlok_number: prev.simlok_number || simlokNumber,
         simlok_date: prev.simlok_date || getCurrentDate() as string
       }));
@@ -350,7 +352,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       // Reset SIMLOK fields jika status REJECTED
       setApprovalData(prev => ({
         ...prev,
-        final_status: status,
+        approval_status: status,
         simlok_number: '',
         simlok_date: ''
       }));
@@ -522,7 +524,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       <span className="text-sm text-gray-500">Review:</span>
                       {getStatusBadge(submission.review_status)}
                       <span className="text-sm text-gray-500">Status:</span>
-                      {getStatusBadge(submission.final_status)}
+                      {getStatusBadge(submission.approval_status)}
                     </div>
                   </div>
 
@@ -541,7 +543,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         value={submission.officer_name}
                       />
                       {/* <InfoCard
-                        label="Email"
+                        label="Alamat Email"
                         value={submission.officer_email || '-'}
                       /> */}
                       <InfoCard
@@ -721,12 +723,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   
 
                   {/* Final Status Information */}
-                  {submission.final_status !== 'PENDING_APPROVAL' && (
+                  {submission.approval_status !== 'PENDING_APPROVAL' && (
                     <DetailSection title="Status Pengajuan" icon={<CheckCircleIcon className="h-5 w-5 text-blue-600" />}>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <InfoCard
                           label="Status"
-                          value={getStatusBadge(submission.final_status)}
+                          value={getStatusBadge(submission.approval_status)}
                         />
                         {submission.simlok_number && (
                           <InfoCard
@@ -740,10 +742,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             value={formatDate(submission.simlok_date)}
                           />
                         )}
-                        {submission.final_note && (
+                        {submission.note_for_vendor && (
                           <InfoCard
                             label="Catatan"
-                            value={submission.final_note}
+                            value={submission.note_for_vendor}
                             className="md:col-span-2"
                           />
                         )}
@@ -843,10 +845,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium text-gray-900">Proses Approval Final</h3>
                   {/* Review Information */}
-                  {submission.review_note && (
+                  {submission.note_for_approver && (
                     <div className="bg-blue-50 rounded-lg p-6">
                       <h4 className="text-base font-semibold text-gray-900 mb-4">Catatan Review</h4>
-                      <p className="text-gray-700 whitespace-pre-line">{submission.review_note}</p>
+                      <p className="text-gray-700 whitespace-pre-line">{submission.note_for_approver}</p>
                       {submission.reviewed_by_name && (
                         <p className="text-sm text-gray-500 mt-2">
                           Direview oleh: {submission.reviewed_by_name}
@@ -858,10 +860,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                     </div>
                   )}
 
-                  {submission.final_status !== 'PENDING_APPROVAL' && (
+                  {submission.approval_status !== 'PENDING_APPROVAL' && (
                     <div className={`
                       rounded-xl p-6 mb-6 border-2
-                      ${submission.final_status === 'APPROVED' 
+                      ${submission.approval_status === 'APPROVED' 
                         ? 'bg-green-50 border-green-200' 
                         : 'bg-red-50 border-red-200'
                       }
@@ -869,12 +871,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       <div className="flex items-start space-x-4">
                         <div className={`
                           flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
-                          ${submission.final_status === 'APPROVED' 
+                          ${submission.approval_status === 'APPROVED' 
                             ? 'bg-green-100' 
                             : 'bg-red-100'
                           }
                         `}>
-                          {submission.final_status === 'APPROVED' ? (
+                          {submission.approval_status === 'APPROVED' ? (
                             <CheckCircleIcon className="h-6 w-6 text-green-600" />
                           ) : (
                             <XCircleIcon className="h-6 w-6 text-red-600" />
@@ -883,22 +885,22 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         <div className="flex-1">
                           <h4 className={`
                             text-lg font-semibold mb-2
-                            ${submission.final_status === 'APPROVED' 
+                            ${submission.approval_status === 'APPROVED' 
                               ? 'text-green-900' 
                               : 'text-red-900'
                             }
                           `}>
-                            {submission.final_status === 'APPROVED' ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak'}
+                            {submission.approval_status === 'APPROVED' ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak'}
                           </h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center space-x-2">
                               <span className="font-medium text-gray-700">Status:</span>
-                              {getStatusBadge(submission.final_status)}
+                              {getStatusBadge(submission.approval_status)}
                             </div>
-                            {submission.final_note && (
+                            {submission.note_for_vendor && (
                               <div>
                                 <span className="font-medium text-gray-700">Catatan:</span>
-                                <p className="mt-1 text-gray-600">{submission.final_note}</p>
+                                <p className="mt-1 text-gray-600">{submission.note_for_vendor}</p>
                               </div>
                             )}
                             {submission.approved_by_name && (
@@ -933,16 +935,16 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                           {/* Approve Option */}
                           <label className={`
                             relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200
-                            ${approvalData.final_status === 'APPROVED' 
+                            ${approvalData.approval_status === 'APPROVED' 
                               ? 'border-green-500 bg-green-50 shadow-md' 
                               : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50'
                             }
                           `}>
                             <input
                               type="radio"
-                              name="final_status"
+                              name="approval_status"
                               value="APPROVED"
-                              checked={approvalData.final_status === 'APPROVED'}
+                              checked={approvalData.approval_status === 'APPROVED'}
                               onChange={(e) => {
                                 handleStatusChange(e.target.value as 'APPROVED');
                               }}
@@ -951,12 +953,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <div className="flex items-center flex-1">
                               <div className={`
                                 flex-shrink-0 w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center
-                                ${approvalData.final_status === 'APPROVED' 
+                                ${approvalData.approval_status === 'APPROVED' 
                                   ? 'border-green-500 bg-green-500' 
                                   : 'border-gray-300'
                                 }
                               `}>
-                                {approvalData.final_status === 'APPROVED' && (
+                                {approvalData.approval_status === 'APPROVED' && (
                                   <CheckCircleIcon className="h-3 w-3 text-white" />
                                 )}
                               </div>
@@ -970,16 +972,16 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                           {/* Reject Option */}
                           <label className={`
                             relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all duration-200
-                            ${approvalData.final_status === 'REJECTED' 
+                            ${approvalData.approval_status === 'REJECTED' 
                               ? 'border-red-500 bg-red-50 shadow-md' 
                               : 'border-gray-200 bg-white hover:border-red-300 hover:bg-red-50'
                             }
                           `}>
                             <input
                               type="radio"
-                              name="final_status"
+                              name="approval_status"
                               value="REJECTED"
-                              checked={approvalData.final_status === 'REJECTED'}
+                              checked={approvalData.approval_status === 'REJECTED'}
                               onChange={(e) => {
                                 handleStatusChange(e.target.value as 'REJECTED');
                               }}
@@ -988,12 +990,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <div className="flex items-center flex-1">
                               <div className={`
                                 flex-shrink-0 w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center
-                                ${approvalData.final_status === 'REJECTED' 
+                                ${approvalData.approval_status === 'REJECTED' 
                                   ? 'border-red-500 bg-red-500' 
                                   : 'border-gray-300'
                                 }
                               `}>
-                                {approvalData.final_status === 'REJECTED' && (
+                                {approvalData.approval_status === 'REJECTED' && (
                                   <XCircleIcon className="h-3 w-3 text-white" />
                                 )}
                               </div>
@@ -1006,7 +1008,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         </div>
                       </div>
 
-                      {approvalData.final_status === 'APPROVED' && (
+                      {approvalData.approval_status === 'APPROVED' && (
                         <div className="bg-white border border-gray-200 rounded-xl p-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <DocumentTextIcon className="h-5 w-5 text-blue-600 mr-2" />
@@ -1055,22 +1057,38 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         </div>
                       )}
 
-
+                      {/* Note for Vendor
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Catatan untuk Vendor (Opsional)
+                        </label>
+                        <textarea
+                          value={approvalData.note_for_vendor}
+                          onChange={(e) => setApprovalData({ ...approvalData, note_for_vendor: e.target.value })}
+                          rows={4}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white shadow-sm"
+                          placeholder="Tambahkan catatan untuk vendor..."
+                        />
+                        <p className="text-xs text-gray-600 mt-2 flex items-center">
+                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                          Catatan ini akan ditampilkan kepada vendor
+                        </p>
+                      </div> */}
 
                       {/* Submit Button */}
                       <div className="flex justify-end pt-4 border-t border-gray-200">
                         <Button
                           onClick={handleSubmitApproval}
                           disabled={
-                            !approvalData.final_status || 
-                            (approvalData.final_status === 'APPROVED' && !approvalData.simlok_number.trim()) ||
+                            !approvalData.approval_status || 
+                            (approvalData.approval_status === 'APPROVED' && !approvalData.simlok_number.trim()) ||
                             saving
                           }
                           className={`
                             px-8 py-3 rounded-lg font-medium transition-all duration-200 min-w-[160px]
-                            ${approvalData.final_status === 'APPROVED'
+                            ${approvalData.approval_status === 'APPROVED'
                               ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl'
-                              : approvalData.final_status === 'REJECTED'
+                              : approvalData.approval_status === 'REJECTED'
                               ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl'
                               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             }
@@ -1083,12 +1101,12 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             </div>
                           ) : (
                             <div className="flex items-center">
-                              {approvalData.final_status === 'APPROVED' ? (
+                              {approvalData.approval_status === 'APPROVED' ? (
                                 <>
                                   <CheckCircleIcon className="h-5 w-5 mr-2" />
                                   Setujui Pengajuan
                                 </>
-                              ) : approvalData.final_status === 'REJECTED' ? (
+                              ) : approvalData.approval_status === 'REJECTED' ? (
                                 <>
                                   <XCircleIcon className="h-5 w-5 mr-2" />
                                   Tolak Pengajuan
@@ -1103,7 +1121,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                     </div>
                   )}
 
-                  {!canApprove && submission.final_status !== 'PENDING_APPROVAL' && (
+                  {!canApprove && submission.approval_status !== 'PENDING_APPROVAL' && (
                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
                       <div className="text-center">
                         <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
@@ -1128,7 +1146,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
             {/* Debug info untuk development */}
             {/* {submission && (
               <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                Status: {submission.final_status} | SIMLOK: {submission.simlok_number || 'Belum ada'}
+                Status: {submission.approval_status} | SIMLOK: {submission.simlok_number || 'Belum ada'}
               </div>
             )} */}
             

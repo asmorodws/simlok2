@@ -60,7 +60,7 @@ export async function GET() {
       // Pending submissions
       prisma.submission.count({
         where: {
-          approval_status: 'PENDING'
+          approval_status: 'PENDING_APPROVAL'
         }
       }),
       

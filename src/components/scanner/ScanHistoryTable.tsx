@@ -23,7 +23,7 @@ export interface QrScan {
     vendor_name: string;
     job_description: string;
     review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS' | string;
-    final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | string;
+    approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | string;
   };
   user: {
     id: string;
@@ -166,7 +166,7 @@ export default function ScanHistoryTable({
       cell: (scan) => (
         <div className="flex flex-col gap-0.5">
           {/* <StatusBadge status={scan.submission.review_status} type="review" /> */}
-          <StatusBadge status={scan.submission.final_status} type="final" />
+          <StatusBadge status={scan.submission.approval_status} type="final" />
         </div>
       ),
       sortable: false,

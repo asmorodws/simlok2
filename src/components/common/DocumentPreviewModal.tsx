@@ -161,7 +161,7 @@ export default function DocumentPreviewModal({
                   onClick={handleDownload}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
-                  Download Dokumen
+                  Unduh Dokumen
                 </button>
                 <button
                   onClick={handleOpenInNewTab}
@@ -187,7 +187,7 @@ export default function DocumentPreviewModal({
                   onClick={handleDownload}
                   className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
-                  Download File
+                  Unduh File
                 </button>
                 <button
                   onClick={handleOpenInNewTab}
@@ -230,7 +230,7 @@ export default function DocumentPreviewModal({
               <button
                 onClick={handleDownload}
                 className="p-2 text-gray-400 hover:text-gray-600 transition-colors rounded-full hover:bg-gray-100"
-                title="Download"
+                title="Unduh"
               >
                 <ArrowDownTrayIcon className="w-5 h-5" />
               </button>

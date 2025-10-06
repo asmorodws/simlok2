@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by final status if provided
     if (finalStatus && ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
-      whereClause.final_status = finalStatus;
+      whereClause.approval_status = finalStatus;
     }
 
     // Filter by vendor if provided
@@ -115,23 +115,23 @@ export async function GET(request: NextRequest) {
         prisma.submission.count({
           where: {
             review_status: 'MEETS_REQUIREMENTS',
-            final_status: 'PENDING_APPROVAL'
+            approval_status: 'PENDING_APPROVAL'
           }
         }),
         prisma.submission.count({
           where: {
             review_status: 'NOT_MEETS_REQUIREMENTS',
-            final_status: 'PENDING_APPROVAL'
+            approval_status: 'PENDING_APPROVAL'
           }
         }),
         prisma.submission.count({
           where: {
-            final_status: 'APPROVED'
+            approval_status: 'APPROVED'
           }
         }),
         prisma.submission.count({
           where: {
-            final_status: 'REJECTED'
+            approval_status: 'REJECTED'
           }
         }),
       ])

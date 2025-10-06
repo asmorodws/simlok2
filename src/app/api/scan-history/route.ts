@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
             vendor_name: true,
             job_description: true,
             review_status: true,
-            final_status: true,
+            approval_status: true,
           }
         },
         user: {

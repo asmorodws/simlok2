@@ -171,7 +171,15 @@ export default function UserVerificationManagement({
       ADMIN: 'bg-purple-100 text-purple-800',
       SUPER_ADMIN: 'bg-red-100 text-red-800',
     };
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[r] || 'bg-gray-100 text-gray-800'}`}>{r}</span>;
+    const roleLabels: Record<string, string> = {
+      VENDOR: 'Vendor',
+      VERIFIER: 'Verifier',
+      REVIEWER: 'Reviewer',
+      APPROVER: 'Approver',
+      ADMIN: 'Admin',
+      SUPER_ADMIN: 'Super Admin',
+    };
+    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[r] || 'bg-gray-100 text-gray-800'}`}>{roleLabels[r] || r}</span>;
   }, []);
 
   const getVerificationStatus = useCallback((user: UserData) => {

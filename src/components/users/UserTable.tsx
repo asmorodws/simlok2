@@ -73,7 +73,7 @@ export default function UserTable({
       },
       {
         key: 'role',
-        header: 'Role',
+        header: 'Peran',
         sortable: true,
         minWidth: 120,
         cell: (u) => getRoleBadge(u.role),

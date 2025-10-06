@@ -210,14 +210,14 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email <span className="text-red-500">*</span>
+                  Alamat Email <span className="text-red-500">*</span>
                 </label>
                 <Input
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="email@example.com"
+                  placeholder="email@contoh.com"
                   {...(errors.email && { error: errors.email })}
                   required
                 />

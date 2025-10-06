@@ -90,7 +90,7 @@ export interface SubmissionPDFData {
   signer_name?: string | null;
   qrcode?: string | null;  // QR code string for PDF
   // Tambahkan untuk daftar pekerja dari tabel terpisah
-  final_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | null;
+  approval_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | null;
   workerList?: Array<{
     worker_name: string;
     worker_photo?: string | null;
@@ -634,7 +634,7 @@ for (let idx = 0; idx < lines.length; idx++) {
   k.text(jabatanSigner, A4.w - 230, jabatanY, { size: 11 });
   
   // Add QR code if available - positioned with simple pixel values for easy maintenance
-  if (s.qrcode && s.final_status === 'APPROVED') {
+  if (s.qrcode && s.approval_status === 'APPROVED') {
     const qrImage = await generateQRImage(k.doc, s.qrcode);
     if (qrImage) {
       const qrSize = 80; // Reduced QR code size

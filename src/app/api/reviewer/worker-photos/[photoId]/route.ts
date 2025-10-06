@@ -31,7 +31,7 @@ export async function DELETE(
         submission: {
           select: {
             id: true,
-            final_status: true,
+            approval_status: true,
           }
         }
       }
@@ -42,7 +42,7 @@ export async function DELETE(
     }
 
     // Cannot delete photos after submission is finalized
-    if (worker.submission.final_status !== 'PENDING_APPROVAL') {
+    if (worker.submission.approval_status !== 'PENDING_APPROVAL') {
       return NextResponse.json({ 
         error: 'Cannot delete worker photo after submission has been finalized' 
       }, { status: 400 });

@@ -275,6 +275,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   type="text"
                   value={formData.officer_name}
                   onChange={handleChange}
+                  disabled={true}
                   placeholder="Masukkan nama petugas"
                   required
                   className="mt-1"
@@ -288,7 +289,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
 
             {/* Email - semua role */}
             <div>
-              <p className="text-sm font-medium text-gray-500">Email</p>
+              <p className="text-sm font-medium text-gray-500">Alamat Email</p>
               {isEditing ? (
                 <Input
                   id="email"

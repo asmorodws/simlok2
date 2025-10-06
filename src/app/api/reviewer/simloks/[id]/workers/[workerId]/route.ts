@@ -29,7 +29,7 @@ export async function DELETE(
       where: { id },
       select: {
         id: true,
-        final_status: true,
+        approval_status: true,
       }
     });
 
@@ -38,7 +38,7 @@ export async function DELETE(
     }
 
     // Reviewer cannot edit after Approver has finalized
-    if (existingSubmission.final_status !== 'PENDING_APPROVAL') {
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
       return NextResponse.json({ 
         error: 'Cannot delete worker after submission has been finalized' 
       }, { status: 400 });

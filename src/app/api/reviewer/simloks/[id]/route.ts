@@ -125,7 +125,7 @@ export async function PATCH(
       where: { id: resolvedParams.id },
       select: {
         id: true,
-        final_status: true,
+        approval_status: true,
       }
     });
 
@@ -134,7 +134,7 @@ export async function PATCH(
     }
 
     // Reviewer cannot edit after Approver has finalized
-    if (existingSubmission.final_status !== 'PENDING_APPROVAL') {
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
       return NextResponse.json({ 
         error: 'Cannot edit submission after it has been finalized' 
       }, { status: 400 });

@@ -37,4 +37,4 @@ export interface WorkerList {
   created_at: Date;
 }
 
-export type SubmissionStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type SubmissionStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';

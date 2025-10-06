@@ -142,6 +142,7 @@ export default function VendorDashboard() {
             work_location: submission.work_location,
             work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
             approval_status: submission.approval_status,
+            review_status: submission.review_status ?? 'PENDING_REVIEW',
             simlok_number: submission.simlok_number,
             created_at: submission.created_at,
           }))}
@@ -159,6 +160,7 @@ export default function VendorDashboard() {
             work_location: submission.work_location,
             work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
             approval_status: submission.approval_status,
+            review_status: submission.review_status ?? 'PENDING_REVIEW',
             simlok_number: submission.simlok_number,
             created_at: submission.created_at,
           }))}

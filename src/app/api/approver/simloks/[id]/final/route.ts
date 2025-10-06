@@ -7,8 +7,8 @@ import { generateQrString } from '@/lib/qr-security';
 
 // Schema for validating final approval data
 const finalApprovalSchema = z.object({
-  final_status: z.enum(['APPROVED', 'REJECTED']),
-  final_note: z.string().optional(),
+  approval_status: z.enum(['APPROVED', 'REJECTED']),
+  note_for_vendor: z.string().optional(),
   simlok_number: z.string().optional(),
   simlok_date: z.string().optional(),
 });
@@ -69,7 +69,7 @@ export async function PATCH(
       select: {
         id: true,
         review_status: true,
-        final_status: true,
+        approval_status: true,
         user_id: true,
         implementation_start_date: true,
         implementation_end_date: true,
@@ -101,7 +101,7 @@ export async function PATCH(
     }
 
     // Cannot finalize if already finalized
-    if (existingSubmission.final_status !== 'PENDING_APPROVAL') {
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
       return NextResponse.json({ 
         error: 'Submission has already been finalized' 
       }, { status: 400 });
@@ -112,13 +112,13 @@ export async function PATCH(
 
     // Generate simlok number only if approved
     const updateData: any = {
-      final_status: validatedData.final_status,
-      final_note: validatedData.final_note || null,
+      approval_status: validatedData.approval_status,
+      note_for_vendor: validatedData.note_for_vendor || null,
       approved_by_final_id: session.user.id,
       approved_at: new Date(),
     };
 
-    if (validatedData.final_status === 'APPROVED') {
+    if (validatedData.approval_status === 'APPROVED') {
       // Use provided simlok number or generate one
       updateData.simlok_number = validatedData.simlok_number?.trim() || await generateSimlokNumber();
       
@@ -172,7 +172,7 @@ export async function PATCH(
     });
 
     // Log QR code generation for approved submissions
-    if (validatedData.final_status === 'APPROVED' && updateData.qrcode) {
+    if (validatedData.approval_status === 'APPROVED' && updateData.qrcode) {
       console.log(`✅ QR Code auto-generated for approved submission ${resolvedParams.id}: ${updateData.qrcode.substring(0, 50)}...`);
     }
 
@@ -180,7 +180,7 @@ export async function PATCH(
     const { notifyVendorStatusChange, notifyReviewerSubmissionApproved } = await import('@/server/events');
     
     // Notify vendor with real-time updates
-    const vendorStatus = validatedData.final_status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+    const vendorStatus = validatedData.approval_status === 'APPROVED' ? 'APPROVED' : 'REJECTED';
     await notifyVendorStatusChange(
       existingSubmission.user.id, 
       resolvedParams.id, 
@@ -188,13 +188,13 @@ export async function PATCH(
     );
 
     // Notify reviewers when submission is approved
-    if (validatedData.final_status === 'APPROVED') {
+    if (validatedData.approval_status === 'APPROVED') {
       await notifyReviewerSubmissionApproved(resolvedParams.id);
     }
 
     return NextResponse.json({ 
       submission: updatedSubmission,
-      message: `Submission ${validatedData.final_status.toLowerCase()} successfully`
+      message: `Submission ${validatedData.approval_status.toLowerCase()} successfully`
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

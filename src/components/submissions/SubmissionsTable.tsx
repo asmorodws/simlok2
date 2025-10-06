@@ -2,7 +2,9 @@
 
 import type { ReactNode } from 'react';
 import {
-  ChevronUpIcon, ChevronDownIcon, ChevronUpDownIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ChevronUpDownIcon,
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 
@@ -56,7 +58,7 @@ interface ReusableTableProps<T extends Record<string, unknown>> {
   rowKey?: (row: T, index: number) => string;
 }
 
-export default function ReusableTable<T extends Record<string, unknown>>({
+function ReusableTable<T extends Record<string, unknown>>({
   columns,
   data,
   sortBy,
@@ -77,7 +79,8 @@ export default function ReusableTable<T extends Record<string, unknown>>({
 
   const handleSort = (col: Column<T>) => {
     if (!onSortChange || !col.sortable) return;
-    const nextOrder: SortOrder = sortBy === col.key ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc';
+    const nextOrder: SortOrder = 
+      sortBy === col.key ? (sortOrder === 'asc' ? 'desc' : 'asc') : 'desc';
     onSortChange(col.key, nextOrder);
   };
 
@@ -119,7 +122,10 @@ export default function ReusableTable<T extends Record<string, unknown>>({
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {data.map((row, idx) => (
-                  <tr key={rowKey ? rowKey(row, idx) : `row-${idx}`} className="hover:bg-gray-50 transition-colors">
+                  <tr 
+                    key={rowKey ? rowKey(row, idx) : `row-${idx}`} 
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     {columns.map((col) => (
                       <td
                         key={`${col.key}-${rowKey ? rowKey(row, idx) : idx}`}
@@ -194,7 +200,6 @@ export default function ReusableTable<T extends Record<string, unknown>>({
   );
 }
 
-// SubmissionsTable component that wraps ReusableTable for submissions
 interface SubmissionsTableProps {
   submissions: SubmissionRow[];
   loading: boolean;
@@ -210,50 +215,103 @@ export function SubmissionsTable({
   onDelete,
   formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID')
 }: SubmissionsTableProps) {
+  const getVendorStatus = (reviewStatus: string, approvalStatus: string) => {
+    if (approvalStatus === 'APPROVED') {
+      return {
+        label: 'Disetujui',
+        color: 'bg-green-100 text-green-800',
+      };
+    }
+    if (approvalStatus === 'REJECTED') {
+      return {
+        label: 'Ditolak',
+        color: 'bg-red-100 text-red-800',
+      };
+    }
+    if (reviewStatus === 'PENDING_REVIEW') {
+      return {
+        label: 'Sedang Direview',
+        color: 'bg-blue-100 text-blue-800',
+      };
+    }
+    if (reviewStatus === 'MEETS_REQUIREMENTS') {
+      return {
+        label: 'Menunggu Persetujuan Final',
+        color: 'bg-yellow-100 text-yellow-800',
+      };
+    }
+    if (reviewStatus === 'NEEDS_REVISION') {
+      return {
+        label: 'Perlu Revisi',
+        color: 'bg-orange-100 text-orange-800',
+      };
+    }
+    return {
+      label: 'Sedang Diproses',
+      color: 'bg-gray-100 text-gray-800',
+    };
+  };
+
   const columns: Column<SubmissionRow>[] = [
     {
       key: 'job_description',
       header: 'Deskripsi Pekerjaan',
-      cell: (row) => <span className="font-medium">{row.job_description}</span>,
-      sortable: true,
-    },
-    {
-      key: 'work_location',
-      header: 'Lokasi Kerja',
-      cell: (row) => <span>{row.work_location}</span>,
-      sortable: true,
-    },
-    {
-      key: 'approval_status',
-      header: 'Status',
       cell: (row) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-          row.approval_status === 'APPROVED' 
-            ? 'bg-green-100 text-green-800'
-            : row.approval_status === 'REJECTED'
-            ? 'bg-red-100 text-red-800'
-            : 'bg-yellow-100 text-yellow-800'
-        }`}>
-          {row.approval_status}
+        <span className="whitespace-nowrap font-medium">
+          {row.job_description}
         </span>
       ),
       sortable: true,
     },
     {
+      key: 'work_location',
+      header: 'Lokasi Kerja',
+      cell: (row) => (
+        <span>
+          {row.work_location}
+        </span>
+      ),
+      sortable: true,
+    },
+    {
+      key: 'approval_status',
+      header: 'Status',
+      cell: (row) => {
+        const status = getVendorStatus(
+          (row.review_status as string) || '',
+          (row.approval_status as string) || ''
+        );
+        return (
+          <div className="flex flex-col">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium ${status.color} inline-block whitespace-nowrap`}
+            >
+              {status.label}
+            </span>
+          </div>
+        );
+      },
+      sortable: true,
+    },
+    {
       key: 'created_at',
       header: 'Tanggal Dibuat',
-      cell: (row) => <span>{formatDate(row.created_at)}</span>,
+      cell: (row) => (
+        <span className="whitespace-nowrap">
+          {formatDate(row.created_at)}
+        </span>
+      ),
       sortable: true,
     },
     {
       key: 'actions',
       header: 'Aksi',
       cell: (row) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 whitespace-nowrap">
           <Button size="sm" variant="info" onClick={() => onView(row)}>
             Lihat
           </Button>
-          {onDelete && row.approval_status == "PENDING" &&  (
+          {onDelete && (row.approval_status === "PENDING_APPROVAL" && row.review_status === "PENDING_REVIEW") && (
             <Button size="sm" variant="destructive" onClick={() => onDelete(row.id)}>
               Hapus
             </Button>
@@ -277,7 +335,6 @@ export function SubmissionsTable({
       data={submissions}
       empty={{
         title: 'Tidak ada pengajuan',
-        description: 'Belum ada pengajuan yang dibuat'
       }}
     />
   );

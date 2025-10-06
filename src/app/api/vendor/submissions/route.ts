@@ -93,10 +93,9 @@ export async function GET(request: NextRequest) {
         signer_position: true,
         signer_name: true,
         review_status: true,
-        review_note: true,
+        note_for_approver: true,
         reviewed_at: true,
-        final_note: true,
-        final_status: true,
+        note_for_vendor: true,
         approved_at: true,
         user: {
           select: {
@@ -132,7 +131,7 @@ export async function GET(request: NextRequest) {
 
     const statistics = {
       total: totalCount,
-      pending: stats.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+      pending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
       approved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
       rejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0
     };

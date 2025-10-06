@@ -18,9 +18,8 @@ import ApproverTable, { type ApproverSubmission } from '@/components/approver/Ap
 
 interface Submission {
   id: string;
-  approval_status: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -39,8 +38,8 @@ interface Submission {
   worker_names: string;
   content: string;
   notes?: string;
-  review_note?: string;
-  final_note?: string;
+  note_for_approver?: string;
+  note_for_vendor?: string;
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;

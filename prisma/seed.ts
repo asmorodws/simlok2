@@ -312,11 +312,10 @@ async function main() {
         worker_count: workerCount, // Hitung dari worker_names
         content: null, // akan diisi setelah diapprove
         user_id: vendorData.id,
-        approval_status: 'PENDING', // Semua submission pending approval
         review_status: "PENDING_REVIEW", // Semua pending review dari reviewer
-        final_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
-        review_note: null, // belum ada review
-        final_note: null, // belum ada final note
+        approval_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
+        note_for_approver: null, // belum ada review
+        note_for_vendor: null, // belum ada final note
         reviewed_by_id: null, // belum di-review
         reviewed_at: null, // belum di-review
         approved_by: null, // belum diapprove
@@ -388,10 +387,9 @@ async function main() {
       where: { id: submission.id },
       data: {
         review_status: 'MEETS_REQUIREMENTS',
-        final_status: 'APPROVED',
         approval_status: 'APPROVED',
-        review_note: 'Semua dokumen lengkap dan memenuhi persyaratan keselamatan kerja.',
-        final_note: 'Disetujui untuk pelaksanaan. Pastikan mengikuti protokol keselamatan.',
+        note_for_approver: 'Semua dokumen lengkap dan memenuhi persyaratan keselamatan kerja.',
+        note_for_vendor: 'Disetujui untuk pelaksanaan. Pastikan mengikuti protokol keselamatan.',
         reviewed_by_id: reviewerUser.id,
         reviewed_at: reviewedAt,
         approved_by_final_id: approverUser.id,

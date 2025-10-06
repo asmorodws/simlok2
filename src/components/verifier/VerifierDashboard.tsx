@@ -33,7 +33,7 @@ interface SubmissionData {
   job_description: string;
   work_location: string;
   implementation: string;
-  approval_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   simlok_number?: string;
   simlok_date?: string;
   created_at: string;
@@ -60,7 +60,7 @@ interface QrScan {
     officer_name: string;
     job_description: string;
     work_location: string;
-    approval_status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
     working_hours?: string;
     implementation?: string;
     simja_number?: string;
@@ -130,21 +130,21 @@ export default function VerifierDashboard() {
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <ClockIcon className="w-3 h-3 mr-1" />
-            Pending
+            Menunggu
           </span>
         );
       case 'APPROVED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
-            Approved
+            Disetujui
           </span>
         );
       case 'REJECTED':
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircleIcon className="w-3 h-3 mr-1" />
-            Rejected
+            Ditolak
           </span>
         );
       default:
@@ -353,7 +353,7 @@ export default function VerifierDashboard() {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
               {/* Status Banner */}
               <div className="mb-6">
-                {selectedScan.submission.approval_status === 'PENDING' && (
+                {selectedScan.submission.approval_status === 'PENDING_APPROVAL' && (
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg">
                     <div className="flex items-center">
                       <ClockIcon className="w-5 h-5 text-yellow-600 mr-2" />
@@ -624,7 +624,7 @@ export default function VerifierDashboard() {
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
               {/* Status Banner */}
               <div className="mb-6">
-                {selectedSubmission.approval_status === 'PENDING' && (
+                {selectedSubmission.approval_status === 'PENDING_APPROVAL' && (
                   <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 p-4 rounded-lg">
                     <div className="flex items-center">
                       <ClockIcon className="w-5 h-5 text-yellow-600 mr-2" />

@@ -30,12 +30,12 @@ export async function GET() {
     // Format statistics
     const vendorStats = {
       totalSubmissions: totalCount,
-      pendingSubmissions: stats.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+      pendingSubmissions: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
       approvedSubmissions: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
       rejectedSubmissions: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
       draftSubmissions: 0, // Assuming no draft status in current schema
       totalApproved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-      totalPending: stats.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+      totalPending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
       totalRejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0
     };
 

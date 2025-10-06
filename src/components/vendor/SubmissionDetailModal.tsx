@@ -25,9 +25,8 @@ interface Submission {
   id: string;
   approval_status: string;
   review_status?: string;
-  review_note?: string | null;
-  final_note?: string | null;
-  final_status?: string;
+  note_for_approver?: string | null;
+  note_for_vendor?: string | null;
   reviewed_at?: string | null;
   approved_at?: string | null;
   vendor_name: string;
@@ -87,7 +86,6 @@ export default function SubmissionDetailModal({
   } | null>(null);
 
   useEffect(() => {
-    // Handle escape key to close modal
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
@@ -96,7 +94,6 @@ export default function SubmissionDetailModal({
 
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     }
 
@@ -108,14 +105,6 @@ export default function SubmissionDetailModal({
 
   if (!isOpen || !submission) return null;
 
-  // Debug logging for development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('SubmissionDetailModal: Received submission data:', submission);
-    console.log('SubmissionDetailModal: Working hours:', submission.working_hours);
-    console.log('SubmissionDetailModal: User data:', submission.user);
-    console.log('SubmissionDetailModal: Approved by user:', submission.approved_by_user);
-  }
-
   const formatDate = (dateString: string | Date) => {
     const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     return date.toLocaleDateString('id-ID', {
@@ -125,32 +114,44 @@ export default function SubmissionDetailModal({
     });
   };
 
+  // Mapping status internal ke label bahasa Indonesia
+  const STATUS_LABELS: Record<string, string> = {
+    PENDING: 'Menunggu',
+    APPROVED: 'Disetujui',
+    REJECTED: 'Ditolak',
+    PENDING_APPROVAL: 'Menunggu Review',
+    // Tambahkan status lain kalau ada
+  };
+
   const getStatusBadge = (status: string) => {
     const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-    
+
+    const label = STATUS_LABELS[status] ?? status;
+
     switch (status) {
       case 'PENDING':
+      case 'PENDING_APPROVAL':
         return (
           <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>
-            Menunggu
+            {label}
           </span>
         );
       case 'APPROVED':
         return (
           <span className={`${baseClasses} bg-green-100 text-green-800`}>
-            Disetujui
+            {label}
           </span>
         );
       case 'REJECTED':
         return (
           <span className={`${baseClasses} bg-red-100 text-red-800`}>
-            Ditolak
+            {label}
           </span>
         );
       default:
         return (
           <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
-            {status}
+            {label}
           </span>
         );
     }
@@ -167,13 +168,10 @@ export default function SubmissionDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/30 transition-opacity"
         onClick={onClose}
       />
-
-      {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
           {/* Header */}
@@ -200,18 +198,17 @@ export default function SubmissionDetailModal({
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-8">
-              {/* Debug Section - Development Only */}
               {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <button
                     onClick={() => setShowDebug(!showDebug)}
                     className="text-sm font-medium text-yellow-800 hover:text-yellow-900"
                   >
-                    {showDebug ? 'Hide' : 'Show'} Debug Info
+                    {showDebug ? 'Sembunyikan' : 'Tampilkan'} Info Debug
                   </button>
                   {showDebug && (
                     <div className="mt-3">
-                      <h4 className="font-bold mb-2">Debug Info:</h4>
+                      <h4 className="font-bold mb-2">Info Debug:</h4>
                       <pre className="text-xs bg-yellow-50 p-3 rounded border overflow-auto max-h-40">
                         {JSON.stringify({
                           id: submission.id,
@@ -233,7 +230,6 @@ export default function SubmissionDetailModal({
                 </div>
               )}
 
-              {/* Informasi Vendor */}
               <DetailSection 
                 title="Informasi Vendor" 
                 icon={<BuildingOfficeIcon className="h-5 w-5 text-blue-500" />}
@@ -249,7 +245,7 @@ export default function SubmissionDetailModal({
                     icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                   />
                   <InfoCard
-                    label="Email"
+                    label="Alamat Email"
                     value={submission.user?.email || '-'}
                   />
                   <InfoCard
@@ -259,7 +255,6 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
-                {/* Informasi Dokumen */}
               <DetailSection 
                 title="Informasi Dokumen" 
                 icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
@@ -357,7 +352,6 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
-              {/* Informasi Pekerjaan */}
               <DetailSection 
                 title="Informasi Pekerjaan" 
                 icon={<BriefcaseIcon className="h-5 w-5 text-green-500" />}
@@ -373,7 +367,7 @@ export default function SubmissionDetailModal({
                   />
                   <InfoCard
                     label="Pelaksanaan"
-                    value={submission.implementation || 'Akan diisi oleh admin saat approval'}
+                    value={submission.implementation || 'Akan diisi oleh admin saat disetujui'}
                   />
                   <InfoCard
                     label="Jam Kerja"
@@ -385,22 +379,8 @@ export default function SubmissionDetailModal({
                     className="md:col-span-2"
                   />
                 </div>
-
-                {/* {submission.other_notes && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <InfoCard
-                      label="Lain-lain"
-                      value={
-                        <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                          {submission.other_notes}
-                        </div>
-                      }
-                    />
-                  </div>
-                )} */}
               </DetailSection>
 
-              {/* Daftar Pekerja */}
               <DetailSection 
                 title="Daftar Pekerja" 
                 icon={<UserIcon className="h-5 w-5 text-purple-500" />}
@@ -421,28 +401,6 @@ export default function SubmissionDetailModal({
                 )}
               </DetailSection>
 
-           
-
-              {/* Informasi Penanda Tangan */}
-              {/* {(submission.signer_position || submission.signer_name) && (
-                <DetailSection 
-                  title="Informasi Penanda Tangan" 
-                  icon={<UserIcon className="h-5 w-5 text-indigo-500" />}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InfoCard
-                      label="Jabatan Penanda Tangan"
-                      value={submission.signer_position || '-'}
-                    />
-                    <InfoCard
-                      label="Nama Penanda Tangan"
-                      value={submission.signer_name || '-'}
-                    />
-                  </div>
-                </DetailSection>
-              )} */}
-
-              {/* Status & Approval */}
               <DetailSection 
                 title="Status Pengajuan" 
                 icon={
@@ -454,81 +412,22 @@ export default function SubmissionDetailModal({
                     <PendingIcon className="h-5 w-5 text-orange-500" />
                   )
                 }
-                
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InfoCard
-                    label="Status"
-                    value={getStatusBadge(submission.approval_status)}
-                  />
-                  {submission.approved_by_user && (
-                    <InfoCard
-                      label="Disetujui oleh"
-                      value={submission.approved_by_user.officer_name}
-                    />
-                  )}
-
-                  {submission.notes && (
-                    <InfoCard
-                      label="Keterangan"
-                      value={
-                        <div className="whitespace-pre-wrap text-sm text-gray-900 bg-gray-50 p-3 rounded-md">
-                          {submission.notes}
-                        </div>
-                      }
-                    />
-                  )}
-
-                  {/* Review Notes from Reviewer - Show if exists */}
-                  {submission.review_note && (
+                  {submission.note_for_approver && (
                     <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start">
                         <DocumentIcon className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
                         <div className="flex-1">
-                          <h4 className="text-sm font-medium text-blue-800 mb-2">Catatan Review</h4>
+                          <h4 className="text-sm font-medium text-blue-800 mb-2">Catatan</h4>
                           <p className="text-sm text-blue-700 whitespace-pre-line">
-                            {submission.review_note}
+                            {submission.note_for_vendor}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
-
-                  {/* Final Notes for Vendor - Show if exists and submission is finalized */}
-                  {submission.final_note && (submission.approval_status === 'APPROVED' || submission.approval_status === 'REJECTED') && (
-                    <div className={`md:col-span-2 border rounded-lg p-4 ${
-                      submission.approval_status === 'APPROVED' 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-red-50 border-red-200'
-                    }`}>
-                      <div className="flex items-start">
-                        <DocumentIcon className={`h-5 w-5 mr-3 mt-0.5 flex-shrink-0 ${
-                          submission.approval_status === 'APPROVED' 
-                            ? 'text-green-500' 
-                            : 'text-red-500'
-                        }`} />
-                        <div className="flex-1">
-                          <h4 className={`text-sm font-medium mb-2 ${
-                            submission.approval_status === 'APPROVED' 
-                              ? 'text-green-800' 
-                              : 'text-red-800'
-                          }`}>
-                            Keterangan dari Reviewer
-                          </h4>
-                          <p className={`text-sm whitespace-pre-line ${
-                            submission.approval_status === 'APPROVED' 
-                              ? 'text-green-700' 
-                              : 'text-red-700'
-                          }`}>
-                            {submission.final_note}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status-specific information */}
-                  {submission.approval_status === 'PENDING' && (
+                  {submission.approval_status === 'PENDING_APPROVAL' && (
                     <div className="md:col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <div className="flex items-center">
                         <PendingIcon className="h-5 w-5 text-yellow-500 mr-3" />
@@ -573,7 +472,6 @@ export default function SubmissionDetailModal({
               </DetailSection>
             </div>
 
-            {/* Footer Actions */}
             <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
               <div className="flex items-center space-x-3 justify-between w-full">
                 {submission.approval_status === 'APPROVED' && submission.simlok_number && (
@@ -586,7 +484,6 @@ export default function SubmissionDetailModal({
                     Lihat PDF
                   </Button>
                 )}
-                
                 <Button
                   variant="outline"
                   size="sm"
@@ -600,7 +497,6 @@ export default function SubmissionDetailModal({
         </div>
       </div>
 
-      {/* Document Preview Modal */}
       <DocumentPreviewModal
         isOpen={isDocumentModalOpen}
         onClose={() => setIsDocumentModalOpen(false)}
@@ -608,7 +504,6 @@ export default function SubmissionDetailModal({
         fileName={selectedDocument?.title || ''}
       />
 
-      {/* PDF Download Modal */}
       <SimlokPdfModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}

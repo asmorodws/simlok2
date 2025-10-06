@@ -438,9 +438,9 @@ async function main() {
             scanned_by: randomVerifier.id,
             scanned_at: scanDate,
             scanner_name: randomVerifier.officer_name,
-            notes: i === 0 ? 'Scan pertama - verifikasi awal pelaksanaan' : 
-                   i === 1 ? 'Scan kedua - monitoring progress pekerjaan' : 
-                   'Scan ketiga - verifikasi penyelesaian pekerjaan',
+            scan_location: i === 0 ? 'Gerbang Utama - Area A' : 
+                          i === 1 ? 'Area Kerja - Sektor B' : 
+                          'Pos Security - Exit Gate',
           },
         });
         
@@ -509,7 +509,7 @@ async function main() {
     });
 
     // Create vendor notification for status changes (for approved/rejected submissions)
-    if (submission.approval_status !== 'PENDING') {
+    if (submission.approval_status !== 'PENDING_APPROVAL') {
       await prisma.notification.create({
         data: {
           scope: 'vendor',

@@ -250,7 +250,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }
     
     // Check if submission is still editable
-    if (submission.approval_status !== 'PENDING') {
+    if (submission.approval_status !== 'PENDING_APPROVAL') {
       setAlert({
         variant: 'warning',
         title: 'Peringatan!',
@@ -419,11 +419,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
             <div className="flex justify-between items-center mb-6">
               <div className="text-sm text-gray-500">
                 Status: <span className={`font-medium ${
-                  submission.approval_status === 'PENDING' ? 'text-yellow-600' :
+                  submission.approval_status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
                   submission.approval_status === 'APPROVED' ? 'text-green-600' :
                   'text-red-600'
                 }`}>{
-                  submission.approval_status === 'PENDING' ? 'Menunggu Review' :
+                  submission.approval_status === 'PENDING_APPROVAL' ? 'Menunggu Review' :
                   submission.approval_status === 'APPROVED' ? 'Disetujui' :
                   submission.approval_status === 'REJECTED' ? 'Ditolak' :
                   submission.approval_status
@@ -431,7 +431,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               </div>
             </div>
             
-            {submission.approval_status !== 'PENDING' && (
+            {submission.approval_status !== 'PENDING_APPROVAL' && (
               <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-yellow-800 text-sm">
                   <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
@@ -441,7 +441,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
             )}
             
             <form onSubmit={handleSubmit} className="space-y-8">
-              <fieldset disabled={submission.approval_status !== 'PENDING'} className={submission.approval_status !== 'PENDING' ? 'opacity-60' : ''}>
+              <fieldset disabled={submission.approval_status !== 'PENDING_APPROVAL'} className={submission.approval_status !== 'PENDING_APPROVAL' ? 'opacity-60' : ''}>
             
             {/* Informasi Vendor */}
             <div className="p-6 rounded-lg">
@@ -685,7 +685,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                           variant="outline"
                           className="text-red-500 hover:bg-red-50 border-red-200 w-8 h-8 p-0 rounded-full"
                           title="Hapus pekerja"
-                          disabled={submission.approval_status !== 'PENDING'}
+                          disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                         >
                           ✕
                         </Button>
@@ -709,7 +709,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                                 variant="outline"
                                 onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
                                 className="bg-white text-gray-800 hover:bg-gray-100 text-xs px-3 py-1"
-                                disabled={submission.approval_status !== 'PENDING'}
+                                disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                               >
                                 Ganti Foto
                               </Button>
@@ -719,16 +719,16 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                               onClick={() => updateWorkerPhoto(worker.id, '')}
                               className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
                               title="Hapus foto"
-                              disabled={submission.approval_status !== 'PENDING'}
+                              disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                             >
                               ✕
                             </button>
                           </div>
                         ) : (
                           <div 
-                            onClick={() => submission.approval_status === 'PENDING' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
+                            onClick={() => submission.approval_status === 'PENDING_APPROVAL' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
                             className={`w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center transition-all duration-200 bg-gray-50 ${
-                              submission.approval_status === 'PENDING' 
+                              submission.approval_status === 'PENDING_APPROVAL' 
                                 ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50' 
                                 : 'cursor-not-allowed opacity-60'
                             }`}
@@ -794,7 +794,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                 ))}
                 
                 {/* Add New Worker Card */}
-                {submission.approval_status === 'PENDING' && (
+                {submission.approval_status === 'PENDING_APPROVAL' && (
                   <div 
                     onClick={addWorker}
                     className="border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[280px] text-gray-500 hover:text-blue-600"
@@ -821,7 +821,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
               >
                 Batal
               </Button>
-              {submission.approval_status === 'PENDING' && (
+              {submission.approval_status === 'PENDING_APPROVAL' && (
                 <Button
                   type="submit"
                   disabled={isLoading}

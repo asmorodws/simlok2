@@ -13,10 +13,10 @@ export default function DashboardMainContent() {
   const role = session?.user.role ?? "VENDOR";
 
   const stats = [
-    { label: "Products", value: 42, icon: ChartPieIcon },
-    { label: "Orders", value: 128, icon: ClockIcon },
-    { label: "Earnings", value: "$3,210", icon: ArrowTrendingUpIcon },
-    { label: "Pending", value: "$450", icon: PlusIcon },
+    { label: "Produk", value: 42, icon: ChartPieIcon },
+    { label: "Pesanan", value: 128, icon: ClockIcon },
+    { label: "Penghasilan", value: "$3,210", icon: ArrowTrendingUpIcon },
+    { label: "Menunggu", value: "$450", icon: PlusIcon },
   ];
 
   const activities = [

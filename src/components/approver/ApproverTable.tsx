@@ -11,12 +11,11 @@ import TableActionButton from '@/components/table/TableActionButton';
 
 export interface ApproverSubmission extends Record<string, unknown> {
   id: string;
-  approval_status: string;
   review_status:
     | 'PENDING_REVIEW'
     | 'MEETS_REQUIREMENTS'
     | 'NOT_MEETS_REQUIREMENTS';
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -35,8 +34,8 @@ export interface ApproverSubmission extends Record<string, unknown> {
   worker_names: string;
   content: string;
   notes?: string;
-  review_note?: string;
-  final_note?: string;
+  note_for_approver?: string;
+  note_for_vendor?: string;
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;
@@ -99,7 +98,7 @@ function ReviewStatusBadge({
 function FinalStatusBadge({
   status,
 }: {
-  status: ApproverSubmission['final_status'] | string;
+  status: ApproverSubmission['approval_status'] | string;
 }) {
   switch (status) {
     case 'PENDING_APPROVAL':
@@ -206,12 +205,12 @@ export default function ApproverTable({
         cell: (s) => <ReviewStatusBadge status={s.review_status} />,
       },
       {
-        key: 'final_status',
+        key: 'approval_status',
         header: 'Status Final',
         sortable: true,
         minWidth: 130,
         className: 'whitespace-nowrap px-3 py-2',
-        cell: (s) => <FinalStatusBadge status={s.final_status} />,
+        cell: (s) => <FinalStatusBadge status={s.approval_status} />,
       },
       {
         key: 'actions',
@@ -220,7 +219,7 @@ export default function ApproverTable({
         minWidth: 184,                    // ⬅️ cukup lebar utk 1 tombol + icon
         className: 'px-3 py-2 whitespace-nowrap',
         cell: (s) => {
-          const pending = s.final_status === 'PENDING_APPROVAL';
+          const pending = s.approval_status === 'PENDING_APPROVAL';
           return (
             <div className="flex items-center justify-center"> {/* ⬅️ tombol center */}
               <TableActionButton

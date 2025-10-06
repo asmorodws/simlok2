@@ -90,7 +90,6 @@ model VerificationToken {
 /// ----------  SUBMISSION  ----------
 model Submission {
   id                        String       @id @default(cuid())
-  approval_status           String       @default("PENDING")
   approved_by               String?
   vendor_name               String
   based_on                  String
@@ -121,9 +120,9 @@ model Submission {
   implementation_start_date DateTime?
   approved_at               DateTime?
   approved_by_final_id      String?
-  final_note                String?      @db.Text
-  final_status              FinalStatus  @default(PENDING_APPROVAL)
-  review_note               String?      @db.Text
+  note_for_vendor           String?      @db.Text
+  approval_status           ApprovalStatus  @default(PENDING_APPROVAL)
+  note_for_approver         String?      @db.Text
   review_status             ReviewStatus @default(PENDING_REVIEW)
   reviewed_at               DateTime?
   reviewed_by_id            String?
@@ -136,11 +135,9 @@ model Submission {
   user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   worker_list               WorkerList[]
 
-  @@index([approval_status])
   @@index([review_status])
-  @@index([final_status])
+  @@index([approval_status])
   @@index([created_at])
-  @@index([user_id, approval_status])
   @@index([reviewed_by_id])
   @@index([approved_by_final_id])
   @@index([approved_by], map: "Submission_approved_by_fkey")
@@ -218,7 +215,7 @@ enum ReviewStatus {
   NOT_MEETS_REQUIREMENTS
 }
 
-enum FinalStatus {
+enum ApprovalStatus {
   PENDING_APPROVAL
   APPROVED
   REJECTED

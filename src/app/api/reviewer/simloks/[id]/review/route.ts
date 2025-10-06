@@ -8,8 +8,8 @@ import { notifyApproverReviewedSubmission } from '@/server/events';
 // Schema for validating review data
 const reviewSchema = z.object({
   review_status: z.enum(['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS']),
-  review_note: z.string().optional(),
-  final_note: z.string().optional(),
+  note_for_approver: z.string().optional(),
+  note_for_vendor: z.string().optional(),
 });
 
 // PATCH /api/reviewer/simloks/[id]/review - Set review status and note
@@ -35,7 +35,7 @@ export async function PATCH(
       where: { id: resolvedParams.id },
       select: {
         id: true,
-        final_status: true,
+        approval_status: true,
         user_id: true,
         user: {
           select: {
@@ -51,7 +51,7 @@ export async function PATCH(
     }
 
     // Reviewer cannot review after Approver has finalized
-    if (existingSubmission.final_status !== 'PENDING_APPROVAL') {
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
       return NextResponse.json({ 
         error: 'Cannot review submission after it has been finalized' 
       }, { status: 400 });
@@ -64,8 +64,8 @@ export async function PATCH(
       where: { id: resolvedParams.id },
       data: {
         review_status: validatedData.review_status,
-        review_note: validatedData.review_note || null,
-        final_note: validatedData.final_note || null,
+        note_for_approver: validatedData.note_for_approver || null,
+        note_for_vendor: validatedData.note_for_vendor || null,
         reviewed_by_id: session.user.id,
         reviewed_at: new Date(),
       },

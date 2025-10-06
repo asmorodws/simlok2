@@ -133,7 +133,6 @@ async function generatePDF(submission: any) {
     console.log('PDF Generation Debug:', {
       submissionId: submission.id,
       approval_status: submission.approval_status,
-      final_status: submission.final_status,
       simlok_number: submission.simlok_number,
       has_simlok_number: !!submission.simlok_number
     });
@@ -228,7 +227,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
       
-      if (existingSubmission.approval_status !== 'PENDING') {
+      if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
         console.log('PUT /api/submissions/[id] - Cannot edit non-pending submission');
         return NextResponse.json({ 
           error: 'Can only edit pending submissions' 
@@ -241,7 +240,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const updateData: any = {};
     let statusChanged = false;
-    let newStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | undefined;
+    let newStatus: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | undefined;
 
     // Handle different types of updates based on user role
     if ( session.user.role === 'VERIFIER') {
@@ -441,7 +440,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
         }, { status: 403 });
       }
       
-      if (existingSubmission.approval_status !== 'PENDING') {
+      if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
         return NextResponse.json({ 
           error: 'Can only delete pending submissions. Approved or rejected submissions cannot be deleted.' 
         }, { status: 400 });

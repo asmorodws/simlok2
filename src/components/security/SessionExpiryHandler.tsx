@@ -115,21 +115,21 @@ export default function SessionExpiryHandler({ children }: SessionExpiryHandlerP
       
       <ConfirmModal
         isOpen={showSessionWarning}
-        title="Session Warning"
-        message={`Your session will expire in ${JWT_CONFIG.WARNING_BEFORE_EXPIRY} minutes. Would you like to extend your session?`}
+        title="Peringatan Sesi"
+        message={`Sesi Anda akan berakhir dalam ${JWT_CONFIG.WARNING_BEFORE_EXPIRY} menit. Apakah Anda ingin memperpanjang sesi?`}
         onConfirm={handleExtendSession}
         onClose={handleSessionExpiry}
-        confirmText="Extend Session"
-        cancelText="Let it expire"
+        confirmText="Perpanjang Sesi"
+        cancelText="Biarkan Berakhir"
       />
 
       <ConfirmModal
         isOpen={showSessionExpired}
-        title="Session Expired"
-        message="Your session has expired. Please log in again."
+        title="Sesi Berakhir"
+        message="Sesi Anda telah berakhir. Silakan masuk kembali."
         onConfirm={handleGoToLogin}
         onClose={handleGoToLogin}
-        confirmText="Go to Login"
+        confirmText="Ke Halaman Masuk"
         showCancel={false}
       />
     </>

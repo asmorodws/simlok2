@@ -97,7 +97,7 @@ const SignInForm: FC<Props> = ({
               {/* Email */}
               <div>
                 <Label className="text-gray-700 font-medium text-sm" htmlFor="email">
-                  Email <span className="text-red-500">*</span>
+                  Alamat Email <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -114,14 +114,14 @@ const SignInForm: FC<Props> = ({
               {/* Password — gunakan native input untuk hindari double eye icon */}
               <div>
                 <Label className="text-gray-700 font-medium text-sm" htmlFor="password">
-                  Password <span className="text-red-500">*</span>
+                  Kata Sandi <span className="text-red-500">*</span>
                 </Label>
                 <div className={`relative mt-2 ${pwdFocused ? "ring-1 ring-blue-500 rounded-lg" : ""}`}>
                   <input
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Masukkan password"
+                    placeholder="Masukkan kata sandi"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setPwdFocused(true)}
@@ -133,7 +133,7 @@ const SignInForm: FC<Props> = ({
                   <button
                     type="button"
                     onClick={() => setShow(!showPassword)}
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                   >
                     {showPassword ? (

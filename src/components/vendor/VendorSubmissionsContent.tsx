@@ -226,7 +226,7 @@ export default function VendorSubmissionsContent() {
               onClick={clearFilters}
               className="sm:w-auto w-full text-red-600 border-red-200 hover:bg-red-50"
             >
-              Clear
+              Hapus Filter
             </Button>
           )}
         </div>
@@ -357,6 +357,7 @@ export default function VendorSubmissionsContent() {
               work_location: s.work_location,
               work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
               approval_status: s.approval_status,
+              review_status: s.review_status ?? 'PENDING_REVIEW',
               simlok_number: s.simlok_number,
               created_at: s.created_at,
             }))}
@@ -374,6 +375,7 @@ export default function VendorSubmissionsContent() {
               work_location: s.work_location,
               work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
               approval_status: s.approval_status,
+              review_status: s.review_status ?? 'PENDING_REVIEW',
               simlok_number: s.simlok_number,
               created_at: s.created_at,
             }))}

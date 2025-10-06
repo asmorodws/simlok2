@@ -38,10 +38,10 @@ export async function GET(request: NextRequest) {
     // Filter by final status if provided
     if (finalStatus && finalStatus.trim()) {
       if (['PENDING_APPROVAL', 'APPROVED', 'REJECTED'].includes(finalStatus)) {
-        whereClause.final_status = finalStatus;
+        whereClause.approval_status = finalStatus;
       }
     }
-    // Note: If no finalStatus is provided, show all submissions (don't filter by final_status)
+    // Note: If no finalStatus is provided, show all submissions (don't filter by approval_status)
 
     // Filter by vendor if provided
     if (vendorId) {
@@ -76,7 +76,6 @@ export async function GET(request: NextRequest) {
           id: true,
           approval_status: true,
           review_status: true,
-          final_status: true,
           vendor_name: true,
           based_on: true,
           officer_name: true,
@@ -124,7 +123,7 @@ export async function GET(request: NextRequest) {
       prisma.submission.groupBy({
         by: ['review_status'],
         where: {
-          final_status: 'PENDING_APPROVAL'
+          approval_status: 'PENDING_APPROVAL'
         },
         _count: {
           review_status: true
@@ -151,7 +150,6 @@ export async function GET(request: NextRequest) {
     const formattedSubmissions = submissions.map(submission => ({
       approval_status: submission.approval_status,
       review_status: submission.review_status,
-      final_status: submission.final_status,
       vendor_name: submission.vendor_name,
       based_on: submission.based_on,
       officer_name: submission.officer_name,

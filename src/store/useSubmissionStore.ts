@@ -6,9 +6,8 @@ interface Submission {
   work_location: string;
   approval_status: string;
   review_status?: string;
-  review_note?: string | null;
-  final_note?: string | null;
-  final_status?: string;
+  note_for_approver?: string | null;
+  note_for_vendor?: string | null;
   reviewed_at?: string | null;
   approved_at?: string | null;
   simlok_number?: string | null;

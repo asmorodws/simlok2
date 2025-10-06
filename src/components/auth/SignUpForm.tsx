@@ -138,7 +138,7 @@ const SignUpForm: FC<Props> = ({
 
                   <div>
                     <Label className="text-gray-700 font-medium text-xs">
-                      Email <span className="text-red-500">*</span>
+                      Alamat Email <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="email"
@@ -218,7 +218,7 @@ const SignUpForm: FC<Props> = ({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-gray-700 font-medium text-xs">
-                      Password <span className="text-red-500">*</span>
+                      Kata Sandi <span className="text-red-500">*</span>
                     </Label>
                     <div className="relative mt-1">
                       <input
@@ -252,7 +252,7 @@ const SignUpForm: FC<Props> = ({
                     <div className="relative mt-1">
                       <input
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Ulangi password"
+                        placeholder="Ulangi kata sandi"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required

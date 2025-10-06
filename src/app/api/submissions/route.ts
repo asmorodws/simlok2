@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
       response.statistics = {
         total: total,
-        pending: statistics.find(s => s.approval_status === 'PENDING')?._count.approval_status || 0,
+        pending: statistics.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
         approved: statistics.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
         rejected: statistics.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
       };

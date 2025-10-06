@@ -13,7 +13,7 @@ export const AdminNewVendorEvent = z.object({
 
 export const VendorSubmissionStatusChangedEvent = z.object({
   submissionId: z.string(),
-  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']),
+  status: z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']),
   updatedAt: z.string(),
 });
 

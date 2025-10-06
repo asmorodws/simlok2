@@ -11,9 +11,8 @@ import TableActionButton from '@/components/table/TableActionButton';
 
 export interface ReviewerSubmission extends Record<string, unknown> {
   id: string;
-  approval_status: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -32,8 +31,8 @@ export interface ReviewerSubmission extends Record<string, unknown> {
   worker_names: string;
   content: string;
   notes?: string;
-  review_note?: string;
-  final_note?: string;
+  note_for_approver?: string;
+  note_for_vendor?: string;
   sika_document_upload?: string;
   simja_document_upload?: string;
   qrcode?: string;
@@ -92,7 +91,7 @@ function ReviewStatusBadge({ status }: { status: ReviewerSubmission['review_stat
   }
 }
 
-function FinalStatusBadge({ status }: { status: ReviewerSubmission['final_status'] | string }) {
+function FinalStatusBadge({ status }: { status: ReviewerSubmission['approval_status'] | string }) {
   switch (status) {
     case 'PENDING_APPROVAL': return <Badge variant="warning">Menunggu Persetujuan</Badge>;
     case 'APPROVED': return <Badge variant="success">Disetujui</Badge>;
@@ -179,11 +178,11 @@ export default function ReviewerTable({
         cell: (s) => <ReviewStatusBadge status={s.review_status} />,
       },
       {
-        key: 'final_status',
+        key: 'approval_status',
         header: 'Status Final',
         sortable: true,
         className: 'whitespace-nowrap',
-        cell: (s) => <FinalStatusBadge status={s.final_status} />,
+        cell: (s) => <FinalStatusBadge status={s.approval_status} />,
       },
     ],
     []
@@ -198,7 +197,7 @@ export default function ReviewerTable({
       minWidth: 176,                   // ⬅️ beri ruang cukup untuk tombol
       className: 'whitespace-nowrap text-center', // ⬅️ bantu alignment sel
       cell: (s) => {
-        const pending = s.final_status === 'PENDING_APPROVAL';
+        const pending = s.approval_status === 'PENDING_APPROVAL';
         return (
           <div className="flex items-center justify-center"> {/* ⬅️ center-kan tombol */}
             <TableActionButton

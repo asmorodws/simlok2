@@ -68,11 +68,11 @@ interface SubmissionDetail {
   signer_position: string;
   signer_name: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  review_note: string;
+  note_for_approver: string;
   reviewed_by_name?: string;
   reviewed_by_email?: string;
-  final_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
-  final_note: string;
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  note_for_vendor: string;
   approved_by_name?: string;
   approved_by_email?: string;
   created_at: string;
@@ -343,8 +343,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
   const [reviewData, setReviewData] = useState({
     review_status: '' as 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS' | '',
-    review_note: '',
-    final_note: ''
+    note_for_approver: '',
+    note_for_vendor: ''
   });
 
   const [approvalForm, setApprovalForm] = useState({
@@ -480,8 +480,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
       setReviewData({
         review_status: sub.review_status === 'PENDING_REVIEW' ? '' : sub.review_status,
-        review_note: sub.review_note || '',
-        final_note: sub.final_note || ''
+        note_for_approver: sub.note_for_approver || '',
+        note_for_vendor: sub.note_for_vendor || ''
       });
 
       setApprovalForm({
@@ -534,12 +534,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       return;
     }
 
-    if (!reviewData.review_note.trim()) {
-      showError('Error', 'Catatan review wajib diisi');
+    if (!reviewData.note_for_approver.trim()) {
+      showError('Error', 'Catatan untuk approver wajib diisi');
       return;
     }
 
-    if (!reviewData.final_note.trim()) {
+    if (!reviewData.note_for_vendor.trim()) {
       showError('Error', 'Catatan untuk vendor wajib diisi');
       return;
     }
@@ -670,8 +670,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         setActiveTab('details');
         setReviewData({
           review_status: '',
-          review_note: '',
-          final_note: ''
+          note_for_approver: '',
+          note_for_vendor: ''
         });
         setApprovalForm({
           content: '',
@@ -815,8 +815,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
   // Helper functions
   const canEdit = useMemo(() => {
-    return submission && submission.final_status === 'PENDING_APPROVAL';
-  }, [submission?.final_status]);
+    return submission && submission.approval_status === 'PENDING_APPROVAL';
+  }, [submission?.approval_status]);
 
   // Prevent rendering if not open or no submissionId
   if (!isOpen || !submissionId) return null;
@@ -926,7 +926,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <ImprovedDateRangePicker
                           value={implementationDatesHook.dates}
                           onChange={implementationDatesHook.updateDates}
-                          disabled={submission.final_status !== 'PENDING_APPROVAL'}
+                          disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                           className="mb-4"
                         />
                       </div>
@@ -955,11 +955,11 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             <textarea
                               value={approvalForm.pelaksanaan}
                               onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
-                              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                                 }`}
                               rows={3}
                               placeholder="Terhitung mulai tanggal..."
-                              readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                              readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                             />
                           </div>
 
@@ -1022,9 +1022,9 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             type="text"
                             value={approvalForm.jabatan_signer}
                             onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                               }`}
-                            readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                           />
                         </div>
                         <div>
@@ -1033,9 +1033,9 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             type="text"
                             value={approvalForm.nama_signer}
                             onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                               }`}
-                            readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                           />
                         </div>
                       </div>
@@ -1053,10 +1053,10 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           value={approvalForm.content}
                           onChange={(e) => setApprovalForm(prev => ({ ...prev, content: e.target.value }))}
                           rows={4}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                             }`}
                           placeholder="Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis."
-                          readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                          readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                         />
                         <p className="text-xs text-gray-500 mt-2">
                           Isi ketentuan dan syarat-syarat untuk surat izin masuk lokasi
@@ -1071,13 +1071,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         Catatan untuk Approver <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        value={reviewData.review_note}
-                        onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
+                        value={reviewData.note_for_approver}
+                        onChange={(e) => setReviewData({ ...reviewData, note_for_approver: e.target.value })}
                         rows={4}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                           }`}
                         placeholder="Berikan penjelasan detail mengenai hasil review..."
-                        readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                        readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                         required
                       />
                     </div>
@@ -1087,13 +1087,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         Catatan untuk Vendor <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        value={reviewData.final_note}
-                        onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
+                        value={reviewData.note_for_vendor}
+                        onChange={(e) => setReviewData({ ...reviewData, note_for_vendor: e.target.value })}
                         rows={4}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.final_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                           }`}
                         placeholder="Berikan keterangan yang akan ditampilkan kepada vendor..."
-                        readOnly={submission.final_status !== 'PENDING_APPROVAL'}
+                        readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
                         required
                       />
                       <p className="text-xs text-gray-500 mt-2">
@@ -1116,7 +1116,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
                           onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
                           className="sr-only"
-                          disabled={submission.final_status !== 'PENDING_APPROVAL'}
+                          disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                         />
                         <div className="flex items-center">
                           <CheckCircleIcon className="h-5 w-5 mr-3 text-green-500" />
@@ -1138,7 +1138,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                           checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
                           onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
                           className="sr-only"
-                          disabled={submission.final_status !== 'PENDING_APPROVAL'}
+                          disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                         />
                         <div className="flex items-center">
                           <XCircleIcon className="h-5 w-5 mr-3 text-red-500" />
@@ -1151,12 +1151,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     </div>
 
                     {/* Submit Button - Available while final status is PENDING_APPROVAL */}
-                    {submission.final_status === 'PENDING_APPROVAL' && (
+                    {submission.approval_status === 'PENDING_APPROVAL' && (
                       <div className="mt-6">
                         <Button
                           onClick={handleSubmitReview}
                           variant="primary"
-                          disabled={!reviewData.review_status || !reviewData.review_note.trim() || !reviewData.final_note.trim() || saving}
+                          disabled={!reviewData.review_status || !reviewData.note_for_approver.trim() || !reviewData.note_for_vendor.trim() || saving}
                           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold py-4 text-base"
                         >
                           {saving ? (
@@ -1180,7 +1180,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     )}
 
                     {/* Review Status Info - Show when already reviewed and can still edit */}
-                    {submission.review_status !== 'PENDING_REVIEW' && submission.final_status === 'PENDING_APPROVAL' && (
+                    {submission.review_status !== 'PENDING_REVIEW' && submission.approval_status === 'PENDING_APPROVAL' && (
                       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <div className="text-center">
                           <div className="text-sm text-blue-700 mb-2 flex items-center justify-center">
@@ -1195,14 +1195,14 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     )}
 
                     {/* Final Review Status - Show when review is locked */}
-                    {submission.final_status !== 'PENDING_APPROVAL' && (
+                    {submission.approval_status !== 'PENDING_APPROVAL' && (
                       <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
                         <div className="text-center">
                           <div className="text-sm text-gray-600 mb-2">
                             {getReviewStatusBadge(submission.review_status)}
                           </div>
                           <div className="text-sm text-gray-600 mb-2">
-                            Status Akhir: {getFinalStatusBadge(submission.final_status)}
+                            Status Akhir: {getFinalStatusBadge(submission.approval_status)}
                           </div>
                           <p className="text-sm text-gray-500">
                             Review telah selesai pada {submission.reviewed_at ? new Date(submission.reviewed_at).toLocaleDateString('id-ID', {
@@ -1235,7 +1235,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                       <span className="text-sm text-gray-500">Review:</span>
                       {getReviewStatusBadge(submission.review_status)}
                       <span className="text-sm text-gray-500">Status:</span>
-                      {getFinalStatusBadge(submission.final_status)}
+                      {getFinalStatusBadge(submission.approval_status)}
                     </div>
                   </div>
 
@@ -1255,7 +1255,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                       />
                       {/* <InfoCard
-                        label="Email"
+                        label="Alamat Email"
                         value={submission.officer_email || '-'}
                       /> */}
                       <InfoCard

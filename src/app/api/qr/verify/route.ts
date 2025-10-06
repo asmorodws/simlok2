@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { qrData, qr_data, scanLocation, scanNotes, scanner_type } = body;
+    const { qrData, qr_data, scanLocation, scanner_type } = body;
 
     // Support both qrData and qr_data parameter names for compatibility
     const qrString = qr_data || qrData;
@@ -202,8 +202,7 @@ export async function POST(request: NextRequest) {
           submission_id: qrPayload.id,
           scanned_by: session.user.id,
           scanner_name: userExists.officer_name || session.user.officer_name,
-          scan_location: userExists.address || 'Lokasi tidak tersedia',
-          notes: scanNotes || `Scanned via ${scanner_type || 'scanner'} at: ${scanLocation || 'Unknown location'}`,
+          scan_location: scanLocation || userExists.address || 'Lokasi tidak tersedia',
         },
         include: {
           user: {
@@ -226,7 +225,7 @@ export async function POST(request: NextRequest) {
         message: 'QR code/barcode verified successfully',
         scan_id: scanRecord.id,
         scanned_at: scanRecord.scanned_at,
-        scanned_by: scanRecord.user.officer_name,
+        scanned_by: scanRecord.user?.officer_name || session.user.officer_name,
         data: {
           submission: {
             id: submission.id,

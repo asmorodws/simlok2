@@ -24,7 +24,7 @@ export async function GET() {
       prisma.submission.count({
         where: {
           user_id: userId,
-          approval_status: "PENDING"
+          approval_status: "PENDING_APPROVAL"
         }
       }),
       prisma.submission.count({
