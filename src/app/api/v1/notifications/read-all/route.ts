@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Cache, CacheNamespaces } from "@/lib/cache";
 import { resolveAudience } from "@/lib/notificationAudience";
-
-const notifCacheKey = (aud: { readerKey: "user" | "vendor"; readerId: string }) =>
-  `list:${aud.readerKey}:${aud.readerId}`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,7 +42,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    await Cache.invalidateByPrefix(notifCacheKey(audience), CacheNamespaces.NOTIFICATIONS);
+    // Don't invalidate cache since we disabled caching in the main route
+    // await Cache.invalidateByPrefix(notifCacheKey(audience), CacheNamespaces.NOTIFICATIONS);
 
     const res = NextResponse.json({ success: true, data: { unreadCount: 0 } });
     res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");

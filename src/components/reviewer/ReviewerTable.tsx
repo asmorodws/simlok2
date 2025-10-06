@@ -8,6 +8,7 @@ import ReusableTable, {
 import { Badge } from '@/components/ui/Badge';
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import TableActionButton from '@/components/table/TableActionButton';
+import { ReviewerTableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
 
 export interface ReviewerSubmission extends Record<string, unknown> {
   id: string;
@@ -54,6 +55,7 @@ export interface ReviewerSubmission extends Record<string, unknown> {
 export interface ReviewerTableProps {
   data: ReviewerSubmission[];
   mode?: string;
+  loading?: boolean;
 
   // sorting (opsional)
   sortBy?: keyof ReviewerSubmission | string;
@@ -102,6 +104,7 @@ function FinalStatusBadge({ status }: { status: ReviewerSubmission['approval_sta
 
 export default function ReviewerTable({
   data,
+  loading = false,
   sortBy,
   sortOrder = 'desc',
   onSortChange,
@@ -217,6 +220,11 @@ export default function ReviewerTable({
     cols.push(actionColumn);
     return cols;
   }, [baseColumns, actionColumn, showScanStatus]);
+
+  // Tampilkan skeleton saat loading
+  if (loading) {
+    return <ReviewerTableSkeleton />;
+  }
 
   // Hindari prop undefined (exactOptionalPropertyTypes)
   const sortByProp = typeof sortBy === 'string' && sortBy.length > 0 ? { sortBy } : {};

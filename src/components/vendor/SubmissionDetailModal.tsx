@@ -414,7 +414,7 @@ export default function SubmissionDetailModal({
                 }
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {submission.note_for_approver && (
+                  {submission.note_for_vendor && (
                     <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <div className="flex items-start">
                         <DocumentIcon className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />

@@ -192,6 +192,7 @@ export default function ReviewerSubmissionsManagement() {
       <ReviewerTable
         mode="management"
         data={submissions}
+        loading={_loading}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onSortChange={(field, order) => { setSortBy(String(field)); setSortOrder(order); setCurrentPage(1); }}

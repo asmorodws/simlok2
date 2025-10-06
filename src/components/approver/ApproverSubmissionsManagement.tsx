@@ -15,6 +15,7 @@ import Alert from '@/components/ui/alert/Alert';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
+import PageSkeleton from '@/components/ui/skeleton/PageSkeleton';
 
 interface Submission {
   id: string;
@@ -143,39 +144,6 @@ function EmptyState({
   );
 }
 
-// Loading State Component
-function LoadingState() {
-  return (
-    <div className="space-y-6">
-      {/* Loading Filters */}
-      <div className="bg-white p-6 rounded-lg shadow animate-pulse">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 h-10 bg-gray-200 rounded" />
-          <div className="sm:w-48 h-10 bg-gray-200 rounded" />
-        </div>
-      </div>
-
-      {/* Loading Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-6">
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <div className="h-4 bg-gray-200 rounded w-24" />
-                <div className="h-4 bg-gray-200 rounded w-32" />
-                <div className="h-4 bg-gray-200 rounded w-48" />
-                <div className="h-4 bg-gray-200 rounded w-20" />
-                <div className="h-4 bg-gray-200 rounded w-20" />
-                <div className="h-4 bg-gray-200 rounded w-24" />
-                <div className="h-8 bg-gray-200 rounded w-16" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function ApproverSubmissionsManagement() {
   const [submissions, setSubmissions] = useState<ApproverSubmission[]>([]);
@@ -281,7 +249,7 @@ export default function ApproverSubmissionsManagement() {
   const hasFilters = Boolean(searchTerm || reviewStatusFilter || finalStatusFilter);
 
   if (loading && submissions.length === 0) {
-    return <LoadingState />;
+    return <PageSkeleton hasHeader hasFilters hasStats={false} />;
   }
 
   return (
@@ -363,6 +331,7 @@ export default function ApproverSubmissionsManagement() {
           {/* TABEL REUSABLE: sama seperti reviewer */}
           <ApproverTable
             data={submissions}
+            loading={loading}
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSortChange={(field, order) => {

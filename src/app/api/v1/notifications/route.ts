@@ -3,12 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Cache, CacheNamespaces } from "@/lib/cache";
 import { resolveAudience } from "@/lib/notificationAudience";
-
-const NOTIF_LIST_TTL_SECONDS = 60;
-const notifCacheKey = (aud: { readerKey: "user" | "vendor"; readerId: string }) =>
-  `list:${aud.readerKey}:${aud.readerId}`;
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,17 +23,18 @@ export async function GET(req: NextRequest) {
     const search   = sp.get("search") || undefined;
     const filter   = (sp.get("filter") as "all" | "unread" | "read") || "all";
 
-    const cacheKey = `${notifCacheKey(audience)}:scope=${audience.scope}:p=${page}:s=${pageSize}:f=${filter}:q=${search || ""}`;
-    const cached = await Cache.getJSON<{ data: any[]; pagination: any }>(cacheKey, {
-      namespace: CacheNamespaces.NOTIFICATIONS,
-    });
-    if (cached) {
-      const res = NextResponse.json({ success: true, data: cached });
-      res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-      res.headers.set("Pragma", "no-cache");
-      res.headers.set("Expires", "0");
-      return res;
-    }
+    // Disable caching completely to prevent stale data after mark as read
+    // const cacheKey = `${notifCacheKey(audience)}:scope=${audience.scope}:p=${page}:s=${pageSize}:f=${filter}:q=${search || ""}`;
+    // const cached = await Cache.getJSON<{ data: any[]; pagination: any }>(cacheKey, {
+    //   namespace: CacheNamespaces.NOTIFICATIONS,
+    // });
+    // if (cached) {
+    //   const res = NextResponse.json({ success: true, data: cached });
+    //   res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    //   res.headers.set("Pragma", "no-cache");
+    //   res.headers.set("Expires", "0");
+    //   return res;
+    // }
 
     // WHERE dasar: scope sesuai audience
     const where: any = { scope: audience.scope };
@@ -111,10 +107,11 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    await Cache.setJSON(cacheKey, result, {
-      namespace: CacheNamespaces.NOTIFICATIONS,
-      ttl: NOTIF_LIST_TTL_SECONDS,
-    });
+    // Disable caching to prevent stale data
+    // await Cache.setJSON(cacheKey, result, {
+    //   namespace: CacheNamespaces.NOTIFICATIONS,
+    //   ttl: NOTIF_LIST_TTL_SECONDS,
+    // });
 
     const res = NextResponse.json({ success: true, data: result });
     res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");

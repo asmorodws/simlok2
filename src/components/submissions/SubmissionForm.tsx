@@ -15,6 +15,9 @@ import Alert from '../ui/alert/Alert';
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types/submission';
 
+// import modal konfirmasi
+import ConfirmModal from '@/components/ui/modal/ConfirmModal'; // sesuaikan path dengan struktur proyekmu
+
 // ===============================
 // Types
 // ===============================
@@ -55,6 +58,13 @@ export default function SubmissionForm() {
     message: string;
   } | null>(null);
 
+  // menandai adanya draft
+  const [hasDraft, setHasDraft] = useState(false);
+
+  // state modal konfirmasi hapus draft
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeletingDraft, setIsDeletingDraft] = useState(false);
+
   // -------------------------------
   // Workers state + helpers
   // -------------------------------
@@ -62,9 +72,7 @@ export default function SubmissionForm() {
     { id: `${Date.now()}`, worker_name: '', worker_photo: '' },
   ]);
 
-  // angka target baris (valid terakhir)
   const [desiredCount, setDesiredCount] = useState<number>(1);
-  // input teks yang user ketik (editable, bisa kosong "")
   const [workerCountInput, setWorkerCountInput] = useState<string>('1');
 
   // bulk add
@@ -85,7 +93,7 @@ export default function SubmissionForm() {
     work_location: '',
     working_hours: '',
     work_facilities: '',
-    worker_count: 1, // akan diset dari desiredCount saat submit
+    worker_count: 1,
     simja_number: '',
     simja_date: '',
     sika_number: '',
@@ -106,7 +114,6 @@ export default function SubmissionForm() {
       const parsed: DraftShape = JSON.parse(raw);
       if (!parsed || parsed.v !== DRAFT_VERSION) return;
 
-      // Restore state dari draft
       setFormData(parsed.formData);
       setWorkers(parsed.workers?.length ? parsed.workers : [{ id: `${Date.now()}`, worker_name: '', worker_photo: '' }]);
       setDesiredCount(parsed.desiredCount ?? parsed.workers?.length ?? 1);
@@ -114,7 +121,8 @@ export default function SubmissionForm() {
       setShowBulk(Boolean(parsed.showBulk));
       setBulkNames(parsed.bulkNames ?? '');
 
-      // Info kecil (opsional)
+      setHasDraft(true);
+
       setAlert({
         variant: 'info',
         title: 'Draft Dipulihkan',
@@ -124,30 +132,27 @@ export default function SubmissionForm() {
     } catch (e) {
       console.warn('Gagal memulihkan draft:', e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Prefill vendor/officer dari session (tidak override draft user jika sudah ada)
+  // Prefill vendor/officer dari session
   useEffect(() => {
     if (session?.user) {
       setFormData((prev) => ({
         ...prev,
-        vendor_name: session.user.vendor_name || prev.vendor_name || '',
-        officer_name: session.user.officer_name || prev.officer_name || '',
+        vendor_name: (session.user as any).vendor_name || prev.vendor_name || '',
+        officer_name: (session.user as any).officer_name || prev.officer_name || '',
       }));
     }
   }, [session]);
 
-  // Sync awal: kalau tidak ada draft, set default 1 baris
+  // Sync awal jika tidak ada draft
   useEffect(() => {
-    // Jika workerCountInput sudah berasal dari draft, lewati init
     if (workerCountInput !== '1' || workers.length !== 1) return;
     const initial = workers.length || 1;
     setDesiredCount(initial);
     setWorkerCountInput(String(initial));
     setFormData((prev) => ({ ...prev, worker_count: initial }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [workerCountInput, workers.length]);
 
   // ===============================
   // PERSISTENCE: SAVE (debounced)
@@ -156,6 +161,7 @@ export default function SubmissionForm() {
   const saveDraft = (payload: DraftShape) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      if (!hasDraft) setHasDraft(true);
     } catch (e) {
       console.warn('Gagal menyimpan draft:', e);
     }
@@ -163,7 +169,6 @@ export default function SubmissionForm() {
 
   const scheduleSave = () => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    // debounce 500ms
     saveTimer.current = window.setTimeout(() => {
       const draft: DraftShape = {
         v: DRAFT_VERSION,
@@ -178,13 +183,11 @@ export default function SubmissionForm() {
     }, 500) as unknown as number;
   };
 
-  // Trigger save saat state terkait berubah
   useEffect(() => {
     scheduleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames]);
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -205,6 +208,16 @@ export default function SubmissionForm() {
     () => workers.every((w) => w.worker_name.trim() && w.worker_photo.trim()),
     [workers]
   );
+
+  // Tampilkan tombol hapus draft hanya jika:
+  // - ada draft
+  // - "Berdasarkan" terisi
+  // - ada minimal satu pekerja dengan foto
+  const canShowDelete = useMemo(() => {
+    const basedFilled = (formData.based_on || '').trim().length > 0;
+    const hasAnyPhoto = workers.some((w) => (w.worker_photo || '').trim().length > 0);
+    return hasDraft && basedFilled || hasAnyPhoto;
+  }, [hasDraft, formData.based_on, workers]);
 
   // -------------------------------
   // Utilities
@@ -239,10 +252,27 @@ export default function SubmissionForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value, type } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? (value === '' ? ('' as any) : Number(value)) : value,
-    }));
+
+    if (type === 'number') {
+      let processedValue: number | undefined;
+
+      if (value === '' || value === null) {
+        processedValue = undefined;
+      } else {
+        const numValue = Number(value);
+        processedValue = isNaN(numValue) ? undefined : numValue;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        [name]: processedValue as any,
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value === null || value === undefined ? '' : String(value),
+      }));
+    }
   };
 
   const handleDateChange = (name: keyof SubmissionData) => (value: string) => {
@@ -277,7 +307,7 @@ export default function SubmissionForm() {
       const nextLen = Math.max(1, nextArr.length);
       setDesiredCount(nextLen);
       setWorkerCountInput(String(nextLen));
-      return nextArr.length > 0 ? nextArr : prev; // cegah kosong total
+      return nextArr.length > 0 ? nextArr : prev;
     });
   };
 
@@ -338,6 +368,58 @@ export default function SubmissionForm() {
   };
 
   // -------------------------------
+  // Delete draft via modal
+  // -------------------------------
+  const openDeleteDraftModal = () => setIsDeleteModalOpen(true);
+  const closeDeleteDraftModal = () => {
+    if (!isDeletingDraft) setIsDeleteModalOpen(false);
+  };
+
+  const confirmDeleteDraft = async () => {
+    try {
+      setIsDeletingDraft(true);
+
+      // hapus draft
+      localStorage.removeItem(STORAGE_KEY);
+      setHasDraft(false);
+
+      // reset state form
+      setFormData({
+        vendor_name: (session?.user as any)?.vendor_name || '',
+        based_on: '',
+        officer_name: (session?.user as any)?.officer_name || '',
+        job_description: '',
+        work_location: '',
+        working_hours: '',
+        work_facilities: '',
+        worker_count: 1,
+        simja_number: '',
+        simja_date: '',
+        sika_number: '',
+        sika_date: '',
+        worker_names: '',
+        sika_document_upload: '',
+        simja_document_upload: '',
+      });
+      setWorkers([{ id: `${Date.now()}`, worker_name: '', worker_photo: '' }]);
+      setDesiredCount(1);
+      setWorkerCountInput('1');
+      setShowBulk(false);
+      setBulkNames('');
+
+      setAlert({
+        variant: 'success',
+        title: 'Draft Dihapus',
+        message: 'Semua data draft berhasil dihapus. Form dikembalikan ke kondisi awal.',
+      });
+      setTimeout(() => setAlert(null), 3000);
+    } finally {
+      setIsDeletingDraft(false);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  // -------------------------------
   // Submit
   // -------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
@@ -348,7 +430,7 @@ export default function SubmissionForm() {
       if (workers.length === 0) {
         setAlert({
           variant: 'error',
-          title: 'Error!',
+          title: 'Error',
           message: 'Minimal harus ada satu pekerja.',
         });
         setIsLoading(false);
@@ -397,7 +479,7 @@ export default function SubmissionForm() {
 
       const payload: SubmissionData & { workers: Worker[] } = {
         ...formData,
-        worker_count: desiredCount,
+        worker_count: Math.max(1, desiredCount || 1),
         worker_names: workerNames,
         workers,
       };
@@ -410,22 +492,23 @@ export default function SubmissionForm() {
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || 'Failed to create submission');
+        throw new Error((error as any).error || 'Failed to create submission');
       }
 
-      // === PERSISTENCE: Clear draft setelah submit sukses ===
+      // bersihkan draft setelah submit
       localStorage.removeItem(STORAGE_KEY);
+      setHasDraft(false);
 
-      showSuccess('Berhasil!', 'Pengajuan SIMLOK berhasil dibuat!');
+      showSuccess('Berhasil', 'Pengajuan SIMLOK berhasil dibuat');
       router.push('/vendor/submissions');
     } catch (error) {
       console.error('Error creating submission:', error);
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to create submission. Please try again.';
-      showError('Error!', errorMessage);
+      showError('Error', errorMessage);
       setAlert({
         variant: 'error',
-        title: 'Error!',
+        title: 'Error',
         message: errorMessage,
       });
       setTimeout(() => setAlert(null), 5000);
@@ -441,9 +524,24 @@ export default function SubmissionForm() {
     <div className="max-w-4xl mx-auto p-6">
       <Card>
         <div className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            
+          {/* Toolbar ringan: hanya muncul jika ada draft + based_on terisi + ada foto pekerja */}
+          {canShowDelete && (
+            <div className="mb-4 flex w-full items-center justify-end gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700">
+                Draft aktif
+              </span>
+              <button
+                type="button"
+                className="text-xs text-red-600 hover:underline"
+                onClick={openDeleteDraftModal}
+                title="Hapus draft tersimpan"
+              >
+                Hapus Draft
+              </button>
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* ================= Vendor ================= */}
             <div className="p-6 rounded-lg">
               <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">
@@ -456,12 +554,12 @@ export default function SubmissionForm() {
                     id="vendor_name"
                     name="vendor_name"
                     type="text"
-                    value={session?.user?.vendor_name || formData.vendor_name || ''}
+                    value={(session?.user as any)?.vendor_name || formData.vendor_name || ''}
                     onChange={handleChange}
                     required
-                    disabled={!!session?.user?.vendor_name}
+                    disabled={!!(session?.user as any)?.vendor_name}
                     placeholder="Masukkan nama vendor"
-                    className={session?.user?.vendor_name ? 'cursor-not-allowed bg-gray-50' : ''}
+                    className={(session?.user as any)?.vendor_name ? 'cursor-not-allowed bg-gray-50' : ''}
                   />
                 </div>
 
@@ -647,7 +745,7 @@ export default function SubmissionForm() {
                     </p>
                   ) : (
                     <p className="text-xs text-gray-500 mt-1">
-                      Lengkapi Nama & Foto. Kamu bisa tambah satu-satu atau tempel banyak nama.
+                      Lengkapi Nama dan Foto. Anda bisa tambah satu per satu atau tempel banyak nama.
                     </p>
                   )}
                 </div>
@@ -810,8 +908,8 @@ export default function SubmissionForm() {
               </div>
 
               <div className="mt-2 text-xs text-gray-500">
-                • Jumlah pekerja <b>editable</b>: ketik angka, lalu klik <b>Sesuaikan</b> untuk otomatis menambah/mengurangi baris. <br />
-                • Wajib isi nama & unggah foto untuk setiap pekerja sebelum submit.
+                • Jumlah pekerja editable: ketik angka, lalu klik <b>Sesuaikan</b> untuk otomatis menambah/mengurangi baris. <br />
+                • Wajib isi nama dan unggah foto untuk setiap pekerja sebelum submit.
               </div>
             </div>
 
@@ -825,9 +923,9 @@ export default function SubmissionForm() {
                 disabled={isLoading}
                 title={
                   !allWorkersValid
-                    ? 'Lengkapi nama & foto semua pekerja'
+                    ? 'Lengkapi nama dan foto semua pekerja'
                     : rowsMismatch
-                      ? 'Jumlah baris ≠ jumlah pekerja. Sesuaikan dulu.'
+                      ? 'Jumlah baris tidak sama dengan jumlah pekerja. Sesuaikan dulu.'
                       : ''
                 }
               >
@@ -840,6 +938,20 @@ export default function SubmissionForm() {
 
       {/* Alert */}
       {alert && <Alert variant={alert.variant} title={alert.title} message={alert.message} />}
+
+      {/* Modal Konfirmasi Hapus Draft */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={closeDeleteDraftModal}
+        onConfirm={confirmDeleteDraft}
+        title="Hapus Draft?"
+        message="Tindakan ini akan menghapus semua data draft yang tersimpan dan mengembalikan form ke kondisi awal."
+        confirmText="Hapus"
+        cancelText="Batal"
+        showCancel
+        variant="danger"
+        isLoading={isDeletingDraft}
+      />
     </div>
   );
 }

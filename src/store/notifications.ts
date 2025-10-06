@@ -196,6 +196,9 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         set({ unreadCount: Math.max(0, result.data.unreadCount) });
       }
 
+      // No need to refetch data as we already have optimistic update
+      // The notification stays in the list but shows as read
+
     } catch (error) {
       console.error('💥 Error markAsRead:', error);
       

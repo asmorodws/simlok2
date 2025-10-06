@@ -15,7 +15,7 @@ interface UserInfoCardProps {
     vendor_name: string | null;
     phone_number: string | null;
     address: string | null;
-    role: string; // gunakan enum jika ada
+    role: string;
   };
 }
 
@@ -49,7 +49,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
   const validateForm = () => {
     if (user.role === "VENDOR") {
       return (
-        // vendor_name tidak perlu divalidasi karena tidak bisa diubah
         formData.email.trim() &&
         formData.phone_number.trim() &&
         formData.address.trim()
@@ -67,16 +66,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-
+    // Untuk alamat, boleh karakter khusus, jadi tidak filter keras
     if (name === "address") {
-      // Izinkan huruf, angka, spasi, koma, titik, garis miring, dash
-      if (/^[a-zA-Z0-9\s,./-]*$/.test(value)) {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-      }
+      setFormData((prev) => ({ ...prev, [name]: value }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
-
     if (errors[name as keyof typeof errors]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
@@ -94,24 +89,18 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         email: "",
       };
 
-      // Validasi berdasarkan role
-      if (user.role === "VENDOR") {
-        // Vendor tidak perlu validasi vendor_name karena tidak bisa diubah
-        // Tetapi tetap perlu validasi officer_name
-        if (!formData.officer_name.trim()) {
-          newErrors.officer_name = "Nama petugas wajib diisi";
-        }
-      } else {
-        if (!formData.officer_name.trim()) {
-          newErrors.officer_name = "Nama petugas wajib diisi";
-        }
+      if (!formData.officer_name.trim()) {
+        newErrors.officer_name = "Nama petugas wajib diisi";
       }
-
-      // Validasi umum
-      if (!formData.phone_number.trim()) newErrors.phone_number = "Nomor telepon wajib diisi";
-      if (!formData.address.trim()) newErrors.address = "Alamat wajib diisi";
-      if (!formData.email.trim() || !validateEmail(formData.email.trim()))
+      if (!formData.phone_number.trim()) {
+        newErrors.phone_number = "Nomor telepon wajib diisi";
+      }
+      if (!formData.address.trim()) {
+        newErrors.address = "Alamat wajib diisi";
+      }
+      if (!formData.email.trim() || !validateEmail(formData.email.trim())) {
         newErrors.email = "Format email tidak valid";
+      }
 
       const hasErrors = Object.values(newErrors).some((e) => e !== "");
       if (hasErrors) {
@@ -122,11 +111,9 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         return;
       }
 
-      // Kirim field sesuai role + email
       const dataToSend =
         user.role === "VENDOR"
           ? {
-              // vendor_name: tidak dikirim karena tidak bisa diubah
               officer_name: formData.officer_name.trim(),
               phone_number: formData.phone_number.trim(),
               address: formData.address.trim(),
@@ -148,7 +135,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       const text = await response.text();
 
       if (!response.ok) {
-        // pesan error dari server (mis. 400 validasi, 409 email duplikat)
         throw new Error(text || "Gagal memperbarui profil");
       }
 
@@ -195,25 +181,11 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <h4 className="text-lg font-semibold text-gray-800">
               Informasi Pribadi
             </h4>
-
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
               >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
                 Ubah
               </button>
             ) : (
@@ -245,7 +217,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Nama Vendor - khusus VENDOR */}
             {user.role === "VENDOR" && (
               <div className="lg:col-span-2">
                 <p className="text-sm font-medium text-gray-500">Nama Vendor</p>
@@ -258,7 +229,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                     onChange={handleChange}
                     disabled={true}
                     placeholder="PT. Nama Perusahaan"
-                    required
                     className="mt-1"
                   />
                 ) : (
@@ -269,14 +239,14 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               </div>
             )}
 
-            {/* Nama Petugas - untuk semua role (editable jika bukan vendor, tampil readonly jika vendor) */}
             <div>
               <p className="text-sm font-medium text-gray-500">Nama Petugas</p>
-              {isEditing  ? (
+              {isEditing ? (
                 <Input
                   id="officer_name"
                   name="officer_name"
                   type="text"
+                  validationMode="letters"
                   value={formData.officer_name}
                   onChange={handleChange}
                   placeholder="Masukkan nama petugas"
@@ -290,7 +260,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               )}
             </div>
 
-            {/* Email - semua role */}
             <div>
               <p className="text-sm font-medium text-gray-500">Alamat Email</p>
               {isEditing ? (
@@ -298,6 +267,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   id="email"
                   name="email"
                   type="email"
+                  validationMode="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="email@perusahaan.com"
@@ -310,7 +280,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               )}
             </div>
 
-            {/* Nomor Telepon */}
             <div>
               <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
               {isEditing ? (
@@ -318,6 +287,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   id="phone_number"
                   name="phone_number"
                   type="tel"
+                  validationMode="numbers"
                   value={formData.phone_number}
                   onChange={handleChange}
                   placeholder="08123456789"
@@ -331,7 +301,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               )}
             </div>
 
-            {/* Alamat */}
             <div className="lg:col-span-2">
               <p className="text-sm font-medium text-gray-500">Alamat</p>
               {isEditing ? (

@@ -127,6 +127,7 @@ const SignUpForm: FC<Props> = ({
                       id="nama_petugas"
                       name="nama_petugas"
                       type="text"
+                      validationMode="letters"
                       value={nama_petugas}
                       onChange={(e) => setNamaPetugas(e.target.value)}
                       placeholder="Ahmad Budi"
@@ -145,6 +146,7 @@ const SignUpForm: FC<Props> = ({
                       name="email"
                       type="email"
                       value={email}
+                      validationMode="email"
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="email@perusahaan.com"
                       required
@@ -163,6 +165,7 @@ const SignUpForm: FC<Props> = ({
                       id="no_telp"
                       name="no_telp"
                       type="tel"
+                      validationMode="numbers"
                       value={no_telp}
                       onChange={(e) => setNoTelp(e.target.value)}
                       placeholder="08123456789"
@@ -214,7 +217,6 @@ const SignUpForm: FC<Props> = ({
 
               <div className="space-y-3 pt-3 border-t border-gray-200">
                 <h3 className="text-sm font-semibold text-gray-900">Keamanan Akun</h3>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-gray-700 font-medium text-xs">

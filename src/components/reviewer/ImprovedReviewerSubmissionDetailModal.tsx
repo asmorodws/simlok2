@@ -21,6 +21,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
 import DatePicker from '@/components/form/DatePicker';
+import TimePicker from '@/components/form/TimePicker';
 
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
@@ -68,11 +69,12 @@ interface SubmissionDetail {
   signer_position: string;
   signer_name: string;
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
-  note_for_approver: string;
+  note_for_approver?: string;
+  note_for_vendor?: string;
   reviewed_by_name?: string;
   reviewed_by_email?: string;
   approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
-  note_for_vendor: string;
+  final_note?: string;
   approved_by_name?: string;
   approved_by_email?: string;
   created_at: string;
@@ -343,8 +345,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
   const [reviewData, setReviewData] = useState({
     review_status: '' as 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS' | '',
-    note_for_approver: '',
-    note_for_vendor: ''
+    review_note: '',
+    final_note: ''
   });
 
   const [approvalForm, setApprovalForm] = useState({
@@ -354,7 +356,15 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     nama_signer: 'Julianto Santoso'
   });
 
+  // Working hours state - editable by reviewer
+  const [workingHours, setWorkingHours] = useState('08:00 WIB - 17:00 WIB');
+
   const { showSuccess, showError } = useToast();
+
+  // Handle working hours change
+  const handleWorkingHoursChange = useCallback((value: string) => {
+    setWorkingHours(value);
+  }, []);
 
   // Helper function to format date for Indonesian locale
   const formatDate = useCallback((dateStr: string | Date) => {
@@ -480,8 +490,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
       setReviewData({
         review_status: sub.review_status === 'PENDING_REVIEW' ? '' : sub.review_status,
-        note_for_approver: sub.note_for_approver || '',
-        note_for_vendor: sub.note_for_vendor || ''
+        review_note: sub.note_for_approver || '',
+        final_note: sub.note_for_vendor || ''
       });
 
       setApprovalForm({
@@ -490,6 +500,9 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         jabatan_signer: sub.signer_position || 'Sr Officer Security III',
         nama_signer: sub.signer_name || 'Julianto Santoso'
       });
+
+      // Initialize working hours from submission data
+      setWorkingHours(sub.working_hours || '08:00 WIB - 17:00 WIB');
 
     } catch (err: any) {
       console.error('Error fetching submission:', err);
@@ -534,12 +547,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       return;
     }
 
-    if (!reviewData.note_for_approver.trim()) {
-      showError('Error', 'Catatan untuk approver wajib diisi');
+    if (!reviewData.review_note.trim()) {
+      showError('Error', 'Catatan review wajib diisi');
       return;
     }
 
-    if (!reviewData.note_for_vendor.trim()) {
+    if (!reviewData.final_note.trim()) {
       showError('Error', 'Catatan untuk vendor wajib diisi');
       return;
     }
@@ -555,6 +568,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         content: approvalForm.content,
         signer_position: approvalForm.jabatan_signer,
         signer_name: approvalForm.nama_signer,
+        working_hours: workingHours,  // kirim jam kerja yang diedit
         // Preserve SIMJA and SIKA dates to prevent them from being lost
         simja_number: submission?.simja_number,
         simja_date: submission?.simja_date,
@@ -583,11 +597,19 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         throw new Error('Gagal menyimpan template approval');
       }
 
-      // 2. Submit review
+      // 2. Submit review - Map frontend field names to API expected names
+      const reviewPayload = {
+        review_status: reviewData.review_status,
+        note_for_approver: reviewData.review_note,
+        note_for_vendor: reviewData.final_note,
+      };
+
+      console.log('Sending review payload:', reviewPayload);
+
       const reviewResponse = await fetch(`/api/reviewer/simloks/${submissionId}/review`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reviewData),
+        body: JSON.stringify(reviewPayload),
       });
 
       if (!reviewResponse.ok) {
@@ -623,6 +645,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     implementationDatesHook.template.pelaksanaan,
     implementationDatesHook.template.lainLain,
     approvalForm,
+    workingHours,
     showSuccess,
     showError,
     onReviewSubmitted
@@ -670,8 +693,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         setActiveTab('details');
         setReviewData({
           review_status: '',
-          note_for_approver: '',
-          note_for_vendor: ''
+          review_note: '',
+          final_note: ''
         });
         setApprovalForm({
           content: '',
@@ -679,6 +702,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
           jabatan_signer: 'Sr Officer Security III',
           nama_signer: 'Julianto Santoso'
         });
+        setWorkingHours('08:00 WIB - 17:00 WIB');
         implementationDatesHook.reset();
       }, 50);
 
@@ -932,7 +956,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                       </div>
 
                       {/* Generated Templates Preview */}
-                      {implementationDatesHook.template.pelaksanaan && (
+                      {/* {implementationDatesHook.template.pelaksanaan && (
                         <div className="mt-6">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -943,7 +967,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             </div>
                           </div>
                         </div>
-                      )}
+                      )} */}
 
                       {/* Pelaksanaan Input Fields */}
                       {implementationDatesHook.template.pelaksanaan && (
@@ -967,14 +991,18 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               6. Jam Kerja
                             </label>
-                            <input
-                              type="text"
-                              value={submission?.working_hours || '08:00 WIB - 17:00 WIB'}
-                              readOnly
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                            <TimePicker
+                              value={workingHours}
+                              onChange={handleWorkingHoursChange}
+                              disabled={submission.approval_status !== 'PENDING_APPROVAL'}
+                              placeholder="Pilih jam kerja"
+                              className="w-full"
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                              Jam kerja diambil dari data vendor (tidak dapat diubah di tahap review)
+                              {submission.approval_status === 'PENDING_APPROVAL' 
+                                ? 'Jam kerja dapat diubah oleh reviewer pada tahap review'
+                                : 'Jam kerja sudah ditetapkan dan tidak dapat diubah'
+                              }
                             </p>
                           </div>
 
@@ -1071,8 +1099,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         Catatan untuk Approver <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        value={reviewData.note_for_approver}
-                        onChange={(e) => setReviewData({ ...reviewData, note_for_approver: e.target.value })}
+                        value={reviewData.review_note}
+                        onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
                         rows={4}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                           }`}
@@ -1087,8 +1115,8 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         Catatan untuk Vendor <span className="text-red-500">*</span>
                       </label>
                       <textarea
-                        value={reviewData.note_for_vendor}
-                        onChange={(e) => setReviewData({ ...reviewData, note_for_vendor: e.target.value })}
+                        value={reviewData.final_note}
+                        onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
                         rows={4}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
                           }`}
@@ -1156,7 +1184,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <Button
                           onClick={handleSubmitReview}
                           variant="primary"
-                          disabled={!reviewData.review_status || !reviewData.note_for_approver.trim() || !reviewData.note_for_vendor.trim() || saving}
+                          disabled={!reviewData.review_status || !reviewData.review_note.trim() || !reviewData.final_note.trim() || saving}
                           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold py-4 text-base"
                         >
                           {saving ? (

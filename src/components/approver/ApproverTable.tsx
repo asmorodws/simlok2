@@ -8,6 +8,7 @@ import ReusableTable, {
 import { Badge } from '@/components/ui/Badge';
 import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import TableActionButton from '@/components/table/TableActionButton';
+import { ApproverTableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
 
 export interface ApproverSubmission extends Record<string, unknown> {
   id: string;
@@ -54,6 +55,7 @@ export interface ApproverSubmission extends Record<string, unknown> {
 
 export interface ApproverTableProps {
   data: ApproverSubmission[];
+  loading?: boolean;
 
   // sorting (opsional)
   sortBy?: keyof ApproverSubmission | string;
@@ -114,6 +116,7 @@ function FinalStatusBadge({
 
 export default function ApproverTable({
   data,
+  loading = false,
   sortBy,
   sortOrder = 'desc',
   onSortChange,
@@ -234,6 +237,11 @@ export default function ApproverTable({
     ],
     [onOpenDetail]
   );
+
+  // Tampilkan skeleton saat loading
+  if (loading) {
+    return <ApproverTableSkeleton />;
+  }
 
   // Hindari prop undefined (exactOptionalPropertyTypes)
   const sortByProp =

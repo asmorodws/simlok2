@@ -207,6 +207,7 @@ export default function ApproverDashboard() {
 
         <ApproverTable
           data={submissions}
+          loading={loading}
           sortBy="created_at"
           sortOrder="desc"
           onOpenDetail={handleViewDetail}

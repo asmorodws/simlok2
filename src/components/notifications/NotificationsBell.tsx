@@ -35,6 +35,14 @@ export default function NotificationsBell() {
     }
   }, [session]);
 
+  // Reload notifications when panel is opened to ensure fresh data
+  useEffect(() => {
+    if (isOpen && session?.user) {
+      console.log('NotificationsBell - Panel opened, reloading notifications');
+      loadNotifications();
+    }
+  }, [isOpen, session]);
+
   // Sync unread count with store items changes
   useEffect(() => {
     if (notifications.length > 0) {

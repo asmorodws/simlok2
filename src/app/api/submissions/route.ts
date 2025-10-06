@@ -201,17 +201,27 @@ export async function POST(request: NextRequest) {
     // Extract workers data and remove it from body since it's not part of Submission model
     const { workers, ...submissionData } = body as any;
 
+    // Debug: Log data yang masuk
+    console.log('Submission data received:', JSON.stringify(submissionData, null, 2));
+
     // Generate QR Code (simple implementation)
     const qrData = `${session.user.id}-${Date.now()}`;
 
     try {
+      // Validate dan clean numeric fields
+      const cleanedData = {
+        ...submissionData,
+        worker_count: submissionData.worker_count && !isNaN(Number(submissionData.worker_count)) 
+          ? Number(submissionData.worker_count) 
+          : null,
+      };
+
       // Create submission first
       const submission = await prisma.submission.create({
         data: {
-          ...submissionData,
+          ...cleanedData,
           user_id: session.user.id,
           vendor_phone: userExists.phone_number, // Auto-fill dari data user
-          worker_count: submissionData.worker_count || null,
           simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
           sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,
           qrcode: qrData,

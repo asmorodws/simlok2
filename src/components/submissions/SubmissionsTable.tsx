@@ -230,13 +230,13 @@ export function SubmissionsTable({
     }
     if (reviewStatus === 'PENDING_REVIEW') {
       return {
-        label: 'Sedang Direview',
-        color: 'bg-blue-100 text-blue-800',
+        label: 'Menunggu Review',
+        color: 'bg-yellow-100 text-yellow-800',
       };
     }
     if (reviewStatus === 'MEETS_REQUIREMENTS') {
       return {
-        label: 'Menunggu Persetujuan Final',
+        label: 'Menunggu Persetujuan',
         color: 'bg-yellow-100 text-yellow-800',
       };
     }

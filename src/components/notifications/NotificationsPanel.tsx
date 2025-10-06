@@ -32,7 +32,8 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
     items: notifications,
     unreadCount,
     markAsRead,
-    markAllAsRead
+    markAllAsRead,
+    reload
   } = useNotificationsStore();
   const { showError, showWarning } = useToast();
 
@@ -53,6 +54,22 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
 
   // State for vendor verification modal
   const [selectedVendorUser, setSelectedVendorUser] = useState<UserData | null>(null);
+
+  // Reload notifications when panel is opened to ensure fresh data
+  useEffect(() => {
+    const { scope, vendorId } = getScopeAndVendor();
+    console.log('NotificationsPanel - Reloading fresh data on open:', { scope, vendorId });
+    reload({
+      scope,
+      vendorId,
+      filter: 'all', // Always load ALL notifications (read and unread)
+      pageSize: 50
+    }).then(() => {
+      console.log('NotificationsPanel - Fresh data loaded successfully');
+    }).catch((error) => {
+      console.error('Failed to reload notifications:', error);
+    });
+  }, []); // Run once when panel opens
 
   // Close panel on ESC & lock scroll
   useEffect(() => {
