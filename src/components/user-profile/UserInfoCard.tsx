@@ -253,6 +253,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                     type="text"
                     value={formData.vendor_name}
                     onChange={handleChange}
+                    disabled={true}
                     placeholder="PT. Nama Perusahaan"
                     required
                     className="mt-1"
@@ -275,7 +276,6 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                   type="text"
                   value={formData.officer_name}
                   onChange={handleChange}
-                  disabled={true}
                   placeholder="Masukkan nama petugas"
                   required
                   className="mt-1"

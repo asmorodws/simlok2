@@ -10,10 +10,10 @@ const commonSchema = z.object({
   email: z.string().trim().email("Format email tidak valid"),
 });
 
-const vendorSchema = commonSchema.extend({
-  vendor_name: z.string().trim().min(1, "Nama vendor wajib diisi"),
-});
-
+// Karena kita tidak ingin mengizinkan ubah vendor_name lewat endpoint ini,
+// kita hapus vendor_name dari schema vendor
+const vendorSchema = commonSchema;  // sama dengan commonSchema
+// Untuk officer, schema termasuk officer_name
 const officerSchema = commonSchema.extend({
   officer_name: z.string().trim().min(1, "Nama petugas wajib diisi"),
 });
@@ -22,13 +22,12 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Pastikan session valid
     if (!session?.user?.id) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
-    // Ambil role dari DB agar pasti terbaru
+
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true },
@@ -38,30 +37,25 @@ export async function PUT(req: Request) {
       return new NextResponse("User not found", { status: 404 });
     }
 
-    // Validasi sesuai role
-    let parsed:
-      | z.infer<typeof vendorSchema>
-      | z.infer<typeof officerSchema>;
+    let parsed: z.infer<typeof vendorSchema> | z.infer<typeof officerSchema>;
 
     if (user.role === "VENDOR") {
+      // Validasi hanya phone_number, address, email
       const res = vendorSchema.safeParse(body);
       if (!res.success) {
         const first = res.error.issues[0];
-        return new NextResponse(first?.message ?? "Validasi gagal", {
-          status: 400,
-        });
+        return new NextResponse(first?.message ?? "Validasi gagal", { status: 400 });
       }
       parsed = res.data;
 
-      // Update hanya field yang relevan untuk vendor
+      // Update: JANGAN ubah vendor_name di sini
       const updatedUser = await prisma.user.update({
         where: { id: session.user.id },
         data: {
-          vendor_name: parsed.vendor_name,
           phone_number: parsed.phone_number,
           address: parsed.address,
           email: parsed.email,
-          // officer_name tidak disentuh (tetap nilai lama)
+          // vendor_name: tidak diikutkan
         },
         select: {
           id: true,
@@ -76,16 +70,14 @@ export async function PUT(req: Request) {
 
       return NextResponse.json(updatedUser);
     } else {
+      // non-vendor
       const res = officerSchema.safeParse(body);
       if (!res.success) {
         const first = res.error.issues[0];
-        return new NextResponse(first?.message ?? "Validasi gagal", {
-          status: 400,
-        });
+        return new NextResponse(first?.message ?? "Validasi gagal", { status: 400 });
       }
       parsed = res.data;
 
-      // Update hanya field yang relevan untuk non-vendor
       const updatedUser = await prisma.user.update({
         where: { id: session.user.id },
         data: {
@@ -93,7 +85,7 @@ export async function PUT(req: Request) {
           phone_number: parsed.phone_number,
           address: parsed.address,
           email: parsed.email,
-          // vendor_name tidak disentuh (tetap nilai lama)
+          // vendor_name: tidak disentuh
         },
         select: {
           id: true,
@@ -109,7 +101,6 @@ export async function PUT(req: Request) {
       return NextResponse.json(updatedUser);
     }
   } catch (error: any) {
-    // Tangani kemungkinan constraint unique email
     if (error?.code === "P2002" && Array.isArray(error?.meta?.target) && error.meta.target.includes("email")) {
       return new NextResponse("Email sudah digunakan", { status: 409 });
     }
