@@ -13,7 +13,7 @@ const updateUserSchema = z.object({
   phone_number: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   role: z.enum(['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN']),
-  password: z.string().min(6).optional(),
+  password: z.string().optional(),
 });
 
 // PUT /api/admin/users/[id] - Update user
@@ -49,7 +49,17 @@ export async function PUT(
     }
 
     const body = await request.json();
+    console.log('Update user request body:', body);
+    
     const validatedData = updateUserSchema.parse(body);
+    console.log('Validated data:', validatedData);
+
+    // Validate password if provided
+    if (validatedData.password && validatedData.password.trim() !== '') {
+      if (validatedData.password.length < 6) {
+        return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+      }
+    }
 
     // Check if email is already taken by another user
     if (validatedData.email !== existingUser.email) {
@@ -82,8 +92,8 @@ export async function PUT(
       updateData.vendor_name = null;
     }
 
-    // Hash password if provided
-    if (validatedData.password) {
+    // Hash password if provided and not empty
+    if (validatedData.password && validatedData.password.trim() !== '') {
       updateData.password = await bcrypt.hash(validatedData.password, 12);
     }
 
@@ -113,15 +123,21 @@ export async function PUT(
     });
 
   } catch (error) {
+    console.error('Error updating user - Full error:', error);
+    
     if (error instanceof z.ZodError) {
+      console.error('Zod validation error:', error.issues);
       return NextResponse.json({ 
         error: 'Validation error', 
         details: error.issues 
       }, { status: 400 });
     }
     
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Unexpected error updating user:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

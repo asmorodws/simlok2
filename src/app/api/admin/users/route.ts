@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
+import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
 // GET /api/reviewer/users - Get pending user verifications
 export async function GET(request: NextRequest) {
@@ -125,4 +127,100 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching users for verification:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+// Schema for validating user creation data
+const createUserSchema = z.object({
+  officer_name: z.string().optional().nullable(),
+  vendor_name: z.string().optional().nullable(),
+  email: z.string().email('Invalid email format'),
+  phone_number: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  role: z.enum(['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN']),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+// POST /api/admin/users - Create new user
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only SUPER_ADMIN can access this endpoint
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const validatedData = createUserSchema.parse(body);
+
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validatedData.email }
+    });
+
+    if (existingUser) {
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+
+    // Prepare user data
+    const userData: any = {
+      email: validatedData.email,
+      password: hashedPassword,
+      role: validatedData.role,
+      phone_number: validatedData.phone_number || null,
+      address: validatedData.address || null,
+      verification_status: 'VERIFIED', // Admin-created users are automatically verified
+      verified_at: new Date(),
+      verified_by: session.user.id,
+    };
+
+    // Handle name fields based on role
+    if (validatedData.role === 'VENDOR') {
+      userData.vendor_name = validatedData.vendor_name;
+      userData.officer_name = validatedData.vendor_name; // Keep officer_name as vendor_name for consistency
+    } else {
+      userData.officer_name = validatedData.officer_name;
+      userData.vendor_name = null;
+    }
+
+    // Create user
+    const newUser = await prisma.user.create({
+      data: userData,
+      select: {
+        id: true,
+        email: true,
+        officer_name: true,
+        vendor_name: true,
+        phone_number: true,
+        address: true,
+        role: true,
+        verified_at: true,
+        verification_status: true,
+        created_at: true
+      }
+    });
+
+    return NextResponse.json({
+      user: newUser,
+      message: 'User created successfully'
+    }, { status: 201 });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Validation error', 
+        details: error.issues 
+      }, { status: 400 });
+    }
+    
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

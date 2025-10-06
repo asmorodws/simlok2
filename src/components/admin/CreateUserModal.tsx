@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { XMarkIcon, UserIcon } from "@heroicons/react/24/outline";
+import React, { useState } from "react";
+import { XMarkIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
 import Input from "@/components/form/Input";
 import TextArea from "@/components/form/textarea/TextArea";
 
-interface EditUserModalProps {
-  user: UserData | null;
+interface CreateUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUserUpdate: (user: UserData) => void;
+  onUserCreate: (user: UserData) => void;
 }
 
 const USER_ROLES = [
@@ -22,7 +21,7 @@ const USER_ROLES = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' }
 ];
 
-export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: EditUserModalProps) {
+export default function CreateUserModal({ isOpen, onClose, onUserCreate }: CreateUserModalProps) {
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -35,21 +34,6 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
     password: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        officer_name: user.officer_name || '',
-        vendor_name: user.vendor_name || '',
-        email: user.email || '',
-        phone_number: user.phone_number || '',
-        address: user.address || '',
-        role: user.role || 'VENDOR',
-        password: ''
-      });
-      setErrors({});
-    }
-  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -70,6 +54,12 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
       newErrors.email = 'Format email tidak valid';
     }
 
+    if (!formData.password.trim()) {
+      newErrors.password = 'Password wajib diisi';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password harus minimal 6 karakter';
+    }
+
     if (formData.role === 'VENDOR') {
       if (!formData.vendor_name.trim()) {
         newErrors.vendor_name = 'Nama vendor wajib diisi untuk role vendor';
@@ -77,13 +67,6 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
     } else {
       if (!formData.officer_name.trim()) {
         newErrors.officer_name = 'Nama petugas wajib diisi';
-      }
-    }
-
-    // Validate password if provided
-    if (formData.password.trim()) {
-      if (formData.password.length < 6) {
-        newErrors.password = 'Password harus minimal 6 karakter';
       }
     }
 
@@ -95,6 +78,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
     e.preventDefault();
     
     if (!validateForm()) {
+      showError('Error', 'Mohon periksa kembali data yang diisi');
       return;
     }
 
@@ -102,19 +86,14 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
       setLoading(true);
       
       const dataToSend = {
-        email: formData.email,
-        phone_number: formData.phone_number,
-        address: formData.address,
-        role: formData.role,
+        ...formData,
         // Clean up data based on role
         vendor_name: formData.role === 'VENDOR' ? formData.vendor_name : null,
-        officer_name: formData.role !== 'VENDOR' ? formData.officer_name : null,
-        // Only send password if it's not empty, otherwise send undefined to be excluded
-        password: formData.password.trim() !== '' ? formData.password : undefined
+        officer_name: formData.role !== 'VENDOR' ? formData.officer_name : null
       };
 
-      const response = await fetch(`/api/admin/users/${user?.id}`, {
-        method: 'PUT',
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -123,24 +102,51 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal mengupdate user');
+        throw new Error(errorData.message || 'Gagal membuat user');
       }
 
       const result = await response.json();
       
-      showSuccess('Berhasil', 'Data user berhasil diperbarui');
-      onUserUpdate(result.user);
+      showSuccess('Berhasil', 'User berhasil dibuat');
+      onUserCreate(result.user);
+      
+      // Reset form
+      setFormData({
+        officer_name: '',
+        vendor_name: '',
+        email: '',
+        phone_number: '',
+        address: '',
+        role: 'VENDOR',
+        password: ''
+      });
+      setErrors({});
       onClose();
       
     } catch (error: any) {
-      console.error('Error updating user:', error);
-      showError('Error', error.message || 'Gagal mengupdate user');
+      console.error('Error creating user:', error);
+      showError('Error', error.message || 'Gagal membuat user');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen || !user) return null;
+  const handleClose = () => {
+    // Reset form when closing
+    setFormData({
+      officer_name: '',
+      vendor_name: '',
+      email: '',
+      phone_number: '',
+      address: '',
+      role: 'VENDOR',
+      password: ''
+    });
+    setErrors({});
+    onClose();
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -148,16 +154,16 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-              <UserIcon className="w-5 h-5 text-blue-600" />
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+              <UserPlusIcon className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Edit User</h2>
-              <p className="text-sm text-gray-500">Perbarui informasi user</p>
+              <h2 className="text-lg font-semibold text-gray-900">Tambah User Baru</h2>
+              <p className="text-sm text-gray-500">Buat akun user baru dalam sistem</p>
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <XMarkIcon className="w-5 h-5 text-gray-500" />
@@ -238,6 +244,22 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                 />
               </div>
 
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Minimal 6 karakter"
+                  {...(errors.password && { error: errors.password })}
+                  required
+                />
+              </div>
+
               {/* Phone Number */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -251,24 +273,6 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                   placeholder="08123456789"
                   {...(errors.phone_number && { error: errors.phone_number })}
                 />
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password Baru
-                </label>
-                <Input
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Kosongkan jika tidak ingin mengubah password"
-                  {...(errors.password && { error: errors.password })}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Kosongkan field ini jika tidak ingin mengubah password user
-                </p>
               </div>
 
               {/* Address */}
@@ -294,7 +298,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
         <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Batal
@@ -303,9 +307,9 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+            {loading ? 'Membuat...' : 'Buat User'}
           </button>
         </div>
       </div>

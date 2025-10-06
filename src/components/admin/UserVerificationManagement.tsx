@@ -4,9 +4,11 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 // ⛔️ Hapus import Button external agar seragam di file ini
 // import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
-import ReviewerUserVerificationModal from '@/components/reviewer/ReviewerUserVerificationModal';
-import EditUserModal from '@/components/admin/EditUserModal';
-import DeleteUserModal from '@/components/admin/DeleteUserModal';
+import { useSession } from 'next-auth/react';
+import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
+import EditUserModal from './EditUserModal';
+import DeleteUserModal from './DeleteUserModal';
+import CreateUserModal from './CreateUserModal';
 import {
   MagnifyingGlassIcon,
   ChevronUpIcon,
@@ -15,10 +17,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   UserIcon,
+  UserPlusIcon,
   ClockIcon,
-  // ⛔️ Hapus ikon untuk tombol aksi agar simple (tanpa ikon)
-  // PencilIcon,
-  // TrashIcon,
 } from '@heroicons/react/24/outline';
 import type { UserData } from '@/types/user';
 
@@ -53,6 +53,7 @@ export default function UserVerificationManagement({
   refreshTrigger = 0,
 }: UserVerificationManagementProps) {
   const { showSuccess } = useToast();
+  const { data: session, status: sessionStatus } = useSession();
   const [users, setUsers] = useState<UserData[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
@@ -63,6 +64,10 @@ export default function UserVerificationManagement({
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Role guard - get from session
+  const currentUserRole = session?.user?.role;
+  const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,19 +89,21 @@ export default function UserVerificationManagement({
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
 
   // Search focus retainer
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
 
-  // ======= SIMPLE BUTTON STYLES (inline, tanpa komponen terpisah) =======
+  // ======= SIMPLE BUTTON STYLES (dibesarkan, inline) =======
   const btnBase =
     'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  const btnText = 'text-xs'; // ukuran ringkas untuk ruang tabel
-  const btnLink = `${btnBase} ${btnText} text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-400 px-2 py-1.5`;
-  const btnNeutral = `${btnBase} ${btnText} text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus-visible:ring-gray-400 px-3 py-1.5`;
-  const btnDanger = `${btnBase} ${btnText} text-white bg-red-600 hover:bg-red-700 focus-visible:ring-red-600 px-3 py-1.5`;
-  const btnOutline = `${btnBase} text-sm px-3 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus-visible:ring-blue-500`;
+  // ukuran tombol tabel dibesarkan dari text-xs -> text-sm, padding juga ditambah
+  const btnText = 'text-sm';
+  const btnLink = `${btnBase} ${btnText} text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-400 px-3 py-2`;
+  const btnNeutral = `${btnBase} ${btnText} text-gray-900 bg-white border border-gray-300 hover:bg-gray-100 focus-visible:ring-gray-400 px-3.5 py-2`;
+  const btnDanger = `${btnBase} ${btnText} text-white bg-red-600 hover:bg-red-700 focus-visible:ring-red-600 px-3.5 py-2`;
+  const btnOutline = `${btnBase} text-sm px-3.5 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus-visible:ring-blue-500`;
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -141,8 +148,11 @@ export default function UserVerificationManagement({
   }, [currentPage, debouncedSearchTerm, statusFilter, sortField, sortOrder, limit]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers, refreshTrigger]);
+    // Only fetch users if session is available
+    if (session?.user) {
+      fetchUsers();
+    }
+  }, [fetchUsers, refreshTrigger, session?.user]);
 
   // Reset ke halaman 1 saat parameter list berubah
   useEffect(() => {
@@ -315,6 +325,20 @@ export default function UserVerificationManagement({
     showSuccess('Berhasil', 'User berhasil dihapus');
   };
 
+  // Handle user create
+  const handleUserCreate = (newUser: UserData) => {
+    setUsers((prev) => [newUser, ...prev]);
+    // Update stats
+    setStats((prev) => ({
+      ...prev,
+      totalUsers: prev.totalUsers + 1,
+      totalVerified: prev.totalVerified + 1, // Admin-created users are auto-verified
+    }));
+    // Refetch to ensure consistency
+    fetchUsers().catch(() => {});
+    showSuccess('Berhasil', 'User baru berhasil dibuat');
+  };
+
   const paginationInfo = useMemo(
     () => ({
       currentPage,
@@ -418,7 +442,7 @@ export default function UserVerificationManagement({
                   <td className="px-6 py-4 whitespace-nowrap">{getVerificationStatus(user)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      {/* Tombol link-like (ringkas) untuk lihat detail/verifikasi */}
+                      {/* Lihat: tersedia untuk semua role */}
                       <button
                         onClick={() => openVerificationModal(user)}
                         className={btnLink}
@@ -427,23 +451,26 @@ export default function UserVerificationManagement({
                         Lihat
                       </button>
 
-                      {/* Tombol netral untuk edit */}
-                      <button
-                        onClick={() => openEditModal(user)}
-                        className={btnNeutral}
-                        title="Edit User"
-                      >
-                        Edit
-                      </button>
+                      {/* Edit & Hapus: hanya untuk SUPER_ADMIN */}
+                      {isSuperAdmin && (
+                        <>
+                          <button
+                            onClick={() => openEditModal(user)}
+                            className={btnNeutral}
+                            title="Edit User"
+                          >
+                            Edit
+                          </button>
 
-                      {/* Tombol merah solid untuk aksi destruktif */}
-                      <button
-                        onClick={() => openDeleteModal(user)}
-                        className={btnDanger}
-                        title="Hapus User"
-                      >
-                        Hapus
-                      </button>
+                          <button
+                            onClick={() => openDeleteModal(user)}
+                            className={btnDanger}
+                            title="Hapus User"
+                          >
+                            Hapus
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -459,7 +486,36 @@ export default function UserVerificationManagement({
         )}
       </div>
     );
-  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus]);
+  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus, isSuperAdmin]);
+
+  // Loading state for session
+  if (sessionStatus === 'loading') {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4" />
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (sessionStatus === 'unauthenticated' || !session?.user) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="text-center py-12">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="text-red-800">Anda harus login untuk mengakses halaman ini</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && users.length === 0) {
     return (
@@ -574,16 +630,25 @@ export default function UserVerificationManagement({
           <option value="rejected">Ditolak</option>
         </select>
 
-        {/* Tombol reset filter pakai style outline lokal */}
+        {/* Tombol reset filter */}
         <button onClick={resetFilters} className={btnOutline}>
           Reset Filter
         </button>
+
+        {/* Tombol tambah user baru — biru dan hanya untuk SUPER_ADMIN */}
+          <button
+            onClick={() => setShowCreateUserModal(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <UserPlusIcon className="w-4 h-4" />
+            Tambah User
+          </button>
       </div>
 
       {/* Tabel */}
       <div className="relative">{tableContent}</div>
 
-      {/* Pagination (tetap) */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-700">
@@ -660,6 +725,13 @@ export default function UserVerificationManagement({
         isOpen={showDeleteUserModal}
         onClose={closeDeleteModal}
         onUserDelete={handleUserDelete}
+      />
+
+      {/* Modal Create User */}
+      <CreateUserModal
+        isOpen={showCreateUserModal}
+        onClose={() => setShowCreateUserModal(false)}
+        onUserCreate={handleUserCreate}
       />
     </div>
   );
