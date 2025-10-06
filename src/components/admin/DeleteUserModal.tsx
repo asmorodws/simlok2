@@ -13,7 +13,7 @@ interface DeleteUserModalProps {
 }
 
 export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }: DeleteUserModalProps) {
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
@@ -31,16 +31,16 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
         throw new Error(errorData.message || 'Gagal menghapus user');
       }
 
-      // const result = await response.json();
+      const result = await response.json();
       
-      // if (result.preservedSubmissions && result.preservedSubmissions > 0) {
-      //   showSuccess(
-      //     'User berhasil dihapus', 
-      //     `${result.preservedSubmissions} submission telah dipertahankan dalam sistem`
-      //   );
-      // } else {
-      //   showSuccess('Berhasil', 'User berhasil dihapus');
-      // }
+      if (result.preservedSubmissions && result.preservedSubmissions > 0) {
+        showSuccess(
+          'User berhasil dihapus', 
+          `${result.preservedSubmissions} submission telah dipertahankan dalam sistem`
+        );
+      } else {
+        showSuccess('Berhasil', 'User berhasil dihapus');
+      }
       
       onUserDelete(user.id);
       onClose();

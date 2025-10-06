@@ -309,7 +309,7 @@ export default function UserVerificationManagement({
     setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
     // Refetch to ensure consistency
     fetchUsers().catch(() => {});
-    showSuccess('Berhasil', 'Data user berhasil diperbarui');
+    // Note: Toast already shown by EditUserModal
   };
 
   // Handle user delete
@@ -322,7 +322,7 @@ export default function UserVerificationManagement({
     }));
     // Refetch to ensure consistency
     fetchUsers().catch(() => {});
-    showSuccess('Berhasil', 'User berhasil dihapus');
+    // Note: Toast already shown by DeleteUserModal (if uncommented)
   };
 
   // Handle user create
@@ -336,7 +336,7 @@ export default function UserVerificationManagement({
     }));
     // Refetch to ensure consistency
     fetchUsers().catch(() => {});
-    showSuccess('Berhasil', 'User baru berhasil dibuat');
+    // Note: Toast already shown by CreateUserModal
   };
 
   const paginationInfo = useMemo(

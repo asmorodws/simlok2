@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Button from '@/components/ui/button/Button';
-import { useToast } from '@/hooks/useToast';
 import ReviewerUserVerificationModal from '@/components/reviewer/ReviewerUserVerificationModal';
 import {
   MagnifyingGlassIcon,
@@ -44,7 +43,7 @@ export default function UserVerificationManagement({
   className = '',
   refreshTrigger = 0,
 }: UserVerificationManagementProps) {
-  const { showSuccess } = useToast();
+  // Note: showSuccess removed as toast is handled by ReviewerUserVerificationModal
   const [users, setUsers] = useState<UserData[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
@@ -232,7 +231,7 @@ export default function UserVerificationManagement({
 
     // Refetch agar 100% konsisten
     fetchUsers().catch(() => {});
-    showSuccess('Berhasil', 'Status verifikasi diperbarui');
+    // Note: Toast already shown by ReviewerUserVerificationModal
   };
 
   // Info paging (untuk teks ringkas bawah)
