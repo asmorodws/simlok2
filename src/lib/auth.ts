@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { JWT_CONFIG } from "@/utils/jwt-config";
 import { TokenManager } from "@/utils/token-manager";
+import { verifyTurnstileToken } from "@/utils/turnstile-middleware";
 
 
 export const authOptions: NextAuthOptions = {
@@ -25,9 +26,26 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [
     Credentials({
-      credentials: { email: {}, password: {} },
+      credentials: { 
+        email: { type: "email" }, 
+        password: { type: "password" },
+        turnstile_token: { type: "text" }
+      },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        // Verify Turnstile token if provided
+        if (credentials.turnstile_token && process.env.NODE_ENV === 'production') {
+          // Only verify Turnstile in production
+          const isTurnstileValid = await verifyTurnstileToken(credentials.turnstile_token);
+          if (!isTurnstileValid) {
+            throw new Error('TURNSTILE_FAILED');
+          }
+        } else if (process.env.NODE_ENV === 'production' && !credentials.turnstile_token) {
+          // Require Turnstile in production
+          throw new Error('TURNSTILE_REQUIRED');
+        }
+        // In development, skip Turnstile verification for easier testing
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },

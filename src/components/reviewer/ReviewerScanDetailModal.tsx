@@ -3,6 +3,7 @@
 
 import React from 'react';
 import Button from '@/components/ui/button/Button';
+import { Badge } from '@/components/ui/Badge';
 import { id as localeID } from 'date-fns/locale';
 import { format } from 'date-fns';
 import type { QrScan } from '@/components/scanner/ScanHistoryTable';
@@ -13,6 +14,32 @@ interface Props {
   scan: QrScan | null;
   /** opsional: untuk buka PDF SIMLOK dari reviewer */
   onOpenPdf?: (scan: QrScan) => void;
+}
+
+function getReviewStatusBadge(status: string) {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return <Badge variant="warning">Menunggu Review</Badge>;
+    case 'MEETS_REQUIREMENTS':
+      return <Badge variant="success">Memenuhi Syarat</Badge>;
+    case 'NOT_MEETS_REQUIREMENTS':
+      return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+    default:
+      return <Badge variant="default">{status}</Badge>;
+  }
+}
+
+function getApprovalStatusBadge(status: string) {
+  switch (status) {
+    case 'PENDING_APPROVAL':
+      return <Badge variant="warning">Menunggu Persetujuan</Badge>;
+    case 'APPROVED':
+      return <Badge variant="success">Disetujui</Badge>;
+    case 'REJECTED':
+      return <Badge variant="destructive">Ditolak</Badge>;
+    default:
+      return <Badge variant="default">{status}</Badge>;
+  }
 }
 
 export default function ReviewerScanDetailModal({ open, onClose, scan, onOpenPdf }: Props) {
@@ -42,6 +69,14 @@ export default function ReviewerScanDetailModal({ open, onClose, scan, onOpenPdf
                 <div className="flex justify-between">
                   <span className="text-gray-500">Deskripsi Pekerjaan:</span>
                   <span className="font-medium">{scan.submission.job_description}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Status Review:</span>
+                  <div>{getReviewStatusBadge(scan.submission.review_status)}</div>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Status Persetujuan:</span>
+                  <div>{getApprovalStatusBadge(scan.submission.approval_status)}</div>
                 </div>
               </div>
             </section>

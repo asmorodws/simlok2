@@ -7,6 +7,7 @@ import {
   ChevronUpDownIcon,
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
+import { Badge } from '@/components/ui/Badge';
 
 export type SortOrder = 'asc' | 'desc';
 
@@ -215,80 +216,60 @@ export function SubmissionsTable({
   onDelete,
   formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID')
 }: SubmissionsTableProps) {
-  const getVendorStatus = (reviewStatus: string, approvalStatus: string) => {
+  const getVendorStatusBadge = (reviewStatus: string, approvalStatus: string) => {
     if (approvalStatus === 'APPROVED') {
-      return {
-        label: 'Disetujui',
-        color: 'bg-green-100 text-green-800',
-      };
+      return <Badge variant="success">Disetujui</Badge>;
     }
     if (approvalStatus === 'REJECTED') {
-      return {
-        label: 'Ditolak',
-        color: 'bg-red-100 text-red-800',
-      };
+      return <Badge variant="destructive">Ditolak</Badge>;
     }
     if (reviewStatus === 'PENDING_REVIEW') {
-      return {
-        label: 'Menunggu Review',
-        color: 'bg-yellow-100 text-yellow-800',
-      };
+      return <Badge variant="warning">Menunggu Review</Badge>;
     }
     if (reviewStatus === 'MEETS_REQUIREMENTS') {
-      return {
-        label: 'Menunggu Persetujuan',
-        color: 'bg-yellow-100 text-yellow-800',
-      };
+      return <Badge variant="warning">Menunggu Persetujuan</Badge>;
     }
     if (reviewStatus === 'NEEDS_REVISION') {
-      return {
-        label: 'Perlu Revisi',
-        color: 'bg-orange-100 text-orange-800',
-      };
+      return <Badge variant="warning">Perlu Revisi</Badge>;
     }
-    return {
-      label: 'Sedang Diproses',
-      color: 'bg-gray-100 text-gray-800',
-    };
+    return <Badge variant="default">Sedang Diproses</Badge>;
   };
 
   const columns: Column<SubmissionRow>[] = [
     {
-      key: 'job_description',
-      header: 'Deskripsi Pekerjaan',
-      cell: (row) => (
-        <span className="whitespace-nowrap font-medium">
-          {row.job_description}
-        </span>
-      ),
-      sortable: true,
-    },
-    {
-      key: 'work_location',
-      header: 'Lokasi Kerja',
-      cell: (row) => (
-        <span>
-          {row.work_location}
-        </span>
-      ),
-      sortable: true,
-    },
+  key: 'job_description',
+  header: 'Deskripsi Pekerjaan',
+  cell: (row) => (
+    <span className="block max-w-[300px] whitespace-normal break-words">
+      {row.job_description}
+    </span>
+  ),
+  sortable: true,
+  align: 'left',
+  minWidth: 300,
+  className: 'max-w-[300px] whitespace-normal break-words',
+},
+{
+  key: 'work_location',
+  header: 'Lokasi Kerja',
+  cell: (row) => (
+    <span className="block max-w-[300px] whitespace-normal break-words">
+      {row.work_location}
+    </span>
+  ),
+  sortable: true,
+  align: 'left',
+  minWidth: 300,
+  className: 'max-w-[300px] whitespace-normal break-words',
+},
+
     {
       key: 'approval_status',
       header: 'Status',
       cell: (row) => {
-        const status = getVendorStatus(
+        return getVendorStatusBadge(
           (row.review_status as string) || '',
           (row.approval_status as string) || ''
-        );
-        return (
-          <div className="flex flex-col">
-            <span
-              className={`px-2 py-1 rounded-full text-xs font-medium ${status.color} inline-block whitespace-nowrap`}
-            >
-              {status.label}
-            </span>
-          </div>
         );
       },
       sortable: true,

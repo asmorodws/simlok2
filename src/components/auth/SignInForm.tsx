@@ -1,23 +1,26 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import type { FC } from "react";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import Image from "next/image";
+import { Turnstile } from "next-turnstile";
 
 import Input from "@/components/form/Input";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
+import { useToast } from "@/hooks/useToast";
 
 interface Props {
   email: string;
   password: string;
   showPassword: boolean;
   error: string;
+  isLoading: boolean;
   setEmail: (v: string) => void;
   setPassword: (v: string) => void;
   setShow: (v: boolean) => void;
-  handleSubmit: (e: React.FormEvent) => void;
+  handleSubmit: (e: React.FormEvent, turnstileToken?: string) => void;
 }
 
 /**
@@ -30,12 +33,32 @@ const SignInForm: FC<Props> = ({
   password,
   showPassword,
   error,
+  isLoading,
   setEmail,
   setPassword,
   setShow,
   handleSubmit,
 }) => {
   const [pwdFocused, setPwdFocused] = useState(false);
+  const [turnstileStatus, setTurnstileStatus] = useState<
+    "success" | "error" | "expired" | "required"
+  >("required");
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const { showError, showWarning, showSuccess } = useToast();
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Always check if turnstile is verified (both development and production)
+    if (turnstileStatus !== "success" || !turnstileToken) {
+      showWarning("Verifikasi Diperlukan", "Harap verifikasi bahwa Anda bukan robot sebelum melanjutkan.");
+      return;
+    }
+
+    // Call the parent handleSubmit with turnstile token
+    handleSubmit(e, turnstileToken);
+  };
 
   return (
     <div className="min-h-screen flex">
@@ -93,7 +116,7 @@ const SignInForm: FC<Props> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-6">
               {/* Email */}
               <div>
                 <Label className="text-gray-700 font-medium text-sm" htmlFor="email">
@@ -101,6 +124,7 @@ const SignInForm: FC<Props> = ({
                 </Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="masukkan@email.com"
                   value={email}
@@ -145,15 +169,52 @@ const SignInForm: FC<Props> = ({
                 </div>
               </div>
 
+            {/* Turnstile CAPTCHA */}
+              <div className="flex justify-center mt-6">
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                  retry="auto"
+                  refreshExpired="auto"
+                  sandbox={process.env.NODE_ENV === "development"}
+                  onError={() => {
+                    setTurnstileStatus("error");
+                    showError("Verifikasi Gagal", "Verifikasi keamanan gagal. Silakan coba lagi.");
+                  }}
+                  onExpire={() => {
+                    setTurnstileStatus("expired");
+                    showWarning("Verifikasi Kadaluarsa", "Verifikasi keamanan telah kadaluarsa. Silakan verifikasi ulang.");
+                  }}
+                  onLoad={() => {
+                    setTurnstileStatus("required");
+                  }}
+                  onVerify={(token) => {
+                    setTurnstileStatus("success");
+                    setTurnstileToken(token);
+                    // showSuccess("Verifikasi Berhasil", "Verifikasi keamanan berhasil. Anda dapat melanjutkan login.");
+                  }}
+                />
+              </div>
+
+
+
               <Button
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg"
                 type="submit"
+                disabled={isLoading || turnstileStatus !== "success"}
               >
-                Masuk
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Masuk...
+                  </div>
+                ) : (
+                  "Masuk"
+                )}
               </Button>
             </form>
-
+                
             <div className="mt-6 pt-6 border-t border-gray-200">
+              
               <p className="text-center text-gray-600 text-sm">
                 Belum memiliki akun?{" "}
                 <Link href="/signup" className="text-blue-600 hover:text-blue-800 font-medium">
@@ -162,7 +223,7 @@ const SignInForm: FC<Props> = ({
               </p>
             </div>
           </div>
-
+  
           {/* Footer (opsional) */}
           {/* <div className="mt-8 text-center text-xs text-gray-500">
             <p>© 2025 Pertamina. Seluruh hak cipta dilindungi.</p>

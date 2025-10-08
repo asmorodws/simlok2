@@ -20,6 +20,7 @@ import WorkersList from '@/components/common/WorkersList';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import Button from '@/components/ui/button/Button';
+import { Badge } from '@/components/ui/Badge';
 
 interface Submission {
   id: string;
@@ -124,36 +125,18 @@ export default function SubmissionDetailModal({
   };
 
   const getStatusBadge = (status: string) => {
-    const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
-
     const label = STATUS_LABELS[status] ?? status;
 
     switch (status) {
       case 'PENDING':
       case 'PENDING_APPROVAL':
-        return (
-          <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>
-            {label}
-          </span>
-        );
+        return <Badge variant="warning">{label}</Badge>;
       case 'APPROVED':
-        return (
-          <span className={`${baseClasses} bg-green-100 text-green-800`}>
-            {label}
-          </span>
-        );
+        return <Badge variant="success">{label}</Badge>;
       case 'REJECTED':
-        return (
-          <span className={`${baseClasses} bg-red-100 text-red-800`}>
-            {label}
-          </span>
-        );
+        return <Badge variant="destructive">{label}</Badge>;
       default:
-        return (
-          <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
-            {label}
-          </span>
-        );
+        return <Badge variant="default">{label}</Badge>;
     }
   };
 

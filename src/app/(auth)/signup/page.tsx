@@ -57,7 +57,7 @@ export default function SignupPage() {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, turnstileToken?: string) => {
     e.preventDefault();
     setError("");
 
@@ -81,6 +81,7 @@ export default function SignupPage() {
           vendor_name: nama_vendor.trim(),
           address: alamat.trim(),
           phone_number: no_telp.trim(),
+          turnstile_token: turnstileToken,
         }),
       });
 

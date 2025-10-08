@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Button from '@/components/ui/button/Button';
+import { Badge } from '@/components/ui/Badge';
 import { id as localeID } from 'date-fns/locale';
 import { format } from 'date-fns';
 import type { QrScan } from '@/components/scanner/ScanHistoryTable';
@@ -11,6 +12,32 @@ interface Props {
   onClose: () => void;
   scan: QrScan | null;
   onOpenPdf?: (scan: QrScan) => void; // opsional: buka PDF SIMLOK dari approver
+}
+
+function getReviewStatusBadge(status: string) {
+  switch (status) {
+    case 'PENDING_REVIEW':
+      return <Badge variant="warning">Menunggu Review</Badge>;
+    case 'MEETS_REQUIREMENTS':
+      return <Badge variant="success">Memenuhi Syarat</Badge>;
+    case 'NOT_MEETS_REQUIREMENTS':
+      return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+    default:
+      return <Badge variant="default">{status}</Badge>;
+  }
+}
+
+function getApprovalStatusBadge(status: string) {
+  switch (status) {
+    case 'PENDING_APPROVAL':
+      return <Badge variant="warning">Menunggu Persetujuan</Badge>;
+    case 'APPROVED':
+      return <Badge variant="success">Disetujui</Badge>;
+    case 'REJECTED':
+      return <Badge variant="destructive">Ditolak</Badge>;
+    default:
+      return <Badge variant="default">{status}</Badge>;
+  }
 }
 
 export default function ApproverScanDetailModal({ open, onClose, scan, onOpenPdf }: Props) {
@@ -32,6 +59,8 @@ export default function ApproverScanDetailModal({ open, onClose, scan, onOpenPdf
                 <div><span className="text-gray-500">No. Simlok:</span> <span className="font-medium">{scan.submission.simlok_number}</span></div>
                 <div><span className="text-gray-500">Perusahaan:</span> <span className="font-medium">{scan.submission.vendor_name}</span></div>
                 <div><span className="text-gray-500">Pekerjaan:</span> <span className="font-medium">{scan.submission.job_description}</span></div>
+                <div><span className="text-gray-500">Status Review:</span> <span>{getReviewStatusBadge(scan.submission.review_status)}</span></div>
+                <div><span className="text-gray-500">Status Persetujuan:</span> <span>{getApprovalStatusBadge(scan.submission.approval_status)}</span></div>
               </div>
             </section>
 

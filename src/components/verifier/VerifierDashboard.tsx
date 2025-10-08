@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useToast } from '@/hooks/useToast';
 import Button from '../ui/button/Button';
+import { Badge } from '@/components/ui/Badge';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import CameraQRScanner from '../scanner/CameraQRScanner';
 
@@ -128,24 +129,24 @@ export default function VerifierDashboard() {
     switch (status) {
       case 'PENDING':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          <Badge variant="warning">
             <ClockIcon className="w-3 h-3 mr-1" />
             Menunggu
-          </span>
+          </Badge>
         );
       case 'APPROVED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <Badge variant="success">
             <CheckCircleIcon className="w-3 h-3 mr-1" />
             Disetujui
-          </span>
+          </Badge>
         );
       case 'REJECTED':
         return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <Badge variant="destructive">
             <XCircleIcon className="w-3 h-3 mr-1" />
             Ditolak
-          </span>
+          </Badge>
         );
       default:
         return null;

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/singletons";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { notifyAdminNewVendor } from "@/server/events";
+import { verifyTurnstileToken } from "@/utils/turnstile-middleware";
 
 // Validation schema for vendor registration
 const vendorRegistrationSchema = z.object({
@@ -33,7 +34,11 @@ const vendorRegistrationSchema = z.object({
     .max(15, "Nomor telepon maksimal 15 digit")
     .regex(/^[0-9+\-\s]+$/, "Nomor telepon hanya boleh berisi angka, +, -, dan spasi")
     .trim(),
+  turnstile_token: z.string()
+    .min(1, "Token keamanan diperlukan")
 });
+
+
 
 // Rate limiting store (in production, use Redis)
 const registrationAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -93,7 +98,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400 });
     }
 
-    const { officer_name, email, password, vendor_name, address, phone_number } = validationResult.data;
+    const { officer_name, email, password, vendor_name, address, phone_number, turnstile_token } = validationResult.data;
+
+    // Verify Turnstile token (only in production)
+    if (process.env.NODE_ENV === 'production' && turnstile_token) {
+      const isTurnstileValid = await verifyTurnstileToken(turnstile_token);
+      if (!isTurnstileValid) {
+        return NextResponse.json({ error: "Verifikasi keamanan gagal. Silakan refresh halaman dan coba lagi." }, { status: 400 });
+      }
+    }
+    // In development, skip Turnstile verification for easier testing
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 

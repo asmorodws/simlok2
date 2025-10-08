@@ -163,12 +163,15 @@ export default function ScanHistoryTable({
       header: 'Status',
       minWidth: '9rem',
       className: 'px-3 py-2',
-      cell: (scan) => (
-        <div className="flex flex-col gap-0.5">
-          {/* <StatusBadge status={scan.submission.review_status} type="review" /> */}
-          <StatusBadge status={scan.submission.approval_status} type="final" />
-        </div>
-      ),
+      cell: (scan) => {
+        // Prioritize approval status if it's not pending, otherwise show review status
+        const showApprovalStatus = scan.submission.approval_status !== 'PENDING_APPROVAL';
+        if (showApprovalStatus) {
+          return <StatusBadge status={scan.submission.approval_status} type="final" />;
+        } else {
+          return <StatusBadge status={scan.submission.review_status} type="review" />;
+        }
+      },
       sortable: false,
       align: 'left',
     },

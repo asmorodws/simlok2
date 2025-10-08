@@ -7,7 +7,10 @@ import Input from "@/components/form/Input";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import Image from "next/image";
+import { Turnstile } from "next-turnstile";
+import { useState, useRef } from "react";
 import type { FC } from "react";
+import { useToast } from "@/hooks/useToast";
 
 interface Props {
   email: string;
@@ -32,7 +35,7 @@ interface Props {
   setShowPassword: (v: boolean) => void;
   setShowConfirmPassword: (v: boolean) => void;
   setAgree: (v: boolean) => void;
-  handleSubmit: (e: React.FormEvent) => void;
+  handleSubmit: (e: React.FormEvent, turnstileToken?: string) => void;
 }
 
 const SignUpForm: FC<Props> = ({
@@ -59,7 +62,28 @@ const SignUpForm: FC<Props> = ({
   setShowConfirmPassword,
   setAgree,
   handleSubmit,
-}) => (
+}) => {
+  const [turnstileStatus, setTurnstileStatus] = useState<
+    "success" | "error" | "expired" | "required"
+  >("required");
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const formRef = useRef<HTMLFormElement>(null);
+  const { showError, showWarning, showSuccess } = useToast();
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Always check if turnstile is verified (both development and production)
+    if (turnstileStatus !== "success" || !turnstileToken) {
+      showWarning("Verifikasi Diperlukan", "Harap verifikasi bahwa Anda bukan robot sebelum mendaftar.");
+      return;
+    }
+
+    // Call the parent handleSubmit with turnstile token
+    handleSubmit(e, turnstileToken);
+  };
+
+  return (
   <div className="min-h-screen flex">
     {/* Left Section - Welcome & Branding */}
     <div className="hidden lg:flex lg:w-1/2 bg-blue-600 relative">
@@ -114,7 +138,7 @@ const SignUpForm: FC<Props> = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-3">
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-900">Informasi Petugas</h3>
 
@@ -284,6 +308,34 @@ const SignUpForm: FC<Props> = ({
                 )}
               </div>
 
+              {/* Turnstile CAPTCHA */}
+              <div className="flex justify-center pt-2">
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                  retry="auto"
+                  refreshExpired="auto"
+                  sandbox={process.env.NODE_ENV === "development"}
+                  onError={() => {
+                    setTurnstileStatus("error");
+                    showError("Verifikasi Gagal", "Verifikasi keamanan gagal. Silakan coba lagi.");
+                  }}
+                  onExpire={() => {
+                    setTurnstileStatus("expired");
+                    showWarning("Verifikasi Kadaluarsa", "Verifikasi keamanan telah kadaluarsa. Silakan verifikasi ulang.");
+                  }}
+                  onLoad={() => {
+                    setTurnstileStatus("required");
+                  }}
+                  onVerify={(token) => {
+                    setTurnstileStatus("success");
+                    setTurnstileToken(token);
+                    // showSuccess("Verifikasi Berhasil", "Verifikasi keamanan berhasil. Anda dapat melanjutkan pendaftaran.");
+                  }}
+                />
+              </div>
+
+
+
               <div className="flex items-start gap-2 pt-3">
                 <Checkbox
                   checked={agreeToTerms}
@@ -307,7 +359,7 @@ const SignUpForm: FC<Props> = ({
               <Button 
                 className="w-full h-9 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded text-sm disabled:opacity-50" 
                 type="submit"
-                disabled={isLoading || !agreeToTerms || password !== confirmPassword}
+                disabled={isLoading || !agreeToTerms || password !== confirmPassword || turnstileStatus !== "success"}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
@@ -340,6 +392,7 @@ const SignUpForm: FC<Props> = ({
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default SignUpForm;
