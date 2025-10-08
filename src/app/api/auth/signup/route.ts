@@ -7,7 +7,6 @@ import { notifyAdminNewVendor } from "@/server/events";
 
 // Validation schema for vendor registration
 const vendorRegistrationSchema = z.object({
-  csrfToken: z.string().min(1, "CSRF token is required"),
   officer_name: z.string()
     .min(2, "Nama petugas minimal 2 karakter")
     .max(100, "Nama petugas maksimal 100 karakter")
@@ -68,28 +67,6 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-function validateCsrfToken(req: NextRequest, csrfToken: string): boolean {
-  try {
-    const cookieHeader = req.headers.get("cookie") || "";
-    const csrfCookie = cookieHeader
-      .split("; ")
-      .find((c) => c.startsWith("__Host-next-auth.csrf-token=") || c.startsWith("next-auth.csrf-token="));
-
-    if (!csrfCookie) {
-      return false;
-    }
-
-    // Format cookie: token|hash, URL encoded %7C = |
-    const cookieValue = decodeURIComponent(csrfCookie.split("=")[1] || '');
-    const [expectedToken] = cookieValue.split("|");
-    
-    return expectedToken === csrfToken;
-  } catch (error) {
-    console.error("CSRF validation error:", error);
-    return false;
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     // Get client IP for rate limiting
@@ -116,12 +93,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: errors }, { status: 400 });
     }
 
-    const { csrfToken, officer_name, email, password, vendor_name, address, phone_number } = validationResult.data;
-
-    // Validate CSRF token
-    if (!validateCsrfToken(req, csrfToken)) {
-      return NextResponse.json({ error: "Invalid CSRF token" }, { status: 403 });
-    }
+    const { officer_name, email, password, vendor_name, address, phone_number } = validationResult.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 

@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignUpForm from "@/components/auth/SignUpForm";
-import { getCsrfToken } from "next-auth/react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -69,8 +68,6 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const csrf = await getCsrfToken();
-      
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { 
@@ -78,7 +75,6 @@ export default function SignupPage() {
         },
         credentials: "include",
         body: JSON.stringify({
-          csrfToken: csrf,
           officer_name: nama_petugas.trim(),
           email: email.trim().toLowerCase(),
           password,
