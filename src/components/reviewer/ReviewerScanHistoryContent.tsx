@@ -1,7 +1,7 @@
 // src/app/(reviewer)/scan-history/ReviewerScanHistoryContent.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MagnifyingGlassIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import Alert from '@/components/ui/alert/Alert';
@@ -30,7 +30,7 @@ export default function ReviewerScanHistoryContent() {
   const [openPdf, setOpenPdf] = useState(false);
   const pageSize = 15;
 
-  const fetchScanHistory = async () => {
+  const fetchScanHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -53,12 +53,15 @@ export default function ReviewerScanHistoryContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, filters, search]);
 
+  // Initial fetch and debounced search
   useEffect(() => {
-    const t = setTimeout(fetchScanHistory, 300);
+    const t = setTimeout(() => {
+      fetchScanHistory();
+    }, 300);
     return () => clearTimeout(t);
-  }, [page, search]);
+  }, [page, search, fetchScanHistory]);
 
   const applyFilters = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,21 +82,22 @@ export default function ReviewerScanHistoryContent() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
           <div className="flex items-center space-x-3">
-
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Manajemen Riwayat Scan</h2>
               <p className="text-sm text-gray-500">Pantau aktivitas scan QR code oleh verifikator</p>
             </div>
           </div>
 
-          <Button
-            onClick={() => setShowFilters((s) => !s)}
-            variant={showFilters ? 'secondary' : 'primary'}
-            className="inline-flex items-center space-x-2"
-          >
-            <DocumentTextIcon className="h-4 w-4" />
-            <span>Filter</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowFilters((s) => !s)}
+              variant={showFilters ? 'secondary' : 'primary'}
+              className="inline-flex items-center space-x-2"
+            >
+              <DocumentTextIcon className="h-4 w-4" />
+              <span>Filter</span>
+            </Button>
+          </div>
         </div>
 
         {/* Search */}

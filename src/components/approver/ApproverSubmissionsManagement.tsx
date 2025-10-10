@@ -226,6 +226,20 @@ export default function ApproverSubmissionsManagement() {
     };
   }, [socket, fetchSubmissions]);
 
+  // Listen to custom events untuk refresh data submissions list dari notification panel
+  useEffect(() => {
+    const handleSubmissionsRefresh = () => {
+      console.log('🔄 Approver submissions list received refresh event');
+      fetchSubmissions();
+    };
+
+    window.addEventListener('approver-dashboard-refresh', handleSubmissionsRefresh);
+    
+    return () => {
+      window.removeEventListener('approver-dashboard-refresh', handleSubmissionsRefresh);
+    };
+  }, [fetchSubmissions]);
+
 
 
   const clearFilters = () => {
@@ -255,11 +269,9 @@ export default function ApproverSubmissionsManagement() {
     <div className="space-y-6">
       {/* Header and Filters - Unified Design */}
       <div className="bg-white rounded-xl border shadow-sm p-6 space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Persetujuan Pengajuan</h1>
-            <p className="text-sm text-gray-500 mt-1">Kelola dan setujui pengajuan SIMLOK</p>
-          </div>
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Persetujuan Pengajuan</h1>
+          <p className="text-sm text-gray-500 mt-1">Kelola dan setujui pengajuan SIMLOK</p>
         </div>
 
         {/* Toolbar - Search and Filters */}

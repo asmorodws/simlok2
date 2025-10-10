@@ -200,6 +200,19 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
     setSelectedSubmissionId(null);
   };
 
+  const handleSubmissionUpdated = () => {
+    // Kirim custom event untuk refresh dashboard sesuai role
+    if (session?.user?.role === 'APPROVER') {
+      console.log('🔄 Triggering approver dashboard refresh from notification panel');
+      window.dispatchEvent(new CustomEvent('approver-dashboard-refresh'));
+    } else if (session?.user?.role === 'REVIEWER') {
+      console.log('🔄 Triggering reviewer dashboard refresh from notification panel');
+      window.dispatchEvent(new CustomEvent('reviewer-dashboard-refresh'));
+    }
+    
+    handleCloseDetailModal();
+  };
+
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -524,9 +537,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
               isOpen={isDetailModalOpen}
               onClose={handleCloseDetailModal}
               submissionId={selectedSubmissionId}
-              onApprovalSubmitted={() => {
-                handleCloseDetailModal();
-              }}
+              onApprovalSubmitted={handleSubmissionUpdated}
             />
           )}
 
@@ -535,9 +546,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
               isOpen={isDetailModalOpen}
               onClose={handleCloseDetailModal}
               submissionId={selectedSubmissionId}
-              onReviewSubmitted={() => {
-                handleCloseDetailModal();
-              }}
+              onReviewSubmitted={handleSubmissionUpdated}
             />
           )}
 

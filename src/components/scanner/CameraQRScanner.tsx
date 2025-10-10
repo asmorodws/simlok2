@@ -9,7 +9,7 @@ import {
   StopIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
-import { Modal } from '@/components/ui/modal';
+
 import ScanModal from './ScanModal';
 
 interface ScanResult {
@@ -59,20 +59,12 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
     console.log('=========================');
   }, [isScanning]);
 
-  const resetScannerState = useCallback(() => {
-    console.log('=== RESETTING SCANNER STATE ===');
-    setScanResult(null);
-    setIsModalOpen(false);
-    setError(null);
-    scanningRef.current = false;
-    // Don't reset scanIdRef here as we want it to keep incrementing
-  }, []);
+
 
   useEffect(() => {
     if (isOpen) {
       console.log('=== SCANNER OPENED ===');
-      // Reset previous scan results when opening scanner
-      resetScannerState();
+      // Only initialize scanner, don't reset modal state if already showing success
       initializeScanner();
     } else {
       console.log('=== SCANNER CLOSED ===');
@@ -111,7 +103,7 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
       
       console.log('Scanner cleanup completed');
     };
-  }, [isOpen, resetScannerState]);
+  }, [isOpen]); // Removed resetScannerState from dependency to prevent unnecessary resets
 
   const initializeScanner = async () => {
     try {
@@ -127,8 +119,11 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
       stopScanner();
       
       setError(null);
-      setScanResult(null); // Clear any previous scan results
-      setIsModalOpen(false); // Ensure modal is closed
+      // Don't reset scan result and modal state if modal is currently showing success
+      if (!isModalOpen) {
+        setScanResult(null); // Only clear if modal is not open
+        setIsModalOpen(false);
+      }
       scanningRef.current = false; // Reset scanning state
       
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -173,9 +168,11 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
       
       console.log(`=== STARTING SCAN PROCESS (ID: ${currentScanId}) ===`);
       
-      // Reset any previous scan result before starting new scan
-      setScanResult(null);
-      setIsModalOpen(false);
+      // Don't reset modal state if success modal is currently being shown
+      if (!isModalOpen || !scanResult?.success) {
+        setScanResult(null);
+        setIsModalOpen(false);
+      }
       
       // Always create a fresh code reader instance to avoid state issues
       if (codeReaderRef.current) {
@@ -247,18 +244,30 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
       console.log('API response data.data:', result.data);
       console.log('API response data.data.submission:', result.data?.submission);
 
+      // Set scan result first
       setScanResult(result);
-      
-      // Call onScan callback if provided
-      if (onScan) {
-        onScan(scannedText);
-      }
       
       console.log('=== SETTING MODAL STATE ===');
       console.log('result.success:', result.success);
       console.log('About to set modal open to true');
+      
+      // Immediately show modal for better UX
       setIsModalOpen(true);
-      console.log('Modal state should be open now');
+      console.log('Modal state set to open immediately');
+      
+      // Call onScan callback after modal is set (if provided)
+      if (onScan) {
+        onScan(scannedText);
+      }
+      
+      // Dispatch refresh event for table updates (now safe since no loading state)
+      if (result.success) {
+        console.log('Scan successful, dispatching silent refresh event...');
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('verifier-scan-refresh'));
+          console.log('verifier-scan-refresh event dispatched (silent mode)');
+        }, 200); // Quick refresh since it won't interfere with modal
+      }
       
     } catch (error) {
       console.error('Error verifying QR:', error);
@@ -267,7 +276,10 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
         error: 'Failed to verify barcode/QR code'
       };
       setScanResult(errorResult);
+      
+      // Show error modal immediately too
       setIsModalOpen(true);
+      console.log('Error modal state set to open immediately');
     }
   };
 
@@ -349,28 +361,85 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
 
   const handleModalClose = () => {
     console.log('=== CLOSING RESULT MODAL ===');
+    
+    // Clear modal state first
     setIsModalOpen(false);
     setScanResult(null);
     setError(null);
     
-    // Restart scanning after modal closes if scanner is still open
-    if (isOpen && videoRef.current && streamRef.current) {
-      console.log('=== RESTARTING SCANNER AFTER MODAL CLOSE ===');
-      // Add delay to ensure state is properly reset and avoid race conditions
-      setTimeout(() => {
-        // Double check if scanner is still open and stream is still active
-        if (isOpen && streamRef.current && !scanningRef.current) {
-          console.log('Restarting scan process...');
-          setIsScanning(true);
-          scanningRef.current = false; // Reset scanning state
-          startScanning();
-        } else {
-          console.log('Scanner closed or already scanning, skipping restart');
-        }
-      }, 500); // Increased delay for more stability
-    } else {
-      console.log('Scanner not available for restart - isOpen:', isOpen, 'videoRef:', !!videoRef.current, 'stream:', !!streamRef.current);
-    }
+    // No need to dispatch refresh here anymore - already handled after scan
+    
+    // Wait for modal to fully close before restarting scanner
+    setTimeout(() => {
+      // Restart scanning after modal closes if scanner is still open
+      if (isOpen && videoRef.current && streamRef.current) {
+        console.log('=== RESTARTING SCANNER AFTER MODAL CLOSE ===');
+        // Additional delay to ensure all state changes are complete
+        setTimeout(() => {
+          // Triple check if scanner is still open and stream is still active
+          if (isOpen && streamRef.current && !scanningRef.current && !isScanning) {
+            console.log('Restarting scan process...');
+            setIsScanning(true);
+            // Reset scanning state before starting
+            scanningRef.current = false;
+            
+            // Start scanning without resetting modal state again
+            if (!videoRef.current) {
+              console.error('Video element not available');
+              return;
+            }
+
+            // Increment scan ID for this session
+            scanIdRef.current += 1;
+            const currentScanId = scanIdRef.current;
+            
+            console.log(`=== RESTARTING SCAN PROCESS (ID: ${currentScanId}) ===`);
+            
+            // Create fresh code reader instance
+            if (codeReaderRef.current) {
+              codeReaderRef.current = null;
+            }
+            codeReaderRef.current = new BrowserMultiFormatReader();
+            console.log('Fresh BrowserMultiFormatReader created for restart');
+            
+            scanningRef.current = true; // Mark scanning as active
+            
+            codeReaderRef.current.decodeFromVideoDevice(
+              undefined,
+              videoRef.current,
+              (result, error) => {
+                // Check if this is still the current scan session
+                if (scanIdRef.current !== currentScanId) {
+                  console.log(`Ignoring result from old scan session (${currentScanId} vs ${scanIdRef.current})`);
+                  return;
+                }
+                
+                // Check if scanning is still active before processing
+                if (!scanningRef.current) {
+                  console.log('Scanning stopped, ignoring result');
+                  return;
+                }
+
+                if (result) {
+                  console.log(`=== SCAN SUCCESS (ID: ${currentScanId}) ===`);
+                  console.log('Scanned text:', result.getText());
+                  scanningRef.current = false; // Stop scanning immediately
+                  handleScanSuccess(result.getText());
+                }
+                
+                if (error && !(error instanceof NotFoundException)) {
+                  console.log('Scan error (non-critical):', error.message);
+                }
+              }
+            );
+          } else {
+            console.log('Scanner closed or already scanning, skipping restart - isOpen:', isOpen, 'scanning:', scanningRef.current, 'isScanning:', isScanning);
+          }
+        }, 200);
+      } else {
+        console.log('Scanner not available for restart - isOpen:', isOpen, 'videoRef:', !!videoRef.current, 'stream:', !!streamRef.current);
+      }
+    }, 100);
   };
 
   console.log('=== RENDER STATE ===');
@@ -381,8 +450,10 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={handleClose}>
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      {/* Custom modal with full black background for camera scanner */}
+      {isOpen && (
+        <div className="fixed inset-0 z-[99] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <h2 className="text-xl font-semibold mb-4">
               {title}
@@ -452,7 +523,8 @@ export default function CameraQRScanner({ isOpen, onClose, onScan, title = "Scan
             </div>
           </div>
         </div>
-      </Modal>
+        </div>
+      )}
 
       {scanResult && (
         <ScanModal

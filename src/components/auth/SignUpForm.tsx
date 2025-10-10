@@ -68,7 +68,7 @@ const SignUpForm: FC<Props> = ({
   >("required");
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const formRef = useRef<HTMLFormElement>(null);
-  const { showError, showWarning, showSuccess } = useToast();
+  const { showError, showWarning } = useToast();
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();

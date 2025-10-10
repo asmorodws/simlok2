@@ -89,12 +89,10 @@ export default function VerifierDashboard() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const scanHistoryRef = useRef<{ closeDetailModal: () => void } | null>(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       // Fetch stats, recent submissions, and recent scans in parallel
       const [submissionsRes, scansRes, statsRes] = await Promise.all([
@@ -121,9 +119,44 @@ export default function VerifierDashboard() {
       console.error('Error fetching dashboard data:', error);
       showError('Error', 'Gagal memuat data dashboard');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  // Custom event listener for refreshing dashboard after QR scan
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    
+    const handleVerifierScanRefresh = () => {
+      console.log('Verifier scan refresh event received, scheduling dashboard data refresh...');
+      
+      // Clear any existing timeout to debounce multiple refresh calls
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+      
+      // Refresh data without loading state to avoid modal interference
+      refreshTimeout = setTimeout(() => {
+        console.log('Executing dashboard data refresh (silent)...');
+        fetchDashboardData(false); // false = no loading state, just update data
+      }, 150); // Reduced delay since no loading state
+    };
+
+    window.addEventListener('verifier-scan-refresh', handleVerifierScanRefresh);
+
+    return () => {
+      window.removeEventListener('verifier-scan-refresh', handleVerifierScanRefresh);
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
+  }, []);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -163,6 +196,18 @@ export default function VerifierDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Dashboard Verifikator</h1>
+            <p className="text-gray-600 mt-1">
+              Kelola verifikasi dan scan QR Code SIMLOK
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border shadow-sm p-6">
@@ -812,8 +857,7 @@ export default function VerifierDashboard() {
         onScan={(result: string) => {
           console.log('Barcode/QR Scanned in verifier:', result);
           // Scanner will handle the verification automatically
-          // Just close the scanner after successful scan
-          setScannerOpen(false);
+          // Let the scanner show success modal first before closing
         }}
         title="Scan Barcode/QR Code SIMLOK"
         description="Arahkan kamera ke barcode atau QR code SIMLOK untuk memverifikasi"

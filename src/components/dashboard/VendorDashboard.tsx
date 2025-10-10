@@ -34,7 +34,7 @@ export default function VendorDashboard() {
   });
 
 
-  useSocket();
+  const socket = useSocket();
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -42,6 +42,30 @@ export default function VendorDashboard() {
       fetchVendorSubmissions();
     }
   }, [session?.user?.id, fetchVendorStats, fetchVendorSubmissions]);
+
+  // Socket listeners for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.emit('join', { role: 'VENDOR' });
+
+    const handleSubmissionUpdate = () => {
+      if (session?.user?.id) {
+        fetchVendorStats();
+        fetchVendorSubmissions();
+      }
+    };
+
+    socket.on('submission:reviewed', handleSubmissionUpdate);
+    socket.on('submission:approved', handleSubmissionUpdate);
+    socket.on('submission:rejected', handleSubmissionUpdate);
+
+    return () => {
+      socket.off('submission:reviewed', handleSubmissionUpdate);
+      socket.off('submission:approved', handleSubmissionUpdate);
+      socket.off('submission:rejected', handleSubmissionUpdate);
+    };
+  }, [socket, session?.user?.id, fetchVendorStats, fetchVendorSubmissions]);
 
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
@@ -95,7 +119,7 @@ export default function VendorDashboard() {
               {session?.user.vendor_name && `${session.user.vendor_name} - `} Kelola pengajuan SIMLOK Anda
             </p>
           </div>
-          <div className="mt-4 sm:mt-0">
+          <div className="mt-4 sm:mt-0 flex items-center gap-3">
             <Link href="/vendor/submissions/create">
               <Button variant="primary" size="md">
                 <PlusIcon className="w-5 h-5 mr-2" /> Buat pengajuan

@@ -13,6 +13,7 @@ import ConfirmModal from "../ui/modal/ConfirmModal";
 import Card from "../ui/Card";
 import Button from "../ui/button/Button";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import { useSocket } from "@/components/common/RealtimeUpdates";
 
 export default function VendorSubmissionsContent() {
   const { showSuccess, showError } = useToast();
@@ -83,6 +84,29 @@ export default function VendorSubmissionsContent() {
     return () => clearTimeout(timeoutId);
   }, [fetchVendorSubmissions, currentPage, searchTerm, statusFilter, sortBy, sortOrder]);
 
+  // Socket listener for real-time updates
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.emit('join', { role: 'VENDOR' });
+
+    const handleSubmissionUpdate = () => {
+      // Force refresh to get updated data when submission status changes
+      forceRefresh();
+    };
+
+    socket.on('submission:reviewed', handleSubmissionUpdate);
+    socket.on('submission:approved', handleSubmissionUpdate);
+    socket.on('submission:rejected', handleSubmissionUpdate);
+
+    return () => {
+      socket.off('submission:reviewed', handleSubmissionUpdate);
+      socket.off('submission:approved', handleSubmissionUpdate);
+      socket.off('submission:rejected', handleSubmissionUpdate);
+    };
+  }, [socket, forceRefresh]);
+
   const formatDate = (date: string) =>
     new Date(date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 
@@ -151,7 +175,7 @@ export default function VendorSubmissionsContent() {
               Lihat dan kelola semua pengajuan SIMLOK Anda
             </p>
           </div>
-          <div className="mt-4 sm:mt-0 flex gap-2">
+          <div className="mt-4 sm:mt-0 flex items-center gap-3">
             {/* <Button 
               onClick={async () => {
                 try {

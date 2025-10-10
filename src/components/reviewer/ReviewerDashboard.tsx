@@ -73,16 +73,32 @@ export default function ReviewerDashboard() {
   useEffect(() => {
     if (!socket) return;
     socket.emit('join', { role: 'REVIEWER' });
-    const refresh = () => fetchDashboardData();
-    socket.on('notification:new', refresh);
-    socket.on('stats:update', refresh);
-    socket.on('submission:created', refresh);
+    const refreshData = () => {
+      fetchDashboardData();
+    };
+    socket.on('notification:new', refreshData);
+    socket.on('stats:update', refreshData);
+    socket.on('submission:created', refreshData);
     return () => {
-      socket.off('notification:new', refresh);
-      socket.off('stats:update', refresh);
-      socket.off('submission:created', refresh);
+      socket.off('notification:new', refreshData);
+      socket.off('stats:update', refreshData);
+      socket.off('submission:created', refreshData);
     };
   }, [socket, fetchDashboardData]);
+
+  // Listen to custom events untuk refresh data dashboard
+  useEffect(() => {
+    const handleDashboardRefresh = () => {
+      console.log('🔄 Reviewer dashboard received refresh event');
+      fetchDashboardData();
+    };
+
+    window.addEventListener('reviewer-dashboard-refresh', handleDashboardRefresh);
+    
+    return () => {
+      window.removeEventListener('reviewer-dashboard-refresh', handleDashboardRefresh);
+    };
+  }, [fetchDashboardData]);
 
   const handleViewDetail = (submissionId: string) => {
     setSelectedSubmission(submissionId);
@@ -102,6 +118,18 @@ export default function ReviewerDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Dashboard Reviewer</h1>
+              <p className="text-gray-600 mt-1">
+                Kelola review dan verifikasi pengajuan SIMLOK
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl border shadow-sm p-6">

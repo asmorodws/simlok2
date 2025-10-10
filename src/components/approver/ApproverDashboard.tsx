@@ -69,6 +69,22 @@ export default function ApproverDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+
+
+  // Listen to custom events untuk refresh data dashboard
+  useEffect(() => {
+    const handleDashboardRefresh = () => {
+      console.log('🔄 Approver dashboard received refresh event');
+      fetchDashboardData();
+    };
+
+    window.addEventListener('approver-dashboard-refresh', handleDashboardRefresh);
+    
+    return () => {
+      window.removeEventListener('approver-dashboard-refresh', handleDashboardRefresh);
+    };
+  }, [fetchDashboardData]);
+
   // Socket untuk real-time updates
   const socket = useSocket();
   useEffect(() => {

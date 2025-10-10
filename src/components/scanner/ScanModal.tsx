@@ -43,7 +43,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 md:p-8"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 md:p-8"
       onClick={onClose}
     >
       <div 

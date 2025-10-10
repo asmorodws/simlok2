@@ -77,8 +77,39 @@ export default function VerifierScanHistory() {
     fetchScanHistory();
   }, [pagination.offset, searchTerm, filters]);
 
-  const fetchScanHistory = async () => {
-    setLoading(true);
+  // Custom event listener for refreshing scan history after QR scan
+  useEffect(() => {
+    let refreshTimeout: NodeJS.Timeout | null = null;
+    
+    const handleVerifierScanRefresh = () => {
+      console.log('Verifier scan refresh event received, scheduling scan history refresh...');
+      
+      // Clear any existing timeout to debounce multiple refresh calls
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+      
+      // Refresh data without loading state to avoid modal interference
+      refreshTimeout = setTimeout(() => {
+        console.log('Executing scan history refresh (silent)...');
+        fetchScanHistory(false); // false = no loading state, just update data
+      }, 150); // Reduced delay since no loading state
+    };
+
+    window.addEventListener('verifier-scan-refresh', handleVerifierScanRefresh);
+
+    return () => {
+      window.removeEventListener('verifier-scan-refresh', handleVerifierScanRefresh);
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    };
+  }, []);
+
+  const fetchScanHistory = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       const params = new URLSearchParams({
         limit: pagination.limit.toString(),
@@ -108,7 +139,9 @@ export default function VerifierScanHistory() {
       console.error('Error fetching scan history:', error);
       showError('Error', 'Gagal memuat riwayat scan');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 

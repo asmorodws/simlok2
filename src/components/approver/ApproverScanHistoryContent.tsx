@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   MagnifyingGlassIcon,
   DocumentTextIcon,
@@ -32,7 +32,7 @@ export default function ApproverScanHistoryContent() {
   const [openPdf, setOpenPdf] = useState(false);
   const pageSize = 15;
 
-  const fetchScanHistory = async () => {
+  const fetchScanHistory = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -55,12 +55,15 @@ export default function ApproverScanHistoryContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, filters, search]);
 
+  // Initial fetch and debounced search
   useEffect(() => {
-    const t = setTimeout(fetchScanHistory, 300);
+    const t = setTimeout(() => {
+      fetchScanHistory();
+    }, 300);
     return () => clearTimeout(t);
-  }, [page, search]);
+  }, [page, search, fetchScanHistory]);
 
   const applyFilters = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,14 +90,16 @@ export default function ApproverScanHistoryContent() {
             </div>
           </div>
 
-          <Button
-            onClick={() => setShowFilters((s) => !s)}
-            variant={showFilters ? 'secondary' : 'primary'}
-            className="inline-flex items-center space-x-2"
-          >
-            <DocumentTextIcon className="h-4 w-4" />
-            <span>Filter</span>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowFilters((s) => !s)}
+              variant={showFilters ? 'secondary' : 'primary'}
+              className="inline-flex items-center space-x-2"
+            >
+              <DocumentTextIcon className="h-4 w-4" />
+              <span>Filter</span>
+            </Button>
+          </div>
         </div>
 
         {/* Search */}

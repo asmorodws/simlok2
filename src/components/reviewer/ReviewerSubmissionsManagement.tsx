@@ -73,7 +73,9 @@ export default function ReviewerSubmissionsManagement() {
 
   useEffect(() => {
     if (!socket) return;
-    const refresh = () => fetchSubmissions();
+    const refresh = () => {
+      fetchSubmissions();
+    };
     socket.emit('join', { role: 'REVIEWER' });
     socket.on('submission:created', refresh);
     socket.on('submission:reviewed', refresh);
@@ -86,6 +88,20 @@ export default function ReviewerSubmissionsManagement() {
       socket.off('submission:rejected', refresh);
     };
   }, [socket, fetchSubmissions]);
+
+  // Listen to custom events untuk refresh data submissions list dari notification panel
+  useEffect(() => {
+    const handleSubmissionsRefresh = () => {
+      console.log('🔄 Reviewer submissions list received refresh event');
+      fetchSubmissions();
+    };
+
+    window.addEventListener('reviewer-dashboard-refresh', handleSubmissionsRefresh);
+    
+    return () => {
+      window.removeEventListener('reviewer-dashboard-refresh', handleSubmissionsRefresh);
+    };
+  }, [fetchSubmissions]);
 
   const handleExportToExcel = async (filters: ExportFilters) => {
     try {
@@ -134,7 +150,7 @@ export default function ReviewerSubmissionsManagement() {
             <h1 className="text-xl md:text-2xl font-semibold text-gray-900">Review Pengajuan</h1>
             <p className="text-sm text-gray-500 mt-1">Kelola dan review pengajuan SIMLOK</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Button
               onClick={() => setShowExportModal(true)}
               disabled={exportLoading}
@@ -228,7 +244,9 @@ export default function ReviewerSubmissionsManagement() {
           isOpen={showDetailModal}
           onClose={() => { setShowDetailModal(false); setSelectedSubmission(null); }}
           submissionId={selectedSubmission.id}
-          onReviewSubmitted={() => { fetchSubmissions(); }}
+          onReviewSubmitted={() => { 
+            fetchSubmissions(); 
+          }}
         />
       )}
     </div>
