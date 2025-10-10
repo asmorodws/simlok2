@@ -38,10 +38,16 @@ export default function VerificationPendingPage() {
     // Redirect jika user sudah terverifikasi
     if (session?.user?.verified_at) {
       const role = session.user.role;
- if (role === "VENDOR") {
+      if (role === "VENDOR") {
         router.push("/vendor");
       } else if (role === "VERIFIER") {
         router.push("/verifier");
+      } else if (role === "REVIEWER") {
+        router.push("/reviewer");
+      } else if (role === "APPROVER") {
+        router.push("/approver");
+      } else if (role === "SUPER_ADMIN") {
+        router.push("/super-admin");
       } else {
         router.push('/dashboard');
       }

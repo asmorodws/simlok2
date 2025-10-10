@@ -16,12 +16,21 @@ export default function AuthRedirect({
     if (status === "loading") return; // tunggu dulu
 
     if (session?.user?.role && session.accessToken) {
-      switch (session.user.role ) {
+      switch (session.user.role) {
         case "VENDOR":
           router.replace("/vendor");
           break;
         case "VERIFIER":
           router.replace("/verifier");
+          break;
+        case "REVIEWER":
+          router.replace("/reviewer");
+          break;
+        case "APPROVER":
+          router.replace("/approver");
+          break;
+        case "SUPER_ADMIN":
+          router.replace("/super-admin");
           break;
         default:
           router.replace("/"); // fallback
