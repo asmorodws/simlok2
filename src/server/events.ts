@@ -1,38 +1,26 @@
 import { prisma } from '@/lib/singletons';
-import { eventsPublisher } from './eventsPublisher';
-import { notificationsPublisher } from './notificationsPublisher';
-import type {
-  AdminNewSubmissionEvent,
-  AdminNewVendorEvent,
-  VendorSubmissionStatusChangedEvent,
-  NotificationNewEvent
-} from '../shared/events';// Helper to count unread notifications
+
+// Helper to count unread notifications
 async function getUnreadCount(scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId?: string): Promise<number> {
   if (scope === 'admin') {
     return await prisma.notification.count({
       where: {
         scope: 'admin',
-        reads: {
-          none: {}
-        }
+        reads: { none: {} }
       }
     });
   } else if (scope === 'reviewer') {
     return await prisma.notification.count({
       where: {
         scope: 'reviewer',
-        reads: {
-          none: {}
-        }
+        reads: { none: {} }
       }
     });
   } else if (scope === 'approver') {
     return await prisma.notification.count({
       where: {
         scope: 'approver',
-        reads: {
-          none: {}
-        }
+        reads: { none: {} }
       }
     });
   } else if (scope === 'vendor' && vendorId) {
@@ -41,9 +29,7 @@ async function getUnreadCount(scope: 'admin' | 'vendor' | 'reviewer' | 'approver
         scope: 'vendor',
         vendor_id: vendorId,
         reads: {
-          none: {
-            vendor_id: vendorId
-          }
+          none: { vendor_id: vendorId }
         }
       }
     });
@@ -79,61 +65,10 @@ export async function notifyAdminNewSubmission(submissionId: string) {
       }
     });
 
-    // Emit events
-    const submissionEvent: AdminNewSubmissionEvent = {
-      submissionId,
-      createdAt: submission.created_at.toISOString()
-    };
-
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'admin',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.adminNewSubmission(submissionEvent);
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Update unread count
-    const unreadCount = await getUnreadCount('admin');
-    const unreadCountEvent = {
-      scope: 'admin' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update stats
-    const totalPending = await prisma.submission.count({
-      where: { approval_status: 'PENDING_APPROVAL' }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'admin',
-      changes: {
-        pendingSubmissions: totalPending,
-        totalSubmissions: await prisma.submission.count()
-      }
-    });
+    console.log('New submission notification created:', notification.id);
 
     // Also notify reviewers about new submission
     await notifyReviewerNewSubmission(submissionId);
-
-    // Emit submission created event to reviewers
-    eventsPublisher.submissionCreated({
-      submissionId,
-      vendorName: submission.vendor_name,
-      officerName: submission.officer_name,
-      createdAt: submission.created_at.toISOString()
-    });
 
   } catch (error) {
     console.error('Error notifying admin new submission:', error);
@@ -167,49 +102,7 @@ export async function notifyAdminNewVendor(vendorId: string) {
       }
     });
 
-    // Emit events
-    const vendorEvent: AdminNewVendorEvent = {
-      vendorId,
-      createdAt: vendor.created_at.toISOString()
-    };
-
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'admin',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.adminNewVendor(vendorEvent);
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Update unread count
-    const unreadCount = await getUnreadCount('admin');
-    const unreadCountEvent = {
-      scope: 'admin' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update stats
-    const totalVendors = await prisma.user.count({
-      where: { role: 'VENDOR' }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'admin',
-      changes: {
-        totalVendors
-      }
-    });
+    console.log('New vendor notification created:', notification.id);
 
   } catch (error) {
     console.error('Error notifying admin new vendor:', error);
@@ -236,13 +129,6 @@ export async function notifyVendorStatusChange(
       APPROVED: 'Disetujui',
       REJECTED: 'Ditolak'
     }[status];
-
-    // Truncate job description if too long
-    // const truncateText = (text: string, maxLength: number = 50) => {
-    //   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
-    // };
-
-    // const truncatedJobDescription = truncateText(submission.job_description);
 
     // Create more informative title and message with submission ID
     const title = status === 'APPROVED' 
@@ -273,64 +159,7 @@ export async function notifyVendorStatusChange(
       }
     });
 
-    // Emit events
-    const statusEvent: VendorSubmissionStatusChangedEvent = {
-      submissionId,
-      status,
-      updatedAt: new Date().toISOString()
-    };
-
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'vendor',
-      vendorId,
-      createdAt: notification.created_at.toISOString()
-    };
-
-  eventsPublisher.vendorSubmissionStatusChanged(vendorId, statusEvent);
-  eventsPublisher.notificationNew(notificationEvent);
-  
-  // Emit specific submission finalized event
-  eventsPublisher.submissionFinalized(vendorId, {
-    submissionId,
-    finalStatus: status,
-    finalizedBy: 'Approver', // You might want to pass actual approver name
-    finalizedAt: new Date().toISOString()
-  });
-  
-  // Publish to real-time subscribers via Redis
-  await notificationsPublisher.publishNotification(notificationEvent);
-
-  // Update unread count
-  const unreadCount = await getUnreadCount('vendor', vendorId);
-  const unreadCountEvent = {
-    scope: 'vendor' as const,
-    vendorId,
-    unreadCount: unreadCount,
-    count: unreadCount
-  };
-  eventsPublisher.notificationUnreadCount(unreadCountEvent);
-  await notificationsPublisher.publishUnreadCount(unreadCountEvent);    // Update vendor stats
-    const vendorSubmissions = await prisma.submission.findMany({
-      where: { user_id: vendorId }
-    });
-
-    const stats = {
-      totalSubmissions: vendorSubmissions.length,
-      pendingSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'PENDING_APPROVAL').length,
-      approvedSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'APPROVED').length,
-      rejectedSubmissions: vendorSubmissions.filter((s: any) => s.approval_status === 'REJECTED').length
-    };
-
-    eventsPublisher.statsUpdate({
-      scope: 'vendor',
-      vendorId,
-      changes: stats
-    });
+    console.log('Vendor status change notification created:', notification.id);
 
   } catch (error) {
     console.error('Error notifying vendor status change:', error);
@@ -340,21 +169,6 @@ export async function notifyVendorStatusChange(
 export async function notifyNotificationsRemoved(submissionId: string) {
   try {
     console.log(`Broadcasting notification removal for submission: ${submissionId}`);
-
-    // Create event for notification removal
-    const notificationRemovalEvent = {
-      submissionId,
-      timestamp: new Date().toISOString()
-    };
-
-    // Emit to Socket.io clients
-    eventsPublisher.notificationRemoved(notificationRemovalEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotificationRemoval(notificationRemovalEvent);
-
-    console.log(`✅ Broadcasted notification removal for submission: ${submissionId}`);
-
   } catch (error) {
     console.error('Error broadcasting notification removal:', error);
   }
@@ -386,56 +200,6 @@ export async function notifyReviewerNewUser(userId: string) {
           phoneNumber: user.phone_number,
           registrationDate: user.created_at.toISOString()
         })
-      }
-    });
-
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'reviewer',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Emit specific user verification event
-    eventsPublisher.userVerificationNeeded({
-      userId,
-      vendorName: user.vendor_name || '',
-      officerName: user.officer_name,
-      email: user.email,
-      createdAt: user.created_at.toISOString()
-    });
-
-    // Update unread count for reviewers
-    const unreadCount = await getUnreadCount('reviewer');
-    const unreadCountEvent = {
-      scope: 'reviewer' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update reviewer stats
-    const totalPendingUsers = await prisma.user.count({
-      where: { 
-        verified_at: null,
-        role: 'VENDOR' // Only vendor users need verification
-      }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'reviewer',
-      changes: {
-        pendingUserVerifications: totalPendingUsers
       }
     });
 
@@ -471,45 +235,6 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
           officerName: submission.officer_name,
           jobDescription: submission.job_description
         })
-      }
-    });
-
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'reviewer',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Update unread count for reviewers
-    const unreadCount = await getUnreadCount('reviewer');
-    const unreadCountEvent = {
-      scope: 'reviewer' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update reviewer stats
-    const totalPendingReview = await prisma.submission.count({
-      where: { review_status: 'PENDING_REVIEW' }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'reviewer',
-      changes: {
-        pendingReview: totalPendingReview,
-        totalSubmissions: await prisma.submission.count()
       }
     });
 
@@ -573,58 +298,6 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
       }
     });
 
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'approver',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Emit specific submission reviewed event
-    eventsPublisher.submissionReviewed({
-      submissionId,
-      reviewStatus: submission.review_status,
-      reviewedBy: submission.reviewed_by_user?.officer_name || 'Unknown',
-      reviewedAt: new Date().toISOString()
-    });
-
-    // Update unread count for approvers
-    const unreadCount = await getUnreadCount('approver');
-    const unreadCountEvent = {
-      scope: 'approver' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update approver stats
-    const totalPendingFinal = await prisma.submission.count({
-      where: { 
-        review_status: 'MEETS_REQUIREMENTS',
-        approval_status: 'PENDING_APPROVAL'
-      }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'approver',
-      changes: {
-        pendingFinalApproval: totalPendingFinal,
-        totalReviewedSubmissions: await prisma.submission.count({
-          where: { review_status: { not: 'PENDING_REVIEW' } }
-        })
-      }
-    });
-
     console.log(`✅ Notified approvers about reviewed submission: ${submissionId}`);
 
   } catch (error) {
@@ -655,70 +328,12 @@ export async function notifyUserVerificationResult(
       ? 'Selamat! Akun vendor Anda telah diverifikasi dan sekarang dapat mengajukan permohonan Simlok.'
       : `Maaf, akun vendor Anda tidak dapat diverifikasi. ${note || 'Silakan hubungi admin untuk informasi lebih lanjut.'}`;
 
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: `temp_${Date.now()}`, // Will be replaced when notification is created
-      type: verificationStatus === 'VERIFY' ? 'user_verified' : 'user_rejected',
-      title: title,
-      message: message,
-      data: JSON.stringify({
-        userId,
-        verificationStatus,
-        note
-      }),
-      scope: 'vendor',
-      vendorId: userId,
-      createdAt: new Date().toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Emit specific user verification result event
-    eventsPublisher.userVerificationResult(userId, {
-      userId,
-      status: verificationStatus,
-      verifiedAt: new Date().toISOString(),
-      note: note || ''
-    });
-
-    // Update unread count for the specific vendor
-    const unreadCount = await getUnreadCount('vendor', userId);
-    const unreadCountEvent = {
-      scope: 'vendor' as const,
-      vendorId: userId,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update vendor stats
-    const totalPendingUsers = await prisma.user.count({
-      where: { 
-        verified_at: null,
-        role: 'VENDOR'
-      }
-    });
-
-    // Update reviewer stats  
-    eventsPublisher.statsUpdate({
-      scope: 'reviewer',
-      changes: {
-        pendingUserVerifications: totalPendingUsers
-      }
-    });
-
     console.log(`✅ Notified user about verification result: ${userId} - ${verificationStatus}`);
 
   } catch (error) {
     console.error('Error notifying user verification result:', error);
   }
 }
-
-// notifyReviewerFinalDecision function removed - reviewers no longer need notification when submissions are approved/rejected
 
 export async function notifyReviewerSubmissionApproved(submissionId: string) {
   try {
@@ -760,45 +375,6 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
           simlokNumber: submission.simlok_number,
           approvedAt: submission.approved_at
         })
-      }
-    });
-
-    // Create notification event
-    const notificationEvent: NotificationNewEvent = {
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      data: notification.data,
-      scope: 'reviewer',
-      createdAt: notification.created_at.toISOString()
-    };
-
-    eventsPublisher.notificationNew(notificationEvent);
-    
-    // Publish to real-time subscribers via Redis
-    await notificationsPublisher.publishNotification(notificationEvent);
-
-    // Update unread count for reviewers
-    const unreadCount = await getUnreadCount('reviewer');
-    const unreadCountEvent = {
-      scope: 'reviewer' as const,
-      unreadCount: unreadCount,
-      count: unreadCount
-    };
-    eventsPublisher.notificationUnreadCount(unreadCountEvent);
-    await notificationsPublisher.publishUnreadCount(unreadCountEvent);
-
-    // Update reviewer stats
-    const totalApproved = await prisma.submission.count({
-      where: { approval_status: 'APPROVED' }
-    });
-
-    eventsPublisher.statsUpdate({
-      scope: 'reviewer',
-      changes: {
-        approvedSubmissions: totalApproved,
-        totalSubmissions: await prisma.submission.count()
       }
     });
 
