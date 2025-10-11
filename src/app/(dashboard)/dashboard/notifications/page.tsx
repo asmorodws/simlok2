@@ -313,7 +313,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR", "APPROVER", "REVIEWER"]}>
+    <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR", "APPROVER", "REVIEWER", "VISITOR"]}>
       <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
           {/* Header */}

@@ -223,6 +223,7 @@ export default function UserVerificationManagement({
       APPROVER: 'bg-orange-100 text-orange-800',
       ADMIN: 'bg-purple-100 text-purple-800',
       SUPER_ADMIN: 'bg-red-100 text-red-800',
+      VISITOR: 'bg-cyan-100 text-cyan-800',
     };
     const roleLabels: Record<string, string> = {
       VENDOR: 'Vendor',
@@ -231,6 +232,7 @@ export default function UserVerificationManagement({
       APPROVER: 'Approver',
       ADMIN: 'Admin',
       SUPER_ADMIN: 'Super Admin',
+      VISITOR: 'Visitor',
     };
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[r] || 'bg-gray-100 text-gray-800'}`}>{roleLabels[r] || r}</span>;
   }, []);

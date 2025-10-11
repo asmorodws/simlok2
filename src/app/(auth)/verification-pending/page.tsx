@@ -48,6 +48,8 @@ export default function VerificationPendingPage() {
         router.push("/approver");
       } else if (role === "SUPER_ADMIN") {
         router.push("/super-admin");
+      } else if (role === "VISITOR") {
+        router.push("/visitor");
       } else {
         router.push('/dashboard');
       }

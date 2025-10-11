@@ -47,6 +47,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     APPROVER: MenuItem[];
     VENDOR: MenuItem[];
     VERIFIER: MenuItem[];
+    VISITOR: MenuItem[];
   };
 
   const menuConfig: MenuConfig = {
@@ -72,6 +73,9 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     VERIFIER: [
       { label: "Dashboard", href: "/verifier", icon: HomeIcon },
       { label: "Riwayat Scan", href: "/verifier/history", icon: ClockIcon },
+    ],
+    VISITOR: [
+      { label: "Dashboard", href: "/visitor", icon: HomeIcon },
     ],
   };
 

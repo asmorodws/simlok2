@@ -169,6 +169,19 @@ async function main() {
       rejected_by: "REVIEWER",
       rejection_reason: "Dokumen tidak lengkap dan tidak sesuai dengan persyaratan yang ditetapkan.",
     },
+    {
+      officer_name: "Visitor Utama",
+      email: "visitor@example.com",
+      password: "visitor123",
+      role: "VISITOR" as const,
+      profile_photo: null,
+      address: "Jl. Visitor No. 10, Jakarta",
+      phone_number: "081234567897",
+      vendor_name: null, // kosong untuk visitor
+      verified_at: new Date(), // visitor sudah terverifikasi
+      verified_by: "SUPER_ADMIN",
+      verification_status: "VERIFIED" as const,
+    },
   ];
 
   console.log("👥 Membuat users...");

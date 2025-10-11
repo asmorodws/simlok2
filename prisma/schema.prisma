@@ -234,4 +234,5 @@ enum User_role {
   SUPER_ADMIN
   REVIEWER
   APPROVER
+  VISITOR
 }

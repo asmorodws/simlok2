@@ -19,6 +19,8 @@ export default async function DashboardPage() {
     redirect("/vendor");
   } else if (role === "VERIFIER") {
     redirect("/verifier");
+  } else if (role === "VISITOR") {
+    redirect("/visitor");
   }
 
   // Fallback

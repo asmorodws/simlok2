@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
+import { XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 import Button from '@/components/ui/button/Button';
+import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 
 interface ScanResult {
   success: boolean;
@@ -31,6 +32,8 @@ const ScanModal: React.FC<ScanModalProps> = ({
   onClose,
   result
 }) => {
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+
   if (!isOpen) return null;
 
   // Debug logging
@@ -205,9 +208,19 @@ const ScanModal: React.FC<ScanModalProps> = ({
 
           {/* Actions - Fixed at bottom */}
           <div className="flex gap-3 shrink-0 pt-4 md:pt-6 border-t border-gray-200 md:px-2">
+            {result.success && submission?.status === 'approved' && submission?.number && (
+              <Button 
+                onClick={() => setIsPdfModalOpen(true)}
+                variant="primary"
+                className="flex-1 md:py-3 md:text-base md:font-medium"
+              >
+                <DocumentTextIcon className="w-4 h-4 mr-2" />
+                Lihat PDF
+              </Button>
+            )}
             <Button 
               onClick={onClose}
-              variant={result.success ? "primary" : "outline"}
+              variant={result.success && submission?.status === 'approved' && submission?.number ? "outline" : "primary"}
               className="flex-1 md:py-3 md:text-base md:font-medium"
             >
               {result.success ? 'Selesai' : 'Tutup'}
@@ -215,6 +228,17 @@ const ScanModal: React.FC<ScanModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* PDF Modal */}
+      {result.success && submission && (
+        <SimlokPdfModal
+          isOpen={isPdfModalOpen}
+          onClose={() => setIsPdfModalOpen(false)}
+          submissionId={submission.id || ''}
+          submissionName={submission.vendor?.name || ''}
+          nomorSimlok={submission.number || ''}
+        />
+      )}
     </div>
   );
 };

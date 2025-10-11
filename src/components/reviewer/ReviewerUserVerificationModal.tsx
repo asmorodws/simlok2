@@ -175,6 +175,8 @@ export default function ReviewerUserVerificationModal({
                         ? 'bg-blue-100 text-blue-800' 
                         : currentUser.role === 'VERIFIER'
                         ? 'bg-purple-100 text-purple-800'
+                        : currentUser.role === 'VISITOR'
+                        ? 'bg-cyan-100 text-cyan-800'
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       <IdentificationIcon className="w-4 h-4 inline mr-1" />

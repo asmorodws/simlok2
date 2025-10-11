@@ -32,6 +32,9 @@ export default function AuthRedirect({
         case "SUPER_ADMIN":
           router.replace("/super-admin");
           break;
+        case "VISITOR":
+          router.replace("/visitor");
+          break;
         default:
           router.replace("/"); // fallback
       }

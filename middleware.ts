@@ -9,6 +9,7 @@ const roleHierarchy = {
   APPROVER: 4,
   REVIEWER: 3,
   VERIFIER: 2,
+  VISITOR: 1,
   VENDOR: 1,
 } as const;
 
@@ -20,6 +21,7 @@ const protectedRoutes: { prefix: string; minRole: Role }[] = [
   { prefix: "/approver", minRole: "APPROVER" },
   { prefix: "/reviewer", minRole: "REVIEWER" },
   { prefix: "/verifier", minRole: "VERIFIER" },
+  { prefix: "/visitor", minRole: "VISITOR" },
   { prefix: "/vendor", minRole: "VENDOR" },
   { prefix: "/dashboard", minRole: "VENDOR" }, // contoh: semua role bisa akses /dashboard, nanti UI berbeda
 ];
