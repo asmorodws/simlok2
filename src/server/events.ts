@@ -1,43 +1,5 @@
 import { prisma } from '@/lib/singletons';
 
-// Helper to count unread notifications
-async function getUnreadCount(scope: 'admin' | 'vendor' | 'reviewer' | 'approver', vendorId?: string): Promise<number> {
-  if (scope === 'admin') {
-    return await prisma.notification.count({
-      where: {
-        scope: 'admin',
-        reads: { none: {} }
-      }
-    });
-  } else if (scope === 'reviewer') {
-    return await prisma.notification.count({
-      where: {
-        scope: 'reviewer',
-        reads: { none: {} }
-      }
-    });
-  } else if (scope === 'approver') {
-    return await prisma.notification.count({
-      where: {
-        scope: 'approver',
-        reads: { none: {} }
-      }
-    });
-  } else if (scope === 'vendor' && vendorId) {
-    return await prisma.notification.count({
-      where: {
-        scope: 'vendor',
-        vendor_id: vendorId,
-        reads: {
-          none: { vendor_id: vendorId }
-        }
-      }
-    });
-  }
-  
-  return 0;
-}
-
 export async function notifyAdminNewSubmission(submissionId: string) {
   try {
     // Get submission details
@@ -87,7 +49,7 @@ export async function notifyAdminNewVendor(vendorId: string) {
     }
 
     // Create notification record
-    const notification = await prisma.notification.create({
+    const _notification = await prisma.notification.create({
       data: {
         scope: 'admin',
         type: 'new_vendor',
@@ -102,7 +64,7 @@ export async function notifyAdminNewVendor(vendorId: string) {
       }
     });
 
-    console.log('New vendor notification created:', notification.id);
+    console.log('New vendor notification created:', _notification.id);
 
   } catch (error) {
     console.error('Error notifying admin new vendor:', error);
@@ -144,7 +106,7 @@ export async function notifyVendorStatusChange(
         : `Status pengajuan Simlok Anda berubah menjadi ${statusText.toLowerCase()}.`;
 
     // Create notification record
-    const notification = await prisma.notification.create({
+    const _notification = await prisma.notification.create({
       data: {
         scope: 'vendor',
         vendor_id: vendorId,
@@ -159,7 +121,7 @@ export async function notifyVendorStatusChange(
       }
     });
 
-    console.log('Vendor status change notification created:', notification.id);
+    console.log('Vendor status change notification created:', _notification.id);
 
   } catch (error) {
     console.error('Error notifying vendor status change:', error);
@@ -186,7 +148,7 @@ export async function notifyReviewerNewUser(userId: string) {
     }
 
     // Create notification record for reviewers
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         scope: 'reviewer',
         type: 'new_user_verification',
@@ -223,7 +185,7 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
     }
 
     // Create notification record for reviewers
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         scope: 'reviewer',
         type: 'new_submission_review',
@@ -280,7 +242,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
     }
 
     // Create notification record for approvers (for both meets and doesn't meet requirements)
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         scope: 'approver',
         type: notificationType,
@@ -320,13 +282,9 @@ export async function notifyUserVerificationResult(
       throw new Error('User not found');
     }
 
-    const title = verificationStatus === 'VERIFY' 
-      ? 'Akun Anda Telah Diverifikasi' 
-      : 'Verifikasi Akun Ditolak';
-      
-    const message = verificationStatus === 'VERIFY'
-      ? 'Selamat! Akun vendor Anda telah diverifikasi dan sekarang dapat mengajukan permohonan Simlok.'
-      : `Maaf, akun vendor Anda tidak dapat diverifikasi. ${note || 'Silakan hubungi admin untuk informasi lebih lanjut.'}`;
+    // Notification details (currently just logging, can be used for future notifications)
+    void verificationStatus; // Mark as intentionally unused
+    void note; // Mark as intentionally unused
 
     console.log(`✅ Notified user about verification result: ${userId} - ${verificationStatus}`);
 
@@ -359,7 +317,7 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
     const notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} telah disetujui oleh Approver`;
 
     // Create notification record for reviewers
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         scope: 'reviewer',
         type: 'submission_approved',

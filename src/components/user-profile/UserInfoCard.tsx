@@ -126,7 +126,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               email: formData.email.trim(),
             };
 
-      const response = await fetch("/api/users/profile", {
+      const response = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),

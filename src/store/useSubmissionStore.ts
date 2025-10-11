@@ -142,7 +142,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
         ...(params.status && { status: params.status }),
       });
       
-      const response = await fetch(`/api/admin/submissions?${searchParams}`);
+      const response = await fetch(`/api/submissions?${searchParams}`);
       if (!response.ok) {
         throw new Error('Failed to fetch submissions');
       }
@@ -167,7 +167,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   fetchAdminStats: async () => {
     try {
       // Fetch statistics without any filters
-      const response = await fetch('/api/admin/submissions/stats');
+      const response = await fetch('/api/submissions/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch admin stats');
       }
@@ -197,7 +197,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
       // Add cache busting timestamp
       searchParams.append('_t', Date.now().toString());
       
-      const url = `/api/vendor/submissions?${searchParams}`;
+      const url = `/api/submissions?${searchParams}`;
       console.log('Store: Fetching vendor submissions from:', url);
       console.log('Store: Request params:', params);
       
@@ -250,7 +250,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   fetchVendorStats: async () => {
     try {
       // Fetch statistics without any filters
-      const response = await fetch('/api/vendor/submissions/stats');
+      const response = await fetch('/api/vendor/dashboard/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch vendor stats');
       }
@@ -268,7 +268,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
     try {
       set({ loading: true, error: null });
       
-      const response = await fetch('/api/admin/dashboard/recent-submissions');
+      const response = await fetch('/api/dashboard/recent-submissions');
       if (!response.ok) {
         throw new Error('Failed to fetch latest submissions');
       }

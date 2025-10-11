@@ -1,207 +1,238 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/singletons";
-import { User_role } from "@prisma/client";
-import bcrypt from "bcryptjs";
-import { z } from "zod";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/singletons';
+import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
-const userSchema = z.object({
-  officer_name: z.string().min(1, "Nama petugas wajib diisi"),
-  email: z.string().email("Email tidak valid"),
-  password: z.string().min(6, "Password minimal 6 karakter").optional(),
-  role: z.nativeEnum(User_role),
-  address: z.string().optional(),
-  phone_number: z.string().optional(),
-  vendor_name: z.string().optional(),
+// Schema for validating user creation data
+const createUserSchema = z.object({
+  officer_name: z.string().optional().nullable(),
+  vendor_name: z.string().optional().nullable(),
+  email: z.string().email('Invalid email format'),
+  phone_number: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  role: z.enum(['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN']),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-// GET - Mengambil daftar user dengan pagination, search, dan sort
+// GET /api/users - Get users (role-based filtering)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    // Cek apakah user adalah super admin
-    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
-      return NextResponse.json(
-        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
-        { status: 403 }
-      );
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get search params
+    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
+    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const search = searchParams.get("search") || "";
-    const sortBy = searchParams.get("sortBy") || "created_at";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
-    const role = searchParams.get("role") || "";
-    const verificationStatus = searchParams.get("verificationStatus") || ""; // "pending", "verified", "all"
-
-    console.log("API received params:", { 
-      page, 
-      limit, 
-      search, 
-      sortBy, 
-      sortOrder, 
-      role, 
-      verificationStatus 
-    });
-
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search');
+    const status = searchParams.get('status'); // 'pending' | 'verified' | 'rejected'
+    const role = searchParams.get('role');
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = {};
+    const whereClause: any = {};
 
-    // Filter by role if specified
-    if (role && (role === User_role.VENDOR || role === User_role.VERIFIER)) {
-      where.role = role;
+    // Role-based filtering
+    if (session.user.role === 'REVIEWER') {
+      // Reviewers only see vendor users for verification
+      whereClause.role = 'VENDOR';
+    } else if (session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') {
+      // Admins can see all users except SUPER_ADMIN (unless they are SUPER_ADMIN)
+      if (session.user.role !== 'SUPER_ADMIN') {
+        whereClause.NOT = { role: 'SUPER_ADMIN' };
+      }
+      // Apply role filter if specified
+      if (role && ['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN'].includes(role)) {
+        whereClause.role = role;
+      }
     }
 
     // Filter by verification status
-    if (verificationStatus === "pending") {
-      where.verified_at = null;
-      console.log("Filtering for pending verification (verified_at is null)");
-    } else if (verificationStatus === "verified") {
-      where.verified_at = { not: null };
-      console.log("Filtering for verified users (verified_at is not null)");
-    } else {
-      console.log("No verification filter applied (showing all)");
+    if (status === 'pending') {
+      whereClause.verification_status = 'PENDING';
+    } else if (status === 'verified') {
+      whereClause.verification_status = 'VERIFIED';
+    } else if (status === 'rejected') {
+      whereClause.verification_status = 'REJECTED';
     }
-    // "all" shows both pending and verified
 
-    console.log("Final query where clause:", JSON.stringify(where, null, 2));
-
-    // Search functionality
+    // Search by name, vendor name, or email
     if (search) {
-      where.OR = [
+      whereClause.OR = [
         { officer_name: { contains: search } },
-        { email: { contains: search } },
         { vendor_name: { contains: search } },
-        { phone_number: { contains: search } },
+        { email: { contains: search } }
       ];
     }
 
-    // Get total count
-    const total = await prisma.user.count({ where });
+    // Get users with pagination
+    const [users, totalCount] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          email: true,
+          officer_name: true,
+          vendor_name: true,
+          address: true,
+          phone_number: true,
+          profile_photo: true,
+          created_at: true,
+          verified_at: true,
+          verified_by: true,
+          verification_status: true,
+          rejected_at: true,
+          rejected_by: true,
+          rejection_reason: true,
+          role: true
+        },
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where: whereClause })
+    ]);
 
-    // Get users with pagination and sorting
-    const users = await prisma.user.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: {
-        [sortBy]: sortOrder as "asc" | "desc"
-      },
-      select: {
-        id: true,
-        officer_name: true,
-        email: true,
-        role: true,
-        address: true,
-        phone_number: true,
-        vendor_name: true,
-        created_at: true,
-        verified_at: true,
-        verified_by: true,
-        profile_photo: true,
-      }
-    });
+    // Get verification stats (useful for both reviewers and admins)
+    const stats = {
+      totalPending: await prisma.user.count({
+        where: {
+          ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
+          verification_status: 'PENDING'
+        }
+      }),
+      totalVerified: await prisma.user.count({
+        where: {
+          ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
+          verification_status: 'VERIFIED'
+        }
+      }),
+      totalRejected: await prisma.user.count({
+        where: {
+          ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
+          verification_status: 'REJECTED'
+        }
+      }),
+      totalUsers: await prisma.user.count({
+        where: session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}
+      }),
+      todayRegistrations: await prisma.user.count({
+        where: {
+          ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
+          created_at: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      })
+    };
 
     return NextResponse.json({
       users,
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+      },
+      stats
     });
-
   } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan saat mengambil data user" },
-      { status: 500 }
-    );
+    console.error('Error fetching users:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// POST - Membuat user baru
+// POST /api/users - Create new user (SUPER_ADMIN only)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Cek apakah user adalah super admin
-    if (!session || session.user.role !== User_role.SUPER_ADMIN) {
-      return NextResponse.json(
-        { error: "Akses ditolak. Hanya super admin yang dapat mengakses endpoint ini." },
-        { status: 403 }
-      );
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only SUPER_ADMIN can create users
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
-    const validation = userSchema.safeParse(body);
+    const validatedData = createUserSchema.parse(body);
 
-    if (!validation.success) {
-      return NextResponse.json(
-        { error: "Data tidak valid", details: validation.error.issues },
-        { status: 400 }
-      );
-    }
-
-    const { officer_name, email, password, role, address, phone_number, vendor_name } = validation.data;
-
-    // Cek apakah email sudah ada
+    // Check if email already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email: validatedData.email }
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: "Email sudah digunakan" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password || "password123", 10);
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
 
-    // Buat user baru
+    // Prepare user data
+    const userData: any = {
+      email: validatedData.email,
+      password: hashedPassword,
+      role: validatedData.role,
+      phone_number: validatedData.phone_number || null,
+      address: validatedData.address || null,
+      verification_status: 'VERIFIED', // Admin-created users are automatically verified
+      verified_at: new Date(),
+      verified_by: session.user.id,
+    };
+
+    // Handle name fields based on role
+    if (validatedData.role === 'VENDOR') {
+      userData.vendor_name = validatedData.vendor_name;
+      userData.officer_name = validatedData.vendor_name; // Keep officer_name as vendor_name for consistency
+    } else {
+      userData.officer_name = validatedData.officer_name;
+      userData.vendor_name = null;
+    }
+
+    // Create user
     const newUser = await prisma.user.create({
-      data: {
-        officer_name,
-        email,
-        password: hashedPassword,
-        role,
-        address: address || null,
-        phone_number: phone_number || null,
-        vendor_name: role === User_role.VENDOR ? (vendor_name || null) : null,
-        verified_by: session.user.officer_name,
-        verified_at: new Date(),
-      },
+      data: userData,
       select: {
         id: true,
-        officer_name: true,
         email: true,
-        role: true,
-        address: true,
-        phone_number: true,
+        officer_name: true,
         vendor_name: true,
-        created_at: true,
+        phone_number: true,
+        address: true,
+        role: true,
         verified_at: true,
-        verified_by: true,
+        verification_status: true,
+        created_at: true
       }
     });
 
-    return NextResponse.json(newUser, { status: 201 });
+    return NextResponse.json({
+      user: newUser,
+      message: 'User created successfully'
+    }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating user:", error);
-    return NextResponse.json(
-      { error: "Terjadi kesalahan saat membuat user" },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ 
+        error: 'Validation error', 
+        details: error.issues 
+      }, { status: 400 });
+    }
+    
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

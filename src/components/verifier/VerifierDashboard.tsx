@@ -96,7 +96,7 @@ export default function VerifierDashboard() {
     try {
       // Fetch stats, recent submissions, and recent scans in parallel
       const [submissionsRes, scansRes, statsRes] = await Promise.all([
-        fetch('/api/verifier/submissions?limit=5&offset=0&status=ALL&dateRange=ALL&search='),
+        fetch('/api/submissions?limit=5&page=1&status=APPROVED'),
         fetch('/api/qr/verify?limit=5&offset=0&search='),
         fetch('/api/verifier/stats')
       ]);

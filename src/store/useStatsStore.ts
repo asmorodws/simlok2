@@ -53,7 +53,7 @@ export const useStatsStore = create<StatsStore>((set) => ({
   fetchAdminStats: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await fetch('/api/admin/dashboard/stats');
+      const response = await fetch('/api/dashboard/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch admin stats');
       }

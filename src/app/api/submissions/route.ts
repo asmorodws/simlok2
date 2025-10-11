@@ -27,14 +27,53 @@ export async function GET(request: NextRequest) {
 
     const whereClause: any = {};
 
-    // Filter by role
-    if (session.user.role === 'VENDOR') {
-      whereClause.user_id = session.user.id;
+    // Filter by role with appropriate permissions
+    switch (session.user.role) {
+      case 'VENDOR':
+        // Vendors can only see their own submissions
+        whereClause.user_id = session.user.id;
+        break;
+      
+      case 'REVIEWER':
+        // Reviewers see submissions that need review or are being reviewed
+        if (!status) {
+          whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
+        }
+        break;
+        
+      case 'APPROVER':
+        // Approvers see submissions that have been reviewed and meet requirements
+        if (!status) {
+          whereClause.review_status = 'MEETS_REQUIREMENTS';
+          whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
+        }
+        break;
+        
+      case 'VERIFIER':
+        // Verifiers see approved submissions for scanning/verification
+        if (!status) {
+          whereClause.approval_status = 'APPROVED';
+        }
+        break;
+        
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        // Admins can see all submissions (no additional filter)
+        break;
+        
+      default:
+        return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
     }
 
-    // Filter by status if provided
+    // Filter by status if provided (overrides role-based defaults)
     if (status) {
-      whereClause.approval_status = status;
+      if (status.includes('APPROVAL')) {
+        whereClause.approval_status = status;
+      } else if (status.includes('REVIEW')) {
+        whereClause.review_status = status;
+      } else {
+        whereClause.approval_status = status;
+      }
     }
 
     // Filter by vendor name if provided (admin/verifier only)

@@ -70,12 +70,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch submission with user and approved by user details
-    const submission = await prisma.submission.findFirst({
-      where: { 
-        id,
+    const whereClause: any = { id };
+    
+    // Apply role-based access control
+    switch (session.user.role) {
+      case 'VENDOR':
         // Vendors can only see their own submissions
-        ...(session.user.role === 'VENDOR' ? { user_id: session.user.id } : {})
-      },
+        whereClause.user_id = session.user.id;
+        break;
+      case 'REVIEWER':
+      case 'APPROVER':
+      case 'VERIFIER':
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        // These roles can see all submissions (no additional filter)
+        break;
+      default:
+        return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
+    }
+    
+    const submission = await prisma.submission.findFirst({
+      where: whereClause,
       include: {
         user: {
           select: {
@@ -114,8 +129,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return generatePDF(submission);
     }
 
-    // Return regular JSON response
-    const response = NextResponse.json(submission);
+    // Return regular JSON response wrapped in submission object for consistency
+    const response = NextResponse.json({ submission });
     
     // Add cache control for better performance
     response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
@@ -233,6 +248,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           error: 'Can only edit pending submissions' 
         }, { status: 400 });
       }
+    } else if (session.user.role === 'REVIEWER' || session.user.role === 'APPROVER') {
+      // Reviewers and Approvers can edit submissions in PENDING_APPROVAL status
+      if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
+        console.log('PUT /api/submissions/[id] - Cannot edit non-pending submission');
+        return NextResponse.json({ 
+          error: 'Can only edit pending submissions' 
+        }, { status: 400 });
+      }
     }
 
     const body = await request.json();
@@ -243,7 +266,54 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     let newStatus: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | undefined;
 
     // Handle different types of updates based on user role
-    if ( session.user.role === 'VERIFIER') {
+    if (session.user.role === 'REVIEWER') {
+      // Reviewer updating implementation dates and template data
+      console.log('PUT /api/submissions/[id] - Reviewer update');
+      
+      // Allow reviewer to update implementation dates and template fields
+      const allowedFields = [
+        'implementation_start_date', 'implementation_end_date', 'implementation',
+        'content', 'signer_position', 'signer_name', 'working_hours', 'worker_count',
+        // Preserve existing data
+        'simja_number', 'simja_date', 'sika_number', 'sika_date'
+      ];
+
+      allowedFields.forEach(field => {
+        if (body[field] !== undefined) {
+          if (field === 'implementation_start_date' || field === 'implementation_end_date') {
+            // Handle date fields
+            updateData[field] = body[field] ? new Date(body[field]) : null;
+          } else {
+            updateData[field] = body[field];
+          }
+        }
+      });
+
+      console.log('PUT /api/submissions/[id] - Reviewer update data:', updateData);
+      
+    } else if (session.user.role === 'APPROVER') {
+      // Approver can update similar fields as reviewer plus approval status
+      console.log('PUT /api/submissions/[id] - Approver update');
+      
+      const allowedFields = [
+        'implementation_start_date', 'implementation_end_date', 'implementation',
+        'content', 'signer_position', 'signer_name', 'working_hours', 'worker_count',
+        'simja_number', 'simja_date', 'sika_number', 'sika_date'
+      ];
+
+      allowedFields.forEach(field => {
+        if (body[field] !== undefined) {
+          if (field === 'implementation_start_date' || field === 'implementation_end_date') {
+            updateData[field] = body[field] ? new Date(body[field]) : null;
+          } else {
+            updateData[field] = body[field];
+          }
+        }
+      });
+
+      console.log('PUT /api/submissions/[id] - Approver update data:', updateData);
+      
+    } else if (session.user.role === 'VERIFIER') {
       // Admin/Verifier updating approval status
       if (body.status_approval_admin && ['APPROVED', 'REJECTED'].includes(body.status_approval_admin)) {
         console.log('PUT /api/submissions/[id] - Admin/Verifier approval update');
@@ -477,4 +547,10 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       error: 'Internal server error. Please try again later.' 
     }, { status: 500 });
   }
+}
+
+// PATCH /api/submissions/[id] - Update submission (alias for PUT for compatibility)
+export async function PATCH(request: NextRequest, params: RouteParams) {
+  // Just call the PUT method for compatibility
+  return PUT(request, params);
 }

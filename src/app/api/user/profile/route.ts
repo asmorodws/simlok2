@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/singletons";
+
+// GET /api/user/profile - Get current user profile
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get user profile
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        officer_name: true,
+        vendor_name: true,
+        address: true,
+        phone_number: true,
+        profile_photo: true,
+        role: true,
+        created_at: true,
+        verified_at: true,
+        verification_status: true,
+      }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// PUT /api/user/profile - Update current user profile
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { officer_name, vendor_name, address, phone_number } = body;
+
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        officer_name: officer_name || undefined,
+        vendor_name: vendor_name || undefined,
+        address: address || undefined,
+        phone_number: phone_number || undefined,
+      },
+      select: {
+        id: true,
+        email: true,
+        officer_name: true,
+        vendor_name: true,
+        address: true,
+        phone_number: true,
+        profile_photo: true,
+        role: true,
+        created_at: true,
+        verified_at: true,
+        verification_status: true,
+      }
+    });
+
+    return NextResponse.json(updatedUser);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

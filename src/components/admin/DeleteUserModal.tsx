@@ -22,7 +22,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/admin/users/${user.id}`, {
+      const response = await fetch(`/api/users/${user.id}`, {
         method: 'DELETE',
       });
 

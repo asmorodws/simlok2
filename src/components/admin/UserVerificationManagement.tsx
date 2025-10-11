@@ -119,7 +119,7 @@ export default function UserVerificationManagement({
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
 
-      const res = await fetch(`/api/admin/users?${params.toString()}`, { cache: 'no-store' });
+      const res = await fetch(`/api/users?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Gagal mengambil data user');

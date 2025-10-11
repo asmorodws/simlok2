@@ -467,7 +467,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       // Add abort controller to prevent multiple simultaneous requests
       const controller = new AbortController();
 
-      const response = await fetch(`/api/reviewer/simloks/${submissionId}`, {
+      const response = await fetch(`/api/submissions/${submissionId}`, {
         signal: controller.signal
       });
 
@@ -486,6 +486,11 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
       const data = await response.json();
       const sub = data.submission;
+      
+      if (!sub) {
+        throw new Error('Data submission tidak ditemukan dalam response');
+      }
+      
       setSubmission(sub);
 
       setReviewData({
@@ -598,7 +603,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         worker_count: editableWorkerCount
       };
 
-      const saveResponse = await fetch(`/api/reviewer/simloks/${submissionId}`, {
+      console.log('Reviewer - Sending implementation dates to API:', {
+        implementation_start_date: updatePayload.implementation_start_date,
+        implementation_end_date: updatePayload.implementation_end_date,
+        submissionId
+      });
+
+      const saveResponse = await fetch(`/api/submissions/${submissionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
@@ -626,7 +637,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
       console.log('Sending review payload:', reviewPayload);
 
-      const reviewResponse = await fetch(`/api/reviewer/simloks/${submissionId}/review`, {
+      const reviewResponse = await fetch(`/api/submissions/${submissionId}/review`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(reviewPayload),
@@ -662,10 +673,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     reviewData,
     implementationDatesHook.dates.startDate,
     implementationDatesHook.dates.endDate,
-    implementationDatesHook.template.pelaksanaan,
-    implementationDatesHook.template.lainLain,
     approvalForm,
     workingHours,
+    editableWorkerCount,
+    submission?.simja_number,
+    submission?.simja_date,
+    submission?.sika_number,
+    submission?.sika_date,
     showSuccess,
     showError,
     onReviewSubmitted
@@ -798,7 +812,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       if (workersToDelete.length > 0) {
         for (const workerId of workersToDelete) {
           try {
-            await fetch(`/api/reviewer/simloks/${submission?.id}/workers/${workerId}`, {
+            await fetch(`/api/submissions/${submission?.id}/workers/${workerId}`, {
               method: 'DELETE',
             });
           } catch (error) {
@@ -808,7 +822,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       }
 
       // Then update the worker list
-      const response = await fetch(`/api/reviewer/simloks/${submission?.id}`, {
+      const response = await fetch(`/api/submissions/${submission?.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

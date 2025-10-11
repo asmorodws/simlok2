@@ -186,7 +186,7 @@ export default function ApproverSubmissionsManagement() {
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
-      const response = await fetch(`/api/approver/simloks?${params.toString()}`);
+      const response = await fetch(`/api/submissions?${params.toString()}`);
       if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
 
       const data: SubmissionsResponse = await response.json();

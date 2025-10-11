@@ -92,7 +92,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
         officer_name: formData.role !== 'VENDOR' ? formData.officer_name : null
       };
 
-      const response = await fetch('/api/admin/users', {
+          const response = await fetch("/api/users", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

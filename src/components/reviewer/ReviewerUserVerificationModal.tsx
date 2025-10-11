@@ -72,7 +72,7 @@ export default function ReviewerUserVerificationModal({
     setProcessing(currentUser.id);
     
     try {
-      const response = await fetch(`/api/reviewer/users/${currentUser.id}`, {
+      const response = await fetch(`/api/users/${currentUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

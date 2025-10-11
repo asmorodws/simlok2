@@ -204,7 +204,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/approver/simloks/${submissionId}`);
+      const response = await fetch(`/api/submissions/${submissionId}`);
       if (!response.ok) {
         if (response.status === 404) {
           showError('Pengajuan Tidak Ditemukan', 'Pengajuan sudah dihapus oleh vendor');
@@ -219,6 +219,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       }
       
       const data = await response.json();
+      
+      if (!data.submission) {
+        throw new Error('Data submission tidak ditemukan dalam response');
+      }
+      
       setSubmission(data.submission);
       
       // Initialize approval data
@@ -300,7 +305,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/approver/simloks/${submissionId}/final`, {
+      const response = await fetch(`/api/submissions/${submissionId}/approve`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

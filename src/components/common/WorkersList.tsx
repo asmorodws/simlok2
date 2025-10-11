@@ -56,23 +56,8 @@ export default function WorkersList({
       }
 
       try {
-        // Choose the correct API endpoint based on context
-        let apiUrl = '';
-        switch (context) {
-          case 'approver':
-            apiUrl = `/api/approver/simloks/${submissionId}/workers`;
-            break;
-          case 'reviewer':
-            apiUrl = `/api/reviewer/simloks/${submissionId}/workers`;
-            break;
-          case 'admin':
-            apiUrl = `/api/admin/simloks/${submissionId}/workers`;
-            break;
-          case 'vendor':
-          default:
-            apiUrl = `/api/submissions/${submissionId}/workers`;
-            break;
-        }
+        // Use universal submissions endpoint for all roles
+        const apiUrl = `/api/submissions/${submissionId}/workers`;
 
         const response = await fetch(apiUrl);
         if (!response.ok) {

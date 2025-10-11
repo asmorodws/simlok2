@@ -43,20 +43,31 @@ export default function ReviewerDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/reviewer/simloks?page=1&limit=10&sortBy=created_at&sortOrder=desc');
-      if (!response.ok) throw new Error('Gagal mengambil data dashboard');
-      const data = await response.json();
-      setSubmissions((data.submissions ?? []) as ReviewerSubmission[]);
-      setStats(
-        data.stats ?? {
-          pendingReview: 0,
-          meetsRequirements: 0,
-          notMeetsRequirements: 0,
-          total: 0,
-          pendingUserVerifications: 0,
-          totalVerifiedUsers: 0,
-        }
-      );
+      
+      // Fetch submissions and dashboard stats in parallel
+      const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
+        fetch('/api/submissions?page=1&limit=10&sortBy=created_at&sortOrder=desc'),
+        fetch('/api/dashboard/reviewer-stats')
+      ]);
+
+      if (!submissionsResponse.ok || !dashboardStatsResponse.ok) {
+        throw new Error('Gagal mengambil data dashboard');
+      }
+
+      const submissionsData = await submissionsResponse.json();
+      const dashboardStats = await dashboardStatsResponse.json();
+
+      setSubmissions((submissionsData.submissions ?? []) as ReviewerSubmission[]);
+      
+      // Map stats dari API ke format yang diharapkan component
+      setStats({
+        pendingReview: dashboardStats.submissions?.byReviewStatus?.PENDING_REVIEW || 0,
+        meetsRequirements: dashboardStats.submissions?.byReviewStatus?.MEETS_REQUIREMENTS || 0,
+        notMeetsRequirements: dashboardStats.submissions?.byReviewStatus?.NOT_MEETS_REQUIREMENTS || 0,
+        total: dashboardStats.submissions?.total || 0,
+        pendingUserVerifications: dashboardStats.users?.pendingVerifications || 0,
+        totalVerifiedUsers: dashboardStats.users?.totalVerified || 0,
+      });
     } catch (err) {
       console.error(err);
       showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');

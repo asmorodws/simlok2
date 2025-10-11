@@ -11,13 +11,19 @@ export async function GET() {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Check if user has admin privileges
-    if (session.user.role !== 'SUPER_ADMIN') {
+    // Check if user has appropriate privileges
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(session.user.role)) {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Get total users count
-    const totalUsers = await prisma.user.count();
+    // Get total users count (excluding SUPER_ADMIN for ADMIN role)
+    const userWhereClause = session.user.role === 'ADMIN' 
+      ? { role: { not: 'SUPER_ADMIN' as const } }
+      : {};
+
+    const totalUsers = await prisma.user.count({
+      where: userWhereClause
+    });
 
     // Get pending verifications count (users not verified and not rejected)
     const totalPending = await prisma.user.count({
@@ -25,7 +31,8 @@ export async function GET() {
         AND: [
           { verified_at: null },
           { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
-          { rejection_reason: null }
+          { rejection_reason: null },
+          userWhereClause
         ]
       }
     });
@@ -33,9 +40,14 @@ export async function GET() {
     // Get verified users count
     const totalVerified = await prisma.user.count({
       where: {
-        OR: [
-          { verified_at: { not: null } },
-          { verification_status: 'VERIFIED' }
+        AND: [
+          {
+            OR: [
+              { verified_at: { not: null } },
+              { verification_status: 'VERIFIED' }
+            ]
+          },
+          userWhereClause
         ]
       }
     });
@@ -43,9 +55,14 @@ export async function GET() {
     // Get rejected users count
     const totalRejected = await prisma.user.count({
       where: {
-        OR: [
-          { rejection_reason: { not: null } },
-          { verification_status: 'REJECTED' }
+        AND: [
+          {
+            OR: [
+              { rejection_reason: { not: null } },
+              { verification_status: 'REJECTED' }
+            ]
+          },
+          userWhereClause
         ]
       }
     });
@@ -58,15 +75,21 @@ export async function GET() {
 
     const todayRegistrations = await prisma.user.count({
       where: {
-        created_at: {
-          gte: today,
-          lt: tomorrow
-        }
+        AND: [
+          {
+            created_at: {
+              gte: today,
+              lt: tomorrow
+            }
+          },
+          userWhereClause
+        ]
       }
     });
 
     // Get recent users (latest 5)
     const recentUsers = await prisma.user.findMany({
+      where: userWhereClause,
       orderBy: {
         created_at: 'desc'
       },
@@ -99,7 +122,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error("[ADMIN_DASHBOARD_STATS]", error);
+    console.error("[DASHBOARD_STATS]", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

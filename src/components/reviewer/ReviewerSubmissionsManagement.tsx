@@ -55,7 +55,7 @@ export default function ReviewerSubmissionsManagement() {
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
-      const response = await fetch(`/api/reviewer/simloks?${params}`);
+      const response = await fetch(`/api/submissions?${params}`);
       if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
 
       const data: SubmissionsResponse = await response.json();
@@ -113,7 +113,7 @@ export default function ReviewerSubmissionsManagement() {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
-      const response = await fetch(`/api/reviewer/simloks/export?${params}`);
+      const response = await fetch(`/api/submissions/export?${params}`);
       if (!response.ok) throw new Error('Gagal mengekspor data');
 
       const contentDisposition = response.headers.get('Content-Disposition');

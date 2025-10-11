@@ -41,7 +41,7 @@ export default function SuperAdminDashboard() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('/api/admin/dashboard-stats', { cache: 'no-store' });
+      const response = await fetch('/api/dashboard/stats', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard statistics');
       }

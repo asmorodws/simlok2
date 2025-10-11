@@ -41,22 +41,30 @@ export default function ApproverDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        '/api/approver/simloks?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc'
-      );
-      if (!response.ok) throw new Error('Gagal mengambil data dashboard');
+      
+      // Fetch submissions and dashboard stats in parallel
+      const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
+        fetch('/api/submissions?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc'),
+        fetch('/api/dashboard/approver-stats')
+      ]);
 
-      const data = await response.json();
-      setSubmissions((data.submissions ?? []) as ApproverSubmission[]);
-      setStats(
-        data.statistics ?? {
-          total: 0,
-          pending_approval_meets: 0,
-          pending_approval_not_meets: 0,
-          approved: 0,
-          rejected: 0,
-        }
-      );
+      if (!submissionsResponse.ok || !dashboardStatsResponse.ok) {
+        throw new Error('Gagal mengambil data dashboard');
+      }
+
+      const submissionsData = await submissionsResponse.json();
+      const dashboardStats = await dashboardStatsResponse.json();
+
+      setSubmissions((submissionsData.submissions ?? []) as ApproverSubmission[]);
+      
+      // Use stats directly from dedicated dashboard API
+      setStats({
+        total: dashboardStats.total || 0,
+        pending_approval_meets: dashboardStats.pending_approval_meets || 0,
+        pending_approval_not_meets: dashboardStats.pending_approval_not_meets || 0,
+        approved: dashboardStats.approved || 0,
+        rejected: dashboardStats.rejected || 0,
+      });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');

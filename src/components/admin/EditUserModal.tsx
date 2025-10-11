@@ -113,7 +113,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
         password: formData.password.trim() !== '' ? formData.password : undefined
       };
 
-      const response = await fetch(`/api/admin/users/${user?.id}`, {
+      const response = await fetch(`/api/users/${user?.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

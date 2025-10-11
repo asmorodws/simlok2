@@ -117,11 +117,8 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       }
       if (!submissionId) return;
 
-      // Endpoint by role
-      let apiEndpoint = `/api/submissions/${submissionId}`;
-      if (session?.user?.role === 'APPROVER') apiEndpoint = `/api/approver/simloks/${submissionId}`;
-      else if (session?.user?.role === 'REVIEWER') apiEndpoint = `/api/reviewer/simloks/${submissionId}`;
-      else if (session?.user?.role === 'SUPER_ADMIN') apiEndpoint = `/api/submissions/${submissionId}`;
+      // Use universal submissions endpoint for all roles
+      const apiEndpoint = `/api/submissions/${submissionId}`;
 
       const response = await fetch(apiEndpoint);
       if (response.status === 404) {
@@ -171,7 +168,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       if (!vendorId) return;
 
       if (session?.user?.role === 'REVIEWER') {
-        const response = await fetch(`/api/reviewer/users/${vendorId}`);
+        const response = await fetch(`/api/users/${vendorId}`);
         if (response.status === 404) {
           showWarning('Data Vendor Tidak Ditemukan', 'Data vendor pada notifikasi ini sudah tidak tersedia.');
           return;
