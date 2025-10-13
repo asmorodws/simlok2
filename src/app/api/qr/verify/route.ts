@@ -79,13 +79,6 @@ export async function POST(request: NextRequest) {
             vendor_name: true,
           }
         },
-        approved_by_user: {
-          select: {
-            id: true,
-            officer_name: true,
-            email: true,
-          }
-        },
         worker_list: {
           select: {
             id: true,
@@ -232,7 +225,7 @@ export async function POST(request: NextRequest) {
             number: submission.simlok_number,
             title: submission.job_description,
             task: submission.implementation || 'No task description',
-            workers: submission.worker_list.map(worker => ({ name: worker.worker_name })),
+            workers: submission.worker_names.split('\n').filter(name => name.trim()).map(name => ({ name: name.trim() })),
             vendor: submission.vendor_name ? { name: submission.vendor_name } : undefined,
             location: submission.work_location || undefined,
             implementation_start_date: submission.implementation_start_date?.toISOString(),

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
-import { UserData } from '@/types/user';
+import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
 import { 
   XMarkIcon, 
@@ -120,17 +120,17 @@ export default function ReviewerUserVerificationModal({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
-          <Card className="shadow-2xl">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+        <div className="w-full h-full sm:max-w-4xl sm:w-full sm:h-auto sm:max-h-[90vh] overflow-hidden">
+          <Card className="shadow-2xl rounded-none sm:rounded-lg h-full sm:h-auto">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
               <div className="flex items-center">
-                <div className="w-12 h-12 bg-brand-100 rounded-full flex items-center justify-center mr-4">
-                  <UserIcon className="w-6 h-6 text-brand-600" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-100 rounded-full flex items-center justify-center mr-3 sm:mr-4">
+                  <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                     Detail User
                   </h2>
                   <p className="text-sm text-gray-500">
@@ -149,7 +149,7 @@ export default function ReviewerUserVerificationModal({
             </div>
 
             {/* Content */}
-            <div className="p-6 max-h-[calc(90vh-200px)] overflow-y-auto">
+            <div className="p-4 sm:p-6 max-h-[calc(100vh-200px)] sm:max-h-[calc(90vh-200px)] overflow-y-auto">
               <div className="space-y-8">
                 {/* Status Section */}
                 <div className="flex items-center justify-between">

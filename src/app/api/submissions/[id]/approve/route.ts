@@ -44,11 +44,7 @@ async function generateSimlokNumber(): Promise<string> {
   return `${nextNumber}/${month}/${year}`;
 }
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
+import { RouteParams } from '@/types';
 
 // PATCH /api/submissions/[id]/approve - Set final approval status (Approver function)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -98,6 +94,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       approval_status: validatedData.approval_status,
       note_for_vendor: validatedData.note_for_vendor || '',
       approved_at: new Date(),
+      approved_by: session.user.officer_name,
       approved_by_final_id: session.user.id,
     };
 
@@ -126,12 +123,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: updateData,
       include: {
-        user: true,
-        approved_by_final_user: {
-          select: {
-            officer_name: true
-          }
-        }
+        user: true
       }
     });
 

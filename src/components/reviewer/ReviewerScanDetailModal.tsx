@@ -46,14 +46,14 @@ export default function ReviewerScanDetailModal({ open, onClose, scan, onOpenPdf
   if (!open || !scan) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Informasi Detail Scan</h3>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white rounded-none sm:rounded-lg w-full h-full sm:max-w-3xl sm:w-full sm:max-h-[90vh] sm:h-auto overflow-y-auto">
+        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Informasi Detail Scan</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
         </div>
 
-        <div className="p-6 space-y-6 text-sm">
+        <div className="p-4 sm:p-6 space-y-6 text-xs sm:text-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <section>
               <h4 className="font-semibold text-gray-700 mb-2">Informasi Pengajuan</h4>
@@ -126,7 +126,7 @@ export default function ReviewerScanDetailModal({ open, onClose, scan, onOpenPdf
           <div className="pt-4 border-t flex justify-between items-center gap-2">
             {onOpenPdf && (
               <Button onClick={() => onOpenPdf(scan)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Lihat PDF SIMLOK
+                {scan.submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF'}
               </Button>
             )}
             <Button onClick={onClose} variant="destructive">Tutup</Button>

@@ -39,19 +39,7 @@ export const ALLOWED_FILE_EXTENSIONS = {
   ALL: ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif']
 } as const;
 
-export interface FileValidationOptions {
-  maxSizeMB?: number;
-  allowedTypes?: readonly string[];
-  allowedExtensions?: readonly string[];
-}
-
-export interface FileValidationResult {
-  isValid: boolean;
-  error?: string;
-  size?: number;
-  type?: string;
-  extension?: string;
-}
+import { FileValidationOptions, FileValidationResult } from '@/types';
 
 /**
  * Validates file size, type, and extension

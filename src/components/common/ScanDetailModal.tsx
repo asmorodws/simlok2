@@ -124,18 +124,18 @@ export default function ScanDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in duration-200">
+      <div className="bg-white rounded-none sm:rounded-2xl w-full h-full sm:max-w-4xl sm:w-full sm:max-h-[90vh] sm:h-auto overflow-hidden shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-lg">
-                <QrCodeIcon className="w-6 h-6 text-white" />
+                <QrCodeIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">{title}</h3>
-                <p className="text-blue-100 text-sm">
+                <h3 className="text-lg sm:text-xl font-bold">{title}</h3>
+                <p className="text-blue-100 text-xs sm:text-sm">
                   {subtitle || scan.submission.simlok_number || 'Informasi Pengajuan'}
                 </p>
               </div>
@@ -150,7 +150,7 @@ export default function ScanDetailModal({
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(100vh-100px)] sm:max-h-[calc(90vh-100px)]">
           {/* Status Banner */}
           <div className="mb-6">
             {getStatusBanner()}
@@ -358,7 +358,7 @@ export default function ScanDetailModal({
                   className="px-6"
                 >
                   <DocumentTextIcon className="w-4 h-4 mr-2" />
-                  Lihat PDF SIMLOK
+                  {scan.submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF'}
                 </Button>
               )}
             </div>

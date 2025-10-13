@@ -12,11 +12,7 @@ const reviewSchema = z.object({
   note_for_vendor: z.string().optional(),
 });
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
+import { RouteParams } from '@/types';
 
 // PATCH /api/submissions/[id]/review - Set review status and note (Reviewer function)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -62,7 +58,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       note_for_approver: validatedData.note_for_approver || '',
       note_for_vendor: validatedData.note_for_vendor || '',
       reviewed_at: new Date(),
-      reviewed_by_id: session.user.id,
+      reviewed_by: session.user.officer_name,
     };
 
     // Auto-reject if doesn't meet requirements AND this is first time review OR still pending approval
@@ -72,6 +68,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (existingSubmission.approval_status === 'PENDING_APPROVAL') {
         updateData.approval_status = 'REJECTED';
         updateData.approved_at = new Date();
+        updateData.approved_by = session.user.officer_name;
         updateData.approved_by_final_id = session.user.id;
       }
     } else if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
@@ -81,6 +78,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           existingSubmission.approval_status === 'REJECTED') {
         updateData.approval_status = 'PENDING_APPROVAL';
         updateData.approved_at = null;
+        updateData.approved_by = null;
         updateData.approved_by_final_id = null;
       }
     }
@@ -90,12 +88,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: updateData,
       include: {
-        user: true,
-        reviewed_by_user: {
-          select: {
-            officer_name: true
-          }
-        }
+        user: true
       }
     });
 

@@ -319,7 +319,6 @@ async function main() {
         work_location: template.work_location,
         implementation: null, // akan diisi setelah diapprove
         working_hours: template.working_hours,
-        other_notes: null, // akan diisi setelah diapprove
         work_facilities: template.work_facilities,
         worker_names: template.worker_names,
         worker_count: workerCount, // Hitung dari worker_names
@@ -329,7 +328,7 @@ async function main() {
         approval_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
         note_for_approver: null, // belum ada review
         note_for_vendor: null, // belum ada final note
-        reviewed_by_id: null, // belum di-review
+        reviewed_by: null, // belum di-review
         reviewed_at: null, // belum di-review
         approved_by: null, // belum diapprove
         approved_by_final_id: null, // belum diapprove final
@@ -403,8 +402,9 @@ async function main() {
         approval_status: 'APPROVED',
         note_for_approver: 'Semua dokumen lengkap dan memenuhi persyaratan keselamatan kerja.',
         note_for_vendor: 'Disetujui untuk pelaksanaan. Pastikan mengikuti protokol keselamatan.',
-        reviewed_by_id: reviewerUser.id,
+        reviewed_by: reviewerUser.officer_name,
         reviewed_at: reviewedAt,
+        approved_by: approverUser.officer_name,
         approved_by_final_id: approverUser.id,
         approved_at: approvedAt,
         simlok_number: `SIMLOK/2024/${String(approvedSubmissions.length + 1).padStart(4, '0')}`,
@@ -415,8 +415,7 @@ async function main() {
         signer_name: 'Dr. Ir. Budi Santoso, M.T.',
         qrcode: `QR-${submission.id.slice(-8).toUpperCase()}-2024`,
         content: `Pelaksanaan pekerjaan ${submission.job_description} di lokasi ${submission.work_location}. Berlaku mulai ${new Date(approvedAt.getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')} sampai ${new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}.`,
-        implementation: `Pekerjaan dilaksanakan sesuai jadwal kerja ${submission.working_hours} dengan menggunakan fasilitas ${submission.work_facilities}. Semua pekerja wajib menggunakan APD lengkap dan mengikuti protokol keselamatan kerja.`,
-        other_notes: 'Laporkan progress mingguan kepada supervisor. Hubungi emergency hotline 119 jika terjadi kecelakaan kerja.'
+        implementation: `Pekerjaan dilaksanakan sesuai jadwal kerja ${submission.working_hours} dengan menggunakan fasilitas ${submission.work_facilities}. Semua pekerja wajib menggunakan APD lengkap dan mengikuti protokol keselamatan kerja.`
       }
     });
     

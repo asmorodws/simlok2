@@ -3,7 +3,7 @@
 import ReusableTable, { type Column, type SortOrder } from '@/components/table/ReusableTable';
 import Button from '@/components/ui/button/Button';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import type { UserData } from '@/types/user';
+import type { UserData } from '@/types';
 import { useMemo } from 'react';
 
 export interface UserTableProps {

@@ -215,7 +215,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
                 className="flex-1 md:py-3 md:text-base md:font-medium"
               >
                 <DocumentTextIcon className="w-4 h-4 mr-2" />
-                Lihat PDF
+                {submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF'}
               </Button>
             )}
             <Button 

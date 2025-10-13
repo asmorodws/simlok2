@@ -17,7 +17,7 @@ import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
 import ReviewerSubmissionDetailModal from '../reviewer/ImprovedReviewerSubmissionDetailModal';
 import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
-import { UserData } from '@/types/user';
+import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
 import { useNotificationsStore, type Notification } from '../../store/notifications';

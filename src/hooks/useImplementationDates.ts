@@ -11,10 +11,20 @@ export interface ImplementationTemplate {
 }
 
 export interface UseImplementationDatesOptions {
+  // Legacy fields (keeping for backward compatibility during transition)
   simjaNumber?: string | undefined;
   simjaDate?: string | undefined;
   sikaNumber?: string | undefined;
   sikaDate?: string | undefined;
+  
+  // New supporting documents fields
+  supportingDoc1Type?: string | undefined;
+  supportingDoc1Number?: string | undefined;
+  supportingDoc1Date?: string | undefined;
+  supportingDoc2Type?: string | undefined;
+  supportingDoc2Number?: string | undefined;
+  supportingDoc2Date?: string | undefined;
+  
   signerPosition?: string;
   initialDates?: ImplementationDates;
 }
@@ -40,10 +50,20 @@ export interface UseImplementationDatesReturn {
  * Hook ini menangani semua logic terkait tanggal pelaksanaan dengan clean separation of concerns
  */
 export function useImplementationDates({
+  // Legacy support
   simjaNumber = '',
   simjaDate = '',
   sikaNumber = '',
   sikaDate = '',
+  
+  // New supporting documents support
+  supportingDoc1Type = '',
+  supportingDoc1Number = '',
+  supportingDoc1Date = '',
+  supportingDoc2Type = '',
+  supportingDoc2Number = '',
+  supportingDoc2Date = '',
+  
   signerPosition = 'Sr Officer Security III',
   initialDates = { startDate: '', endDate: '' }
 }: UseImplementationDatesOptions = {}): UseImplementationDatesReturn {
@@ -167,7 +187,7 @@ export function useImplementationDates({
     return `Terhitung mulai tanggal ${startDateFormatted} sampai ${endDateFormatted}. Termasuk hari Sabtu, Minggu dan hari libur lainnya.`;
   }, [dates, isValid, formatDateIndonesian]);
 
-  // Generate lain-lain template
+  // Generate lain-lain template with supporting documents
   const lainLainTemplate = useMemo((): string => {
     if (!dates.startDate || !dates.endDate || !isValid) {
       return '';
@@ -178,31 +198,46 @@ export function useImplementationDates({
     // Header
     templateParts.push('Izin diberikan berdasarkan :');
     
-    // SIMJA section
-    if (simjaNumber && simjaDate) {
-      const simjaDateFormatted = formatDateIndonesian(simjaDate);
+    // Use supporting documents if available, fallback to legacy SIMJA/SIKA
+    const doc1Type = supportingDoc1Type || (simjaNumber ? 'SIMJA' : '');
+    const doc1Number = supportingDoc1Number || simjaNumber;
+    const doc1Date = supportingDoc1Date || simjaDate;
+    
+    const doc2Type = supportingDoc2Type || (sikaNumber ? 'SIKA' : '');
+    const doc2Number = supportingDoc2Number || sikaNumber;
+    const doc2Date = supportingDoc2Date || sikaDate;
+    
+    // Document 1 section
+    if (doc1Type && doc1Number && doc1Date) {
+      const doc1DateFormatted = formatDateIndonesian(doc1Date);
       templateParts.push(
-        '• <strong>SIMJA</strong> Ast. Man. Facility Management',
-        `  <strong>No. ${simjaNumber}</strong> <strong>Tanggal ${simjaDateFormatted}</strong>`
+        `• <strong>${doc1Type}</strong>`,
+        `  <strong>No. ${doc1Number}</strong> <strong>Tanggal ${doc1DateFormatted}</strong>`
       );
-    } else {
+    } else if (doc1Type || doc1Number || doc1Date) {
+      const docType = doc1Type || 'Dokumen Perizinan';
+      const docNumber = doc1Number || '[nomor]';
+      const docDate = doc1Date ? formatDateIndonesian(doc1Date) : '[tanggal]';
       templateParts.push(
-        '• <strong>SIMJA</strong> Ast. Man. Facility Management',
-        '  <strong>No. [nomor]</strong> <strong>Tanggal [tanggal]</strong>'
+        `• <strong>${docType}</strong>`,
+        `  <strong>No. ${docNumber}</strong> <strong>Tanggal ${docDate}</strong>`
       );
     }
     
-    // SIKA section
-    if (sikaNumber && sikaDate) {
-      const sikaDateFormatted = formatDateIndonesian(sikaDate);
+    // Document 2 section
+    if (doc2Type && doc2Number && doc2Date) {
+      const doc2DateFormatted = formatDateIndonesian(doc2Date);
       templateParts.push(
-        '• <strong>SIKA</strong> Pekerjaan Dingin',
-        `  <strong>No.${sikaNumber}</strong> <strong>Tgl. ${sikaDateFormatted}</strong>`
+        `• <strong>${doc2Type}</strong>`,
+        `  <strong>No. ${doc2Number}</strong> <strong>Tanggal ${doc2DateFormatted}</strong>`
       );
-    } else {
+    } else if (doc2Type || doc2Number || doc2Date) {
+      const docType = doc2Type || 'Dokumen Perizinan Tambahan';
+      const docNumber = doc2Number || '[nomor]';
+      const docDate = doc2Date ? formatDateIndonesian(doc2Date) : '[tanggal]';
       templateParts.push(
-        '• <strong>SIKA</strong> Pekerjaan Dingin',
-        '  <strong>No.[nomor]</strong> <strong>Tgl. [tanggal]</strong>'
+        `• <strong>${docType}</strong>`,
+        `  <strong>No. ${docNumber}</strong> <strong>Tanggal ${docDate}</strong>`
       );
     }
     
@@ -216,7 +251,11 @@ export function useImplementationDates({
     );
     
     return templateParts.join('\n');
-  }, [dates, isValid, simjaNumber, simjaDate, sikaNumber, sikaDate, signerPosition, formatDateIndonesian]);
+  }, [dates, isValid, 
+      supportingDoc1Type, supportingDoc1Number, supportingDoc1Date,
+      supportingDoc2Type, supportingDoc2Number, supportingDoc2Date,
+      simjaNumber, simjaDate, sikaNumber, sikaDate, 
+      signerPosition, formatDateIndonesian]);
 
   // Template object
   const template = useMemo((): ImplementationTemplate => ({

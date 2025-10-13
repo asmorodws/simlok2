@@ -67,42 +67,10 @@ async function generateQRImage(pdfDoc: PDFDocument, qrString: string): Promise<P
 }
 
 /** Struktur data mengikuti placeholder di template kamu */
-export interface SubmissionPDFData {
-  simlok_number?: string | null;
-  simlok_date?: string | Date | null | undefined;
-  implementation_start_date?: string | Date | null | undefined;
-  implementation_end_date?: string | Date | null | undefined;
-  vendor_name: string;
-  simja_number?: string | null;
-  simja_date?: string | Date | null | undefined;
-  sika_number?: string | null;
-  sika_date?: string | Date | null | undefined;
-  job_description: string;
-  work_location: string;
-  implementation: string | null;
-  working_hours: string;            // contoh: "08:30 - 06:30 WIB"
-  other_notes?: string | null;
-  work_facilities: string;
-  worker_names?: string | null;
-  worker_count?: number | null;
-  content?: string | null;
-  signer_position?: string | null;
-  signer_name?: string | null;
-  qrcode?: string | null;  // QR code string for PDF
-  // Tambahkan untuk daftar pekerja dari tabel terpisah
-  approval_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | null;
-  workerList?: Array<{
-    worker_name: string;
-    worker_photo?: string | null;
-  }>;
-  // Support database field name
-  worker_list?: Array<{
-    worker_name: string;
-    worker_photo?: string | null;
-  }>;
-}
+import { SubmissionPDFData, SIMLOKOptions } from '@/types';
 
-export type SIMLOKOptions = {
+// Local SIMLOKOptions with additional fields not in common types
+export type LocalSIMLOKOptions = {
   logoBase64?: string;     // opsional
   primary?: RGB;           // warna judul
   cityIssued?: string;     // default "Jakarta"
@@ -111,7 +79,7 @@ export type SIMLOKOptions = {
   fontSize?: number;       // default 12
   leftLabelWidth?: number; // default 190
   lineGap?: number;        // default 15.5
-};
+} & SIMLOKOptions;
 
 const A4 = { w: 595.28, h: 841.89 };
 const MARGIN = 50;
@@ -439,9 +407,9 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 
   await k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
-  // Format berdasarkan (SIMJA info)
-  const berdasarkan = s.simja_number
-    ? `${normalizeInline(s.simja_number)} Tgl. ${fmtDateID(s.simja_date)}`
+  // Format berdasarkan (Dokumen Pendukung 1)
+  const berdasarkan = s.supporting_doc1_number
+    ? `${normalizeInline(s.supporting_doc1_number)} Tgl. ${fmtDateID(s.supporting_doc1_date)}`
     : "";
   
   await k.numberedRow(2, "Berdasarkan", berdasarkan);
@@ -521,53 +489,51 @@ for (let idx = 0; idx < lines.length; idx++) {
     // Minimal spacing before SIMJA section
     k.y -= k.lineGap * 0.2; // Reduced spacing
     
-    // SIMJA section with mixed formatting
-    if ((s.simja_number && s.simja_date) || s.simja_number || s.simja_date) {
+    // Dokumen Pendukung 1 section
+    if ((s.supporting_doc1_type && s.supporting_doc1_number && s.supporting_doc1_date) || s.supporting_doc1_type || s.supporting_doc1_number || s.supporting_doc1_date) {
       await k.pageBreak();
       
-      // Bullet point dengan SIMJA bold dan sisa text normal
+      // Bullet point dengan jenis dokumen bold dan sisa text normal
       const bulletX = rightX;
       k.text(" • ", bulletX, k.y, { bold: false });
-      const simjaX = bulletX + k.measure(" • ", { bold: false });
-      k.text("SIMJA", simjaX, k.y, { bold: true });
-      const restX = simjaX + k.measure("SIMJA", { bold: true });
-      k.text(" Ast. Man. Facility Management", restX, k.y, { bold: false });
+      const docTypeX = bulletX + k.measure(" • ", { bold: false });
+      const docType = s.supporting_doc1_type || "Dokumen Perizinan";
+      k.text(docType, docTypeX, k.y, { bold: true });
       
       // Move to next line
       k.y -= k.lineGap;
       
       // Baris kedua dengan indentasi untuk No. dan Tanggal
       await k.pageBreak();
-      const simjaNum = s.simja_number || '[Nomor SIMJA]';
-      const simjaDate = s.simja_date ? fmtDateID(s.simja_date) : '[Tanggal SIMJA]';
-      await k.wrap(`   No. ${simjaNum} Tanggal ${simjaDate}`, rightX, rightW, { bold: true });
+      const docNum = s.supporting_doc1_number || '[Nomor Dokumen]';
+      const docDate = s.supporting_doc1_date ? fmtDateID(s.supporting_doc1_date) : '[Tanggal Dokumen]';
+      await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
       
-      // Minimal spacing after SIMJA section
+      // Minimal spacing after dokumen pendukung 1 section
       k.y -= k.lineGap * 0.2;
     }
     
-    // SIKA section with mixed formatting
-    if ((s.sika_number && s.sika_date) || s.sika_number || s.sika_date) {
+    // Dokumen Pendukung 2 section
+    if ((s.supporting_doc2_type && s.supporting_doc2_number && s.supporting_doc2_date) || s.supporting_doc2_type || s.supporting_doc2_number || s.supporting_doc2_date) {
       await k.pageBreak();
       
-      // Bullet point dengan SIKA bold dan sisa text normal
+      // Bullet point dengan jenis dokumen bold dan sisa text normal
       const bulletX = rightX;
       k.text(" • ", bulletX, k.y, { bold: false });
-      const sikaX = bulletX + k.measure(" • ", { bold: false });
-      k.text("SIKA", sikaX, k.y, { bold: true });
-      const restX = sikaX + k.measure("SIKA", { bold: true });
-      k.text(" Pekerjaan Dingin", restX, k.y, { bold: false });
+      const docTypeX = bulletX + k.measure(" • ", { bold: false });
+      const docType2 = s.supporting_doc2_type || "Dokumen Perizinan Tambahan";
+      k.text(docType2, docTypeX, k.y, { bold: true });
       
       // Move to next line
       k.y -= k.lineGap;
       
       // Baris kedua dengan indentasi untuk No. dan Tanggal
       await k.pageBreak();
-      const sikaNum = s.sika_number || '[Nomor SIKA]';
-      const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
-      await k.wrap(`   No.${sikaNum} Tanggal. ${sikaDate}`, rightX, rightW, { bold: true });
+      const docNum2 = s.supporting_doc2_number || '[Nomor Dokumen]';
+      const docDate2 = s.supporting_doc2_date ? fmtDateID(s.supporting_doc2_date) : '[Tanggal Dokumen]';
+      await k.wrap(`   No. ${docNum2} Tanggal ${docDate2}`, rightX, rightW, { bold: true });
       
-      // Minimal spacing after SIKA section
+      // Minimal spacing after dokumen pendukung 2 section
       k.y -= k.lineGap * 0.2;
     }
     

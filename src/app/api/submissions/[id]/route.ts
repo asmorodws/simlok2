@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
-import { generateSIMLOKPDF, type SubmissionPDFData } from '@/utils/pdf/simlokTemplate';
+import { generateSIMLOKPDF } from '@/utils/pdf/simlokTemplate';
+import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
 import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
 import { generateQrString } from '@/lib/qr-security';
@@ -38,11 +39,7 @@ async function generateSimlokNumber(): Promise<string> {
   return `${nextNumber}/${month}/${year}`;
 }
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
+import { RouteParams } from '@/types';
 
 // GET /api/submissions/[id] - Get single submission with optional PDF generation
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -98,13 +95,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             officer_name: true,
             email: true,
             vendor_name: true,
-          }
-        },
-        approved_by_user: {
-          select: {
-            id: true,
-            officer_name: true,
-            email: true,
           }
         },
         worker_list: {
@@ -322,7 +312,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         
         const approvalData: any = {
           approval_status: body.status_approval_admin,
-          notes: body.keterangan,
           simlok_date: body.tanggal_simlok ? new Date(body.tanggal_simlok) : undefined,
         };
 
@@ -346,7 +335,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           updateData.simlok_number = autoSimlokNumber;
           
           updateData.implementation = body.pelaksanaan;
-          updateData.other_notes = body.lain_lain;
           updateData.content = body.content;
           updateData.signer_position = body.jabatan_signer;
           updateData.signer_name = body.nama_signer;
@@ -427,13 +415,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             officer_name: true,
             email: true,
             vendor_name: true,
-          }
-        },
-        approved_by_user: {
-          select: {
-            id: true,
-            officer_name: true,
-            email: true,
           }
         }
       }

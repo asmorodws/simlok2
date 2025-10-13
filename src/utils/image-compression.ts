@@ -3,21 +3,7 @@
  * Kompres gambar untuk foto pekerja dengan tetap mempertahankan kualitas visual
  */
 
-interface CompressionOptions {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
-  outputFormat?: 'jpeg' | 'webp' | 'png';
-  maxSizeKB?: number;
-}
-
-interface CompressionResult {
-  file: File;
-  originalSize: number;
-  compressedSize: number;
-  compressionRatio: number;
-  format: string;
-}
+import { CompressionOptions, CompressionResult } from '@/types';
 
 export class ImageCompressor {
   /**

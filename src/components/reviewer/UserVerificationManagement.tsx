@@ -10,7 +10,7 @@ import {
   UserIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import type { UserData } from '@/types/user';
+import type { UserData } from '@/types';
 import UserTable from '@/components/users/UserTable';
 
 // Debounce helper

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
-import { SubmissionData } from '@/types/submission';
+import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
 
 // GET /api/submissions - Get all submissions
@@ -110,13 +110,6 @@ export async function GET(request: NextRequest) {
               officer_name: true,
               email: true,
               vendor_name: true,
-            }
-          },
-          approved_by_user: {
-            select: {
-              id: true,
-              officer_name: true,
-              email: true,
             }
           }
         },
@@ -263,6 +256,8 @@ export async function POST(request: NextRequest) {
           vendor_phone: userExists.phone_number, // Auto-fill dari data user
           simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
           sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,
+          supporting_doc1_date: submissionData.supporting_doc1_date ? new Date(submissionData.supporting_doc1_date) : null,
+          supporting_doc2_date: submissionData.supporting_doc2_date ? new Date(submissionData.supporting_doc2_date) : null,
           qrcode: qrData,
         },
         include: {

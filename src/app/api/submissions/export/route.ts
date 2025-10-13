@@ -85,11 +85,6 @@ export async function GET(request: NextRequest) {
             vendor_name: true,
           }
         },
-        reviewed_by_user: {
-          select: {
-            officer_name: true
-          }
-        },
         approved_by_final_user: {
           select: {
             officer_name: true
@@ -123,7 +118,7 @@ export async function GET(request: NextRequest) {
       'Nomor SIMLOK': submission.simlok_number || '',
       'Tanggal SIMLOK': submission.simlok_date ? 
         new Date(submission.simlok_date).toLocaleDateString('id-ID') : '',
-      'Direview Oleh': submission.reviewed_by_user?.officer_name || '',
+      'Direview Oleh': submission.reviewed_by || '',
       'Tanggal Review': submission.reviewed_at ? 
         new Date(submission.reviewed_at).toLocaleDateString('id-ID') : '',
       'Disetujui Oleh': submission.approved_by_final_user?.officer_name || '',

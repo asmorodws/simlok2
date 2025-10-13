@@ -20,7 +20,7 @@ import {
   UserPlusIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import type { UserData } from '@/types/user';
+import type { UserData } from '@/types';
 
 interface Stats {
   totalPending: number;

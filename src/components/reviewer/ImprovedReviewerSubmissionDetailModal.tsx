@@ -16,6 +16,7 @@ import {
   UserIcon,
   BriefcaseIcon,
   DocumentIcon,
+  DocumentArrowUpIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
@@ -58,6 +59,16 @@ interface SubmissionDetail {
   sika_number: string;
   sika_date: string | null;
   sika_document_upload?: string | null;
+  // Supporting Documents 1
+  supporting_doc1_type?: string;
+  supporting_doc1_number?: string;
+  supporting_doc1_date?: string | null;
+  supporting_doc1_upload?: string;
+  // Supporting Documents 2
+  supporting_doc2_type?: string;
+  supporting_doc2_number?: string;
+  supporting_doc2_date?: string | null;
+  supporting_doc2_upload?: string;
   simlok_number: string | null;
   simlok_date: string | null;
   implementation_start_date: string | null;
@@ -405,10 +416,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
   // Use the improved implementation dates hook with stable dependencies
   const implementationDatesHook = useImplementationDates({
-    simjaNumber: submission?.simja_number ?? '',
-    simjaDate: submission?.simja_date ?? '',
-    sikaNumber: submission?.sika_number ?? '',
-    sikaDate: submission?.sika_date ?? '',
+    supportingDoc1Type: submission?.supporting_doc1_type ?? '',
+    supportingDoc1Number: submission?.supporting_doc1_number ?? '',
+    supportingDoc1Date: submission?.supporting_doc1_date ?? '',
+    supportingDoc2Type: submission?.supporting_doc2_type ?? '',
+    supportingDoc2Number: submission?.supporting_doc2_number ?? '',
+    supportingDoc2Date: submission?.supporting_doc2_date ?? '',
     signerPosition: approvalForm.jabatan_signer ?? 'Sr Officer Security III'
   });
 
@@ -595,10 +608,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         signer_name: approvalForm.nama_signer,
         working_hours: workingHours,  // kirim jam kerja yang diedit
         // Preserve SIMJA and SIKA dates to prevent them from being lost
-        simja_number: submission?.simja_number,
-        simja_date: submission?.simja_date,
-        sika_number: submission?.sika_number,
-        sika_date: submission?.sika_date,
+        supporting_doc1_type: submission?.supporting_doc1_type,
+        supporting_doc1_number: submission?.supporting_doc1_number, 
+        supporting_doc1_date: submission?.supporting_doc1_date,
+        supporting_doc2_type: submission?.supporting_doc2_type,
+        supporting_doc2_number: submission?.supporting_doc2_number,
+        supporting_doc2_date: submission?.supporting_doc2_date,
         // Preserve worker count to prevent it from being reset
         worker_count: editableWorkerCount
       };
@@ -676,10 +691,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     approvalForm,
     workingHours,
     editableWorkerCount,
-    submission?.simja_number,
-    submission?.simja_date,
-    submission?.sika_number,
-    submission?.sika_date,
+    submission?.supporting_doc1_type,
+    submission?.supporting_doc1_number,
+    submission?.supporting_doc1_date,
+    submission?.supporting_doc2_type,
+    submission?.supporting_doc2_number,
+    submission?.supporting_doc2_date,
     showSuccess,
     showError,
     onReviewSubmitted
@@ -881,7 +898,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 sm:p-4"
       onClick={(e) => {
         // Close modal when clicking backdrop
         if (e.target === e.currentTarget) {
@@ -890,13 +907,13 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
       }}
     >
       <div
-        className="bg-white rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col"
+        className="bg-white rounded-none sm:rounded-xl shadow-xl w-full h-full sm:max-w-6xl sm:w-full sm:max-h-[90vh] sm:h-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between  p-6 border-b border-gray-200 flex-shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 flex-shrink-0">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Detail & Review Pengajuan</h2>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Detail & Review Pengajuan</h2>
             {submission && (
               <div className="text-sm text-gray-500 mt-1 space-y-1">
                 <p>
@@ -917,42 +934,44 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
 
         {/* Tabs */}
         <div className="border-b border-gray-200 flex-shrink-0">
-          <nav className="flex space-x-8 px-6">
+          <nav className="flex space-x-4 sm:space-x-8 px-4 sm:px-6">
             <button
               onClick={() => setActiveTab('details')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'details'
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${activeTab === 'details'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-              Detail SIMLOK
+              <DocumentTextIcon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Detail SIMLOK</span>
+              <span className="sm:hidden">Detail</span>
             </button>
             <button
               onClick={() => setActiveTab('workers')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'workers'
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${activeTab === 'workers'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <UserGroupIcon className="h-5 w-5 inline mr-2" />
-              Data Pekerja
+              <UserGroupIcon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Data Pekerja</span>
+              <span className="sm:hidden">Pekerja</span>
             </button>
             <button
               onClick={() => setActiveTab('review')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'review'
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${activeTab === 'review'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
-              <CheckCircleIcon className="h-5 w-5 inline mr-2" />
+              <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 inline mr-1 sm:mr-2" />
               Review
             </button>
           </nav>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {loading && (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -1049,14 +1068,14 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                                 {(() => {
                                   let template = "Izin diberikan berdasarkan:";
 
-                                  // SIMJA section
-                                  if (submission.simja_number && submission.simja_date) {
-                                    template += `\n• Simja Ast Man Facility Management\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
+                                  // Dokumen Pendukung 1
+                                  if (submission.supporting_doc1_type && submission.supporting_doc1_number && submission.supporting_doc1_date) {
+                                    template += `\n• ${submission.supporting_doc1_type}\n  ${submission.supporting_doc1_number} Tgl. ${formatDate(submission.supporting_doc1_date)}`;
                                   }
 
-                                  // SIKA section  
-                                  if (submission.sika_number && submission.sika_date) {
-                                    template += `\n• SIKA Pekerjaan Dingin\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
+                                  // Dokumen Pendukung 2
+                                  if (submission.supporting_doc2_type && submission.supporting_doc2_number && submission.supporting_doc2_date) {
+                                    template += `\n• ${submission.supporting_doc2_type}\n  ${submission.supporting_doc2_number} Tgl. ${formatDate(submission.supporting_doc2_date)}`;
                                   }
 
                                   // Head of Security section - akan diisi saat approval dengan tanggal SIMLOK
@@ -1331,9 +1350,9 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     </div>
                   </DetailSection>
 
-                  {/* Informasi Dokumen - sama seperti admin */}
+                  {/* Informasi Dokumen SIMJA/SIKA - tetap tampilkan data legacy */}
                   <DetailSection
-                    title="Informasi Dokumen"
+                    title="Informasi Dokumen (SIMJA/SIKA)"
                     icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1347,7 +1366,6 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <InfoCard
                           label="Tanggal SIMJA"
                           value={formatDate(submission.simja_date)}
-
                         />
                       )}
                       {submission.sika_number && (
@@ -1360,64 +1378,188 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         <InfoCard
                           label="Tanggal SIKA"
                           value={formatDate(submission.sika_date)}
-
                         />
                       )}
-                      {/* Status dan Tanggal Pengajuan */}
-
-                    </div>
-
-                    <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
-                      {/* Dokumen SIKA */}
-                      {submission.sika_document_upload && (
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900">Dokumen SIKA</p>
-                              <p className="text-sm text-gray-500">File tersedia</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
-                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <EyeIcon className="w-4 h-4" />
-                            <span>Lihat</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Dokumen SIMJA */}
-                      {submission.simja_document_upload && (
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900">Dokumen SIMJA</p>
-                              <p className="text-sm text-gray-500">File tersedia</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
-                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <EyeIcon className="w-4 h-4" />
-                            <span>Lihat</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Message if no documents */}
-                      {!submission.sika_document_upload && !submission.simja_document_upload && (
-                        <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                          <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
-                          <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
-                        </div>
-                      )}
+                      <InfoCard
+                        label="Tanggal Pengajuan"
+                        value={formatDate(submission.created_at)}
+                      />
                     </div>
                   </DetailSection>
+
+                  {/* Dokumen Pendukung - tampilan bersebelahan */}
+                  {(submission.supporting_doc1_type || submission.supporting_doc2_type) && (
+                    <DetailSection
+                      title="Dokumen Pendukung"
+                      icon={<DocumentTextIcon className="h-5 w-5 text-purple-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Dokumen Pendukung 1 */}
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 1</h4>
+                          {submission.supporting_doc1_type && (
+                            <InfoCard
+                              label="Jenis Dokumen"
+                              value={submission.supporting_doc1_type}
+                            />
+                          )}
+                          {submission.supporting_doc1_number && (
+                            <InfoCard
+                              label="Nomor Dokumen"
+                              value={submission.supporting_doc1_number}
+                            />
+                          )}
+                          {submission.supporting_doc1_date && (
+                            <InfoCard
+                              label="Tanggal Dokumen"
+                              value={formatDate(submission.supporting_doc1_date)}
+                            />
+                          )}
+                        </div>
+                        
+                        {/* Dokumen Pendukung 2 */}
+                        <div className="space-y-4">
+                          <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 2</h4>
+                          {submission.supporting_doc2_type && (
+                            <InfoCard
+                              label="Jenis Dokumen"
+                              value={submission.supporting_doc2_type}
+                            />
+                          )}
+                          {submission.supporting_doc2_number && (
+                            <InfoCard
+                              label="Nomor Dokumen"
+                              value={submission.supporting_doc2_number}
+                            />
+                          )}
+                          {submission.supporting_doc2_date && (
+                            <InfoCard
+                              label="Tanggal Dokumen"
+                              value={formatDate(submission.supporting_doc2_date)}
+                            />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Upload Documents Preview - bersebelahan */}
+                      {(submission.supporting_doc1_upload || submission.supporting_doc2_upload) && (
+                        <div className="mt-6">
+                          <h5 className="font-medium text-gray-900 mb-4">File Dokumen Pendukung</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Dokumen Pendukung 1 Upload */}
+                            {submission.supporting_doc1_upload && (
+                              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                <div className="flex items-center space-x-3">
+                                  <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                                  <div>
+                                    <p className="font-medium text-gray-900">
+                                      {submission.supporting_doc1_type || 'Dokumen Pendukung 1'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {submission.supporting_doc1_number || 'File tersedia'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleFileView(submission.supporting_doc1_upload!, submission.supporting_doc1_type || 'Dokumen Pendukung 1')}
+                                  className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                  <EyeIcon className="w-4 h-4" />
+                                  <span>Lihat</span>
+                                </button>
+                              </div>
+                            )}
+
+                            {/* Dokumen Pendukung 2 Upload */}
+                            {submission.supporting_doc2_upload && (
+                              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                <div className="flex items-center space-x-3">
+                                  <DocumentIcon className="h-6 w-6 text-green-500 flex-shrink-0" />
+                                  <div>
+                                    <p className="font-medium text-gray-900">
+                                      {submission.supporting_doc2_type || 'Dokumen Pendukung 2'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                      {submission.supporting_doc2_number || 'File tersedia'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleFileView(submission.supporting_doc2_upload!, submission.supporting_doc2_type || 'Dokumen Pendukung 2')}
+                                  className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                >
+                                  <EyeIcon className="w-4 h-4" />
+                                  <span>Lihat</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </DetailSection>
+                  )}
+
+                  {/* SIMJA/SIKA Document Uploads - jika ada */}
+                  {(submission.simja_document_upload || submission.sika_document_upload) && (
+                    <DetailSection
+                      title="File Dokumen SIMJA/SIKA"
+                      icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {submission.simja_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.simja_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {submission.sika_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.sika_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </DetailSection>
+                  )}
+
+                    {/* Message if no documents */}
+                    {!submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
+                     !submission.simja_document_upload && !submission.sika_document_upload && (
+                      <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                        <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
+                      </div>
+                    )}
 
                   {/* Detail Pekerjaan - sama seperti admin */}
                   <DetailSection
@@ -1708,15 +1850,19 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-white">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-white">
           <div>
-           
-              <Button onClick={() => setIsPdfModalOpen(true)} variant="primary" size="sm">
-                <DocumentTextIcon className="w-4 h-4 mr-2" />
-                Lihat Preview PDF SIMLOK
+              <Button onClick={() => setIsPdfModalOpen(true)} variant="primary" size="sm" className="text-xs sm:text-sm">
+                <DocumentTextIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">
+                  {submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF SIMLOK'}
+                </span>
+                <span className="sm:hidden">
+                  {submission?.approval_status === 'APPROVED' ? 'PDF' : 'Preview PDF'}
+                </span>
               </Button>
           </div>
-          <Button onClick={onClose} variant="outline">
+          <Button onClick={onClose} variant="outline" className="text-xs sm:text-sm">
             Tutup
           </Button>
         </div>

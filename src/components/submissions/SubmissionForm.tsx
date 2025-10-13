@@ -12,7 +12,7 @@ import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import { useToast } from '@/hooks/useToast';
-import { SubmissionData } from '@/types/submission';
+import { SubmissionData } from '@/types';
 
 // import modal konfirmasi
 import ConfirmModal from '@/components/ui/modal/ConfirmModal'; // sesuaikan path dengan struktur proyekmu
@@ -92,6 +92,16 @@ export default function SubmissionForm() {
     simja_date: '',
     sika_number: '',
     sika_date: '',
+    // Supporting Documents 1
+    supporting_doc1_type: '',
+    supporting_doc1_number: '',
+    supporting_doc1_date: '',
+    supporting_doc1_upload: '',
+    // Supporting Documents 2
+    supporting_doc2_type: '',
+    supporting_doc2_number: '',
+    supporting_doc2_date: '',
+    supporting_doc2_upload: '',
     worker_names: '',
     sika_document_upload: '',
     simja_document_upload: '',
@@ -381,6 +391,16 @@ export default function SubmissionForm() {
         simja_date: '',
         sika_number: '',
         sika_date: '',
+        // Supporting Documents 1
+        supporting_doc1_type: '',
+        supporting_doc1_number: '',
+        supporting_doc1_date: '',
+        supporting_doc1_upload: '',
+        // Supporting Documents 2
+        supporting_doc2_type: '',
+        supporting_doc2_number: '',
+        supporting_doc2_date: '',
+        supporting_doc2_upload: '',
         worker_names: '',
         sika_document_upload: '',
         simja_document_upload: '',
@@ -433,16 +453,35 @@ export default function SubmissionForm() {
       }
 
       // Validasi dokumen wajib
-      if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
-        showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
-      }
+      // if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
+      //   showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
+      //   setIsLoading(false);
+      //   return;
+      // }
 
-      if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
-        showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
+      // if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
+      //   showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
+      //   setIsLoading(false);
+      //   return;
+      // }
+
+      // validasi dokumen pendukung
+      if (formData.supporting_doc1_type || formData.supporting_doc1_number || formData.supporting_doc1_date) {
+        if (!formData.supporting_doc1_type || !formData.supporting_doc1_type.trim()) {
+          showError('Dokumen Pendukung Tidak Lengkap', 'Tipe dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
+          setIsLoading(false);
+          return;
+        }
+        if (!formData.supporting_doc1_number || !formData.supporting_doc1_number.trim()) {
+          showError('Dokumen Pendukung Tidak Lengkap', 'Nomor dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
+          setIsLoading(false);
+          return;
+        }
+        if (!formData.supporting_doc1_date || !formData.supporting_doc1_date.trim()) {
+          showError('Dokumen Pendukung Tidak Lengkap', 'Tanggal dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
+          setIsLoading(false);
+          return;
+        }
       }
 
       if (workers.length === 0) {
@@ -640,7 +679,7 @@ export default function SubmissionForm() {
                 </div>
 
                 {/* Upload dokumen */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="simja_document_upload">
                     UPLOAD DOKUMEN SIMJA
                     <span className="ml-1 text-red-500">*</span>
@@ -657,9 +696,9 @@ export default function SubmissionForm() {
                       required={false}
                     />
                   </div>
-                </div>
+                </div> */}
 
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="sika_document_upload">
                     UPLOAD DOKUMEN SIKA
                     <span className="ml-1 text-red-500">*</span>
@@ -675,6 +714,133 @@ export default function SubmissionForm() {
                       label=""
                       description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
                     />
+                  </div> */}
+                {/* </div> */}
+              </div>
+
+              {/* Dokumen Pendukung */}
+              <div className="md:col-span-2 mt-10">
+                <h3 className="text-md font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
+                  Dokumen Pendukung
+                </h3>
+                
+                {/* Layout bersebelahan untuk Dokumen Pendukung 1 dan 2 */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Dokumen Pendukung 1 */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-gray-700 border-l-4 border-blue-500 pl-3">
+                      Dokumen Pendukung 1
+                    </h4>
+                    
+                    <div>
+                      <Label htmlFor="supporting_doc1_type">Jenis Dokumen</Label>
+                      <Input
+                        id="supporting_doc1_type"
+                        name="supporting_doc1_type"
+                        type="text"
+                        value={formData.supporting_doc1_type || ''}
+                        onChange={handleChange}
+                        placeholder="Contoh: SIMJA, SIKA Pekerjaan dingin atau lainnya  "
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="supporting_doc1_number">Nomor Dokumen</Label>
+                      <Input
+                        id="supporting_doc1_number"
+                        name="supporting_doc1_number"
+                        type="text"
+                        value={formData.supporting_doc1_number || ''}
+                        onChange={handleChange}
+                        placeholder="Contoh: SIKA/2024/001"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="supporting_doc1_date">Tanggal Dokumen</Label>
+                      <DatePicker
+                        id="supporting_doc1_date"
+                        name="supporting_doc1_date"
+                        value={formData.supporting_doc1_date || ''}
+                        onChange={handleDateChange('supporting_doc1_date')}
+                        placeholder="Pilih tanggal dokumen"
+                        required={false}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="supporting_doc1_upload">Upload Dokumen</Label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <EnhancedFileUpload
+                          id="supporting_doc1_upload"
+                          name="supporting_doc1_upload"
+                          value={formData.supporting_doc1_upload || ''}
+                          onChange={handleFileUpload('supporting_doc1_upload')}
+                          uploadType="document"
+                          label=""
+                          description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
+                          required={false}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dokumen Pendukung 2 */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-gray-700 border-l-4 border-green-500 pl-3">
+                      Dokumen Pendukung 2
+                    </h4>
+                    
+                    <div>
+                      <Label htmlFor="supporting_doc2_type">Jenis Dokumen</Label>
+                      <Input
+                        id="supporting_doc2_type"
+                        name="supporting_doc2_type"
+                        type="text"
+                        value={formData.supporting_doc2_type || ''}
+                        onChange={handleChange}
+                        placeholder="Contoh: SIMJA, SIKA Pekerjaan dingin atau lainnya  "
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="supporting_doc2_number">Nomor Dokumen</Label>
+                      <Input
+                        id="supporting_doc2_number"
+                        name="supporting_doc2_number"
+                        type="text"
+                        value={formData.supporting_doc2_number || ''}
+                        onChange={handleChange}
+                        placeholder="Contoh: SIMJA/2024/001"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="supporting_doc2_date">Tanggal Dokumen</Label>
+                      <DatePicker
+                        id="supporting_doc2_date"
+                        name="supporting_doc2_date"
+                        value={formData.supporting_doc2_date || ''}
+                        onChange={handleDateChange('supporting_doc2_date')}
+                        placeholder="Pilih tanggal dokumen"
+                        required={false}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="supporting_doc2_upload">Upload Dokumen</Label>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <EnhancedFileUpload
+                          id="supporting_doc2_upload"
+                          name="supporting_doc2_upload"
+                          value={formData.supporting_doc2_upload || ''}
+                          onChange={handleFileUpload('supporting_doc2_upload')}
+                          uploadType="document"
+                          label=""
+                          description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
+                          required={false}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

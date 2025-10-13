@@ -43,6 +43,16 @@ interface Submission {
   simja_date?: string | null;
   sika_number?: string;
   sika_date?: string | null;
+  // Supporting Documents 1
+  supporting_doc1_type?: string;
+  supporting_doc1_number?: string;
+  supporting_doc1_date?: string | null;
+  supporting_doc1_upload?: string;
+  // Supporting Documents 2
+  supporting_doc2_type?: string;
+  supporting_doc2_number?: string;
+  supporting_doc2_date?: string | null;
+  supporting_doc2_upload?: string;
   simlok_number?: string;
   simlok_date?: string | null;
   worker_names: string;
@@ -155,14 +165,14 @@ export default function SubmissionDetailModal({
         className="fixed inset-0 bg-black/30 transition-opacity"
         onClick={onClose}
       />
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+      <div className="flex min-h-full items-center justify-center p-0 sm:p-4">
+        <div className="relative bg-white rounded-none sm:rounded-lg shadow-xl w-full h-full sm:max-w-6xl sm:w-full sm:max-h-[90vh] sm:h-auto flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 p-6 flex-shrink-0">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6 flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
-                <p className="text-sm text-gray-500 mt-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Detail Pengajuan SIMLOK</h2>
+                <p className="text-xs sm:text-sm text-gray-500 mt-1">
                   Dibuat pada {formatDate(submission.created_at)}
                 </p>
               </div>
@@ -179,7 +189,7 @@ export default function SubmissionDetailModal({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="space-y-8">
               {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -238,8 +248,9 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
+              {/* Informasi Dokumen SIMJA/SIKA - tetap tampilkan data legacy */}
               <DetailSection 
-                title="Informasi Dokumen" 
+                title="Informasi Dokumen (SIMJA/SIKA)" 
                 icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -283,57 +294,183 @@ export default function SubmissionDetailModal({
                     />
                   )}
                 </div>
-                <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
-                  {submission.sika_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-900">Dokumen SIKA</p>
-                          <p className="text-sm text-gray-500">File tersedia</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
-                        className="flex items-center space-x-2"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        <span>Lihat</span>
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {submission.simja_document_upload && (
-                    <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex items-center space-x-3">
-                        <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium text-gray-900">Dokumen SIMJA</p>
-                          <p className="text-sm text-gray-500">File tersedia</p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
-                        className="flex items-center space-x-2"
-                      >
-                        <EyeIcon className="w-4 h-4" />
-                        <span>Lihat</span>
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {!submission.sika_document_upload && !submission.simja_document_upload && (
-                    <div className="col-span-2 text-center py-8 text-gray-500">
-                      <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p>Belum ada dokumen yang diupload</p>
-                    </div>
-                  )}
-                </div>
               </DetailSection>
+
+              {/* Dokumen Pendukung - tampilan bersebelahan */}
+              {(submission.supporting_doc1_type || submission.supporting_doc2_type) && (
+                <DetailSection
+                  title="Dokumen Pendukung"
+                  icon={<DocumentIcon className="h-5 w-5 text-purple-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Dokumen Pendukung 1 */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 1</h4>
+                      {submission.supporting_doc1_type && (
+                        <InfoCard
+                          label="Jenis Dokumen"
+                          value={submission.supporting_doc1_type}
+                        />
+                      )}
+                      {submission.supporting_doc1_number && (
+                        <InfoCard
+                          label="Nomor Dokumen"
+                          value={submission.supporting_doc1_number}
+                        />
+                      )}
+                      {submission.supporting_doc1_date && (
+                        <InfoCard
+                          label="Tanggal Dokumen"
+                          value={formatDate(submission.supporting_doc1_date)}
+                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                      )}
+                    </div>
+                    
+                    {/* Dokumen Pendukung 2 */}
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 2</h4>
+                      {submission.supporting_doc2_type && (
+                        <InfoCard
+                          label="Jenis Dokumen"
+                          value={submission.supporting_doc2_type}
+                        />
+                      )}
+                      {submission.supporting_doc2_number && (
+                        <InfoCard
+                          label="Nomor Dokumen"
+                          value={submission.supporting_doc2_number}
+                        />
+                      )}
+                      {submission.supporting_doc2_date && (
+                        <InfoCard
+                          label="Tanggal Dokumen"
+                          value={formatDate(submission.supporting_doc2_date)}
+                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Upload Documents Preview - bersebelahan */}
+                  {(submission.supporting_doc1_upload || submission.supporting_doc2_upload) && (
+                    <div className="mt-6">
+                      <h5 className="font-medium text-gray-900 mb-4">File Dokumen Pendukung</h5>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Dokumen Pendukung 1 Upload */}
+                        {submission.supporting_doc1_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {submission.supporting_doc1_type || 'Dokumen Pendukung 1'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.supporting_doc1_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleFileView(submission.supporting_doc1_upload!, submission.supporting_doc1_type || 'Dokumen Pendukung 1')}
+                              className="flex items-center space-x-2"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Dokumen Pendukung 2 Upload */}
+                        {submission.supporting_doc2_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-green-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {submission.supporting_doc2_type || 'Dokumen Pendukung 2'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.supporting_doc2_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleFileView(submission.supporting_doc2_upload!, submission.supporting_doc2_type || 'Dokumen Pendukung 2')}
+                              className="flex items-center space-x-2"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </DetailSection>
+              )}
+
+              {/* SIMJA/SIKA Document Uploads - jika ada */}
+              {(submission.simja_document_upload || submission.sika_document_upload) && (
+                <DetailSection
+                  title="File Dokumen SIMJA/SIKA"
+                  icon={<DocumentIcon className="h-5 w-5 text-gray-500" />}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {submission.simja_document_upload && (
+                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <DocumentIcon className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                            <p className="text-sm text-gray-500">
+                              {submission.simja_number || 'File tersedia'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                          className="flex items-center space-x-2"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                          <span>Lihat</span>
+                        </Button>
+                      </div>
+                    )}
+
+                    {submission.sika_document_upload && (
+                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                            <p className="text-sm text-gray-500">
+                              {submission.sika_number || 'File tersedia'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                          className="flex items-center space-x-2"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                          <span>Lihat</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </DetailSection>
+              )}
+
+
 
               <DetailSection 
                 title="Informasi Pekerjaan" 
@@ -350,7 +487,7 @@ export default function SubmissionDetailModal({
                   />
                   <InfoCard
                     label="Pelaksanaan"
-                    value={submission.implementation || 'Akan diisi oleh admin saat disetujui'}
+                    value={submission.implementation || 'Akan diisi otomatis ketika sudah di setujui'}
                   />
                   <InfoCard
                     label="Jam Kerja"
@@ -455,22 +592,29 @@ export default function SubmissionDetailModal({
               </DetailSection>
             </div>
 
-            <div className="flex items-center justify-between border-t border-gray-200 pt-6 mt-8">
+            <div className="flex items-center justify-between border-t border-gray-200 pt-4 sm:pt-6 mt-6 sm:mt-8">
               <div className="flex items-center space-x-3 justify-between w-full">
                 {submission.approval_status === 'APPROVED' && submission.simlok_number && (
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={handleDownloadPdf}
+                    className="text-xs sm:text-sm"
                   >
-                    <DocumentIcon className="w-4 h-4 mr-2" />
-                    Lihat PDF
+                    <DocumentIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">
+                      {submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF'}
+                    </span>
+                    <span className="sm:hidden">
+                      {submission?.approval_status === 'APPROVED' ? 'PDF' : 'Preview PDF'}
+                    </span>
                   </Button>
                 )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onClose}
+                  className="text-xs sm:text-sm"
                 >
                   Tutup
                 </Button>

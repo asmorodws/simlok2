@@ -33,8 +33,6 @@ model User {
   refreshTokens            RefreshToken[]
   sessions                 Session[]
   finalApprovedSubmissions Submission[]       @relation("FinalApprovedSubmissions")
-  approvedSubmissions      Submission[]       @relation("ApprovedSubmissions")
-  reviewedSubmissions      Submission[]       @relation("ReviewedSubmissions")
   submissions              Submission[]
 }
 
@@ -90,6 +88,7 @@ model VerificationToken {
 /// ----------  SUBMISSION  ----------
 model Submission {
   id                        String       @id @default(cuid())
+  reviewed_by               String?
   approved_by               String?
   vendor_name               String
   based_on                  String
@@ -98,7 +97,6 @@ model Submission {
   work_location             String
   implementation            String?      @db.Text
   working_hours             String
-  other_notes               String?      @db.Text
   work_facilities           String
   simja_number              String?
   simja_date                DateTime?
@@ -106,9 +104,18 @@ model Submission {
   sika_date                 DateTime?
   simlok_number             String?
   simlok_date               DateTime?
+  // Supporting Documents 1
+  supporting_doc1_type      String?
+  supporting_doc1_number    String?
+  supporting_doc1_date      DateTime?
+  supporting_doc1_upload    String?
+  // Supporting Documents 2
+  supporting_doc2_type      String?
+  supporting_doc2_number    String?
+  supporting_doc2_date      DateTime?
+  supporting_doc2_upload    String?
   worker_names              String       @db.Text
   content                   String?      @db.Text
-  notes                     String?      @db.Text
   sika_document_upload      String?
   simja_document_upload     String?
   qrcode                    String?      @db.LongText
@@ -125,22 +132,17 @@ model Submission {
   note_for_approver         String?      @db.Text
   review_status             ReviewStatus @default(PENDING_REVIEW)
   reviewed_at               DateTime?
-  reviewed_by_id            String?
   worker_count              Int?
   vendor_phone              String?
   qrScans                   QrScan[]     @relation("SubmissionQrScans")
   approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id])
-  approved_by_user          User?        @relation("ApprovedSubmissions", fields: [approved_by], references: [id])
-  reviewed_by_user          User?        @relation("ReviewedSubmissions", fields: [reviewed_by_id], references: [id])
   user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
   worker_list               WorkerList[]
 
   @@index([review_status])
   @@index([approval_status])
   @@index([created_at])
-  @@index([reviewed_by_id])
   @@index([approved_by_final_id])
-  @@index([approved_by], map: "Submission_approved_by_fkey")
 }
 
 /// ----------  WORKER LIST  ----------
@@ -193,7 +195,6 @@ model QrScan {
   scanned_by    String
   scanned_at    DateTime   @default(now())
   scanner_name  String?
-  // notes         String?
   scan_location String?
   user          User       @relation("QrScannedBy", fields: [scanned_by], references: [id], onDelete: Cascade)
   submission    Submission @relation("SubmissionQrScans", fields: [submission_id], references: [id], onDelete: Cascade)

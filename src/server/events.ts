@@ -213,12 +213,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
     const submission = await prisma.submission.findUnique({
       where: { id: submissionId },
       include: { 
-        user: true,
-        reviewed_by_user: {
-          select: {
-            officer_name: true
-          }
-        }
+        user: true
       }
     });
 
@@ -253,7 +248,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
           vendorName: submission.vendor_name,
           officerName: submission.officer_name,
           jobDescription: submission.job_description,
-          reviewedBy: submission.reviewed_by_user?.officer_name,
+          reviewedBy: submission.reviewed_by,
           reviewStatus: submission.review_status,
           reviewNote: submission.note_for_approver
         })
