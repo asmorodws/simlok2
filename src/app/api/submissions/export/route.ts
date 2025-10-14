@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
     switch (session.user.role) {
       case 'REVIEWER':
         // Reviewers see submissions that need review or are being reviewed
-        whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'DOES_NOT_MEET_REQUIREMENTS'] };
+        // Use the Prisma enum values defined in schema.prisma (NOT_MEETS_REQUIREMENTS)
+        whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
         break;
         
       case 'APPROVER':
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
       'No': index + 1,
       'Nama Vendor': submission.vendor_name,
       'Nama Petugas': submission.officer_name,
-      'Email': submission.user?.email || '',
+      'Email': submission.user_email || submission.user?.email || '',
       'Deskripsi Pekerjaan': submission.job_description,
       'Lokasi Kerja': submission.work_location,
       'Tanggal Pelaksanaan': submission.implementation_start_date ? 

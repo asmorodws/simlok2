@@ -123,7 +123,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal mengupdate user');
+        throw new Error(errorData.error || errorData.message || 'Gagal mengupdate user');
       }
 
       const result = await response.json();

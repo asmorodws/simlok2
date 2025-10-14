@@ -120,7 +120,13 @@ model Submission {
   simja_document_upload     String?
   qrcode                    String?      @db.LongText
   created_at                DateTime     @default(now())
-  user_id                   String
+  user_id                   String?      // Made optional for deleted users
+  // Denormalized user data - preserved when user is deleted
+  user_email                String?
+  user_officer_name         String?
+  user_vendor_name          String?
+  user_phone_number         String?
+  user_address              String?
   signer_position           String?
   signer_name               String?
   implementation_end_date   DateTime?
@@ -135,8 +141,8 @@ model Submission {
   worker_count              Int?
   vendor_phone              String?
   qrScans                   QrScan[]     @relation("SubmissionQrScans")
-  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id])
-  user                      User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id], onDelete: SetNull)
+  user                      User?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
   worker_list               WorkerList[]
 
   @@index([review_status])

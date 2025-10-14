@@ -77,10 +77,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Submission tidak ditemukan' }, { status: 404 });
     }
 
-    // Check if submission can be approved (must be reviewed and meets requirements)
-    if (existingSubmission.review_status !== 'MEETS_REQUIREMENTS') {
+    // Allow approver to finalize approval even if reviewer marked NOT_MEETS_REQUIREMENTS.
+    // Only block approval if the submission hasn't been reviewed at all.
+    if (existingSubmission.review_status === 'PENDING_REVIEW') {
       return NextResponse.json({ 
-        error: 'Submission belum direview atau tidak memenuhi syarat' 
+        error: 'Submission belum direview' 
       }, { status: 400 });
     }
 
@@ -127,14 +128,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     });
 
-    // Notify vendor of status change
-    await import('@/server/events').then(({ notifyVendorStatusChange }) => 
-      notifyVendorStatusChange(
-        existingSubmission.user_id, 
-        id, 
-        validatedData.approval_status as 'APPROVED' | 'REJECTED'
-      )
-    );
+    // Notify vendor of status change (only if user still exists)
+    if (existingSubmission.user_id) {
+      await import('@/server/events').then(({ notifyVendorStatusChange }) => 
+        notifyVendorStatusChange(
+          existingSubmission.user_id!, 
+          id, 
+          validatedData.approval_status as 'APPROVED' | 'REJECTED'
+        )
+      );
+    }
 
     // If approved, also notify reviewer
     if (validatedData.approval_status === 'APPROVED') {

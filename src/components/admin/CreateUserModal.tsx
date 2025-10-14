@@ -18,6 +18,7 @@ const USER_ROLES = [
   { value: 'VERIFIER', label: 'Verifier' },
   { value: 'REVIEWER', label: 'Reviewer' },
   { value: 'APPROVER', label: 'Approver' },
+  { value: 'VISITOR', label: 'Visitor' },
   { value: 'SUPER_ADMIN', label: 'Super Admin' }
 ];
 
@@ -102,7 +103,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal membuat user');
+        throw new Error(errorData.error || errorData.message || 'Gagal membuat user');
       }
 
       const result = await response.json();

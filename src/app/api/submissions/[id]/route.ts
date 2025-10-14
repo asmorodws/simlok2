@@ -280,6 +280,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
 
       console.log('PUT /api/submissions/[id] - Reviewer update data:', updateData);
+      // If reviewer provided worker_list in body, persist it (delete existing and recreate)
+      if (body.worker_list && Array.isArray(body.worker_list)) {
+        try {
+          // Remove existing workers for submission
+          await prisma.workerList.deleteMany({ where: { submission_id: id } });
+
+          const validWorkers = body.worker_list.filter((w: any) => w.worker_name && w.worker_name.trim() !== '');
+
+          if (validWorkers.length > 0) {
+            await prisma.workerList.createMany({
+              data: validWorkers.map((w: any) => ({
+                worker_name: w.worker_name.trim(),
+                worker_photo: w.worker_photo || null,
+                submission_id: id
+              }))
+            });
+          }
+
+          // If worker_count provided, use it; otherwise set to created length
+          if (body.worker_count !== undefined) {
+            updateData.worker_count = body.worker_count;
+          } else {
+            updateData.worker_count = validWorkers.length;
+          }
+        } catch (err) {
+          console.warn('Failed to persist worker_list for reviewer update:', err);
+        }
+      }
       
     } else if (session.user.role === 'APPROVER') {
       // Approver can update similar fields as reviewer plus approval status

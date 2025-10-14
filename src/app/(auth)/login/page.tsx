@@ -36,6 +36,9 @@ export default function LoginPage() {
           case "ACCOUNT_REJECTED":
             setError("Akun Anda telah ditolak oleh administrator. Silakan hubungi admin untuk informasi lebih lanjut.");
             break;
+          case "ACCOUNT_DEACTIVATED":
+            setError("Akun Anda telah dinonaktifkan. Silakan hubungi administrator untuk informasi lebih lanjut.");
+            break;
           case "TURNSTILE_FAILED":
             setError("Verifikasi keamanan gagal. Silakan refresh halaman dan coba lagi.");
             break;

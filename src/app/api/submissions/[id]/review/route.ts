@@ -61,17 +61,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       reviewed_by: session.user.officer_name,
     };
 
-    // Auto-reject if doesn't meet requirements AND this is first time review OR still pending approval
-    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
-      // Only auto-reject if approval_status is still PENDING_APPROVAL
-      // This prevents overriding approver's decision
-      if (existingSubmission.approval_status === 'PENDING_APPROVAL') {
-        updateData.approval_status = 'REJECTED';
-        updateData.approved_at = new Date();
-        updateData.approved_by = session.user.officer_name;
-        updateData.approved_by_final_id = session.user.id;
-      }
-    } else if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
+    // Previously reviewer could auto-reject the submission. Change behavior:
+    // - Do NOT change final `approval_status` when reviewer marks NOT_MEETS_REQUIREMENTS.
+    // - Leave `approval_status` as-is (usually PENDING_APPROVAL) so approver can still make final decision.
+    // If reviewer changes from NOT_MEETS_REQUIREMENTS -> MEETS_REQUIREMENTS and the submission
+    // was previously rejected by reviewer flow, reset approval to pending so approver can re-evaluate.
+    if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
       // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
       // reset approval status back to PENDING_APPROVAL so approver can review again
       if (existingSubmission.review_status === 'NOT_MEETS_REQUIREMENTS' && 
@@ -92,18 +87,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     });
 
-    // Send notifications based on review status and current state
-    if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
-      // Always notify approver when review meets requirements (even if it's an update)
-      await notifyApproverReviewedSubmission(id);
-    } 
-    // Only notify vendor of rejection if the submission was actually auto-rejected
-    else if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS' && 
-             updateData.approval_status === 'REJECTED') {
-      await import('@/server/events').then(({ notifyVendorStatusChange }) => 
-        notifyVendorStatusChange(existingSubmission.user_id, id, 'REJECTED')
-      );
-    }
+    // Always notify approver that reviewer has saved a review (both MEETS and NOT_MEETS)
+    // This ensures approver sees the review even when reviewer marks NOT_MEETS_REQUIREMENTS.
+    await notifyApproverReviewedSubmission(id);
+
+    // Do NOT notify vendor on reviewer NOT_MEETS_REQUIREMENTS. Vendor will only be notified
+    // when approver changes the final approval_status to REJECTED.
 
     return NextResponse.json({
       message: 'Review berhasil disimpan',

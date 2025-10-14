@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {};
+    const whereClause: any = {
+      isActive: true // Only show active users
+    };
 
     // Role-based filtering
     if (session.user.role === 'REVIEWER') {
@@ -107,27 +109,34 @@ export async function GET(request: NextRequest) {
     const stats = {
       totalPending: await prisma.user.count({
         where: {
+          isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'PENDING'
         }
       }),
       totalVerified: await prisma.user.count({
         where: {
+          isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'VERIFIED'
         }
       }),
       totalRejected: await prisma.user.count({
         where: {
+          isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'REJECTED'
         }
       }),
       totalUsers: await prisma.user.count({
-        where: session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}
+        where: {
+          isActive: true,
+          ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {})
+        }
       }),
       todayRegistrations: await prisma.user.count({
         where: {
+          isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           created_at: {
             gte: new Date(new Date().setHours(0, 0, 0, 0))

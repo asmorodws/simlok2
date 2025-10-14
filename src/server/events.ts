@@ -1,4 +1,5 @@
-import { prisma } from '@/lib/singletons';
+import { prisma, redisPub } from '@/lib/singletons';
+import { emitNotificationNew, emitNotificationUnreadCount } from './socket';
 
 export async function notifyAdminNewSubmission(submissionId: string) {
   try {
@@ -28,6 +29,29 @@ export async function notifyAdminNewSubmission(submissionId: string) {
     });
 
     console.log('New submission notification created:', notification.id);
+    // Publish to Redis so SSE clients receive it and also emit via Socket.IO if available
+    try {
+      const channel = 'notifications:admin';
+      const payload = {
+        type: 'notification:new',
+        data: {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          data: notification.data,
+          scope: notification.scope,
+          vendorId: notification.vendor_id,
+          createdAt: notification.created_at?.toISOString?.() || new Date().toISOString(),
+        }
+      };
+
+      await redisPub.publish(channel, JSON.stringify(payload));
+      // Also emit via websocket in-memory if socket server is initialized
+      emitNotificationNew('admin', undefined, payload.data as any);
+    } catch (err) {
+      console.warn('Failed to publish new admin notification to Redis/socket:', err);
+    }
 
     // Also notify reviewers about new submission
     await notifyReviewerNewSubmission(submissionId);
@@ -65,6 +89,26 @@ export async function notifyAdminNewVendor(vendorId: string) {
     });
 
     console.log('New vendor notification created:', _notification.id);
+    try {
+      const channel = 'notifications:admin';
+      const payload = {
+        type: 'notification:new',
+        data: {
+          id: _notification.id,
+          type: _notification.type,
+          title: _notification.title,
+          message: _notification.message,
+          data: _notification.data,
+          scope: _notification.scope,
+          vendorId: _notification.vendor_id,
+          createdAt: _notification.created_at?.toISOString?.() || new Date().toISOString(),
+        }
+      };
+      await redisPub.publish(channel, JSON.stringify(payload));
+      emitNotificationNew('admin', undefined, payload.data as any);
+    } catch (err) {
+      console.warn('Failed to publish new vendor notification to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying admin new vendor:', error);
@@ -122,6 +166,34 @@ export async function notifyVendorStatusChange(
     });
 
     console.log('Vendor status change notification created:', _notification.id);
+    try {
+      const channel = `notifications:vendor:${vendorId}`;
+      const payload = {
+        type: 'notification:new',
+        data: {
+          id: _notification.id,
+          type: _notification.type,
+          title: _notification.title,
+          message: _notification.message,
+          data: _notification.data,
+          scope: _notification.scope,
+          vendorId: _notification.vendor_id,
+          createdAt: _notification.created_at?.toISOString?.() || new Date().toISOString(),
+        }
+      };
+      await redisPub.publish(channel, JSON.stringify(payload));
+      emitNotificationNew('vendor', vendorId, payload.data as any);
+
+      // Publish unread count for vendor channel
+      const total = await prisma.notification.count({ where: { scope: 'vendor', vendor_id: vendorId } });
+      const read = await prisma.notificationRead.count({ where: { vendor_id: vendorId } });
+      const unread = Math.max(0, total - read);
+      const unreadPayload = { type: 'notification:unread_count', data: { vendorId, scope: 'vendor', unreadCount: unread, count: unread } };
+      await redisPub.publish(`notifications:vendor:${vendorId}`, JSON.stringify(unreadPayload));
+      emitNotificationUnreadCount('vendor', vendorId, { vendorId, scope: 'vendor', unreadCount: unread, count: unread });
+    } catch (err) {
+      console.warn('Failed to publish vendor status change notification to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying vendor status change:', error);
@@ -166,6 +238,37 @@ export async function notifyReviewerNewUser(userId: string) {
     });
 
     console.log(`✅ Notified reviewers about new user: ${userId}`);
+    try {
+      const channel = 'notifications:reviewer';
+      const lastCreated = await prisma.notification.findFirst({ where: { scope: 'reviewer' }, orderBy: { created_at: 'desc' } });
+      if (lastCreated) {
+        const payload = {
+          type: 'notification:new',
+          data: {
+            id: lastCreated.id,
+            type: lastCreated.type,
+            title: lastCreated.title,
+            message: lastCreated.message,
+            data: lastCreated.data,
+            scope: lastCreated.scope,
+            vendorId: lastCreated.vendor_id,
+            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+          }
+        };
+        await redisPub.publish(channel, JSON.stringify(payload));
+        emitNotificationNew('reviewer', undefined, payload.data as any);
+
+        // publish unread count for reviewer
+        const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
+        const read = await prisma.notificationRead.count();
+        const unread = Math.max(0, total - read);
+        const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: unread, count: unread } };
+        await redisPub.publish('notifications:reviewer', JSON.stringify(unreadPayload));
+        emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: unread, count: unread } as any);
+      }
+    } catch (err) {
+      console.warn('Failed to publish reviewer new user notification to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying reviewer new user:', error);
@@ -201,6 +304,37 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
     });
 
     console.log(`✅ Notified reviewers about new submission: ${submissionId}`);
+    try {
+      const channel = 'notifications:reviewer';
+      const lastCreated = await prisma.notification.findFirst({ where: { scope: 'reviewer' }, orderBy: { created_at: 'desc' } });
+      if (lastCreated) {
+        const payload = {
+          type: 'notification:new',
+          data: {
+            id: lastCreated.id,
+            type: lastCreated.type,
+            title: lastCreated.title,
+            message: lastCreated.message,
+            data: lastCreated.data,
+            scope: lastCreated.scope,
+            vendorId: lastCreated.vendor_id,
+            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+          }
+        };
+        await redisPub.publish(channel, JSON.stringify(payload));
+        emitNotificationNew('reviewer', undefined, payload.data as any);
+
+        // publish simple unread count for reviewer scope (global)
+        const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
+        const read = await prisma.notificationRead.count();
+        const unread = Math.max(0, total - read);
+        const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: unread, count: unread } };
+        await redisPub.publish('notifications:reviewer', JSON.stringify(unreadPayload));
+        emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: unread, count: unread } as any);
+      }
+    } catch (err) {
+      console.warn('Failed to publish reviewer notification/new-count to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying reviewer new submission:', error);
@@ -256,6 +390,37 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
     });
 
     console.log(`✅ Notified approvers about reviewed submission: ${submissionId}`);
+    try {
+      const channel = 'notifications:approver';
+      const lastCreated = await prisma.notification.findFirst({ where: { scope: 'approver' }, orderBy: { created_at: 'desc' } });
+      if (lastCreated) {
+        const payload = {
+          type: 'notification:new',
+          data: {
+            id: lastCreated.id,
+            type: lastCreated.type,
+            title: lastCreated.title,
+            message: lastCreated.message,
+            data: lastCreated.data,
+            scope: lastCreated.scope,
+            vendorId: lastCreated.vendor_id,
+            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+          }
+        };
+        await redisPub.publish(channel, JSON.stringify(payload));
+        emitNotificationNew('approver', undefined, payload.data as any);
+
+        // publish unread count for approver
+        const total = await prisma.notification.count({ where: { scope: 'approver' } });
+        const read = await prisma.notificationRead.count();
+        const unread = Math.max(0, total - read);
+        const unreadPayload = { type: 'notification:unread_count', data: { scope: 'approver', unreadCount: unread, count: unread } };
+        await redisPub.publish('notifications:approver', JSON.stringify(unreadPayload));
+        emitNotificationUnreadCount('approver', undefined, { scope: 'approver', unreadCount: unread, count: unread } as any);
+      }
+    } catch (err) {
+      console.warn('Failed to publish approver reviewed notification to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying approver reviewed submission:', error);
@@ -332,6 +497,29 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
     });
 
     console.log(`✅ Notified reviewers about approved submission: ${submissionId}`);
+    try {
+      const channel = 'notifications:reviewer';
+      const lastCreated = await prisma.notification.findFirst({ where: { scope: 'reviewer' }, orderBy: { created_at: 'desc' } });
+      if (lastCreated) {
+        const payload = {
+          type: 'notification:new',
+          data: {
+            id: lastCreated.id,
+            type: lastCreated.type,
+            title: lastCreated.title,
+            message: lastCreated.message,
+            data: lastCreated.data,
+            scope: lastCreated.scope,
+            vendorId: lastCreated.vendor_id,
+            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+          }
+        };
+        await redisPub.publish(channel, JSON.stringify(payload));
+        emitNotificationNew('reviewer', undefined, payload.data as any);
+      }
+    } catch (err) {
+      console.warn('Failed to publish reviewer approved notification to Redis/socket:', err);
+    }
 
   } catch (error) {
     console.error('Error notifying reviewers about approved submission:', error);

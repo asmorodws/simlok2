@@ -54,6 +54,7 @@ export default function UserVerificationManagement({
 }: UserVerificationManagementProps) {
   const { showSuccess } = useToast();
   const { data: session, status: sessionStatus } = useSession();
+  const currentUserId = session?.user?.id;
   const [users, setUsers] = useState<UserData[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
@@ -424,7 +425,11 @@ export default function UserVerificationManagement({
             </thead>
 
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.filter(user => user.vendor_name !== "[DELETED VENDOR]").map((user) => (
+              {users
+                .filter(user => user.vendor_name !== "[DELETED VENDOR]")
+                // Prevent super admin from seeing (and acting on) their own account
+                .filter(user => !(isSuperAdmin && user.id === currentUserId))
+                .map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{user.officer_name}</div>

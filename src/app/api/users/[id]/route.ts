@@ -43,7 +43,10 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const whereClause: any = { id };
+    const whereClause: any = { 
+      id,
+      isActive: true // Only show active users
+    };
 
     // Role-based access control
     if (session.user.role === 'REVIEWER') {
@@ -201,7 +204,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const validatedData = verificationSchema.parse(body);
 
     // Check if user exists and is accessible by current role
-    const whereClause: any = { id };
+    const whereClause: any = { 
+      id,
+      isActive: true // Only allow verification of active users
+    };
     if (session.user.role === 'REVIEWER') {
       // Reviewers can only verify vendor users
       whereClause.role = 'VENDOR';
@@ -306,18 +312,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 
-    // Check if user has related data that would prevent deletion
-    const userSubmissions = await prisma.submission.count({
-      where: { user_id: id }
-    });
-
-    if (userSubmissions > 0) {
-      return NextResponse.json({ 
-        error: 'Cannot delete user with existing submissions. Please transfer or delete submissions first.' 
-      }, { status: 400 });
-    }
-
-    // Delete user
+    // Hard delete user - submissions will remain with denormalized data
     await prisma.user.delete({ where: { id } });
 
     return NextResponse.json({

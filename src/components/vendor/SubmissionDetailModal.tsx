@@ -19,63 +19,10 @@ import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import WorkersList from '@/components/common/WorkersList';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
+import NoteCard from '@/components/common/NoteCard';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
-
-interface Submission {
-  id: string;
-  approval_status: string;
-  review_status?: string;
-  note_for_approver?: string | null;
-  note_for_vendor?: string | null;
-  reviewed_at?: string | null;
-  approved_at?: string | null;
-  vendor_name: string;
-  based_on: string;
-  officer_name: string;
-  job_description: string;
-  work_location: string;
-  implementation: string | null;
-  working_hours: string;
-  other_notes?: string;
-  work_facilities: string;
-  simja_number?: string;
-  simja_date?: string | null;
-  sika_number?: string;
-  sika_date?: string | null;
-  // Supporting Documents 1
-  supporting_doc1_type?: string;
-  supporting_doc1_number?: string;
-  supporting_doc1_date?: string | null;
-  supporting_doc1_upload?: string;
-  // Supporting Documents 2
-  supporting_doc2_type?: string;
-  supporting_doc2_number?: string;
-  supporting_doc2_date?: string | null;
-  supporting_doc2_upload?: string;
-  simlok_number?: string;
-  simlok_date?: string | null;
-  worker_names: string;
-  content?: string | null;
-  notes?: string | null;
-  sika_document_upload?: string;
-  simja_document_upload?: string;
-  qrcode?: string;
-  created_at: string;
-  signer_position?: string;
-  signer_name?: string;
-  user: {
-    id: string;
-    officer_name: string;
-    email: string;
-    vendor_name: string;
-  };
-  approved_by_user?: {
-    id: string;
-    officer_name: string;
-    email: string;
-  } | null;
-}
+import type { Submission } from '@/types/submission';
 
 interface SubmissionDetailModalProps {
   submission: Submission | null;
@@ -214,7 +161,6 @@ export default function SubmissionDetailModal({
                           implementation: submission.implementation,
                           working_hours: submission.working_hours,
                           work_facilities: submission.work_facilities,
-                          other_notes: submission.other_notes,
                           content: submission.content
                         }, null, 2)}
                       </pre>
@@ -239,7 +185,7 @@ export default function SubmissionDetailModal({
                   />
                   <InfoCard
                     label="Alamat Email"
-                    value={submission.user?.email || '-'}
+                    value={submission.user_email || submission.user?.email || '-'}
                   />
                   <InfoCard
                     label="Berdasarkan"
@@ -511,7 +457,7 @@ export default function SubmissionDetailModal({
                     fallbackWorkers={submission.worker_names}
                     layout="grid"
                     showPhotos={true}
-                    maxDisplayCount={6}
+                    maxDisplayCount={8}
                   />
                 ) : (
                   <div className="text-center py-8 text-gray-500">
@@ -535,16 +481,8 @@ export default function SubmissionDetailModal({
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {submission.note_for_vendor && (
-                    <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start">
-                        <DocumentIcon className="h-5 w-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <h4 className="text-sm font-medium text-blue-800 mb-2">Catatan</h4>
-                          <p className="text-sm text-blue-700 whitespace-pre-line">
-                            {submission.note_for_vendor}
-                          </p>
-                        </div>
-                      </div>
+                    <div className="md:col-span-2">
+                      <NoteCard title="Catatan untuk Vendor" note={submission.note_for_vendor} />
                     </div>
                   )}
                   {submission.approval_status === 'PENDING_APPROVAL' && (

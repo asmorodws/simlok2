@@ -253,6 +253,12 @@ export async function POST(request: NextRequest) {
         data: {
           ...cleanedData,
           user_id: session.user.id,
+          // Denormalized user data - preserved if user is deleted
+          user_email: userExists.email,
+          user_officer_name: userExists.officer_name,
+          user_vendor_name: userExists.vendor_name,
+          user_phone_number: userExists.phone_number,
+          user_address: userExists.address,
           vendor_phone: userExists.phone_number, // Auto-fill dari data user
           simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
           sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,

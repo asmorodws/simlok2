@@ -17,10 +17,12 @@ import {
   BriefcaseIcon,
   DocumentIcon,
   DocumentArrowUpIcon,
-  EyeIcon
+  EyeIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
+import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 
@@ -30,6 +32,7 @@ import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
+import NoteCard from '@/components/common/NoteCard';
 
 // Types
 interface WorkerPhoto {
@@ -43,6 +46,7 @@ interface SubmissionDetail {
   id: string;
   vendor_name: string;
   vendor_phone?: string;
+  user_email?: string;
   based_on: string;
   officer_name: string;
   officer_email?: string;
@@ -350,6 +354,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   const [editableWorkerCount, setEditableWorkerCount] = useState(0);
   const [workerCountInput, setWorkerCountInput] = useState('0');
   const [savingWorkers, setSavingWorkers] = useState(false);
+  const [showConfirmSaveWorkers, setShowConfirmSaveWorkers] = useState(false);
 
   // Form states
 
@@ -877,6 +882,16 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     }
   };
 
+    const handleSaveClick = () => {
+      // Show confirmation modal before actually saving
+      setShowConfirmSaveWorkers(true);
+    };
+
+    const handleConfirmSave = async () => {
+      setShowConfirmSaveWorkers(false);
+      await saveWorkerChanges();
+    };
+
   const cancelWorkerEditing = () => {
     if (submission?.worker_list) {
       setEditableWorkers([...submission.worker_list]);
@@ -1335,10 +1350,11 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         value={submission.officer_name}
                         icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                       />
-                      {/* <InfoCard
-                        label="Alamat Email"
-                        value={submission.officer_email || '-'}
-                      /> */}
+                      <InfoCard
+                        label="Alamat Email Vendor"
+                        value={submission.user_email || '-'}
+                        icon={<EnvelopeIcon className="h-4 w-4 text-gray-500" />}
+                      />
                       <InfoCard
                         label="Nomor Telepon Vendor"
                         value={submission.vendor_phone || '-'}
@@ -1616,7 +1632,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                               Batal
                             </Button>
                             <Button
-                              onClick={saveWorkerChanges}
+                              onClick={handleSaveClick}
                               variant="primary"
                               size="sm"
                               disabled={savingWorkers}
@@ -1883,6 +1899,23 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
         onClose={handleClosePreview}
         fileUrl={previewModal.fileUrl}
         fileName={previewModal.fileName}
+      />
+
+      {/* Confirm save workers modal */}
+      <ConfirmModal
+        isOpen={showConfirmSaveWorkers}
+        onClose={() => setShowConfirmSaveWorkers(false)}
+        onConfirm={handleConfirmSave}
+        title={editableWorkerCount !== editableWorkers.length ? 'Jumlah pekerja tidak sesuai' : 'Konfirmasi Simpan Data Pekerja'}
+        message={
+          editableWorkerCount !== editableWorkers.length
+            ? `Jumlah pekerja yang dimasukan (${editableWorkerCount}) tidak sesuai dengan jumlah pekerja yang memiliki foto / daftar (${editableWorkers.length}). Jika Anda tetap menyimpan, jumlah pekerja akan diset ke ${editableWorkerCount}. Apakah Anda yakin ingin melanjutkan?`
+            : 'Anda yakin ingin menyimpan perubahan data pekerja ke database? Perubahan ini akan memperbarui daftar pekerja yang tersimpan.'
+        }
+        confirmText="Simpan"
+        cancelText="Batal"
+        variant={editableWorkerCount !== editableWorkers.length ? 'warning' : 'info'}
+        isLoading={savingWorkers}
       />
     </div>
   );

@@ -51,12 +51,24 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { officer_name, vendor_name, address, phone_number } = body;
+    const { officer_name, vendor_name, address, phone_number, email } = body;
+
+    // Check if email is being changed and already exists
+    if (email && email !== session.user.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (emailExists) {
+        return NextResponse.json({ error: 'Email sudah digunakan oleh user lain' }, { status: 400 });
+      }
+    }
 
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
+        email: email || undefined,
         officer_name: officer_name || undefined,
         vendor_name: vendor_name || undefined,
         address: address || undefined,

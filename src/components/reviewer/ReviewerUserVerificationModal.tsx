@@ -45,13 +45,33 @@ export default function ReviewerUserVerificationModal({
 
   if (!isOpen || !currentUser) return null;
 
-  const formatDate = (dateString: string | Date | null | undefined) => {
-    if (!dateString) return 'N/A';
-    
+  const formatDate = (dateInput: string | Date | number | null | undefined) => {
+    if (dateInput === null || dateInput === undefined) return 'N/A';
+
     try {
-      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
-      if (isNaN(date.getTime())) return 'N/A';
-      
+      let date: Date;
+
+      if (dateInput instanceof Date) {
+        date = dateInput;
+      } else if (typeof dateInput === 'number') {
+        // timestamp (ms)
+        date = new Date(dateInput);
+      } else if (typeof dateInput === 'string') {
+        // try parsing string (ISO or other)
+        date = new Date(dateInput);
+        if (isNaN(date.getTime())) {
+          // try Date.parse fallback
+          const parsed = Date.parse(dateInput);
+          if (!isNaN(parsed)) date = new Date(parsed);
+        }
+      } else {
+        // fallback to toString and attempt parse
+        const s = String(dateInput);
+        date = new Date(s);
+      }
+
+      if (!date || isNaN(date.getTime())) return 'N/A';
+
       return date.toLocaleDateString('id-ID', {
         weekday: 'long',
         year: 'numeric',
@@ -76,7 +96,7 @@ export default function ReviewerUserVerificationModal({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: action === 'approve' ? 'VERIFY' : 'REJECT'
+          action: action === 'approve' ? 'VERIFY' : 'REJECT'
         })
       });
 

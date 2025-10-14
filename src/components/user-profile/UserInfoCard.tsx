@@ -132,10 +132,9 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         body: JSON.stringify(dataToSend),
       });
 
-      const text = await response.text();
-
       if (!response.ok) {
-        throw new Error(text || "Gagal memperbarui profil");
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || "Gagal memperbarui profil");
       }
 
       showSuccess("Berhasil", "Profil berhasil diperbarui");

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { redisPub } from '@/lib/singletons';
+import { redisSub } from '@/lib/singletons';
 
 export const runtime = 'nodejs';
 
@@ -54,14 +54,14 @@ export async function GET(request: NextRequest) {
       }
       
       // Create a Redis subscriber for this connection
-      const subscriber = redisPub.duplicate();
-      
+      const subscriber = redisSub.duplicate();
+
       subscriber.subscribe(channelName, (err, count) => {
         if (err) {
           console.error('Redis subscribe error:', err);
           return;
         }
-        console.log(`📡 Subscribed to Redis channel: ${channelName} (${count} channels)`);
+        console.log(`📡 SSE Subscribed to Redis channel: ${channelName} (${count} channels)`);
       });
 
       subscriber.on('message', (channel, message) => {

@@ -45,11 +45,18 @@ export interface ReviewerSubmission extends Record<string, unknown> {
   scan_count?: number;
   last_scanned_at?: string | null;
 
-  user: {
+  // Denormalized user data
+  user_email?: string | null;
+  user_officer_name?: string | null;
+  user_vendor_name?: string | null;
+  user_phone_number?: string | null;
+  user_address?: string | null;
+
+  user?: {
     officer_name: string;
     email: string;
     vendor_name: string;
-  };
+  } | null;
 }
 
 export interface ReviewerTableProps {
@@ -152,8 +159,8 @@ export default function ReviewerTable({
             <div className="font-medium text-sm text-gray-900 truncate" title={s.vendor_name}>
               {s.vendor_name}
             </div>
-            <div className="text-xs text-gray-500 mt-1 truncate" title={s.user?.officer_name}>
-              {s.user?.officer_name ?? '-'}
+            <div className="text-xs text-gray-500 mt-1 truncate" title={s.user_officer_name || s.user?.officer_name || undefined}>
+              {s.user_officer_name || s.user?.officer_name || '-'}
             </div>
           </div>
         ),

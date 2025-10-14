@@ -25,6 +25,7 @@ import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
+import NoteCard from '@/components/common/NoteCard';
 
 import DatePicker from '@/components/form/DatePicker';
 
@@ -34,6 +35,7 @@ interface SubmissionDetail {
   approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   vendor_name: string;
   vendor_phone?: string;
+  user_email?: string;
   based_on: string;
   officer_name: string;
   officer_email?: string;
@@ -565,10 +567,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         label="Nama Petugas"
                         value={submission.officer_name}
                       />
-                      {/* <InfoCard
-                        label="Alamat Email"
-                        value={submission.officer_email || '-'}
-                      /> */}
+                      <InfoCard
+                        label="Alamat Email Vendor"
+                        value={submission.user_email || '-'}
+                      />
                       <InfoCard
                         label="Nomor Telepon Vendor"
                         value={submission.vendor_phone || '-'}
@@ -872,11 +874,9 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                           />
                         )}
                         {submission.note_for_vendor && (
-                          <InfoCard
-                            label="Catatan"
-                            value={submission.note_for_vendor}
-                            className="md:col-span-2"
-                          />
+                          <div className="md:col-span-2">
+                            <NoteCard title="Catatan untuk Vendor" note={submission.note_for_vendor} />
+                          </div>
                         )}
                         {submission.approved_by_name && (
                           <InfoCard
@@ -975,9 +975,8 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   <h3 className="text-lg font-medium text-gray-900">Proses Approval Final</h3>
                   {/* Review Information */}
                   {submission.note_for_approver && (
-                    <div className="bg-blue-50 rounded-lg p-6">
-                      <h4 className="text-base font-semibold text-gray-900 mb-4">Catatan Review</h4>
-                      <p className="text-gray-700 whitespace-pre-line">{submission.note_for_approver}</p>
+                    <div className="md:col-span-1">
+                      <NoteCard title="Catatan Review" note={submission.note_for_approver} />
                       {submission.reviewed_by_name && (
                         <p className="text-sm text-gray-500 mt-2">
                           Direview oleh: {submission.reviewed_by_name}

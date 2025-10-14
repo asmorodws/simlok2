@@ -498,10 +498,10 @@ async function main() {
         vendor_id: null,
         type: 'new_submission',
         title: 'Pengajuan Baru',
-        message: `Pengajuan baru dari ${submission.user.vendor_name || submission.user.officer_name}: ${submission.job_description}`,
+        message: `Pengajuan baru dari ${submission.user?.vendor_name || submission.user?.officer_name || 'Unknown'}: ${submission.job_description}`,
         data: JSON.stringify({
           submissionId: submission.id,
-          vendorName: submission.user.vendor_name || submission.user.officer_name,
+          vendorName: submission.user?.vendor_name || submission.user?.officer_name || 'Unknown',
           jobDescription: submission.job_description,
         }),
         created_at: submission.created_at,

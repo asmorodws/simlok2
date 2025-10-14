@@ -52,6 +52,11 @@ export const authOptions: NextAuthOptions = {
         });
         if (!user || !user.password) return null;
 
+        // Check if user is active
+        if (!user.isActive) {
+          throw new Error('ACCOUNT_DEACTIVATED');
+        }
+
         // Check if user verification status is REJECTED
         if (user.verification_status === 'REJECTED') {
           throw new Error('ACCOUNT_REJECTED');
@@ -130,10 +135,16 @@ export const authOptions: NextAuthOptions = {
         try {
           const latestUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { verified_at: true, role: true, verification_status: true }
+            select: { verified_at: true, role: true, verification_status: true, isActive: true }
           });
           
           if (latestUser) {
+            // If user is no longer active, clear the token
+            if (!latestUser.isActive) {
+              console.log('JWT callback - user deactivated, clearing session');
+              return {}; // Return empty object to clear token
+            }
+            
             token.verified_at = latestUser.verified_at;
             token.verification_status = latestUser.verification_status || 'PENDING';
             console.log('JWT callback - refreshed verified_at:', latestUser.verified_at);

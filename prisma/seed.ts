@@ -60,6 +60,7 @@ async function main() {
       vendor_name: null, // kosong untuk super admin
       verified_at: new Date(), // super admin sudah terverifikasi
       verified_by: "SYSTEM",
+      isActive: true,
       verification_status: "VERIFIED" as const,
     },
     {
@@ -324,6 +325,12 @@ async function main() {
         worker_count: workerCount, // Hitung dari worker_names
         content: null, // akan diisi setelah diapprove
         user_id: vendorData.id,
+  // Denormalized user fields to preserve vendor info if user is deleted
+  user_email: vendorData.email,
+  user_officer_name: vendorData.officer_name,
+  user_vendor_name: vendorData.vendor_name,
+  user_phone_number: vendorData.phone_number,
+  user_address: vendorData.address,
         review_status: "PENDING_REVIEW", // Semua pending review dari reviewer
         approval_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
         note_for_approver: null, // belum ada review

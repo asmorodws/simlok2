@@ -103,12 +103,18 @@ export interface Submission {
   implementation_start_date?: string | null;
   implementation_end_date?: string | null;
   vendor_phone?: string | null;
-  user: {
+  // Denormalized user data for preservation when user is deleted
+  user_email?: string | null;
+  user_officer_name?: string | null;
+  user_vendor_name?: string | null;
+  user_phone_number?: string | null;
+  user_address?: string | null;
+  user?: {
     id: string;
     officer_name: string;
     email: string;
     vendor_name: string;
-  };
+  } | null;
   approved_by_final_user?: {
     id: string;
     officer_name: string;

@@ -28,26 +28,26 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal menghapus user');
+        throw new Error(errorData.error || errorData.message || 'Gagal menonaktifkan user');
       }
 
       const result = await response.json();
       
       if (result.preservedSubmissions && result.preservedSubmissions > 0) {
         showSuccess(
-          'User berhasil dihapus', 
-          `${result.preservedSubmissions} submission telah dipertahankan dalam sistem`
+          'User berhasil dinonaktifkan', 
+          `Semua data submission tetap dipertahankan dalam sistem`
         );
       } else {
-        showSuccess('Berhasil', 'User berhasil dihapus');
+        showSuccess('Berhasil', 'User berhasil dinonaktifkan');
       }
       
       onUserDelete(user.id);
       onClose();
       
     } catch (error: any) {
-      console.error('Error deleting user:', error);
-      showError('Error', error.message || 'Gagal menghapus user');
+      console.error('Error deactivating user:', error);
+      showError('Error', error.message || 'Gagal menonaktifkan user');
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Hapus User</h2>
-              <p className="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan</p>
+                <p className="text-sm text-gray-500">User akan dihapus dari sistem. Submission tetap dipertahankan untuk integritas data.</p>
             </div>
           </div>
           <button
@@ -84,7 +84,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
               <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-red-700">
                 <p className="font-medium">Peringatan!</p>
-                <p>Tindakan ini akan menghapus user secara permanen dan tidak dapat dibatalkan.</p>
+                <p>Tindakan ini akan menghapus user dari sistem. Pengguna tidak akan bisa login lagi.</p>
               </div>
             </div>
             
@@ -150,14 +150,14 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
             Batal
           </button>
           <button
-            type="button"
-            onClick={handleDelete}
-            disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
-          >
-            <TrashIcon className="w-4 h-4" />
-            {loading ? 'Menghapus...' : 'Ya, Hapus User'}
-          </button>
+              type="button"
+              onClick={handleDelete}
+              disabled={loading}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center gap-2"
+            >
+              <TrashIcon className="w-4 h-4" />
+              {loading ? 'Menghapus...' : 'Ya, Hapus User'}
+            </button>
         </div>
       </div>
     </div>
