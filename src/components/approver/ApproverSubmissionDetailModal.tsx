@@ -1025,12 +1025,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                               <span className="font-medium text-gray-700">Status:</span>
                               {getStatusBadge(submission.approval_status)}
                             </div>
-                            {submission.note_for_vendor && (
-                              <div>
-                                <span className="font-medium text-gray-700">Catatan:</span>
-                                <p className="mt-1 text-gray-600">{submission.note_for_vendor}</p>
-                              </div>
-                            )}
+                           
                             {submission.approved_by_name && (
                               <div className="pt-2 border-t border-gray-200">
                                 <span className="font-medium text-gray-700">Diproses oleh:</span>
