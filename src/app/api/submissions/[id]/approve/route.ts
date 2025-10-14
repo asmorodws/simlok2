@@ -19,16 +19,23 @@ async function generateSimlokNumber(): Promise<string> {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0'); // MM format
 
-  // Get the last SIMLOK number for current month/year
+  // Prefer querying by simlok_date (indexed) for performance instead of string contains
+  // Build month range (start of month inclusive, start of next month exclusive)
+  const startOfMonth = new Date(year, parseInt(month, 10) - 1, 1);
+  const startOfNextMonth = new Date(year, parseInt(month, 10), 1);
+
+  // Get the last approved submission in the month (use simlok_date range)
   const lastSubmission = await prisma.submission.findFirst({
     where: {
-      simlok_number: {
-        contains: `/${month}/${year}`
+      simlok_date: {
+        gte: startOfMonth,
+        lt: startOfNextMonth,
       }
     },
-    orderBy: {
-      simlok_number: 'desc'
-    }
+    orderBy: [
+      { simlok_date: 'desc' },
+      { simlok_number: 'desc' }
+    ]
   });
 
   let nextNumber = 1;
@@ -119,31 +126,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       };
     }
 
-    // Update submission
+    // Update submission. Return only the updated submission fields (avoid fetching full user object)
     const updatedSubmission = await prisma.submission.update({
       where: { id },
       data: updateData,
-      include: {
-        user: true
-      }
     });
 
     // Notify vendor of status change (only if user still exists)
+    // Fire-and-forget so notifications don't delay the HTTP response.
     if (existingSubmission.user_id) {
-      await import('@/server/events').then(({ notifyVendorStatusChange }) => 
-        notifyVendorStatusChange(
-          existingSubmission.user_id!, 
-          id, 
-          validatedData.approval_status as 'APPROVED' | 'REJECTED'
+      import('@/server/events')
+        .then(({ notifyVendorStatusChange }) =>
+          notifyVendorStatusChange(
+            existingSubmission.user_id!,
+            id,
+            validatedData.approval_status as 'APPROVED' | 'REJECTED'
+          )
         )
-      );
+        .catch(err => console.error('notifyVendorStatusChange error (async):', err));
     }
 
-    // If approved, also notify reviewer
+    // If approved, also notify reviewer (async)
     if (validatedData.approval_status === 'APPROVED') {
-      await import('@/server/events').then(({ notifyReviewerSubmissionApproved }) => 
-        notifyReviewerSubmissionApproved(id)
-      );
+      import('@/server/events')
+        .then(({ notifyReviewerSubmissionApproved }) =>
+          notifyReviewerSubmissionApproved(id)
+        )
+        .catch(err => console.error('notifyReviewerSubmissionApproved error (async):', err));
     }
 
     return NextResponse.json({

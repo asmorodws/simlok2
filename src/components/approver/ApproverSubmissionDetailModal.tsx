@@ -20,6 +20,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
+import { useRealTimeNotifications } from '@/hooks/useRealTimeNotifications';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
@@ -140,6 +141,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     fileName: ''
   });
   const { showSuccess, showError } = useToast();
+  const { eventSource, isConnected } = useRealTimeNotifications();
 
   // Function to generate auto SIMLOK number - mengikuti sistem admin yang sudah ada
   const generateSimlokNumber = async () => {
@@ -216,7 +218,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     try {
       setLoading(true);
       
-      const response = await fetch(`/api/submissions/${submissionId}`);
+  const response = await fetch(`/api/submissions/${submissionId}`, { cache: 'no-store' });
       if (!response.ok) {
         if (response.status === 404) {
           showError('Pengajuan Tidak Ditemukan', 'Pengajuan sudah dihapus oleh vendor');
@@ -271,7 +273,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     
     try {
       setLoadingScanHistory(true);
-      const response = await fetch(`/api/submissions/${submissionId}/scans`);
+  const response = await fetch(`/api/submissions/${submissionId}/scans`, { cache: 'no-store' });
       
       if (!response.ok) {
         throw new Error('Failed to fetch scan history');
@@ -293,6 +295,70 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       fetchScanHistory();
     }
   }, [isOpen, submissionId]);
+
+  // Listen to SSE notifications and refetch submission detail when related notifications arrive
+  useEffect(() => {
+    if (!eventSource || !submissionId) return;
+
+    const handler = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        // message.data may be a notification payload; the nested `data` field might be a JSON string
+        const payload = message.data || {};
+
+        // Try to extract submissionId from payload.data (which can be stringified JSON) or payload directly
+        let inner = payload.data ?? payload;
+        if (typeof inner === 'string') {
+          try {
+            inner = JSON.parse(inner);
+          } catch (err) {
+            // ignore parse error
+          }
+        }
+
+        const notifiedSubmissionId = inner?.submissionId || inner?.submission_id || payload?.submissionId || payload?.submission_id;
+        if (notifiedSubmissionId && String(notifiedSubmissionId) === String(submissionId)) {
+          // refetch detail to show latest status
+          fetchSubmissionDetail();
+        }
+      } catch (err) {
+        // ignore malformed messages
+      }
+    };
+
+    eventSource.addEventListener('message', handler as EventListener);
+
+    return () => {
+      try { eventSource.removeEventListener('message', handler as EventListener); } catch (e) { /* ignore */ }
+    };
+  }, [eventSource, submissionId]);
+
+  // Fallback polling when SSE is not available: poll submission detail every 5s while modal is open
+  useEffect(() => {
+    if (isConnected) return; // SSE available, no polling needed
+    if (!isOpen || !submissionId) return;
+
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        await fetchSubmissionDetail();
+      } catch (e) {
+        // ignore polling errors
+      }
+    };
+
+    // Initial immediate fetch to reduce perceived latency
+    tick();
+
+    const intervalId = window.setInterval(tick, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isConnected, isOpen, submissionId]);
 
   const handleViewPdf = () => {
     setIsPdfModalOpen(true);
@@ -1021,10 +1087,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             {submission.approval_status === 'APPROVED' ? 'Pengajuan Disetujui' : 'Pengajuan Ditolak'}
                           </h4>
                           <div className="space-y-2 text-sm">
-                            <div className="flex items-center space-x-2">
+                            {/* <div className="flex items-center space-x-2">
                               <span className="font-medium text-gray-700">Status:</span>
                               {getStatusBadge(submission.approval_status)}
-                            </div>
+                            </div> */}
                            
                             {submission.approved_by_name && (
                               <div className="pt-2 border-t border-gray-200">

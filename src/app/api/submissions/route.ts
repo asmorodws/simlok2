@@ -193,17 +193,30 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Validate required fields
+    // Validate required fields (use Indonesian error messages and friendly labels)
     const requiredFields = [
       'vendor_name', 'based_on', 'officer_name', 'job_description',
       'work_location', 'working_hours', 'work_facilities', 'worker_names'
     ];
 
+    const fieldLabels: Record<string, string> = {
+      vendor_name: 'Nama Vendor',
+      based_on: 'Berdasarkan',
+      officer_name: 'Nama Petugas',
+      job_description: 'Deskripsi Pekerjaan',
+      work_location: 'Lokasi Kerja',
+      working_hours: 'Jam Kerja',
+      work_facilities: 'Sarana Kerja',
+      worker_names: 'Daftar Pekerja'
+    };
+
     for (const field of requiredFields) {
       if (!body[field as keyof SubmissionData]) {
-        console.log(`POST /api/submissions - Missing required field: ${field}`);
+        const label = fieldLabels[field] || field;
+        console.log(`POST /api/submissions - Field wajib tidak diisi: ${field}`);
         return NextResponse.json({
-          error: `Field ${field} is required`
+          error: `Field wajib: ${label} harus diisi`,
+          field: field
         }, { status: 400 });
       }
     }

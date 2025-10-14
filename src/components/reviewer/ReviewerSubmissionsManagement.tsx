@@ -114,7 +114,16 @@ export default function ReviewerSubmissionsManagement() {
       if (filters.endDate) params.append('endDate', filters.endDate);
 
       const response = await fetch(`/api/submissions/export?${params}`);
-      if (!response.ok) throw new Error('Gagal mengekspor data');
+      if (!response.ok) {
+        // Try to parse JSON error body
+        let errBody: any = null;
+        try { errBody = await response.json(); } catch (e) { /* ignore */ }
+        if (errBody?.error === 'NO_DATA') {
+          showError('Tidak ada data', 'Tidak ada data untuk rentang tanggal atau filter yang dipilih.');
+          return;
+        }
+        throw new Error('Gagal mengekspor data');
+      }
 
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = 'Data_Pengajuan_SIMLOK.xlsx';

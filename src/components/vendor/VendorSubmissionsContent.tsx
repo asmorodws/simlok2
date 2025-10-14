@@ -373,41 +373,46 @@ export default function VendorSubmissionsContent() {
         </Card>
       ) : (
         <>
-          <SubmissionsTable
-            submissions={submissions.map((s: any) => ({
-              id: s.id,
-              job_description: s.job_description,
-              officer_name: s.officer_name,
-              work_location: s.work_location,
-              work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
-              approval_status: s.approval_status,
-              review_status: s.review_status ?? 'PENDING_REVIEW',
-              simlok_number: s.simlok_number,
-              created_at: s.created_at,
-            }))}
-            loading={loading}
-            onView={handleViewDetail}
-            onDelete={handleDelete}
-            formatDate={formatDate}
-          />
+          {/* Desktop / tablet: show table; Mobile: hide table and show card view */}
+          <div className="hidden sm:block">
+            <SubmissionsTable
+              submissions={submissions.map((s: any) => ({
+                id: s.id,
+                job_description: s.job_description,
+                officer_name: s.officer_name,
+                work_location: s.work_location,
+                work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                approval_status: s.approval_status,
+                review_status: s.review_status ?? 'PENDING_REVIEW',
+                simlok_number: s.simlok_number,
+                created_at: s.created_at,
+              }))}
+              loading={loading}
+              onView={handleViewDetail}
+              onDelete={handleDelete}
+              formatDate={formatDate}
+            />
+          </div>
 
-          <SubmissionsCardView
-            submissions={submissions.map((s: any) => ({
-              id: s.id,
-              job_description: s.job_description,
-              officer_name: s.officer_name,
-              work_location: s.work_location,
-              work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
-              approval_status: s.approval_status,
-              review_status: s.review_status ?? 'PENDING_REVIEW',
-              simlok_number: s.simlok_number,
-              created_at: s.created_at,
-            }))}
-            loading={loading}
-            onView={handleViewDetail}
-            onDelete={handleDelete}
-            formatDate={formatDate}
-          />
+          <div className="block sm:hidden">
+            <SubmissionsCardView
+              submissions={submissions.map((s: any) => ({
+                id: s.id,
+                job_description: s.job_description,
+                officer_name: s.officer_name,
+                work_location: s.work_location,
+                work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                approval_status: s.approval_status,
+                review_status: s.review_status ?? 'PENDING_REVIEW',
+                simlok_number: s.simlok_number,
+                created_at: s.created_at,
+              }))}
+              loading={loading}
+              onView={handleViewDetail}
+              onDelete={handleDelete}
+              formatDate={formatDate}
+            />
+          </div>
         </>
       )}
 

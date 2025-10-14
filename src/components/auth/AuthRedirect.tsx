@@ -15,7 +15,9 @@ export default function AuthRedirect({
   useEffect(() => {
     if (status === "loading") return; // tunggu dulu
 
-    if (session?.user?.role && session.accessToken) {
+    // If the session is authenticated, redirect based on role.
+    // Avoid relying on optional properties like accessToken which may not be present.
+    if (status === "authenticated" && session?.user?.role) {
       switch (session.user.role) {
         case "VENDOR":
           router.replace("/vendor");
@@ -49,6 +51,6 @@ export default function AuthRedirect({
     );
   }
 
-  // hanya render children kalau memang BELUM login
-  return <>{!session ? children : null}</>;
+  // Hanya render children kalau user TIDAK terautentikasi.
+  return <>{status !== "authenticated" ? children : null}</>;
 }

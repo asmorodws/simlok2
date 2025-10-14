@@ -97,6 +97,11 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // If no submissions found, inform client so it can show a friendly toast instead of downloading an empty file
+    if (!submissions || submissions.length === 0) {
+      return NextResponse.json({ error: 'NO_DATA', message: 'Tidak ada data untuk rentang tanggal atau filter yang diberikan' }, { status: 404 });
+    }
+
     // Prepare data for Excel
     const excelData = submissions.map((submission, index) => ({
       'No': index + 1,
