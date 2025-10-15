@@ -12,6 +12,8 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
+import LineChartOne from '@/components/ui/chart/LineChart';
+import BarChartOne from '@/components/ui/chart/BarChart';
 
 interface StatsData {
   pendingReview: number;
@@ -160,19 +162,13 @@ export default function VisitorDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">Dashboard Visitor</h1>
-              <p className="text-gray-600 mt-1">
-                Monitoring sistem SIMLOK secara real-time
-              </p>
+              <p className="text-gray-600 mt-1">Monitoring sistem SIMLOK secara real-time</p>
             </div>
             <div className="flex items-center space-x-4 mt-4 sm:mt-0">
-              <div className="flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-                <EyeIcon className="w-4 h-4 mr-2" />
-                Mode Baca Saja
-              </div>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing || loading}
-                className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
+                className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors text-sm"
               >
                 <ArrowPathIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
                 {refreshing ? 'Memuat...' : 'Refresh'}
@@ -181,108 +177,154 @@ export default function VisitorDashboard() {
           </div>
         </div>
 
-        {/* Statistics Cards - Sama seperti Reviewer Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Total Submission</h3>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats?.totalSubmissions || 0}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <DocumentTextIcon className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
+        {/* Small Line Chart */}
+        <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-700">Chart SIMLOK</h2>
           </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Menunggu Review</h3>
-                <p className="text-2xl font-bold text-amber-600 mt-1">{stats?.pendingReview || 0}</p>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-full">
-                <ClockIcon className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Memenuhi Syarat</h3>
-                <p className="text-2xl font-bold text-green-600 mt-1">{stats?.meetsRequirements || 0}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircleIcon className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Tidak Memenuhi Syarat</h3>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats?.notMeetsRequirements || 0}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
+          <div className="w-full">
+            <LineChartOne />
           </div>
         </div>
 
-        {/* Approval Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
-                <p className="text-2xl font-bold text-purple-600 mt-1">{stats?.pendingApproval || 0}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <ClockIcon className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
+        {/* Vendor Bar Chart */}
+        <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-700">Chart User</h2>
           </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
-                <p className="text-2xl font-bold text-green-600 mt-1">{stats?.approved || 0}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircleIcon className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats?.rejected || 0}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <XCircleIcon className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
+          <div className="w-full">
+            <BarChartOne />
           </div>
         </div>
 
-        {/* User Verification Stats - Sama seperti Reviewer Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="bg-white rounded-xl border shadow-sm p-6">
+        {/* Unified stats grid: show up to 5 cards per row on large screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+          {/* Total Submission */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">User Perlu Verifikasi</h3>
-                <p className="text-2xl font-bold text-purple-600 mt-1">
-                  {stats?.pendingUserVerifications || 0}
-                </p>
+                <h3 className="text-xs font-medium text-gray-500">Total Submission</h3>
+                <p className="text-xl font-semibold text-blue-600 mt-1">{stats?.totalSubmissions || 0}</p>
               </div>
-              <div className="p-3 bg-purple-100 rounded-full">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-blue-100 rounded-full">
+                <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Menunggu Review */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Menunggu Review</h3>
+                <p className="text-xl font-semibold text-amber-600 mt-1">{stats?.pendingReview || 0}</p>
+              </div>
+              <div className="p-2 bg-amber-100 rounded-full">
+                <ClockIcon className="w-5 h-5 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Memenuhi Syarat */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Memenuhi Syarat</h3>
+                <p className="text-xl font-semibold text-green-600 mt-1">{stats?.meetsRequirements || 0}</p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Tidak Memenuhi Syarat */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Tidak Memenuhi Syarat</h3>
+                <p className="text-xl font-semibold text-red-600 mt-1">{stats?.notMeetsRequirements || 0}</p>
+              </div>
+              <div className="p-2 bg-red-100 rounded-full">
+                <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Menunggu Persetujuan */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Menunggu Persetujuan</h3>
+                <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingApproval || 0}</p>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-full">
+                <ClockIcon className="w-5 h-5 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Disetujui */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Disetujui</h3>
+                <p className="text-xl font-semibold text-green-600 mt-1">{stats?.approved || 0}</p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircleIcon className="w-5 h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Ditolak */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Ditolak</h3>
+                <p className="text-xl font-semibold text-red-600 mt-1">{stats?.rejected || 0}</p>
+              </div>
+              <div className="p-2 bg-red-100 rounded-full">
+                <XCircleIcon className="w-5 h-5 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total QR Scan */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Total QR Scan</h3>
+                <p className="text-xl font-semibold text-cyan-600 mt-1">{stats?.totalQrScans || 0}</p>
+              </div>
+              <div className="p-2 bg-cyan-100 rounded-full">
+                <QrCodeIcon className="w-5 h-5 text-cyan-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Total User */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">Total User</h3>
+                <p className="text-xl font-medium text-slate-600 mt-1">{stats?.totalUsers || 0}</p>
+              </div>
+              <div className="p-2 bg-slate-100 rounded-full">
+                <UsersIcon className="w-5 h-5 text-slate-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* User Perlu Verifikasi */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-medium text-gray-500">User Perlu Verifikasi</h3>
+                <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingUserVerifications || 0}</p>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-full">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
@@ -290,50 +332,25 @@ export default function VisitorDashboard() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border shadow-sm p-6">
+          {/* User Terverifikasi */}
+          <div className="bg-white rounded-xl border shadow-sm p-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-medium text-gray-500">User Terverifikasi</h3>
-                <p className="text-2xl font-bold text-indigo-600 mt-1">
-                  {stats?.totalVerifiedUsers || 0}
-                </p>
+                <h3 className="text-xs font-medium text-gray-500">User Terverifikasi</h3>
+                <p className="text-xl font-semibold text-indigo-600 mt-1">{stats?.totalVerifiedUsers || 0}</p>
               </div>
-              <div className="p-3 bg-indigo-100 rounded-full">
-                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-indigo-100 rounded-full">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
           </div>
+
         </div>
 
-        {/* Additional Stats - QR Scans */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Total QR Scan</h3>
-                <p className="text-2xl font-bold text-cyan-600 mt-1">{stats?.totalQrScans || 0}</p>
-              </div>
-              <div className="p-3 bg-cyan-100 rounded-full">
-                <QrCodeIcon className="w-6 h-6 text-cyan-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Total User</h3>
-                <p className="text-2xl font-bold text-slate-600 mt-1">{stats?.totalUsers || 0}</p>
-              </div>
-              <div className="p-3 bg-slate-100 rounded-full">
-                <UsersIcon className="w-6 h-6 text-slate-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* End of unified stats grid */}
         
       </div>
     </div>
