@@ -5,7 +5,6 @@ import {
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
-  EyeIcon,
   UsersIcon,
   QrCodeIcon,
   DocumentTextIcon,
@@ -14,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
+import PieChart from '@/components/ui/chart/PieChart';
 
 interface StatsData {
   pendingReview: number;
@@ -194,6 +194,45 @@ export default function VisitorDashboard() {
           </div>
           <div className="w-full">
             <BarChartOne />
+          </div>
+        </div>
+
+        {/* Two Pie Charts: QR scan status & comparison between simlok and vendor */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-white rounded-xl border shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">QR SIMLOK</h3>
+              <p className="text-xs text-gray-500">Jumlah QR yang sudah / belum di-scan</p>
+            </div>
+            <PieChart
+              series={[240, 60]}
+              labels={["Sudah di-scan", "Belum di-scan"]}
+              colors={["#465FFF", "#10B981"]}
+              height={280}
+              donut={true}
+            />
+          </div>
+
+          <div className="bg-white rounded-xl border shadow-sm p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Jumlah SIMLOK dan Vendor</h3>
+              <p className="text-xs text-gray-500">Jumlah Simlok dibandingkan dengan jumlah Vendor</p>
+            </div>
+            {/* compute vendor total from the same sample monthly data used in BarChart */}
+            {(() => {
+              const sampleVendorsMonthly = [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27];
+              const vendorTotal = sampleVendorsMonthly.reduce((a, b) => a + b, 0);
+              const simlokTotal = stats?.totalSubmissions || 0;
+              return (
+                <PieChart
+                  series={[simlokTotal, vendorTotal]}
+                  labels={["Jumlah Simlok", "Jumlah Vendor"]}
+                  colors={["#465FFF", "#F87171"]}
+                  height={280}
+                  donut={true}
+                />
+              );
+            })()}
           </div>
         </div>
 
