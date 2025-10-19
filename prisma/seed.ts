@@ -345,8 +345,14 @@ async function main() {
         // Semua submission memiliki nomor dan tanggal SIKA dan SIMJA
         simja_number: `SIMJA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
         simja_date: new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000), // 0-10 hari sebelum created_at
+        simja_type: ['Ast. Man. Facility Management', 'Ast. Man. Engineering', 'Ast. Man. Production', 'Manager Operasional'][Math.floor(Math.random() * 4)], // Random SIMJA type
         sika_number: `SIKA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
         sika_date: new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000), // 0-15 hari sebelum created_at
+        sika_type: ['Pekerjaan Dingin', 'Pekerjaan Panas', 'Bekerja di Ketinggian', 'Confined Space'][Math.floor(Math.random() * 4)], // Random SIKA type
+        // HSSE Pass at submission level (optional)
+        hsse_pass_number: Math.random() > 0.5 ? `HSSE/2024/${String(submissionCount + 1).padStart(4, '0')}` : null,
+        hsse_pass_valid_thru: Math.random() > 0.5 ? new Date(createdDate.getTime() + Math.random() * 365 * 24 * 60 * 60 * 1000) : null, // 0-365 hari ke depan
+        hsse_pass_document_upload: null, // bisa diupload vendor
         simlok_number: null, // akan diisi setelah diapprove
         simlok_date: null, // akan diisi setelah diapprove
         implementation_start_date: null, // akan diisi setelah diapprove
@@ -372,6 +378,10 @@ async function main() {
           data: {
             worker_name: workerName.trim(),
             worker_photo: null, // akan diupload nanti
+            // HSSE Pass fields for each worker (required in form, but seed with sample data)
+            hsse_pass_number: `HSSE-W-${String(submissionCount + 1).padStart(4, '0')}-${workerNamesArray.indexOf(workerName) + 1}`,
+            hsse_pass_valid_thru: new Date(createdDate.getTime() + (Math.random() * 180 + 180) * 24 * 60 * 60 * 1000), // 180-360 hari ke depan
+            hsse_pass_document_upload: null, // akan diupload nanti
             submission_id: createdSubmission.id,
           },
         });
@@ -402,6 +412,10 @@ async function main() {
     const reviewedAt = new Date(new Date(submission.created_at).getTime() + Math.random() * 7 * 24 * 60 * 60 * 1000); // 0-7 hari setelah created
     const approvedAt = new Date(reviewedAt.getTime() + Math.random() * 3 * 24 * 60 * 60 * 1000); // 0-3 hari setelah reviewed
     
+    // Generate SIMLOK number with new format: autoincrement/S00330/tahun
+    const year = approvedAt.getFullYear();
+    const simlokNumber = `${approvedSubmissions.length + 1}/S00330/${year}`;
+    
     const updatedSubmission = await prisma.submission.update({
       where: { id: submission.id },
       data: {
@@ -414,13 +428,13 @@ async function main() {
         approved_by: approverUser.officer_name,
         approved_by_final_id: approverUser.id,
         approved_at: approvedAt,
-        simlok_number: `SIMLOK/2024/${String(approvedSubmissions.length + 1).padStart(4, '0')}`,
+        simlok_number: simlokNumber,
         simlok_date: approvedAt,
         implementation_start_date: new Date(approvedAt.getTime() + 2 * 24 * 60 * 60 * 1000), // 2 hari setelah approval
         implementation_end_date: new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 hari setelah approval
         signer_position: 'Manager Operasional',
         signer_name: 'Dr. Ir. Budi Santoso, M.T.',
-        qrcode: `QR-${submission.id.slice(-8).toUpperCase()}-2024`,
+        qrcode: `QR-${submission.id.slice(-8).toUpperCase()}-${year}`,
         content: `Pelaksanaan pekerjaan ${submission.job_description} di lokasi ${submission.work_location}. Berlaku mulai ${new Date(approvedAt.getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')} sampai ${new Date(approvedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID')}.`,
         implementation: `Pekerjaan dilaksanakan sesuai jadwal kerja ${submission.working_hours} dengan menggunakan fasilitas ${submission.work_facilities}. Semua pekerja wajib menggunakan APD lengkap dan mengikuti protokol keselamatan kerja.`
       }

@@ -15,7 +15,8 @@ import {
   DocumentIcon,
   CalendarIcon,
   EyeIcon,
-  MapPinIcon
+  MapPinIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -49,8 +50,16 @@ interface SubmissionDetail {
   worker_count: number | null;
   simja_number?: string;
   simja_date?: string | null;
+  simja_type?: string | null;
+  simja_document_upload?: string;
   sika_number?: string;
   sika_date?: string | null;
+  sika_type?: string | null;
+  sika_document_upload?: string;
+  // HSSE Pass at submission level (optional)
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | null;
+  hsse_pass_document_upload?: string | null;
   // Supporting Documents 1
   supporting_doc1_type?: string;
   supporting_doc1_number?: string;
@@ -74,8 +83,6 @@ interface SubmissionDetail {
   note_for_vendor?: string;
   approved_by_name?: string;
   approved_by_email?: string;
-  sika_document_upload?: string;
-  simja_document_upload?: string;
   qrcode?: string;
   created_at: string;
   reviewed_at?: string;
@@ -86,6 +93,9 @@ interface SubmissionDetail {
     id: string;
     worker_name: string;
     worker_photo: string | null;
+    hsse_pass_number?: string | null;
+    hsse_pass_valid_thru?: string | null;
+    hsse_pass_document_upload?: string | null;
     created_at: string;
   }>;
 }
@@ -143,25 +153,24 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   const { showSuccess, showError } = useToast();
   const { eventSource, isConnected } = useRealTimeNotifications();
 
-  // Function to generate auto SIMLOK number - mengikuti sistem admin yang sudah ada
+  // Function to generate auto SIMLOK number - format: nomor/S00330/tahun
   const generateSimlokNumber = async () => {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // MM format
 
     try {
-      // Call API untuk mendapatkan nomor terakhir (untuk demo, kita gunakan format sederhana)
       // Server akan handle logic yang sebenarnya saat approve
+      // Ini hanya placeholder untuk UI preview
       
-      // Fallback format client-side: auto-increment berdasarkan bulan/tahun saat ini
-      // Format: sequential_number/MM/YYYY (contoh: 1/09/2025, 2/09/2025)
+      // Fallback format client-side: auto-increment/S00330/tahun
+      // Format: sequential_number/S00330/YYYY (contoh: 1/S00330/2025, 2/S00330/2025)
       const timestamp = Date.now();
-      const fallbackNumber = timestamp % 1000; // Simple fallback
-      return `${fallbackNumber}/${month}/${year}`;
+      const fallbackNumber = timestamp % 1000; // Simple fallback untuk preview
+      return `${fallbackNumber}/S00330/${year}`;
     } catch (error) {
       // Fallback jika error
       const fallbackNumber = Math.floor(Math.random() * 1000) + 1;
-      return `${fallbackNumber}/${month}/${year}`;
+      return `${fallbackNumber}/S00330/${year}`;
     }
   };
 
@@ -634,11 +643,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         value={submission.officer_name}
                       />
                       <InfoCard
-                        label="Alamat Email Vendor"
+                        label="Alamat Email"
                         value={submission.user_email || '-'}
                       />
                       <InfoCard
-                        label="Nomor Telepon Vendor"
+                        label="Nomor Telepon"
                         value={submission.vendor_phone || '-'}
                       />
                       <InfoCard
@@ -649,89 +658,149 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                     </div>
                   </DetailSection>
 
-                  {/* Informasi Dokumen SIMJA/SIKA - tetap tampilkan data legacy */}
+                  {/* Informasi Dokumen SIMJA/SIKA/HSSE - tetap tampilkan data legacy */}
                   <DetailSection 
-                    title="Informasi Dokumen (SIMJA/SIKA)" 
+                    title="Informasi Dokumen (SIMJA/SIKA/HSSE)" 
                     icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* SIMJA Section */}
                       {submission.simja_number && (
                         <InfoCard
                           label="Nomor SIMJA"
                           value={submission.simja_number}
                         />
                       )}
+                      {/* {submission.simja_type && (
+                        <InfoCard
+                          label="Tipe SIMJA"
+                          value={submission.simja_type}
+                        />
+                      )} */}
                       {submission.simja_date && (
                         <InfoCard
                           label="Tanggal SIMJA"
                           value={formatDate(submission.simja_date)}
                         />
                       )}
+                      
+                      {/* SIKA Section */}
                       {submission.sika_number && (
                         <InfoCard
                           label="Nomor SIKA"
                           value={submission.sika_number}
                         />
                       )}
+                      {/* {submission.sika_type && (
+                        <InfoCard
+                          label="Tipe SIKA"
+                          value={submission.sika_type}
+                        />
+                      )} */}
                       {submission.sika_date && (
                         <InfoCard
                           label="Tanggal SIKA"
                           value={formatDate(submission.sika_date)}
                         />
                       )}
+                      
+                      {/* HSSE Pass Section */}
+                      {submission.hsse_pass_number && (
+                        <InfoCard
+                          label="Nomor HSSE Pass"
+                          value={submission.hsse_pass_number}
+                        />
+                      )}
+                      {submission.hsse_pass_valid_thru && (
+                        <InfoCard
+                          label="Masa berlaku HSSE pass"
+                          value={formatDate(submission.hsse_pass_valid_thru)}
+                        />
+                      )}
+                      
                       <InfoCard
                         label="Tanggal Pengajuan"
                         value={formatDate(submission.created_at)}
                       />
                     </div>
-                    <div className="grid grid-cols-1 mt-5 md:grid-cols-2 gap-4">
-                      {/* {submission.sika_document_upload && (
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900">Dokumen SIKA</p>
-                              <p className="text-sm text-gray-500">File tersedia</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
-                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <EyeIcon className="w-4 h-4" />
-                            <span>Lihat</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {submission.simja_document_upload && (
-                        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-gray-900">Dokumen SIMJA</p>
-                              <p className="text-sm text-gray-500">File tersedia</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
-                            className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <EyeIcon className="w-4 h-4" />
-                            <span>Lihat</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {!submission.sika_document_upload && !submission.simja_document_upload && (
-                        <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                          <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                          <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
-                          <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
-                        </div>
-                      )} */}
-                    </div>
                   </DetailSection>
+
+                  {/* SIMJA/SIKA/HSSE Document Uploads - jika ada */}
+                  {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
+                    <DetailSection
+                      title="File Dokumen SIMJA/SIKA/HSSE"
+                      icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
+                    >
+                      <div className={`grid grid-cols-1 gap-4 ${
+                        submission.hsse_pass_document_upload 
+                          ? 'md:grid-cols-3' 
+                          : 'md:grid-cols-2'
+                      }`}>
+                        {submission.simja_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-orange-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIMJA</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.simja_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.simja_document_upload!, 'Dokumen SIMJA')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {submission.sika_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-red-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen SIKA</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.sika_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {submission.hsse_pass_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen HSSE Pass</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.hsse_pass_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.hsse_pass_document_upload!, 'Dokumen HSSE Pass')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </DetailSection>
+                  )}
 
                   {/* Dokumen Pendukung - tampilan bersebelahan */}
                   {(submission.supporting_doc1_type || submission.supporting_doc2_type) && (
@@ -1023,10 +1092,36 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
                           {/* Info Section */}
                           <div className="px-4 pb-4">
-                            <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">
+                            <h4 className="font-semibold text-gray-900 text-sm mb-2 truncate">
                               {worker.worker_name}
                             </h4>
-                            
+                            {(worker.hsse_pass_number || worker.hsse_pass_valid_thru || worker.hsse_pass_document_upload) && (
+                              <div className="space-y-1 text-xs text-gray-600 border-t pt-2 mt-2">
+                                {worker.hsse_pass_number && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">HSSE Pass:</span>
+                                    <span>{worker.hsse_pass_number}</span>
+                                  </div>
+                                )}
+                                {worker.hsse_pass_valid_thru && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">Masa berlaku HSSE pass:</span>
+                                    <span>{new Date(worker.hsse_pass_valid_thru).toLocaleDateString('id-ID')}</span>
+                                  </div>
+                                )}
+                                {worker.hsse_pass_document_upload && (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={() => handleFileView(worker.hsse_pass_document_upload!, `Dokumen HSSE Pass - ${worker.worker_name}`)}
+                                      className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                      <EyeIcon className="w-4 h-4" />
+                                      <span>Lihat Dokumen HSSE</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}

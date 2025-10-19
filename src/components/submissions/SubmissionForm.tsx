@@ -24,6 +24,9 @@ interface Worker {
   id: string;
   worker_name: string;
   worker_photo: string;
+  hsse_pass_number?: string;
+  hsse_pass_valid_thru?: string;
+  hsse_pass_document_upload?: string;
 }
 
 // ===============================
@@ -59,11 +62,21 @@ export default function SubmissionForm() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeletingDraft, setIsDeletingDraft] = useState(false);
 
+  // Prevent double toast for draft restoration
+  const draftToastShownRef = useRef(false);
+
   // -------------------------------
   // Workers state + helpers
   // -------------------------------
   const [workers, setWorkers] = useState<Worker[]>([
-    { id: `${Date.now()}`, worker_name: '', worker_photo: '' },
+    { 
+      id: `${Date.now()}`, 
+      worker_name: '', 
+      worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
+    },
   ]);
 
   const [desiredCount, setDesiredCount] = useState<number>(1);
@@ -88,29 +101,31 @@ export default function SubmissionForm() {
     working_hours: '',
     work_facilities: '',
     worker_count: 1,
+    worker_names: '',
+
     simja_number: '',
     simja_date: '',
+    simja_document_upload: '',
+    simja_type: '',
+
     sika_number: '',
     sika_date: '',
-    // Supporting Documents 1
-    supporting_doc1_type: '',
-    supporting_doc1_number: '',
-    supporting_doc1_date: '',
-    supporting_doc1_upload: '',
-    // Supporting Documents 2
-    supporting_doc2_type: '',
-    supporting_doc2_number: '',
-    supporting_doc2_date: '',
-    supporting_doc2_upload: '',
-    worker_names: '',
     sika_document_upload: '',
-    simja_document_upload: '',
+    sika_type: '',
+
+    // HSSE Pass
+    hsse_pass_number: '',
+    hsse_pass_valid_thru: null,
+    hsse_pass_document_upload: '',
   });
 
   // ===============================
   // PERSISTENCE: LOAD DRAFT (on mount)
   // ===============================
   useEffect(() => {
+    // Prevent double execution in React StrictMode
+    if (draftToastShownRef.current) return;
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -127,11 +142,14 @@ export default function SubmissionForm() {
 
       setHasDraft(true);
 
+      // Show toast only once
       showSuccess('Draft Dipulihkan', 'Data terakhir yang belum tersimpan berhasil dipulihkan dari penyimpanan lokal.');
+      draftToastShownRef.current = true;
     } catch (e) {
       console.warn('Gagal memulihkan draft:', e);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps is intentional - only run on mount
 
   // Prefill vendor/officer dari session
   useEffect(() => {
@@ -216,18 +234,6 @@ export default function SubmissionForm() {
   // -------------------------------
   // Utilities
   // -------------------------------
-  const statusPill = (ok: boolean) => (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-        ok
-          ? 'bg-green-50 text-green-700 border border-green-200'
-          : 'bg-amber-50 text-amber-700 border border-amber-200'
-      }`}
-    >
-      {ok ? 'Lengkap' : 'Perlu dilengkapi'}
-    </span>
-  );
-
   const focusLastAdded = () => {
     setTimeout(() => {
       lastAddedRef.current?.focus();
@@ -285,6 +291,9 @@ export default function SubmissionForm() {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       worker_name: presetName,
       worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
     };
     setWorkers((prev) => [...prev, newWorker]);
     setDesiredCount((n) => {
@@ -313,6 +322,18 @@ export default function SubmissionForm() {
     setWorkers((prev) => prev.map((w) => (w.id === id ? { ...w, worker_photo: url } : w)));
   };
 
+  const updateWorkerHsseNumber = (id: string, value: string) => {
+    setWorkers((prev) => prev.map((w) => (w.id === id ? { ...w, hsse_pass_number: value } : w)));
+  };
+
+  const updateWorkerHsseValidThru = (id: string, value: string) => {
+    setWorkers((prev) => prev.map((w) => (w.id === id ? { ...w, hsse_pass_valid_thru: value } : w)));
+  };
+
+  const updateWorkerHsseDocument = (id: string, url: string) => {
+    setWorkers((prev) => prev.map((w) => (w.id === id ? { ...w, hsse_pass_document_upload: url } : w)));
+  };
+
   const applyDesiredCount = () => {
     const count =
       workerCountInput === ''
@@ -325,6 +346,9 @@ export default function SubmissionForm() {
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         worker_name: '',
         worker_photo: '',
+        hsse_pass_number: '',
+        hsse_pass_valid_thru: '',
+        hsse_pass_document_upload: ''
       }));
       setWorkers((prev) => [...prev, ...toAdd]);
       focusLastAdded();
@@ -348,6 +372,9 @@ export default function SubmissionForm() {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       worker_name: name,
       worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
     }));
 
     setWorkers((prev) => [...prev, ...toAdd]);
@@ -391,21 +418,24 @@ export default function SubmissionForm() {
         simja_date: '',
         sika_number: '',
         sika_date: '',
-        // Supporting Documents 1
-        supporting_doc1_type: '',
-        supporting_doc1_number: '',
-        supporting_doc1_date: '',
-        supporting_doc1_upload: '',
-        // Supporting Documents 2
-        supporting_doc2_type: '',
-        supporting_doc2_number: '',
-        supporting_doc2_date: '',
-        supporting_doc2_upload: '',
+    
         worker_names: '',
         sika_document_upload: '',
         simja_document_upload: '',
+
+        // HSSE Pass
+        hsse_pass_number: '',
+        hsse_pass_valid_thru: null,
+        hsse_pass_document_upload: '',
       });
-      setWorkers([{ id: `${Date.now()}`, worker_name: '', worker_photo: '' }]);
+      setWorkers([{ 
+        id: `${Date.now()}`, 
+        worker_name: '', 
+        worker_photo: '',
+        hsse_pass_number: '',
+        hsse_pass_valid_thru: '',
+        hsse_pass_document_upload: ''
+      }]);
       setDesiredCount(1);
       setWorkerCountInput('1');
       setShowBulk(false);
@@ -453,35 +483,37 @@ export default function SubmissionForm() {
       }
 
       // Validasi dokumen wajib
-      // if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
-      //   showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
-      //   setIsLoading(false);
-      //   return;
-      // }
+      if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
+        showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
 
-      // if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
-      //   showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
-      //   setIsLoading(false);
-      //   return;
-      // }
+      if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
+        showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
+        setIsLoading(false);
+        return;
+      }
 
-      // validasi dokumen pendukung
-      if (formData.supporting_doc1_type || formData.supporting_doc1_number || formData.supporting_doc1_date) {
-        if (!formData.supporting_doc1_type || !formData.supporting_doc1_type.trim()) {
-          showError('Dokumen Pendukung Tidak Lengkap', 'Tipe dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
-          setIsLoading(false);
-          return;
-        }
-        if (!formData.supporting_doc1_number || !formData.supporting_doc1_number.trim()) {
-          showError('Dokumen Pendukung Tidak Lengkap', 'Nomor dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
-          setIsLoading(false);
-          return;
-        }
-        if (!formData.supporting_doc1_date || !formData.supporting_doc1_date.trim()) {
-          showError('Dokumen Pendukung Tidak Lengkap', 'Tanggal dokumen pendukung 1 wajib diisi jika ada data dokumen pendukung.');
-          setIsLoading(false);
-          return;
-        }
+      // Validasi HSSE Pass (opsional, tapi jika diisi harus lengkap semua)
+      const hssePassNumber = formData.hsse_pass_number?.trim() || '';
+      const hssePassValidThru = formData.hsse_pass_valid_thru ? String(formData.hsse_pass_valid_thru).trim() : '';
+      const hssePassDocument = formData.hsse_pass_document_upload?.trim() || '';
+
+      const hssePassFilled = [hssePassNumber, hssePassValidThru, hssePassDocument].filter(Boolean);
+
+      if (hssePassFilled.length > 0 && hssePassFilled.length < 3) {
+        const missingFields = [];
+        if (!hssePassNumber) missingFields.push('Nomor HSSE Pass');
+        if (!hssePassValidThru) missingFields.push('Tanggal Berlaku');
+        if (!hssePassDocument) missingFields.push('Dokumen HSSE Pass');
+
+        showError(
+          'Data HSSE Pass Tidak Lengkap', 
+          `HSSE Pass bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi. Field yang belum diisi: ${missingFields.join(', ')}.`
+        );
+        setIsLoading(false);
+        return;
       }
 
       if (workers.length === 0) {
@@ -502,17 +534,27 @@ export default function SubmissionForm() {
         return;
       }
 
-      const invalidNames = workers.filter((w) => !w.worker_name.trim()).length;
-      const invalidPhotos = workers.filter((w) => !w.worker_photo.trim()).length;
+      // Validasi data pekerja dan HSSE Pass (semuanya wajib)
+      for (let i = 0; i < workers.length; i++) {
+        const worker = workers[i];
+        if (!worker) continue;
 
-      if (invalidNames > 0 || invalidPhotos > 0) {
-        const errorMessage = invalidNames > 0
-          ? 'Ada nama pekerja yang kosong. Silakan lengkapi semua nama pekerja.'
-          : 'Semua pekerja harus memiliki foto. Silakan unggah foto untuk semua pekerja.';
+        const missingFields = [];
         
-        showError('Data Pekerja Belum Lengkap', errorMessage);
-        setIsLoading(false);
-        return;
+        if (!worker.worker_name?.trim()) missingFields.push('Nama Pekerja');
+        if (!worker.worker_photo?.trim()) missingFields.push('Foto Pekerja');
+        if (!worker.hsse_pass_number?.trim()) missingFields.push('Nomor HSSE Pass');
+        if (!worker.hsse_pass_valid_thru?.trim()) missingFields.push('Tanggal Berlaku HSSE Pass');
+        if (!worker.hsse_pass_document_upload?.trim()) missingFields.push('Dokumen HSSE Pass');
+
+        if (missingFields.length > 0) {
+          showError(
+            'Data Pekerja Tidak Lengkap',
+            `Pekerja ${i + 1} (${worker.worker_name || 'Tanpa Nama'}): Field yang belum diisi: ${missingFields.join(', ')}. Semua field wajib diisi.`
+          );
+          setIsLoading(false);
+          return;
+        }
       }
 
       const workerNames = workers.map((w) => w.worker_name.trim()).join('\n');
@@ -587,7 +629,7 @@ export default function SubmissionForm() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="vendor_name">Nama Vendor</Label>
+                  <Label htmlFor="vendor_name">Nama Vendor <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="vendor_name"
                     name="vendor_name"
@@ -602,7 +644,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="officer_name">Nama Petugas</Label>
+                  <Label htmlFor="officer_name">Nama Petugas <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="officer_name"
                     name="officer_name"
@@ -615,7 +657,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="based_on">Berdasarkan</Label>
+                  <Label htmlFor="based_on">Berdasarkan <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="based_on"
                     name="based_on"
@@ -629,7 +671,7 @@ export default function SubmissionForm() {
 
                 {/* Dokumen */}
                 <div>
-                  <Label htmlFor="simja_number">Nomor SIMJA</Label>
+                  <Label htmlFor="simja_number">Nomor SIMJA <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="simja_number"
                     name="simja_number"
@@ -641,8 +683,9 @@ export default function SubmissionForm() {
                   />
                 </div>
 
+                
                 <div>
-                  <Label htmlFor="sika_number">Nomor SIKA</Label>
+                  <Label htmlFor="sika_number">Nomor SIKA <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="sika_number"
                     name="sika_number"
@@ -653,9 +696,34 @@ export default function SubmissionForm() {
                     placeholder="Contoh: SIKA/2024/001"
                   />
                 </div>
+<div>
+                  <Label htmlFor="simja_type">Tipe SIMJA <span className="ml-1 text-red-500">*</span></Label>
+                  <Input
+                    id="simja_type"
+                    name="simja_type"
+                    type="text"
+                    value={formData.simja_type || ''}
+                    onChange={handleChange}
+                    required
+                    placeholder="Contoh: Ast. Man. Facility Management"
+                    />
+                </div>
 
                 <div>
-                  <Label htmlFor="simja_date">Tanggal SIMJA</Label>
+                  <Label htmlFor="sika_type">Tipe SIKA <span className="ml-1 text-red-500">*</span></Label>
+                  <Input
+                    id="sika_type"
+                    name="sika_type"
+                    type="text"
+                    value={formData.sika_type || ''}
+                    onChange={handleChange}
+                    required
+                    placeholder="Contoh: Pekerjaan dingin / panas"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="simja_date">Tanggal SIMJA <span className="ml-1 text-red-500">*</span></Label>
                   <DatePicker
                     id="simja_date"
                     name="simja_date"
@@ -667,7 +735,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="sika_date">Tanggal SIKA</Label>
+                  <Label htmlFor="sika_date">Tanggal SIKA <span className="ml-1 text-red-500">*</span></Label>
                   <DatePicker
                     id="sika_date"
                     name="sika_date"
@@ -679,10 +747,10 @@ export default function SubmissionForm() {
                 </div>
 
                 {/* Upload dokumen */}
-                {/* <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="simja_document_upload">
                     UPLOAD DOKUMEN SIMJA
-                    <span className="ml-1 text-red-500">*</span>
+                    <span className="ml-1 text-red-500"><span className="ml-1 text-red-500">*</span></span>
                   </Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <EnhancedFileUpload
@@ -692,16 +760,16 @@ export default function SubmissionForm() {
                       onChange={handleFileUpload('simja_document_upload')}
                       uploadType="document"
                       label=""
-                      description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
+                      
                       required={false}
                     />
                   </div>
-                </div> */}
+                </div>
 
-                {/* <div className="space-y-2">
+                <div className="space-y-2">
                   <Label htmlFor="sika_document_upload">
                     UPLOAD DOKUMEN SIKA
-                    <span className="ml-1 text-red-500">*</span>
+                    <span className="ml-1 text-red-500"><span className="ml-1 text-red-500">*</span></span>
                   </Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                     <EnhancedFileUpload
@@ -712,131 +780,59 @@ export default function SubmissionForm() {
                       uploadType="document"
                       required={false}
                       label=""
-                      description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
+                      
                     />
-                  </div> */}
-                {/* </div> */}
-              </div>
-
-              {/* Dokumen Pendukung */}
-              <div className="md:col-span-2 mt-10">
-                <h3 className="text-md font-medium text-gray-900 mb-4 border-b border-gray-200 pb-2">
-                  Dokumen Pendukung
-                </h3>
-                
-                {/* Layout bersebelahan untuk Dokumen Pendukung 1 dan 2 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Dokumen Pendukung 1 */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-700 border-l-4 border-blue-500 pl-3">
-                      Dokumen Pendukung 1
-                    </h4>
-                    
-                    <div>
-                      <Label htmlFor="supporting_doc1_type">Jenis Dokumen</Label>
-                      <Input
-                        id="supporting_doc1_type"
-                        name="supporting_doc1_type"
-                        type="text"
-                        value={formData.supporting_doc1_type || ''}
-                        onChange={handleChange}
-                        placeholder="Contoh: SIMJA, SIKA Pekerjaan dingin atau lainnya  "
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="supporting_doc1_number">Nomor Dokumen</Label>
-                      <Input
-                        id="supporting_doc1_number"
-                        name="supporting_doc1_number"
-                        type="text"
-                        value={formData.supporting_doc1_number || ''}
-                        onChange={handleChange}
-                        placeholder="Contoh: SIKA/2024/001"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="supporting_doc1_date">Tanggal Dokumen</Label>
-                      <DatePicker
-                        id="supporting_doc1_date"
-                        name="supporting_doc1_date"
-                        value={formData.supporting_doc1_date || ''}
-                        onChange={handleDateChange('supporting_doc1_date')}
-                        placeholder="Pilih tanggal dokumen"
-                        required={false}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="supporting_doc1_upload">Upload Dokumen</Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <EnhancedFileUpload
-                          id="supporting_doc1_upload"
-                          name="supporting_doc1_upload"
-                          value={formData.supporting_doc1_upload || ''}
-                          onChange={handleFileUpload('supporting_doc1_upload')}
-                          uploadType="document"
-                          label=""
-                          description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
-                          required={false}
-                        />
-                      </div>
-                    </div>
                   </div>
+                </div>
 
-                  {/* Dokumen Pendukung 2 */}
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-700 border-l-4 border-green-500 pl-3">
-                      Dokumen Pendukung 2
-                    </h4>
-                    
+                {/* HSSE Pass Section */}
+                <div className="md:col-span-2 mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-md font-semibold text-gray-900">
+                      HSSE Pass (Opsional)
+                    </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      Jika diisi, semua field harus lengkap
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="supporting_doc2_type">Jenis Dokumen</Label>
+                      <Label htmlFor="hsse_pass_number">Nomor HSSE Pass</Label>
                       <Input
-                        id="supporting_doc2_type"
-                        name="supporting_doc2_type"
+                        id="hsse_pass_number"
+                        name="hsse_pass_number"
                         type="text"
-                        value={formData.supporting_doc2_type || ''}
+                        value={formData.hsse_pass_number || ''}
                         onChange={handleChange}
-                        placeholder="Contoh: SIMJA, SIKA Pekerjaan dingin atau lainnya  "
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="supporting_doc2_number">Nomor Dokumen</Label>
-                      <Input
-                        id="supporting_doc2_number"
-                        name="supporting_doc2_number"
-                        type="text"
-                        value={formData.supporting_doc2_number || ''}
-                        onChange={handleChange}
-                        placeholder="Contoh: SIMJA/2024/001"
+                        placeholder="Contoh: HSSE/2024/001"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="supporting_doc2_date">Tanggal Dokumen</Label>
+                      <Label htmlFor="hsse_pass_valid_thru">Berlaku Sampai</Label>
                       <DatePicker
-                        id="supporting_doc2_date"
-                        name="supporting_doc2_date"
-                        value={formData.supporting_doc2_date || ''}
-                        onChange={handleDateChange('supporting_doc2_date')}
-                        placeholder="Pilih tanggal dokumen"
+                        id="hsse_pass_valid_thru"
+                        name="hsse_pass_valid_thru"
+                        value={formData.hsse_pass_valid_thru ? String(formData.hsse_pass_valid_thru) : ''}
+                        onChange={handleDateChange('hsse_pass_valid_thru')}
+                        placeholder="Pilih tanggal berlaku"
                         required={false}
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="supporting_doc2_upload">Upload Dokumen</Label>
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="hsse_pass_document_upload">
+                        Upload Dokumen HSSE Pass
+                      </Label>
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                         <EnhancedFileUpload
-                          id="supporting_doc2_upload"
-                          name="supporting_doc2_upload"
-                          value={formData.supporting_doc2_upload || ''}
-                          onChange={handleFileUpload('supporting_doc2_upload')}
+                          id="hsse_pass_document_upload"
+                          name="hsse_pass_document_upload"
+                          value={formData.hsse_pass_document_upload || ''}
+                          onChange={handleFileUpload('hsse_pass_document_upload')}
                           uploadType="document"
                           label=""
-                          description="Upload PDF/DOC/DOCX/JPG/PNG maks 8MB"
+                          
                           required={false}
                         />
                       </div>
@@ -853,7 +849,7 @@ export default function SubmissionForm() {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="job_description">Pekerjaan</Label>
+                  <Label htmlFor="job_description">Pekerjaan <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="job_description"
                     name="job_description"
@@ -866,7 +862,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="work_location">Lokasi Kerja</Label>
+                  <Label htmlFor="work_location">Lokasi Kerja <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="work_location"
                     name="work_location"
@@ -879,7 +875,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="working_hours">Jam kerja</Label>
+                  <Label htmlFor="working_hours">Jam Kerja <span className="ml-1 text-red-500">*</span></Label>
                   <TimePicker
                     id="working_hours"
                     name="working_hours"
@@ -891,7 +887,7 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="work_facilities">Sarana kerja</Label>
+                  <Label htmlFor="work_facilities">Sarana Kerja <span className="ml-1 text-red-500">*</span></Label>
                   <Input
                     id="work_facilities"
                     name="work_facilities"
@@ -923,7 +919,7 @@ export default function SubmissionForm() {
 
                 <div className="flex items-end gap-2 flex-wrap sm:flex-nowrap">
                   <div className="flex-1 min-w-[180px]">
-                    <Label htmlFor="worker_count">Jumlah Pekerja</Label>
+                    <Label htmlFor="worker_count">Jumlah Pekerja <span className="ml-1 text-red-500">*</span></Label>
 
                     <input
                       id="worker_count"
@@ -1009,6 +1005,7 @@ export default function SubmissionForm() {
                     rows={4}
                     placeholder={`Contoh:\nBudi Santoso\nSari Dewi\nAndi Wijaya`}
                     value={bulkNames}
+                    
                     onChange={(e) => setBulkNames(e.target.value)}
                   />
                   <div className="mt-2 flex items-center gap-2">
@@ -1018,70 +1015,134 @@ export default function SubmissionForm() {
                 </div>
               )}
 
-              {/* Tabel ringkas */}
-              <div className="overflow-hidden rounded-xl border border-gray-200">
-                <div className="grid grid-cols-12 bg-gray-50 text-xs font-semibold text-gray-600">
-                  <div className="col-span-1 px-3 py-2">No</div>
-                  <div className="col-span-5 px-3 py-2">Nama Pekerja</div>
-                  <div className="col-span-4 px-3 py-2">Foto</div>
-                  <div className="col-span-2 px-3 py-2 text-right">Aksi</div>
-                </div>
+              {/* Daftar Pekerja - Compact Layout */}
+              <div className="space-y-3">
+                {workers.map((w, idx) => {
+                  const allFieldsComplete = !!w.worker_name.trim() && 
+                                           !!w.worker_photo.trim() && 
+                                           !!w.hsse_pass_number?.trim() && 
+                                           !!w.hsse_pass_valid_thru?.trim() && 
+                                           !!w.hsse_pass_document_upload?.trim();
+                  
+                  return (
+                    <div key={w.id} className="border border-gray-200 rounded-lg p-4 bg-white hover:border-gray-300 transition-colors">
+                      {/* Header dengan Nomor dan Tombol Hapus */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs">
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm font-medium text-gray-700">
+                            {w.worker_name || `Pekerja ${idx + 1}`}
+                          </span>
+                          {allFieldsComplete && (
+                            <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">✓ Lengkap</span>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-7"
+                          onClick={() => removeWorker(w.id)}
+                          disabled={workers.length <= 1}
+                          title={workers.length <= 1 ? 'Minimal 1 pekerja' : 'Hapus pekerja'}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
 
-                <div className="divide-y divide-gray-100">
-                  {workers.map((w, idx) => {
-                    const ok = !!w.worker_name.trim() && !!w.worker_photo.trim();
-                    return (
-                      <div key={w.id} className="grid grid-cols-12 items-center text-sm">
-                        <div className="col-span-1 px-3 py-3 text-gray-500">{idx + 1}</div>
+                      {/* Grid 2 Kolom: Kiri (Nama & HSSE) | Kanan (Upload Foto & Dokumen) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Kolom Kiri - Input Text */}
+                        <div className="space-y-3">
+                          {/* Nama Pekerja */}
+                          <div>
+                            <Label htmlFor={`worker_name_${w.id}`}>Nama Pekerja <span className="ml-1 text-red-500">*</span></Label>
+                            <Input
+                              id={`worker_name_${w.id}`}
+                              name={`worker_name_${w.id}`}
+                              type="text"
+                              value={w.worker_name}
+                              onChange={(e) => updateWorkerName(w.id, e.target.value)}
+                              placeholder="Nama lengkap pekerja"
+                              required
+                              validationMode='letters'
+                            />
+                          </div>
 
-                        <div className="col-span-5 px-3 py-3">
-                          <Input
-                            id={`worker_name_${w.id}`}
-                            name={`worker_name_${w.id}`}
-                            type="text"
-                            value={w.worker_name}
-                            onChange={(e) => updateWorkerName(w.id, e.target.value)}
-                            placeholder="Nama lengkap pekerja"
+                          {/* Nomor HSSE Pass */}
+                          <div>
+                            <Label htmlFor={`hsse_number_${w.id}`}>Nomor HSSE Pass <span className="ml-1 text-red-500">*</span></Label>
+                            <Input
+                              id={`hsse_number_${w.id}`}
+                              name={`hsse_number_${w.id}`}
+                              type="text"
+                              value={w.hsse_pass_number || ''}
+                              onChange={(e) => updateWorkerHsseNumber(w.id, e.target.value)}
+                              placeholder="Contoh: HSSE/2024/001"
+                              required
+                            />
+                          </div>
 
-
-                          />
-                          <div className="mt-1">{statusPill(ok)}</div>
+                          {/* Tanggal Berlaku HSSE */}
+                          <div>
+                            <Label htmlFor={`hsse_valid_${w.id}`}>Berlaku Sampai <span className="ml-1 text-red-500">*</span></Label>
+                            <DatePicker
+                              id={`hsse_valid_${w.id}`}
+                              name={`hsse_valid_${w.id}`}
+                              value={w.hsse_pass_valid_thru || ''}
+                              onChange={(value) => updateWorkerHsseValidThru(w.id, value)}
+                              placeholder="Pilih tanggal"
+                              required
+                            />
+                          </div>
                         </div>
 
-                        {/* FOTO */}
-                        <div className="col-span-4 px-3 py-3">
-                          <EnhancedFileUpload
-                            id={`worker_photo_${w.id}`}
-                            name={`worker_photo_${w.id}`}
-                            value={w.worker_photo}
-                            onChange={(url) => updateWorkerPhoto(w.id, url)}
-                            uploadType="worker-photo"
-                            workerName={w.worker_name || `Pekerja ${idx + 1}`}
-                            required={false}
-                          />
-                        </div>
+                        {/* Kolom Kanan - Upload Files */}
+                        <div className="flex gap-3">
+                          {/* Upload Foto Pekerja */}
+                          <div className="flex-1 min-w-0">
+                            <Label htmlFor={`worker_photo_${w.id}`}>Foto Pekerja <span className="ml-1 text-red-500">*</span></Label>
+                            <div className="text-xs text-gray-500 mb-1">Wajib diisi</div>
+                            <EnhancedFileUpload
+                              id={`worker_photo_${w.id}`}
+                              name={`worker_photo_${w.id}`}
+                              value={w.worker_photo}
+                              onChange={(url) => updateWorkerPhoto(w.id, url)}
+                              uploadType="worker-photo"
+                              workerName={w.worker_name || `Pekerja ${idx + 1}`}
+                              required={false}
+                            />
+                          </div>
 
-                        <div className="col-span-2 px-3 py-3 text-right">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => removeWorker(w.id)}
-                            disabled={workers.length <= 1}
-                            title={workers.length <= 1 ? 'Minimal 1 pekerja' : 'Hapus baris'}
-                          >
-                            Hapus
-                          </Button>
+                          {/* Upload Dokumen HSSE Pass */}
+                          <div className="flex-1 min-w-0">
+                            <Label htmlFor={`hsse_doc_${w.id}`}>Dokumen HSSE Pass <span className="ml-1 text-red-500">*</span></Label>
+                            <div className="text-xs text-gray-500 mb-1">Wajib diisi</div>
+                            <EnhancedFileUpload
+                              id={`hsse_doc_${w.id}`}
+                              name={`hsse_doc_${w.id}`}
+                              value={w.hsse_pass_document_upload || ''}
+                              onChange={(url) => updateWorkerHsseDocument(w.id, url)}
+                              uploadType="document"
+                              maxFileNameLength={15}
+                              required={false}
+                            />
+                          </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="mt-2 text-xs text-gray-500">
-                • Jumlah pekerja editable: ketik angka, lalu klik <b>Sesuaikan</b> untuk otomatis menambah/mengurangi baris. <br />
-                • Wajib isi nama dan unggah foto untuk setiap pekerja sebelum submit.
+              <div className="mt-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="font-medium text-blue-900 mb-1"> Petunjuk Pengisian:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-blue-800">
+                  <li><b>Semua field wajib diisi</b> untuk setiap pekerja (Nama, Foto, HSSE Pass)</li>
+                  <li>Gunakan tombol "Sesuaikan" jika jumlah pekerja tidak sesuai</li>
+                </ul>
               </div>
             </div>
 

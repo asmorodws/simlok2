@@ -328,7 +328,7 @@ async function main() {
       // Add approval data for approved/rejected submissions
       if (status === 'APPROVED') {
         submissionData.approved_by = superAdmin.id;
-        submissionData.simlok_number = `SIMLOK/2024/${String(submissionCount + 1).padStart(3, '0')}`;
+        submissionData.simlok_number = `${submissionCount + 1}/S00330/2024`;
         submissionData.simlok_date = new Date(createdDate.getTime() + Math.random() * 5 * 24 * 60 * 60 * 1000);
         
         // Add implementation date range (7-30 days from approval)

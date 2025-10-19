@@ -55,7 +55,7 @@ export default function DatePicker({
         popperClassName="react-datepicker-popper"
         popperPlacement="bottom-start"
         showPopperArrow={false}
-        isClearable={false}
+        isClearable={true}
         todayButton="Hari ini"
         onKeyDown={(e) => {
           // Mencegah pengetikan manual kecuali untuk navigasi
@@ -77,6 +77,49 @@ export default function DatePicker({
           e.target.focus();
         }}
       />
+      <style jsx global>{`
+        /* Styling untuk tombol clear di DatePicker */
+        .react-datepicker__close-icon {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          background-color: transparent;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          height: 20px;
+          width: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1;
+        }
+
+        .react-datepicker__close-icon::after {
+          content: '×';
+          font-size: 20px;
+          color: #9ca3af;
+          background-color: #f3f4f6;
+          border-radius: 50%;
+          height: 20px;
+          width: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .react-datepicker__close-icon:hover::after {
+          background-color: #ef4444;
+          color: white;
+        }
+
+        /* Berikan padding kanan lebih untuk input agar tidak tertutup tombol clear */
+        .react-datepicker__input-container input:not(:placeholder-shown) {
+          padding-right: 35px;
+        }
+      `}</style>
     </div>
   );
 }

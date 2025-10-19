@@ -19,16 +19,16 @@ export interface SubmissionData {
   simja_date?: string;
   sika_number?: string;
   sika_date?: string;
-  // Supporting Documents 1
-  supporting_doc1_type?: string;
-  supporting_doc1_number?: string;
-  supporting_doc1_date?: string;
-  supporting_doc1_upload?: string;
-  // Supporting Documents 2
-  supporting_doc2_type?: string;
-  supporting_doc2_number?: string;
-  supporting_doc2_date?: string;
-  supporting_doc2_upload?: string;
+  simja_type?: string;
+  sika_type?: string;
+
+  
+  // HSSE Pass Document
+  hsse_pass_number?: string;
+  hsse_pass_valid_thru?: Date | null;
+  hsse_pass_document_upload?: string;
+  
+
   worker_names: string;
   content?: string; // akan diisi oleh admin saat approve
   sika_document_upload?: string;
@@ -53,6 +53,9 @@ export interface WorkerList {
   id: string;
   worker_name: string;
   worker_photo?: string | null;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: Date | null;
+  hsse_pass_document_upload?: string | null;
   submission_id: string;
   created_at: Date;
 }
@@ -84,17 +87,14 @@ export interface Submission {
   content?: string | null;
   simja_number?: string | null;
   simja_date?: string | null;
+  simja_type?: string | null;
   sika_number?: string | null;
   sika_date?: string | null;
-  // Supporting Documents
-  supporting_doc1_type?: string | null;
-  supporting_doc1_number?: string | null;
-  supporting_doc1_date?: string | null;
-  supporting_doc1_upload?: string | null;
-  supporting_doc2_type?: string | null;
-  supporting_doc2_number?: string | null;
-  supporting_doc2_date?: string | null;
-  supporting_doc2_upload?: string | null;
+  sika_type?: string | null;
+  // HSSE Pass
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: Date | string | null;
+  hsse_pass_document_upload?: string | null;
   sika_document_upload?: string | null;
   simja_document_upload?: string | null;
   qrcode?: string | null;
@@ -131,15 +131,18 @@ export interface SubmissionPDFData {
   implementation_end_date?: string | Date | null | undefined;
   vendor_name: string;
   
-  // Supporting Documents 1 & 2 - Replacing SIMJA & SIKA
-  supporting_doc1_type?: string | null;
-  supporting_doc1_number?: string | null;
-  supporting_doc1_date?: string | Date | null | undefined;
-  supporting_doc1_upload?: string | null;
-  supporting_doc2_type?: string | null;
-  supporting_doc2_number?: string | null;
-  supporting_doc2_date?: string | Date | null | undefined;
-  supporting_doc2_upload?: string | null;
+  // Documents
+  simja_number?: string | null;
+  simja_date?: string | Date | null | undefined;
+  simja_type?: string | null;
+  sika_number?: string | null;
+  sika_date?: string | Date | null | undefined;
+  sika_type?: string | null;
+  
+  // HSSE Pass
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | Date | null | undefined;
+  hsse_pass_document_upload?: string | null;
   
   job_description: string;
   work_location: string;

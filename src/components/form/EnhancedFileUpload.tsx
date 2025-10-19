@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import {
   DocumentIcon,
-  XMarkIcon,
   CloudArrowUpIcon,
   PhotoIcon,
   PencilSquareIcon,
@@ -26,6 +25,7 @@ interface EnhancedFileUploadProps {
   label?: string;
   description?: string;
   workerName?: string; // khusus foto pekerja
+  maxFileNameLength?: number; // untuk custom panjang nama file
 }
 
 export default function EnhancedFileUpload({
@@ -42,13 +42,16 @@ export default function EnhancedFileUpload({
   label,
   description,
   workerName,
+  maxFileNameLength = 30, // default 30 karakter
 }: EnhancedFileUploadProps) {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [localPreview, setLocalPreview] = useState<string | null>(null); // Local preview before upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showSuccess, showError } = useToast();
+  const toastShownRef = useRef(false); // Prevent double toast
 
   // --- Helpers UI ---
   const getAcceptTypes = () => {
@@ -67,7 +70,7 @@ export default function EnhancedFileUpload({
       return {
         title: "Unggah Foto Pekerja",
         subtitle: "Tarik & letakkan atau klik untuk memilih",
-        formats: "JPG, JPEG, PNG, WebP — maks 10MB (dikompres otomatis)",
+        formats: "JPG, JPEG, PNG, WebP — maks 10MB",
       };
     }
     return {
@@ -87,6 +90,22 @@ export default function EnhancedFileUpload({
       const last = url.split("?")[0]?.split("/").pop() ?? "";
       return last;
     }
+  };
+
+  const truncateFileName = (fileName: string, maxLength: number = 30): string => {
+    if (!fileName || fileName.length <= maxLength) return fileName;
+    
+    const ext = fileName.split('.').pop() || '';
+    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+    
+    if (nameWithoutExt.length + ext.length + 1 <= maxLength) {
+      return fileName;
+    }
+    
+    const charsToShow = maxLength - ext.length - 4; // -4 untuk "..." dan "."
+    const truncated = nameWithoutExt.substring(0, charsToShow);
+    
+    return ext ? `${truncated}...${ext}` : `${truncated}...`;
   };
 
   // --- Validasi & Upload ---
@@ -152,11 +171,25 @@ export default function EnhancedFileUpload({
     if (!file) return; // guard: File | undefined
 
     setError(null);
+    toastShownRef.current = false; // Reset toast flag
 
     const validation = validateFile(file);
     if (!validation.isValid) {
       setError(validation.error || "File tidak valid");
+      if (!toastShownRef.current) {
+        showError("Validasi Gagal", validation.error || "File tidak valid");
+        toastShownRef.current = true;
+      }
       return;
+    }
+
+    // Create local preview for images immediately
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLocalPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
 
     try {
@@ -175,11 +208,25 @@ export default function EnhancedFileUpload({
 
       onChange?.(url);
       onFileChange?.(file);
-      showSuccess("Berhasil", "File berhasil diunggah");
+      
+      // Clear local preview once uploaded
+      setLocalPreview(null);
+      
+      // Show success toast only once
+      if (!toastShownRef.current) {
+        showSuccess("Berhasil", "File berhasil diunggah");
+        toastShownRef.current = true;
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Gagal mengunggah file";
       setError(msg);
-      showError("Gagal", msg);
+      setLocalPreview(null); // Clear preview on error
+      
+      // Show error toast only once
+      if (!toastShownRef.current) {
+        showError("Gagal", msg);
+        toastShownRef.current = true;
+      }
     } finally {
       setTimeout(() => setUploadProgress(0), 800);
       setUploading(false);
@@ -210,6 +257,8 @@ export default function EnhancedFileUpload({
     onChange?.("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setError(null);
+    setLocalPreview(null); // Clear local preview
+    toastShownRef.current = false; // Reset toast flag
   };
 
   const handleReplace = (e?: React.MouseEvent) => {
@@ -219,8 +268,10 @@ export default function EnhancedFileUpload({
 
   // --- Render ---
   const fileName = fileNameFromUrl(value);
-  const hasFile = Boolean(value);
+  const hasFile = Boolean(value) || Boolean(localPreview);
+  const displayUrl = localPreview || value; // Use local preview if available, otherwise server URL
   const isImage = uploadType === "worker-photo";
+  const isPreviewMode = Boolean(localPreview); // Check if showing local preview
 
   return (
     <div className={`w-full ${className}`}>
@@ -270,8 +321,8 @@ export default function EnhancedFileUpload({
 
         {/* ================== STATE: UPLOADING ================== */}
         {uploading ? (
-          <div className="text-center">
-            <CloudArrowUpIcon className="mx-auto h-10 w-10 text-blue-500 animate-bounce" />
+          <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
+            <CloudArrowUpIcon className="h-10 w-10 text-blue-500 animate-bounce" />
             <p className="mt-3 text-sm font-medium text-gray-900">
               Mengunggah{uploadType === "worker-photo" ? " & mengompres" : ""}…
             </p>
@@ -286,109 +337,150 @@ export default function EnhancedFileUpload({
         ) : /* ================ STATE: HAS FILE ================ */ hasFile ? (
           isImage ? (
             /* FOTO → preview rapih & tidak melebihi komponen */
-            <div
-              className="relative mx-auto flex max-w-full flex-col items-center gap-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="relative w-full max-w-[360px] overflow-hidden rounded-lg border bg-white">
-                {/* Kotak rasio agar tinggi terkontrol (4:3). Gambar absolute agar tidak overflow */}
-                <div className="relative w-full aspect-[4/3]">
-                  <img
-                    src={value}
-                    alt={workerName ? `Foto ${workerName}` : "Foto pekerja"}
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                </div>
-
-                {/* Overlay hover (tetap di dalam kontainer, tidak melebihi) */}
+            <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
+              <div className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-lg border bg-gray-100">
+                <img
+                  src={displayUrl}
+                  alt={workerName ? `Foto ${workerName}` : "Foto pekerja"}
+                  className="w-full h-auto object-contain max-h-[200px]"
+                />
+                
+                {/* Preview badge if showing local preview */}
+                {isPreviewMode && (
+                  <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow">
+                    Preview
+                  </div>
+                )}
+                
+                {/* Overlay hover */}
                 <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/45 group-hover:flex">
                   <div className="pointer-events-auto flex gap-2">
                     <button
                       type="button"
                       onClick={handleReplace}
-                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-gray-700 shadow hover:bg-white"
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-gray-700 shadow hover:bg-white"
                     >
-                      <PencilSquareIcon className="h-4 w-4" />
+                      <PencilSquareIcon className="h-3.5 w-3.5" />
                       Ganti
                     </button>
                     <button
                       type="button"
                       onClick={handleRemove}
-                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-red-600 shadow hover:bg-white"
+                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-red-600 shadow hover:bg-white"
                     >
-                      <TrashIcon className="h-4 w-4" />
+                      <TrashIcon className="h-3.5 w-3.5" />
                       Hapus
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* filename + helper */}
-              <div className="text-center">
-                <div
-                  className="mx-auto max-w-[280px] truncate text-sm font-medium text-gray-900 sm:max-w-[360px]"
-                  title={fileName}
-                >
-                  {fileName || "foto-terunggah"}
-                </div>
-                {workerName && (
-                  <div className="mt-0.5 text-[11px] text-gray-500">
-                    Untuk: <span className="font-medium">{workerName}</span>
-                  </div>
-                )}
               </div>
             </div>
           ) : (
-            /* DOKUMEN → kartu file */
-            <div
-              className="relative mx-auto flex max-w-full flex-col items-center gap-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="relative flex w-full max-w-[420px] items-center gap-3 rounded-lg border bg-white p-3">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md bg-gray-50">
-                  <DocumentIcon className="h-6 w-6 text-blue-500" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div
-                    className="truncate text-sm font-medium text-gray-900"
-                    title={fileName}
-                  >
-                    {fileName || "file-terunggah"}
+            /* DOKUMEN → preview gambar atau PDF icon */
+            <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
+              {/* Check if document is image OR has local preview */}
+              {(isPreviewMode || /\.(jpg|jpeg|png|webp|gif)$/i.test(fileName)) ? (
+                /* Image preview for document */
+                <div className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-lg border bg-gray-100">
+                  <img
+                    src={displayUrl}
+                    alt="Preview dokumen"
+                    className="w-full h-auto object-contain max-h-[200px]"
+                  />
+                  
+                  {/* Preview badge if showing local preview */}
+                  {isPreviewMode && (
+                    <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full shadow">
+                      Preview
+                    </div>
+                  )}
+                  
+                  {/* File name badge */}
+                  {!isPreviewMode && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2">
+                      <div
+                        className="text-center text-xs font-medium text-white truncate"
+                        title={fileName}
+                      >
+                        {truncateFileName(fileName, maxFileNameLength)}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Overlay hover */}
+                  <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/45 group-hover:flex">
+                    <div className="pointer-events-auto flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleReplace}
+                        className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-gray-700 shadow hover:bg-white"
+                      >
+                        <PencilSquareIcon className="h-3.5 w-3.5" />
+                        Ganti
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemove}
+                        className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-red-600 shadow hover:bg-white"
+                      >
+                        <TrashIcon className="h-3.5 w-3.5" />
+                        Hapus
+                      </button>
+                    </div>
                   </div>
-                  {/* <div className="truncate text-xs text-gray-500">{value}</div> */}
                 </div>
+              ) : (
+                /* PDF/DOC icon card */
+                <div className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-lg border bg-gradient-to-br from-blue-50 to-gray-50 py-6 px-4">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white shadow-sm">
+                      <DocumentIcon className="h-7 w-7 text-blue-500" />
+                    </div>
+                    <div className="mt-3 w-full">
+                      <div
+                        className="text-center text-sm font-medium text-gray-900"
+                        title={fileName}
+                      >
+                        {truncateFileName(fileName, maxFileNameLength) || "file-terupload"}
+                      </div>
+                      <div className="mt-1 text-center text-xs text-gray-500">
+                        Dokumen {(/\.pdf$/i.test(fileName)) ? 'PDF' : (/\.(doc|docx)$/i.test(fileName)) ? 'DOC' : ''}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Overlay hover */}
-                <div className="absolute inset-0 hidden items-center justify-center bg-black/40 group-hover:flex">
-                  <div className="pointer-events-auto flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleReplace}
-                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-gray-700 shadow hover:bg-white"
-                    >
-                      <PencilSquareIcon className="h-4 w-4" />
-                      Ganti
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemove}
-                      className="inline-flex items-center gap-1 rounded-md bg-white/95 px-3 py-2 text-sm font-medium text-red-600 shadow hover:bg-white"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                      Hapus
-                    </button>
+                  {/* Overlay hover */}
+                  <div className="pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/45 group-hover:flex">
+                    <div className="pointer-events-auto flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleReplace}
+                        className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-gray-700 shadow hover:bg-white"
+                      >
+                        <PencilSquareIcon className="h-3.5 w-3.5" />
+                        Ganti
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRemove}
+                        className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-red-600 shadow hover:bg-white"
+                      >
+                        <TrashIcon className="h-3.5 w-3.5" />
+                        Hapus
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )
         ) : (
           /* ================ STATE: EMPTY ================ */
-          <div className="text-center">
+          <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
             {uploadType === "worker-photo" ? (
-              <PhotoIcon className="mx-auto h-10 w-10 text-blue-500" />
+              <PhotoIcon className="h-10 w-10 text-blue-500" />
             ) : (
-              <DocumentIcon className="mx-auto h-10 w-10 text-blue-500" />
+              <DocumentIcon className="h-10 w-10 text-blue-500" />
             )}
             <p className="mt-3 text-sm font-medium text-gray-900">{text.title}</p>
             <p className="mt-1 text-xs text-gray-600">{text.subtitle}</p>

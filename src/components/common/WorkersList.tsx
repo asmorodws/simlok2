@@ -7,14 +7,19 @@ import {
   EyeIcon,
   CheckCircleIcon,
   XCircleIcon,
-  XMarkIcon 
+  XMarkIcon,
+  DocumentIcon 
 } from '@heroicons/react/24/outline';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 
 interface Worker {
   id: string;
   worker_name: string;
   worker_photo: string | null;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | null;
+  hsse_pass_document_upload?: string | null;
   submission_id: string;
   created_at: string;
 }
@@ -47,6 +52,11 @@ export default function WorkersList({
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchWorkers = async () => {
@@ -100,6 +110,20 @@ export default function WorkersList({
 
   const closeModal = () => {
     setSelectedImage(null);
+  };
+
+  const handleDocumentView = (url: string, title: string) => {
+    setSelectedDocument({ url: fileUrlHelper.convertLegacyUrl(url), title });
+    setIsDocumentModalOpen(true);
+  };
+
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   if (loading) {
@@ -233,13 +257,41 @@ export default function WorkersList({
 
               {/* Content Section - Name and details below photo */}
               <div className="p-4 pt-2">
-                <h2 className="font-semibold text-gray-900 text-base mb-1">
+                <h2 className="font-semibold text-gray-900 text-base mb-2">
                   {worker.worker_name}
                 </h2>
 
+                {/* HSSE Pass Information */}
+                {(worker.hsse_pass_number || worker.hsse_pass_valid_thru) && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+                    {/* <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 font-medium">HSSE Pass:</span>
+                    </div> */}
+                    {worker.hsse_pass_number && (
+                      <div className="text-xs text-gray-600">
+                        <span className="font-medium">HSSE Pass No:</span> {worker.hsse_pass_number}
+                      </div>
+                    )}
+                    {worker.hsse_pass_valid_thru && (
+                      <div className="text-xs text-gray-600">
+                        <span className="font-medium">Masa berlaku HSSE pass:</span> {formatDate(worker.hsse_pass_valid_thru)}
+                      </div>
+                    )}
+                    {worker.hsse_pass_document_upload && (
+                      <button
+                        onClick={() => handleDocumentView(worker.hsse_pass_document_upload!, `HSSE Pass - ${worker.worker_name}`)}
+                        className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-1"
+                      >
+                        <DocumentIcon className="h-3.5 w-3.5" />
+                        <span>Lihat Dokumen</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Verification Actions */}
                 {verificationMode && (
-                  <div className="flex justify-center space-x-2 pt-3 border-t border-gray-100">
+                  <div className="flex justify-center space-x-2 pt-3 border-t border-gray-100 mt-3">
                     <button 
                       className="flex items-center justify-center w-8 h-8 text-green-600 hover:bg-green-50 rounded-full transition-colors"
                       title="Verifikasi Valid"
@@ -318,9 +370,34 @@ export default function WorkersList({
                 <h3 className="text-base font-medium text-gray-900 truncate">
                   {worker.worker_name}
                 </h3>
-                <p className="text-sm text-gray-500">
-                  Pekerja #{index + 1}
-                </p>
+                <div className="space-y-0.5 mt-1">
+                  <p className="text-sm text-gray-500">
+                    Pekerja #{index + 1}
+                  </p>
+                  {(worker.hsse_pass_number || worker.hsse_pass_valid_thru) && (
+                    <div className="flex items-center space-x-3 text-xs text-gray-600">
+                      {worker.hsse_pass_number && (
+                        <span>
+                          <span className="font-medium">HSSE:</span> {worker.hsse_pass_number}
+                        </span>
+                      )}
+                      {worker.hsse_pass_valid_thru && (
+                        <span>
+                          <span className="font-medium">Berlaku:</span> {formatDate(worker.hsse_pass_valid_thru)}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {worker.hsse_pass_document_upload && (
+                    <button
+                      onClick={() => handleDocumentView(worker.hsse_pass_document_upload!, `HSSE Pass - ${worker.worker_name}`)}
+                      className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      <DocumentIcon className="h-3.5 w-3.5" />
+                      <span>Lihat Dokumen HSSE</span>
+                    </button>
+                  )}
+                </div>
               </div>
               
               {/* Status Badge */}
@@ -390,6 +467,14 @@ export default function WorkersList({
           </div>
         </div>
       )}
+
+      {/* Document Preview Modal for HSSE documents */}
+      <DocumentPreviewModal
+        isOpen={isDocumentModalOpen}
+        onClose={() => setIsDocumentModalOpen(false)}
+        fileUrl={selectedDocument?.url || ''}
+        fileName={selectedDocument?.title || ''}
+      />
     </div>
   );
 }

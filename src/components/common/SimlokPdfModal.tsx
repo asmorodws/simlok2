@@ -107,14 +107,25 @@ export default function SimlokPdfModal({
 
         console.log('SimlokPdfModal: PDF response received successfully');
 
-        // Gunakan blob -> object URL agar:
-        // - lebih stabil di berbagai browser
-        // - bisa di-print/download tanpa kebijakan CORS aneh
+        // Get filename from Content-Disposition header if available
+        const contentDisposition = res.headers.get('Content-Disposition');
+        let serverFilename = filename; // fallback to our generated filename
+        
+        if (contentDisposition) {
+          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (filenameMatch && filenameMatch[1]) {
+            serverFilename = filenameMatch[1].replace(/['"]/g, '');
+          }
+        }
+
+        // Create a File object with proper filename (instead of plain Blob)
+        // This helps browser use the correct filename when saving from preview
         const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
+        const file = new File([blob], serverFilename, { type: 'application/pdf' });
+        const url = URL.createObjectURL(file);
         objectUrlRef.current = url;
 
-        console.log('SimlokPdfModal: PDF blob URL created:', url);
+        console.log('SimlokPdfModal: PDF blob URL created with filename:', serverFilename, url);
 
         if (!cancelled) {
           setPdfUrl(url);
@@ -137,10 +148,15 @@ export default function SimlokPdfModal({
     };
   }, [isOpen, submissionId]);
 
-  // Generate filename (must be before early return to avoid hook order issues)
+  // Generate filename with SIMLOK number only (no vendor name)
   const filename = useMemo(() => {
-    if (nomorSimlok) return `SIMLOK_${nomorSimlok.replace(/[/\\]/g, '_')}.pdf`;
-    return `SIMLOK_${submissionName.replace(/[/\\]/g, '_')}.pdf`;
+    if (nomorSimlok) {
+      // Clean nomor SIMLOK: replace special chars with underscore
+      const cleanNomor = nomorSimlok.replace(/[\[\]/\\]/g, '_');
+      return `SIMLOK_${cleanNomor}.pdf`;
+    }
+    // Fallback to submission ID
+    return `SIMLOK_${submissionName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
   }, [nomorSimlok, submissionName]);
 
   if (!isOpen) return null;

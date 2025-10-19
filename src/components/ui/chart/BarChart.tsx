@@ -9,7 +9,28 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
-export default function BarChartOne() {
+interface BarChartProps {
+  labels?: string[];
+  series?: Array<{
+    name: string;
+    data: number[];
+  }>;
+}
+
+export default function BarChartOne({ labels, series: propSeries }: BarChartProps = {}) {
+  // Use provided labels or fallback to default months
+  const chartLabels = labels || [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  // Use provided series or fallback to dummy data
+  const chartSeries = propSeries || [
+    {
+      name: "Jumlah User",
+      data: [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27],
+    },
+  ];
   const options: ApexOptions = {
     colors: ["#465fff"],
     chart: {
@@ -37,20 +58,7 @@ export default function BarChartOne() {
       colors: ["transparent"],
     },
     xaxis: {
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
+      categories: chartLabels,
       axisBorder: {
         show: false,
       },
@@ -93,19 +101,12 @@ export default function BarChartOne() {
       },
     },
   };
-  const series = [
-    {
-      name: "Jumlah User",
-      // sample vendor counts per month (Jan..Dec)
-      data: [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27],
-    },
-  ];
   return (
     <div className="max-w-full overflow-x-auto custom-scrollbar">
       <div id="chartOne" className="min-w-[1000px]">
         <ReactApexChart
           options={options}
-          series={series}
+          series={chartSeries}
           type="bar"
           height={310}
         />

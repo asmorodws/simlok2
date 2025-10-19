@@ -46,12 +46,15 @@ export async function GET(
     const categoryFolders = {
       sika: 'dokumen-sika',
       simja: 'dokumen-simja',
-      other: 'lainnya',
+      hsse: 'dokumen-hsse',
+      'hsse-worker': 'dokumen-hsse-pekerja',
+      document: 'dokumen',
       'worker-photo': 'foto-pekerja'
     };
 
     const folderName = categoryFolders[category as keyof typeof categoryFolders];
     if (!folderName) {
+      console.error('Invalid category:', category);
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
 

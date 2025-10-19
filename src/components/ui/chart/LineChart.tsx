@@ -9,7 +9,33 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
-export default function LineChartOne() {
+interface LineChartProps {
+  labels?: string[];
+  series?: Array<{
+    name: string;
+    data: number[];
+  }>;
+}
+
+export default function LineChartOne({ labels, series: propSeries }: LineChartProps = {}) {
+  // Use provided labels or fallback to default months
+  const chartLabels = labels || [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+
+  // Use provided series or fallback to dummy data
+  const chartSeries = propSeries || [
+    {
+      name: "Total Pengajuan",
+      data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
+    },
+    {
+      name: "Disetujui",
+      data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
+    },
+  ];
+
   const options: ApexOptions = {
     legend: {
       show: true, // Show legend to indicate which series is which
@@ -68,20 +94,7 @@ export default function LineChartOne() {
     },
     xaxis: {
       type: "category", // Category-based x-axis
-      categories: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ],
+      categories: chartLabels,
       axisBorder: {
         show: false, // Hide x-axis border
       },
@@ -109,23 +122,12 @@ export default function LineChartOne() {
       },
     },
   };
-
-  const series = [
-    {
-      name: "Total Pengajuan",
-      data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
-    },
-    {
-      name: "Disetujui",
-      data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
-    },
-  ];
   return (
     <div className="max-w-full overflow-x-auto custom-scrollbar">
       <div id="chartEight" className="min-w-[1000px]">
         <ReactApexChart
           options={options}
-          series={series}
+          series={chartSeries}
           type="area"
           height={310}
         />

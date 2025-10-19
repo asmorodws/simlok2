@@ -274,9 +274,10 @@ export async function POST(request: NextRequest) {
           user_address: userExists.address,
           vendor_phone: userExists.phone_number, // Auto-fill dari data user
           simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
+          simja_type: submissionData.simja_type || null,
           sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,
-          supporting_doc1_date: submissionData.supporting_doc1_date ? new Date(submissionData.supporting_doc1_date) : null,
-          supporting_doc2_date: submissionData.supporting_doc2_date ? new Date(submissionData.supporting_doc2_date) : null,
+          sika_type: submissionData.sika_type || null,
+          hsse_pass_valid_thru: submissionData.hsse_pass_valid_thru ? new Date(submissionData.hsse_pass_valid_thru) : null,
           qrcode: qrData,
         },
         include: {
@@ -296,6 +297,9 @@ export async function POST(request: NextRequest) {
         const workersData = workers.map((worker: any) => ({
           worker_name: worker.worker_name,
           worker_photo: worker.worker_photo || null,
+          hsse_pass_number: worker.hsse_pass_number || null,
+          hsse_pass_valid_thru: worker.hsse_pass_valid_thru ? new Date(worker.hsse_pass_valid_thru) : null,
+          hsse_pass_document_upload: worker.hsse_pass_document_upload || null,
           submission_id: submission.id,
         }));
 

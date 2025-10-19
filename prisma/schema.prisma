@@ -104,20 +104,17 @@ model Submission {
   sika_date                 DateTime?
   simlok_number             String?
   simlok_date               DateTime?
-  // Supporting Documents 1
-  supporting_doc1_type      String?
-  supporting_doc1_number    String?
-  supporting_doc1_date      DateTime?
-  supporting_doc1_upload    String?
-  // Supporting Documents 2
-  supporting_doc2_type      String?
-  supporting_doc2_number    String?
-  supporting_doc2_date      DateTime?
-  supporting_doc2_upload    String?
-  worker_names              String       @db.Text
-  content                   String?      @db.Text
   sika_document_upload      String?
   simja_document_upload     String?
+  simja_type               String?
+  sika_type                 String?
+  // HSSE PASS
+  hsse_pass_document_upload String?
+  hsse_pass_number          String?
+  hsse_pass_valid_thru     DateTime?
+  
+  worker_names              String       @db.Text
+  content                   String?      @db.Text
   qrcode                    String?      @db.LongText
   created_at                DateTime     @default(now())
   user_id                   String?      // Made optional for deleted users
@@ -156,6 +153,9 @@ model WorkerList {
   id            String     @id @default(cuid())
   worker_name   String
   worker_photo  String?
+  hsse_pass_number String?
+  hsse_pass_valid_thru DateTime?
+  hsse_pass_document_upload String?
   submission_id String
   created_at    DateTime   @default(now())
   submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)

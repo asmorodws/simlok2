@@ -156,7 +156,7 @@ export default function ApproverScanHistoryContent() {
                     value={filters.submissionId}
                     onChange={(e) => setFilters((p) => ({ ...p, submissionId: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    placeholder="Contoh: SIMLOK/2024/0001"
+                    placeholder="Contoh: 1/S00330/2024"
                   />
                 </div>
               </div>

@@ -194,9 +194,9 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
-              {/* Informasi Dokumen SIMJA/SIKA - tetap tampilkan data legacy */}
+              {/* Informasi Dokumen SIMJA/SIKA/HSSE - unified section */}
               <DetailSection 
-                title="Informasi Dokumen (SIMJA/SIKA)" 
+                title="Informasi Dokumen (SIMJA/SIKA/HSSE)" 
                 icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -213,6 +213,12 @@ export default function SubmissionDetailModal({
                       icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                     />
                   )}
+                  {/* {submission.simja_type && (
+                    <InfoCard
+                      label="Tipe SIMJA"
+                      value={submission.simja_type}
+                    />
+                  )} */}
                   {submission.sika_number && (
                     <InfoCard
                       label="Nomor SIKA"
@@ -223,6 +229,25 @@ export default function SubmissionDetailModal({
                     <InfoCard
                       label="Tanggal SIKA"
                       value={formatDate(submission.sika_date)}
+                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
+                    />
+                  )}
+                  {/* {submission.sika_type && (
+                    <InfoCard
+                      label="Tipe SIKA"
+                      value={submission.sika_type}
+                    />
+                  )} */}
+                  {submission.hsse_pass_number && (
+                    <InfoCard
+                      label="Nomor HSSE Pass"
+                      value={submission.hsse_pass_number}
+                    />
+                  )}
+                  {submission.hsse_pass_valid_thru && (
+                    <InfoCard
+                      label="Masa berlaku HSSE pass"
+                      value={formatDate(submission.hsse_pass_valid_thru)}
                       icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
                     />
                   )}
@@ -242,131 +267,13 @@ export default function SubmissionDetailModal({
                 </div>
               </DetailSection>
 
-              {/* Dokumen Pendukung - tampilan bersebelahan */}
-              {(submission.supporting_doc1_type || submission.supporting_doc2_type) && (
+              {/* File Dokumen SIMJA/SIKA/HSSE - unified section with flexible grid */}
+              {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                 <DetailSection
-                  title="Dokumen Pendukung"
-                  icon={<DocumentIcon className="h-5 w-5 text-purple-500" />}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Dokumen Pendukung 1 */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 1</h4>
-                      {submission.supporting_doc1_type && (
-                        <InfoCard
-                          label="Jenis Dokumen"
-                          value={submission.supporting_doc1_type}
-                        />
-                      )}
-                      {submission.supporting_doc1_number && (
-                        <InfoCard
-                          label="Nomor Dokumen"
-                          value={submission.supporting_doc1_number}
-                        />
-                      )}
-                      {submission.supporting_doc1_date && (
-                        <InfoCard
-                          label="Tanggal Dokumen"
-                          value={formatDate(submission.supporting_doc1_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                        />
-                      )}
-                    </div>
-                    
-                    {/* Dokumen Pendukung 2 */}
-                    <div className="space-y-4">
-                      <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 2</h4>
-                      {submission.supporting_doc2_type && (
-                        <InfoCard
-                          label="Jenis Dokumen"
-                          value={submission.supporting_doc2_type}
-                        />
-                      )}
-                      {submission.supporting_doc2_number && (
-                        <InfoCard
-                          label="Nomor Dokumen"
-                          value={submission.supporting_doc2_number}
-                        />
-                      )}
-                      {submission.supporting_doc2_date && (
-                        <InfoCard
-                          label="Tanggal Dokumen"
-                          value={formatDate(submission.supporting_doc2_date)}
-                          icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                        />
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Upload Documents Preview - bersebelahan */}
-                  {(submission.supporting_doc1_upload || submission.supporting_doc2_upload) && (
-                    <div className="mt-6">
-                      <h5 className="font-medium text-gray-900 mb-4">File Dokumen Pendukung</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Dokumen Pendukung 1 Upload */}
-                        {submission.supporting_doc1_upload && (
-                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                            <div className="flex items-center space-x-3">
-                              <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {submission.supporting_doc1_type || 'Dokumen Pendukung 1'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {submission.supporting_doc1_number || 'File tersedia'}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleFileView(submission.supporting_doc1_upload!, submission.supporting_doc1_type || 'Dokumen Pendukung 1')}
-                              className="flex items-center space-x-2"
-                            >
-                              <EyeIcon className="w-4 h-4" />
-                              <span>Lihat</span>
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Dokumen Pendukung 2 Upload */}
-                        {submission.supporting_doc2_upload && (
-                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
-                            <div className="flex items-center space-x-3">
-                              <DocumentIcon className="h-6 w-6 text-green-500 flex-shrink-0" />
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {submission.supporting_doc2_type || 'Dokumen Pendukung 2'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                  {submission.supporting_doc2_number || 'File tersedia'}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleFileView(submission.supporting_doc2_upload!, submission.supporting_doc2_type || 'Dokumen Pendukung 2')}
-                              className="flex items-center space-x-2"
-                            >
-                              <EyeIcon className="w-4 h-4" />
-                              <span>Lihat</span>
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </DetailSection>
-              )}
-
-              {/* SIMJA/SIKA Document Uploads - jika ada */}
-              {(submission.simja_document_upload || submission.sika_document_upload) && (
-                <DetailSection
-                  title="File Dokumen SIMJA/SIKA"
+                  title="File Dokumen SIMJA/SIKA/HSSE"
                   icon={<DocumentIcon className="h-5 w-5 text-gray-500" />}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className={`grid grid-cols-1 md:grid-cols-${submission.hsse_pass_document_upload ? '3' : '2'} gap-4`}>
                     {submission.simja_document_upload && (
                       <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
                         <div className="flex items-center space-x-3">
@@ -405,6 +312,29 @@ export default function SubmissionDetailModal({
                           variant="outline"
                           size="sm"
                           onClick={() => handleFileView(submission.sika_document_upload!, 'Dokumen SIKA')}
+                          className="flex items-center space-x-2"
+                        >
+                          <EyeIcon className="w-4 h-4" />
+                          <span>Lihat</span>
+                        </Button>
+                      </div>
+                    )}
+
+                    {submission.hsse_pass_document_upload && (
+                      <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <div className="flex items-center space-x-3">
+                          <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-gray-900">Dokumen HSSE Pass</p>
+                            <p className="text-sm text-gray-500">
+                              {submission.hsse_pass_number || 'File tersedia'}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFileView(submission.hsse_pass_document_upload!, 'Dokumen HSSE Pass')}
                           className="flex items-center space-x-2"
                         >
                           <EyeIcon className="w-4 h-4" />

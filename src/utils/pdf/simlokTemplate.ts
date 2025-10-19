@@ -193,7 +193,7 @@ class PDFKit {
     }
     
     // Add header dengan nomor SIMLOK
-    const simlokNumber = this.submissionData.simlok_number || "[DRAFT]/XX/09/2025";
+    const simlokNumber = this.submissionData.simlok_number || "[DRAFT]/S00330/2025";
     this.text(`Lampiran Simlok No. ${simlokNumber}`, MARGIN, A4.h - 80, {
       size: 12,
       bold: true,
@@ -407,10 +407,8 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 
   await k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
-  // Format berdasarkan (Dokumen Pendukung 1)
-  const berdasarkan = s.supporting_doc1_number
-    ? `${normalizeInline(s.supporting_doc1_number)} Tgl. ${fmtDateID(s.supporting_doc1_date)}`
-    : "";
+  // Format berdasarkan dari field based_on atau default text
+  const berdasarkan = "Surat Permohonan Izin Kerja";
   
   await k.numberedRow(2, "Berdasarkan", berdasarkan);
   await k.numberedRow(3, "Pekerjaan", s.job_description);
@@ -477,63 +475,69 @@ for (let idx = 0; idx < lines.length; idx++) {
     const colonX = k.x + k.leftLabelWidth - k.measure(":", { size: k.fs }) - 2;
     k.text(":", colonX, k.y);
 
-    // Generate template preview similar to reviewer
+    // Generate template preview
     const rightX = k.x + k.leftLabelWidth + 4;
     const rightW = A4.w - MARGIN - rightX;
-    
-    // Generate structured template with bold formatting
     
     // Line 1: Introduction
     await k.wrap(" Izin diberikan berdasarkan :", rightX, rightW, { bold: false });
     
-    // Minimal spacing before SIMJA section
-    k.y -= k.lineGap * 0.2; // Reduced spacing
+    // Minimal spacing
+    k.y -= k.lineGap * 0.2;
     
-    // Dokumen Pendukung 1 section
-    if ((s.supporting_doc1_type && s.supporting_doc1_number && s.supporting_doc1_date) || s.supporting_doc1_type || s.supporting_doc1_number || s.supporting_doc1_date) {
-      await k.pageBreak();
-      
-      // Bullet point dengan jenis dokumen bold dan sisa text normal
-      const bulletX = rightX;
-      k.text(" • ", bulletX, k.y, { bold: false });
-      const docTypeX = bulletX + k.measure(" • ", { bold: false });
-      const docType = s.supporting_doc1_type || "Dokumen Perizinan";
-      k.text(docType, docTypeX, k.y, { bold: true });
-      
-      // Move to next line
-      k.y -= k.lineGap;
-      
-      // Baris kedua dengan indentasi untuk No. dan Tanggal
-      await k.pageBreak();
-      const docNum = s.supporting_doc1_number || '[Nomor Dokumen]';
-      const docDate = s.supporting_doc1_date ? fmtDateID(s.supporting_doc1_date) : '[Tanggal Dokumen]';
-      await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
-      
-      // Minimal spacing after dokumen pendukung 1 section
-      k.y -= k.lineGap * 0.2;
+    // SIMJA section
+    await k.pageBreak();
+    const bulletX = rightX;
+    k.text(" • ", bulletX, k.y, { bold: false });
+    const simjaX = bulletX + k.measure(" • ", { bold: false });
+    k.text("SIMJA", simjaX, k.y, { bold: true });
+    
+    // Add SIMJA type if available (not bold, same line)
+    if (s.simja_type) {
+      const simjaTextWidth = k.measure("SIMJA", { bold: true });
+      const simjaTypeX = simjaX + simjaTextWidth + k.measure(" ", { bold: false });
+      k.text(` ${s.simja_type}`, simjaTypeX, k.y, { bold: false });
     }
+    k.y -= k.lineGap;
     
-    // Dokumen Pendukung 2 section
-    if ((s.supporting_doc2_type && s.supporting_doc2_number && s.supporting_doc2_date) || s.supporting_doc2_type || s.supporting_doc2_number || s.supporting_doc2_date) {
+    await k.pageBreak();
+    const simjaNum = s.simja_number || '[Nomor SIMJA]';
+    const simjaDate = s.simja_date ? fmtDateID(s.simja_date) : '[Tanggal SIMJA]';
+    await k.wrap(`   No. ${simjaNum} Tanggal ${simjaDate}`, rightX, rightW, { bold: true });
+    k.y -= k.lineGap * 0.2;
+    
+    // SIKA section
+    await k.pageBreak();
+    k.text(" • ", bulletX, k.y, { bold: false });
+    const sikaX = bulletX + k.measure(" • ", { bold: false });
+    k.text("SIKA", sikaX, k.y, { bold: true });
+    
+    // Add SIKA type if available (not bold, same line)
+    if (s.sika_type) {
+      const sikaTextWidth = k.measure("SIKA", { bold: true });
+      const sikaTypeX = sikaX + sikaTextWidth + k.measure(" ", { bold: false });
+      k.text(` ${s.sika_type}`, sikaTypeX, k.y, { bold: false });
+    }
+    k.y -= k.lineGap;
+    
+    await k.pageBreak();
+    const sikaNum = s.sika_number || '[Nomor SIKA]';
+    const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
+    await k.wrap(`   No. ${sikaNum} Tanggal ${sikaDate}`, rightX, rightW, { bold: true });
+    k.y -= k.lineGap * 0.2;
+    
+    // HSSE Pass section (jika ada)
+    if (s.hsse_pass_number || s.hsse_pass_valid_thru) {
       await k.pageBreak();
-      
-      // Bullet point dengan jenis dokumen bold dan sisa text normal
-      const bulletX = rightX;
       k.text(" • ", bulletX, k.y, { bold: false });
-      const docTypeX = bulletX + k.measure(" • ", { bold: false });
-      const docType2 = s.supporting_doc2_type || "Dokumen Perizinan Tambahan";
-      k.text(docType2, docTypeX, k.y, { bold: true });
-      
-      // Move to next line
+      const hsseX = bulletX + k.measure(" • ", { bold: false });
+      k.text("HSSE Pass", hsseX, k.y, { bold: true });
       k.y -= k.lineGap;
       
-      // Baris kedua dengan indentasi untuk No. dan Tanggal
       await k.pageBreak();
-      const docNum2 = s.supporting_doc2_number || '[Nomor Dokumen]';
-      const docDate2 = s.supporting_doc2_date ? fmtDateID(s.supporting_doc2_date) : '[Tanggal Dokumen]';
-      await k.wrap(`   No. ${docNum2} Tanggal ${docDate2}`, rightX, rightW, { bold: true });
-      
-      // Minimal spacing after dokumen pendukung 2 section
+      const hsseNum = s.hsse_pass_number || '[Nomor HSSE Pass]';
+      const hsseValidThru = s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '[Berlaku Sampai]';
+      await k.wrap(`   No. ${hsseNum} Berlaku sampai ${hsseValidThru}`, rightX, rightW, { bold: true });
       k.y -= k.lineGap * 0.2;
     }
     
@@ -630,14 +634,20 @@ for (let idx = 0; idx < lines.length; idx++) {
   return k.doc.save();
 }
 
-import { loadWorkerPhoto, preloadWorkerPhotos } from './imageLoader';
+import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos } from './imageLoader';
 
 /**
- * Add second page with worker photos
+ * Add second page with worker photos and HSSE documents
  */
 async function addWorkerPhotosPage(
   k: PDFKit, 
-  workerList: Array<{ worker_name: string; worker_photo?: string | null }>
+  workerList: Array<{ 
+    worker_name: string; 
+    worker_photo?: string | null;
+    hsse_pass_number?: string | null;
+    hsse_pass_valid_thru?: Date | string | null;
+    hsse_pass_document_upload?: string | null;
+  }>
 ) {
   // Only proceed if there are workers
   if (!workerList || workerList.length === 0) {
@@ -650,117 +660,131 @@ async function addWorkerPhotosPage(
   // Add new page - header akan otomatis ditambahkan
   await k.addPage();
 
-  // Calculate grid layout optimized for 3x3 photos
-  const photosPerRow = 3;
-  const photoWidth = 130;  // Optimized for better fit
-  const photoHeight = 170; // Optimized for better fit
-  const marginHorizontal = (A4.w - (photosPerRow * photoWidth)) / (photosPerRow + 1);
-  const marginVertical = 12; // Reduced vertical margin
-  const nameSpacing = 20; // Space for worker name below photo
+  // Calculate grid layout for 2 columns x 3 rows (6 workers per page)
+  const columns = 2; // 2 kolom
+  const rows = 3; // 3 baris
+  const workersPerPage = columns * rows; // 6 pekerja per halaman
   
-  let currentRow = 0;
-  let currentCol = 0;
-  const startY = A4.h - 140; // Optimized start position to fit header
+  // Item dimensions: each worker gets foto + dokumen side by side in a cell
+  const cellWidth = 240; // Width untuk satu cell (foto + dokumen)
+  const cellHeight = 180; // Height untuk gambar + text
+  const imageHeight = 130; // Height untuk gambar (foto + dokumen)
+  const imageWidth = 110; // Width untuk setiap gambar (foto atau dokumen)
+  const imageGap = 10; // Gap antara foto dan dokumen dalam satu cell
+  
+  const horizontalGap = 30; // Gap between columns
+  const verticalGap = 15; // Gap between rows
+  
+  // Calculate margins to center the grid
+  const totalGridWidth = (cellWidth * columns) + (horizontalGap * (columns - 1));
+  const marginHorizontal = (A4.w - totalGridWidth) / 2;
+  
+  const startY = A4.h - 140; // Start position to fit header
+  let workerIndex = 0;
 
-  // Process each worker
-  for (let i = 0; i < workerList.length; i++) {
-    const worker = workerList[i];
-    if (!worker) continue; // Skip if worker is undefined
-    
-    // Calculate position
-    const x = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
-    const y = startY - (currentRow * (photoHeight + marginVertical + nameSpacing)); // Use nameSpacing constant
-
-    // Check if we need a new page (optimized for 3x3 grid)
-    const bottomY = y - photoHeight;
-    const pageLimit = MARGIN + 30;
-    
-    // Check if we need a new page - either by space limit or by 3x3 grid limit (max 9 per page)
-    const workersOnCurrentPage = (currentRow * photosPerRow) + currentCol;
-    const needNewPageBySpace = bottomY < pageLimit;
-    const needNewPageByGrid = workersOnCurrentPage >= 9; // 3x3 = 9 workers max per page
-    
-    if (needNewPageBySpace || needNewPageByGrid) {
-      await k.addPage(); // Header akan otomatis ditambahkan oleh addPage()
-      
-      currentRow = 0;
-      currentCol = 0;
-      const newY = startY - (currentRow * (photoHeight + marginVertical + nameSpacing));
-      // Recalculate x for new page
-      const newX = marginHorizontal + (currentCol * (photoWidth + marginHorizontal));
-      
-      // Draw on new page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, newX, newY, photoWidth, photoHeight);
-    } else {
-      // Draw on current page
-      await drawWorkerCard(k.page, k.doc, k.font, k.bold, worker, x, y, photoWidth, photoHeight);
+  // Process workers in batches of workersPerPage
+  while (workerIndex < workerList.length) {
+    // Add new page if not first batch
+    if (workerIndex > 0) {
+      await k.addPage();
     }
-
-    // Move to next position
-    currentCol++;
-    if (currentCol >= photosPerRow) {
-      currentCol = 0;
-      currentRow++;
+    
+    // Draw workers for current page (up to workersPerPage)
+    const endIndex = Math.min(workerIndex + workersPerPage, workerList.length);
+    
+    for (let i = workerIndex; i < endIndex; i++) {
+      const worker = workerList[i];
+      if (!worker) continue;
+      
+      // Calculate grid position (which cell in 2x3 grid)
+      const positionInPage = i - workerIndex; // 0-5
+      const col = positionInPage % columns; // 0 or 1
+      const row = Math.floor(positionInPage / columns); // 0, 1, or 2
+      
+      // Calculate X position for this column
+      const cellX = marginHorizontal + (col * (cellWidth + horizontalGap));
+      const photoX = cellX;
+      const documentX = cellX + imageWidth + imageGap;
+      
+      // Calculate Y position for this row
+      const y = startY - (row * (cellHeight + verticalGap));
+      
+      // Draw worker photo and document
+      await drawWorkerPhotoAndDocument(
+        k.page, k.doc, k.font, k.bold, 
+        worker, 
+        photoX,
+        documentX,
+        y, 
+        imageWidth,
+        imageHeight
+      );
     }
+    
+    // Move to next batch
+    workerIndex = endIndex;
   }
 }
 
 /**
- * Draw individual worker card with photo and name
+ * Draw worker photo and HSSE document side by side
  */
-async function drawWorkerCard(
+async function drawWorkerPhotoAndDocument(
   page: any,
   doc: PDFDocument,
   font: PDFFont,
   boldFont: PDFFont,
-  worker: { worker_name: string; worker_photo?: string | null },
-  x: number,
+  worker: { 
+    worker_name: string; 
+    worker_photo?: string | null;
+    hsse_pass_number?: string | null;
+    hsse_pass_valid_thru?: Date | string | null;
+    hsse_pass_document_upload?: string | null;
+  },
+  photoX: number,
+  documentX: number,
   y: number,
-  photoWidth: number,
-  photoHeight: number
+  itemWidth: number,
+  itemHeight: number
 ) {
+  const imageHeight = itemHeight; // Use full itemHeight for images
+  
+  // === LEFT SIDE: WORKER PHOTO ===
   // Draw photo frame
   page.drawRectangle({
-    x: x,
-    y: y - photoHeight,
-    width: photoWidth,
-    height: photoHeight,
+    x: photoX,
+    y: y - imageHeight,
+    width: itemWidth,
+    height: imageHeight,
     borderColor: rgb(0.8, 0.8, 0.8),
     borderWidth: 1,
     color: rgb(0.98, 0.98, 0.98),
   });
 
-  // Load and draw photo if available
+  // Load and draw photo if available (NO LABEL - full frame)
   if (worker.worker_photo) {
-    console.log(`DrawWorkerCard: Processing worker ${worker.worker_name} with photo: ${worker.worker_photo}`);
     const photoImage = await loadWorkerPhoto(doc, worker.worker_photo);
     
     if (photoImage) {
       try {
-        console.log(`DrawWorkerCard: Successfully loaded photo for ${worker.worker_name}, drawing image...`);
-        
         // Calculate dimensions to maintain aspect ratio
         const imgDims = photoImage.scale(1);
         const imgAspectRatio = imgDims.width / imgDims.height;
-        const frameAspectRatio = photoWidth / photoHeight;
+        const frameAspectRatio = itemWidth / imageHeight; // Use full frame height
         
-        let drawWidth = photoWidth - 10; // 5px padding on each side
-        let drawHeight = photoHeight - 10;
-        let drawX = x + 5;
-        let drawY = y - photoHeight + 5;
+        let drawWidth = itemWidth - 2; // Padding 1px each side
+        let drawHeight = imageHeight - 2; // Padding 1px each side
+        let drawX = photoX + 1;
+        let drawY = y - imageHeight + 1;
         
         // Adjust dimensions to fit within frame while maintaining aspect ratio
         if (imgAspectRatio > frameAspectRatio) {
-          // Image is wider, fit to width
           drawHeight = drawWidth / imgAspectRatio;
-          drawY = y - (photoHeight + drawHeight) / 2;
+          drawY = y - (imageHeight + drawHeight) / 2;
         } else {
-          // Image is taller, fit to height
           drawWidth = drawHeight * imgAspectRatio;
-          drawX = x + (photoWidth - drawWidth) / 2;
+          drawX = photoX + (itemWidth - drawWidth) / 2;
         }
-        
-        console.log(`DrawWorkerCard: Drawing image for ${worker.worker_name} at position (${drawX}, ${drawY}) with size ${drawWidth}x${drawHeight}`);
         
         page.drawImage(photoImage, {
           x: drawX,
@@ -768,85 +792,276 @@ async function drawWorkerCard(
           width: drawWidth,
           height: drawHeight,
         });
-        
-        console.log(`DrawWorkerCard: Successfully drawn photo for ${worker.worker_name}`);
       } catch (error) {
-        console.error(`DrawWorkerCard: Error drawing photo for ${worker.worker_name}:`, error);
+        console.error(`Error drawing photo for ${worker.worker_name}:`, error);
         
-        // Draw error placeholder
+        // Draw error placeholder (smaller text)
         page.drawText("Error", { 
-          x: x + photoWidth/2 - 15, 
-          y: y - photoHeight/2 + 10, 
-          size: 10, 
+          x: photoX + itemWidth/2 - 15, 
+          y: y - imageHeight/2 + 5, 
+          size: 7, 
           font: font,
           color: rgb(0.8, 0.2, 0.2) 
         });
         page.drawText("loading", { 
-          x: x + photoWidth/2 - 18, 
-          y: y - photoHeight/2 - 5, 
-          size: 10, 
+          x: photoX + itemWidth/2 - 15, 
+          y: y - imageHeight/2 - 5, 
+          size: 7, 
           font: font,
           color: rgb(0.8, 0.2, 0.2) 
         });
       }
     } else {
-      console.warn(`DrawWorkerCard: Photo image is null/undefined for worker ${worker.worker_name}`);
-      
-      // Draw placeholder text if photo couldn't be loaded
-      page.drawText("Foto tidak", { 
-        x: x + photoWidth/2 - 25, 
-        y: y - photoHeight/2 + 10, 
-        size: 10, 
+      // Draw placeholder for failed load (smaller text)
+      page.drawText("Foto", { 
+        x: photoX + itemWidth/2 - 12, 
+        y: y - imageHeight/2 + 5, 
+        size: 7, 
         font: font,
         color: rgb(0.6, 0.6, 0.6) 
       });
-      page.drawText("tersedia", { 
-        x: x + photoWidth/2 - 20, 
-        y: y - photoHeight/2 - 5, 
-        size: 10, 
+      page.drawText("tidak ada", { 
+        x: photoX + itemWidth/2 - 18, 
+        y: y - imageHeight/2 - 5, 
+        size: 7, 
         font: font,
         color: rgb(0.6, 0.6, 0.6) 
       });
     }
   } else {
-    // Draw placeholder for no photo
-    page.drawText("Tidak ada", { 
-      x: x + photoWidth/2 - 25, 
-      y: y - photoHeight/2 + 10, 
-      size: 10, 
+    // Draw placeholder for no photo (smaller text)
+    page.drawText("Tidak", { 
+      x: photoX + itemWidth/2 - 12, 
+      y: y - imageHeight/2 + 5, 
+      size: 7, 
       font: font,
       color: rgb(0.6, 0.6, 0.6) 
     });
-    page.drawText("foto", { 
-      x: x + photoWidth/2 - 10, 
-      y: y - photoHeight/2 - 5, 
-      size: 10, 
+    page.drawText("ada foto", { 
+      x: photoX + itemWidth/2 - 18, 
+      y: y - imageHeight/2 - 5, 
+      size: 7, 
       font: font,
       color: rgb(0.6, 0.6, 0.6) 
     });
   }
 
-  // Draw worker name below photo with reduced spacing
-  const nameY = y - photoHeight - 15; // Reduced from 15 to 8
-  const maxNameWidth = photoWidth - 4; // Leave 2px margin on each side
-  let displayName = worker.worker_name;
-  let textWidth = boldFont.widthOfTextAtSize(displayName, 9);
-  
-  // Truncate name if too long to fit in photo width
-  if (textWidth > maxNameWidth) {
-    while (textWidth > maxNameWidth && displayName.length > 0) {
-      displayName = displayName.substring(0, displayName.length - 4) + '...';
-      textWidth = boldFont.widthOfTextAtSize(displayName, 9);
+  // === RIGHT SIDE: HSSE DOCUMENT ===
+  // Draw document frame
+  page.drawRectangle({
+    x: documentX,
+    y: y - imageHeight,
+    width: itemWidth,
+    height: imageHeight,
+    borderColor: rgb(0.8, 0.8, 0.8),
+    borderWidth: 1,
+    color: rgb(0.98, 0.98, 0.98),
+  });
+
+  // Load and draw HSSE document if available (NO LABEL - full frame)
+  if (worker.hsse_pass_document_upload) {
+    console.log(`Loading HSSE document for ${worker.worker_name}:`, worker.hsse_pass_document_upload);
+    const documentResult = await loadWorkerDocument(doc, worker.hsse_pass_document_upload);
+    console.log(`Document result for ${worker.worker_name}:`, documentResult.type, documentResult.error || 'no error');
+    
+    if (documentResult.type === 'image' && documentResult.image) {
+      try {
+        // Calculate dimensions to maintain aspect ratio
+        const imgDims = documentResult.image.scale(1);
+        const imgAspectRatio = imgDims.width / imgDims.height;
+        const frameAspectRatio = itemWidth / imageHeight; // Use full frame height
+        
+        let drawWidth = itemWidth - 2; // Padding 1px each side
+        let drawHeight = imageHeight - 2; // Padding 1px each side
+        let drawX = documentX + 1;
+        let drawY = y - imageHeight + 1;
+        
+        if (imgAspectRatio > frameAspectRatio) {
+          drawHeight = drawWidth / imgAspectRatio;
+          drawY = y - (imageHeight + drawHeight) / 2;
+        } else {
+          drawWidth = drawHeight * imgAspectRatio;
+          drawX = documentX + (itemWidth - drawWidth) / 2;
+        }
+        
+        page.drawImage(documentResult.image, {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight,
+        });
+      } catch (error) {
+        console.error(`Error drawing HSSE document for ${worker.worker_name}:`, error);
+        
+        // Draw error placeholder
+        page.drawText("Error", { 
+          x: documentX + itemWidth/2 - 15, 
+          y: y - imageHeight/2 + 5, 
+          size: 7, 
+          font: font,
+          color: rgb(0.8, 0.2, 0.2) 
+        });
+        page.drawText("loading", { 
+          x: documentX + itemWidth/2 - 15, 
+          y: y - imageHeight/2 - 5, 
+          size: 7, 
+          font: font,
+          color: rgb(0.8, 0.2, 0.2) 
+        });
+      }
+    } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
+      try {
+        // For PDF documents, embed first page using pdf-lib embedPages
+        console.log(`Embedding PDF page for ${worker.worker_name}`);
+        
+        const sourcePdf = documentResult.pdfPages;
+        
+        // Embed the first page from the source PDF
+        const [embeddedPage] = await doc.embedPages([sourcePdf.getPage(0)]);
+        
+        if (!embeddedPage) {
+          throw new Error('Failed to embed PDF page');
+        }
+        
+        console.log(`Successfully embedded page for ${worker.worker_name}`);
+        
+        // Get embedded page dimensions
+        const { width: pdfWidth, height: pdfHeight } = embeddedPage.scale(1);
+        
+        // Calculate target dimensions to fit in the document frame with padding
+        const targetWidth = itemWidth - 2; // Padding 1px each side
+        const targetHeight = imageHeight - 2; // Padding 1px each side
+        
+        // Calculate scale to fit while maintaining aspect ratio
+        const scaleX = targetWidth / pdfWidth;
+        const scaleY = targetHeight / pdfHeight;
+        const scale = Math.min(scaleX, scaleY, 1.0); // Don't upscale
+        
+        const scaledWidth = pdfWidth * scale;
+        const scaledHeight = pdfHeight * scale;
+        
+        // Calculate position to center the page
+        const drawX = documentX + 1 + (targetWidth - scaledWidth) / 2;
+        const drawY = y - imageHeight + 1 + (targetHeight - scaledHeight) / 2;
+        
+        // Draw the embedded page on the current page
+        page.drawPage(embeddedPage, {
+          x: drawX,
+          y: drawY,
+          width: scaledWidth,
+          height: scaledHeight,
+        });
+        
+        console.log(`Successfully drew embedded PDF page for ${worker.worker_name}`);
+        
+      } catch (error) {
+        console.error(`Error embedding PDF for ${worker.worker_name}:`, error);
+        
+        // Draw simple placeholder text without emoji
+        page.drawText("PDF", { 
+          x: documentX + itemWidth/2 - 10, 
+          y: y - imageHeight/2 + 15, 
+          size: 10, 
+          font: boldFont,
+          color: rgb(0.2, 0.4, 0.8) 
+        });
+        page.drawText("Dokumen", { 
+          x: documentX + itemWidth/2 - 18, 
+          y: y - imageHeight/2 + 2, 
+          size: 7, 
+          font: font,
+          color: rgb(0.4, 0.4, 0.4) 
+        });
+        page.drawText("Tersedia", { 
+          x: documentX + itemWidth/2 - 18, 
+          y: y - imageHeight/2 - 8, 
+          size: 7, 
+          font: font,
+          color: rgb(0.4, 0.4, 0.4) 
+        });
+      }
+    } else {
+      // Draw placeholder for unsupported type or failed load
+      const errorMsg = documentResult.error || 'Format tidak didukung';
+      page.drawText("Dokumen", { 
+        x: documentX + itemWidth/2 - 20, 
+        y: y - imageHeight/2 + 10, 
+        size: 7, 
+        font: font,
+        color: rgb(0.6, 0.6, 0.6) 
+      });
+      page.drawText("error", { 
+        x: documentX + itemWidth/2 - 12, 
+        y: y - imageHeight/2 - 2, 
+        size: 7, 
+        font: font,
+        color: rgb(0.8, 0.2, 0.2) 
+      });
+      console.warn(`HSSE document error for ${worker.worker_name}:`, errorMsg);
     }
+  } else {
+    // Draw placeholder for no document (smaller text)
+    page.drawText("Tidak", { 
+      x: documentX + itemWidth/2 - 12, 
+      y: y - imageHeight/2 + 5, 
+      size: 7, 
+      font: font,
+      color: rgb(0.6, 0.6, 0.6) 
+    });
+    page.drawText("ada dok", { 
+      x: documentX + itemWidth/2 - 18, 
+      y: y - imageHeight/2 - 5, 
+      size: 7, 
+      font: font,
+      color: rgb(0.6, 0.6, 0.6) 
+    });
   }
+
+  // === WORKER INFO BELOW IMAGES (Left-aligned, starting from photo position) ===
+  const topPadding = 15; // Padding atas untuk memberikan jarak dari gambar
+  const textStartY = y - imageHeight - topPadding; // Start text dengan padding
+  const lineSpacing = 12; // Jarak antar baris
+  const leftX = photoX; // Start from photo position (left-aligned)
   
-  const nameX = x + (photoWidth - textWidth) / 2; // Center the name
+  // Line 1: Worker Name (bold, left-aligned)
+  const nameText = worker.worker_name;
+  const nameFontSize = 10;
   
-  page.drawText(displayName, { 
-    x: nameX, 
-    y: nameY, 
-    size: 9, // Reduced font size from 10 to 9
-    // font: boldFont,
+  page.drawText(nameText, {
+    x: leftX,
+    y: textStartY,
+    size: nameFontSize,
+    font: boldFont,
     color: rgb(0, 0, 0)
   });
+  
+  // Line 2: HSSE Number - Valid Thru (left-aligned below name)
+  if (worker.hsse_pass_number && worker.hsse_pass_valid_thru) {
+    const validThruDate = typeof worker.hsse_pass_valid_thru === 'string' 
+      ? new Date(worker.hsse_pass_valid_thru)
+      : worker.hsse_pass_valid_thru;
+    
+    const hsseText = `${worker.hsse_pass_number} - ${fmtDateID(validThruDate)}`;
+    const hsseFontSize = 9;
+    
+    page.drawText(hsseText, {
+      x: leftX,
+      y: textStartY - lineSpacing,
+      size: hsseFontSize,
+      font: font,
+      color: rgb(0.2, 0.2, 0.2)
+    });
+  } else if (worker.hsse_pass_number) {
+    // Jika hanya ada nomor HSSE tanpa tanggal
+    const hsseText = worker.hsse_pass_number;
+    const hsseFontSize = 9;
+    
+    page.drawText(hsseText, {
+      x: leftX,
+      y: textStartY - lineSpacing,
+      size: hsseFontSize,
+      font: font,
+      color: rgb(0.2, 0.2, 0.2)
+    });
+  }
 }

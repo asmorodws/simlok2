@@ -13,7 +13,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "seed": "npx prisma migrate reset && tsx prisma/seed.ts",
+    "seed": "npx prisma migrate reset && tsx prisma/seed.ts && rm -rf public/uploads/*",
     "seed:new": "npx prisma migrate reset && tsx prisma/new-seed.ts",
     "analyze": "cross-env ANALYZE=true next build"
   },

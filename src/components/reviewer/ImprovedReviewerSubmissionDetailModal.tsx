@@ -11,7 +11,6 @@ import {
   ArrowRightIcon,
   PencilIcon,
   TrashIcon,
-  PlusIcon,
   BuildingOfficeIcon,
   UserIcon,
   BriefcaseIcon,
@@ -32,13 +31,15 @@ import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
-import NoteCard from '@/components/common/NoteCard';
 
 // Types
 interface WorkerPhoto {
   id: string;
   worker_name: string;
   worker_photo: string;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | null;
+  hsse_pass_document_upload?: string | null;
   created_at: string;
 }
 
@@ -59,10 +60,16 @@ interface SubmissionDetail {
   worker_count: number | null;
   simja_number: string;
   simja_date: string | null;
+  simja_type?: string | null;
   simja_document_upload?: string | null;
   sika_number: string;
   sika_date: string | null;
+  sika_type?: string | null;
   sika_document_upload?: string | null;
+  // HSSE Pass at submission level (optional)
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | null;
+  hsse_pass_document_upload?: string | null;
   // Supporting Documents 1
   supporting_doc1_type?: string;
   supporting_doc1_number?: string;
@@ -768,18 +775,27 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     return undefined;
   }, [isOpen]);
 
-  // Worker management functions
-  const addWorker = () => {
-    const newWorker: WorkerPhoto = {
-      id: `temp_${Date.now()}`,
-      worker_name: '',
-      worker_photo: '',
-      created_at: new Date().toISOString(),
-    };
-    setEditableWorkers(prev => [...prev, newWorker]);
-  };
+  // Worker management functions - Only delete is allowed, no add or edit
+  // const addWorker = () => {
+  //   const newWorker: WorkerPhoto = {
+  //     id: `temp_${Date.now()}`,
+  //     worker_name: '',
+  //     worker_photo: '',
+  //     hsse_pass_number: null,
+  //     hsse_pass_valid_thru: null,
+  //     hsse_pass_document_upload: null,
+  //     created_at: new Date().toISOString(),
+  //   };
+  //   setEditableWorkers(prev => [...prev, newWorker]);
+  // };
 
   const removeWorker = (workerId: string) => {
+    // Prevent deletion if only one worker remains
+    if (editableWorkers.length <= 1) {
+      showError('Tidak Dapat Menghapus', 'Minimal harus ada 1 pekerja. Tidak dapat menghapus semua data pekerja.');
+      return;
+    }
+
     // If it's a new temp worker, remove it immediately
     if (workerId.startsWith('temp_')) {
       setEditableWorkers(prev => prev.filter(w => w.id !== workerId));
@@ -790,35 +806,54 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
     }
   };
 
-  const updateWorkerName = (workerId: string, name: string) => {
-    setEditableWorkers(prev =>
-      prev.map(w => w.id === workerId ? { ...w, worker_name: name } : w)
-    );
-  };
+  // Editing functions disabled - reviewer can only delete workers
+  // const updateWorkerName = (workerId: string, name: string) => {
+  //   setEditableWorkers(prev =>
+  //     prev.map(w => w.id === workerId ? { ...w, worker_name: name } : w)
+  //   );
+  // };
 
-  const updateWorkerPhoto = async (workerId: string, file: File) => {
-    try {
-      const formData = new FormData();
-      formData.append('photo', file);
+  // const updateWorkerHsseNumber = (workerId: string, hsseNumber: string) => {
+  //   setEditableWorkers(prev =>
+  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_number: hsseNumber } : w)
+  //   );
+  // };
 
-      const response = await fetch(`/api/reviewer/worker-photos/${workerId}`, {
-        method: 'POST',
-        body: formData,
-      });
+  // const updateWorkerHsseValidThru = (workerId: string, validThru: string) => {
+  //   setEditableWorkers(prev =>
+  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_valid_thru: validThru } : w)
+  //   );
+  // };
 
-      if (response.ok) {
-        const { photo_url } = await response.json();
-        setEditableWorkers(prev =>
-          prev.map(w => w.id === workerId ? { ...w, worker_photo: photo_url } : w)
-        );
-        showSuccess('Berhasil', 'Photo berhasil diunggah');
-      } else {
-        showError('Error', 'Gagal mengunggah photo');
-      }
-    } catch (error) {
-      showError('Error', 'Terjadi kesalahan saat mengunggah photo');
-    }
-  };
+  // const updateWorkerHsseDocument = (workerId: string, documentUrl: string) => {
+  //   setEditableWorkers(prev =>
+  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_document_upload: documentUrl } : w)
+  //   );
+  // };
+
+  // const updateWorkerPhoto = async (workerId: string, file: File) => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('photo', file);
+
+  //     const response = await fetch(`/api/reviewer/worker-photos/${workerId}`, {
+  //       method: 'POST',
+  //       body: formData,
+  //     });
+
+  //     if (response.ok) {
+  //       const { photo_url } = await response.json();
+  //       setEditableWorkers(prev =>
+  //         prev.map(w => w.id === workerId ? { ...w, worker_photo: photo_url } : w)
+  //       );
+  //       showSuccess('Berhasil', 'Photo berhasil diunggah');
+  //     } else {
+  //       showError('Error', 'Gagal mengunggah photo');
+  //     }
+  //   } catch (error) {
+  //     showError('Error', 'Terjadi kesalahan saat mengunggah photo');
+  //   }
+  // };
 
   const saveWorkerChanges = async () => {
     // Validate worker count before saving
@@ -1083,6 +1118,27 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                                 {(() => {
                                   let template = "Izin diberikan berdasarkan:";
 
+                                  // SIMJA
+                                  if (submission.simja_number && submission.simja_date) {
+                                    const simjaText = submission.simja_type 
+                                      ? `\n• SIMJA ${submission.simja_type}` 
+                                      : `\n• SIMJA`;
+                                    template += `${simjaText}\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
+                                  }
+
+                                  // SIKA
+                                  if (submission.sika_number && submission.sika_date) {
+                                    const sikaText = submission.sika_type 
+                                      ? `\n• SIKA ${submission.sika_type}` 
+                                      : `\n• SIKA`;
+                                    template += `${sikaText}\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
+                                  }
+
+                                  // HSSE Pass (submission level - optional)
+                                  if (submission.hsse_pass_number && submission.hsse_pass_valid_thru) {
+                                    template += `\n• HSSE Pass\n  ${submission.hsse_pass_number} Tgl. ${formatDate(submission.hsse_pass_valid_thru)}`;
+                                  }
+
                                   // Dokumen Pendukung 1
                                   if (submission.supporting_doc1_type && submission.supporting_doc1_number && submission.supporting_doc1_date) {
                                     template += `\n• ${submission.supporting_doc1_type}\n  ${submission.supporting_doc1_number} Tgl. ${formatDate(submission.supporting_doc1_date)}`;
@@ -1101,7 +1157,7 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                               </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
-                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data SIMJA, SIKA dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
+                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data SIMJA, SIKA, HSSE Pass dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
                             </p>
                           </div>
                         </div>
@@ -1351,12 +1407,12 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                         icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                       />
                       <InfoCard
-                        label="Alamat Email Vendor"
+                        label="Alamat Email"
                         value={submission.user_email || '-'}
                         icon={<EnvelopeIcon className="h-4 w-4 text-gray-500" />}
                       />
                       <InfoCard
-                        label="Nomor Telepon Vendor"
+                        label="Nomor Telepon"
                         value={submission.vendor_phone || '-'}
                       />
                       <InfoCard
@@ -1366,36 +1422,66 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     </div>
                   </DetailSection>
 
-                  {/* Informasi Dokumen SIMJA/SIKA - tetap tampilkan data legacy */}
+                  {/* Informasi Dokumen SIMJA/SIKA/HSSE - tetap tampilkan data legacy */}
                   <DetailSection
-                    title="Informasi Dokumen (SIMJA/SIKA)"
+                    title="Informasi Dokumen (SIMJA/SIKA/HSSE)"
                     icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* SIMJA Section */}
                       {submission.simja_number && (
                         <InfoCard
                           label="Nomor SIMJA"
                           value={submission.simja_number}
                         />
                       )}
+                      {/* {submission.simja_type && (
+                        <InfoCard
+                          label="Tipe SIMJA"
+                          value={submission.simja_type}
+                        />
+                      )} */}
                       {submission.simja_date && (
                         <InfoCard
                           label="Tanggal SIMJA"
                           value={formatDate(submission.simja_date)}
                         />
                       )}
+                      
+                      {/* SIKA Section */}
                       {submission.sika_number && (
                         <InfoCard
                           label="Nomor SIKA"
                           value={submission.sika_number}
                         />
                       )}
+                      {/* {submission.sika_type && (
+                        <InfoCard
+                          label="Tipe SIKA"
+                          value={submission.sika_type}
+                        />
+                      )} */}
                       {submission.sika_date && (
                         <InfoCard
                           label="Tanggal SIKA"
                           value={formatDate(submission.sika_date)}
                         />
                       )}
+                      
+                      {/* HSSE Pass Section */}
+                      {submission.hsse_pass_number && (
+                        <InfoCard
+                          label="Nomor HSSE Pass"
+                          value={submission.hsse_pass_number}
+                        />
+                      )}
+                      {submission.hsse_pass_valid_thru && (
+                        <InfoCard
+                          label="Masa berlaku HSSE pass"
+                          value={formatDate(submission.hsse_pass_valid_thru)}
+                        />
+                      )}
+                      
                       <InfoCard
                         label="Tanggal Pengajuan"
                         value={formatDate(submission.created_at)}
@@ -1515,13 +1601,17 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                     </DetailSection>
                   )}
 
-                  {/* SIMJA/SIKA Document Uploads - jika ada */}
-                  {(submission.simja_document_upload || submission.sika_document_upload) && (
+                  {/* SIMJA/SIKA/HSSE Document Uploads - jika ada */}
+                  {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                     <DetailSection
-                      title="File Dokumen SIMJA/SIKA"
+                      title="File Dokumen SIMJA/SIKA/HSSE"
                       icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
                     >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className={`grid grid-cols-1 gap-4 ${
+                        submission.hsse_pass_document_upload 
+                          ? 'md:grid-cols-3' 
+                          : 'md:grid-cols-2'
+                      }`}>
                         {submission.simja_document_upload && (
                           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
                             <div className="flex items-center space-x-3">
@@ -1563,19 +1653,41 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                             </button>
                           </div>
                         )}
+
+                        {submission.hsse_pass_document_upload && (
+                          <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <DocumentIcon className="h-6 w-6 text-blue-500 flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-gray-900">Dokumen HSSE Pass</p>
+                                <p className="text-sm text-gray-500">
+                                  {submission.hsse_pass_number || 'File tersedia'}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleFileView(submission.hsse_pass_document_upload!, 'Dokumen HSSE Pass')}
+                              className="flex items-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                              <span>Lihat</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </DetailSection>
                   )}
 
-                    {/* Message if no documents */}
-                    {!submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
-                     !submission.simja_document_upload && !submission.sika_document_upload && (
-                      <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                        <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                        <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
-                        <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
-                      </div>
-                    )}
+                  {/* Message if no documents */}
+                  {!submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
+                   !submission.simja_document_upload && !submission.sika_document_upload && 
+                   !submission.hsse_pass_document_upload && (
+                    <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                      <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                      <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
+                    </div>
+                  )}
 
                   {/* Detail Pekerjaan - sama seperti admin */}
                   <DetailSection
@@ -1799,64 +1911,56 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
                                 </div>
                               )}
                               {isEditingWorkers && (
-                                <div className="absolute top-2 right-2 flex gap-1">
-                                  <label className="cursor-pointer bg-blue-500 text-white p-1.5 rounded-full hover:bg-blue-600 transition-colors">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          updateWorkerPhoto(worker.id, file);
-                                        }
-                                      }}
-                                    />
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                  </label>
+                                <div className="absolute top-2 right-2">
                                   <button
                                     onClick={() => removeWorker(worker.id)}
-                                    className="bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors"
+                                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors shadow-lg flex items-center gap-1"
+                                    title="Hapus pekerja dan semua datanya"
                                   >
                                     <TrashIcon className="w-4 h-4" />
+                                    <span className="text-xs font-medium">Hapus</span>
                                   </button>
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Info Section */}
+                          {/* Info Section - Always Read-Only */}
                           <div className="px-4 pb-4">
-                            {isEditingWorkers ? (
-                              <input
-                                type="text"
-                                value={worker.worker_name}
-                                onChange={(e) => updateWorkerName(worker.id, e.target.value)}
-                                className="w-full font-semibold text-gray-900 text-sm mb-1 border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:outline-none"
-                                placeholder="Nama pekerja"
-                              />
-                            ) : (
-                              <h4 className="font-semibold text-gray-900 text-sm mb-1 truncate">
-                                {worker.worker_name}
-                              </h4>
+                           
+                            <h4 className="font-semibold text-gray-900 text-sm mb-2 truncate">
+                              {worker.worker_name}
+                            </h4>
+                            {(worker.hsse_pass_number || worker.hsse_pass_valid_thru || worker.hsse_pass_document_upload) && (
+                              <div className="space-y-1 text-xs text-gray-600 border-t pt-2 mt-2">
+                                {worker.hsse_pass_number && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">HSSE Pass:</span>
+                                    <span>{worker.hsse_pass_number}</span>
+                                  </div>
+                                )}
+                                {worker.hsse_pass_valid_thru && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium">Masa berlaku HSSE pass:</span>
+                                    <span>{new Date(worker.hsse_pass_valid_thru).toLocaleDateString('id-ID')}</span>
+                                  </div>
+                                )}
+                                {worker.hsse_pass_document_upload && (
+                                  <div className="mt-2">
+                                    <button
+                                      onClick={() => handleFileView(worker.hsse_pass_document_upload!, `Dokumen HSSE Pass - ${worker.worker_name}`)}
+                                      className="w-full flex items-center justify-center space-x-2 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                                    >
+                                      <EyeIcon className="w-4 h-4" />
+                                      <span>Lihat Dokumen HSSE</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>
                       ))}
-                      {isEditingWorkers && (
-                        <div className="bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors">
-                          <button
-                            onClick={addWorker}
-                            className="w-full h-64 flex flex-col items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
-                          >
-                            <PlusIcon className="w-12 h-12 mb-2" />
-                            <span className="text-sm font-medium">Tambah Pekerja</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

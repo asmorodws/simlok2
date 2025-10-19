@@ -17,19 +17,15 @@ const finalApprovalSchema = z.object({
 async function generateSimlokNumber(): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM format
 
-  // Prefer querying by simlok_date (indexed) for performance instead of string contains
-  // Build month range (start of month inclusive, start of next month exclusive)
-  const startOfMonth = new Date(year, parseInt(month, 10) - 1, 1);
-  const startOfNextMonth = new Date(year, parseInt(month, 10), 1);
-
-  // Get the last approved submission in the month (use simlok_date range)
+  // Get the last approved submission for CURRENT YEAR to determine next auto-increment number
+  // Nomor akan direset ke 1 setiap tahun baru
   const lastSubmission = await prisma.submission.findFirst({
     where: {
-      simlok_date: {
-        gte: startOfMonth,
-        lt: startOfNextMonth,
+      simlok_number: {
+        not: null,
+        // Filter untuk tahun yang sama: format nomor/S00330/YYYY
+        contains: `/S00330/${year}`
       }
     },
     orderBy: [
@@ -41,14 +37,16 @@ async function generateSimlokNumber(): Promise<string> {
   let nextNumber = 1;
   
   if (lastSubmission?.simlok_number) {
-    // Extract number from format: number/MM/YYYY
-    const match = lastSubmission.simlok_number.match(/^(\d+)\/\d{2}\/\d{4}$/);
+    // Extract auto-increment number from format: number/S00330/YYYY
+    const match = lastSubmission.simlok_number.match(/^(\d+)\/S00330\/\d{4}$/);
     if (match && match[1]) {
       nextNumber = parseInt(match[1]) + 1;
     }
   }
 
-  return `${nextNumber}/${month}/${year}`;
+  // Format: autoincrement/S00330/tahun
+  // Nomor akan mulai dari 1 lagi setiap tahun baru
+  return `${nextNumber}/S00330/${year}`;
 }
 
 import { RouteParams } from '@/types';

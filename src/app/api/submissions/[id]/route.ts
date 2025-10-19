@@ -12,31 +12,36 @@ import { generateQrString } from '@/lib/qr-security';
 async function generateSimlokNumber(): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0'); // MM format
 
-  // Get the last SIMLOK number for current month/year
+  // Get the last approved submission for CURRENT YEAR to determine next auto-increment number
+  // Nomor akan direset ke 1 setiap tahun baru
   const lastSubmission = await prisma.submission.findFirst({
     where: {
       simlok_number: {
-        contains: `/${month}/${year}`
+        not: null,
+        // Filter untuk tahun yang sama: format nomor/S00330/YYYY
+        contains: `/S00330/${year}`
       }
     },
-    orderBy: {
-      simlok_number: 'desc'
-    }
+    orderBy: [
+      { simlok_date: 'desc' },
+      { simlok_number: 'desc' }
+    ]
   });
 
   let nextNumber = 1;
   
   if (lastSubmission?.simlok_number) {
-    // Extract number from format: number/MM/YYYY
-    const match = lastSubmission.simlok_number.match(/^(\d+)\/\d{2}\/\d{4}$/);
+    // Extract auto-increment number from format: number/S00330/YYYY
+    const match = lastSubmission.simlok_number.match(/^(\d+)\/S00330\/\d{4}$/);
     if (match && match[1]) {
       nextNumber = parseInt(match[1]) + 1;
     }
   }
 
-  return `${nextNumber}/${month}/${year}`;
+  // Format: autoincrement/S00330/tahun
+  // Nomor akan mulai dari 1 lagi setiap tahun baru
+  return `${nextNumber}/S00330/${year}`;
 }
 
 import { RouteParams } from '@/types';
@@ -151,25 +156,33 @@ async function generatePDF(submission: any) {
       // Create a temporary/placeholder SIMLOK number for PDF preview
       const now = new Date();
       const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      pdfData.simlok_number = `[DRAFT]/XX/${month}/${year}`;
+      // const month = String(now.getMonth() + 1).padStart(2, '0');
+      pdfData.simlok_number = `[DRAFT]/S00330/${year}`;
       pdfData.simlok_date = now;
     }
 
     // Generate PDF using the template with potentially modified data
     const pdfBytes = await generateSIMLOKPDF(pdfData as SubmissionPDFData);
 
-    // Generate filename based on simlok_number (including placeholder)
-    const filename = pdfData.simlok_number ? 
-      `SIMLOK_${pdfData.simlok_number.replace(/[\[\]/\\]/g, '_')}.pdf` :
-      `SIMLOK_PREVIEW_${submission.id}.pdf`;
+    // Generate filename based on simlok_number only (no vendor name)
+    let filename: string;
+    if (pdfData.simlok_number) {
+      // Clean simlok number: replace special chars with underscore
+      const cleanSimlokNumber = pdfData.simlok_number.replace(/[\[\]/\\]/g, '_');
+      filename = `SIMLOK_${cleanSimlokNumber}.pdf`;
+    } else {
+      // Fallback for preview mode
+      filename = `SIMLOK_PREVIEW_${submission.id}.pdf`;
+    }
 
     // Return PDF response with proper cache control
+    // Use both filename and filename* for better browser compatibility
+    const encodedFilename = encodeURIComponent(filename);
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="${filename}"`,
+        'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',

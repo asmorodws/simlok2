@@ -10,7 +10,7 @@ export interface FileInfo {
   url: string;
   size: number;
   type: string;
-  category: 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo';
+  category: 'sika' | 'simja' | 'hsse' | 'hsse-worker' | 'document' | 'worker-photo';
 }
 
 export class FileManager {
@@ -29,8 +29,9 @@ export class FileManager {
       base: userBaseDir,
       sika: join(userBaseDir, 'dokumen-sika'),
       simja: join(userBaseDir, 'dokumen-simja'),
-      idCard: join(userBaseDir, 'id-card'),
-      other: join(userBaseDir, 'lainnya'),
+      hsse: join(userBaseDir, 'dokumen-hsse'),
+      hsseWorker: join(userBaseDir, 'dokumen-hsse-pekerja'),
+      document: join(userBaseDir, 'dokumen'),
       workerPhoto: join(userBaseDir, 'foto-pekerja')
     };
   }
@@ -38,22 +39,28 @@ export class FileManager {
   /**
    * Determine file category based on field name or file content
    */
-  private getFileCategory(fieldName?: string, fileName?: string): 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo' {
+  private getFileCategory(fieldName?: string, fileName?: string): 'sika' | 'simja' | 'hsse' | 'hsse-worker' | 'document' | 'worker-photo' {
     if (fieldName) {
       if (fieldName.includes('sika')) return 'sika';
       if (fieldName.includes('simja')) return 'simja';
-      if (fieldName.includes('worker') || fieldName.includes('pekerja')) return 'worker-photo';
+      // Worker HSSE document - check for hsse_doc pattern (from form field)
+      if (fieldName.includes('hsse_doc')) return 'hsse-worker';
+      // Submission-level HSSE document
+      if (fieldName.includes('hsse_pass_document_upload')) return 'hsse';
+      if (fieldName.includes('hsse')) return 'hsse';
+      if (fieldName.includes('worker_photo') || fieldName.includes('pekerja')) return 'worker-photo';
+      if (fieldName.includes('supporting') || fieldName.includes('pendukung')) return 'document';
     }
     
     if (fileName) {
       const lowerName = fileName.toLowerCase();
       if (lowerName.includes('sika')) return 'sika';
       if (lowerName.includes('simja')) return 'simja';
-      if (lowerName.includes('ktp') || lowerName.includes('id') || lowerName.includes('identitas')) return 'id_card';
+      if (lowerName.includes('hsse')) return 'hsse';
       if (lowerName.includes('worker') || lowerName.includes('pekerja') || lowerName.includes('foto')) return 'worker-photo';
     }
     
-    return 'other';
+    return 'document';
   }
 
   /**
@@ -163,8 +170,9 @@ export class FileManager {
     const targetFolder = {
       sika: folders.sika,
       simja: folders.simja,
-      id_card: folders.idCard,
-      other: folders.other,
+      hsse: folders.hsse,
+      'hsse-worker': folders.hsseWorker,
+      document: folders.document,
       'worker-photo': folders.workerPhoto
     }[category];
 
@@ -194,11 +202,11 @@ export class FileManager {
   /**
    * Rename existing file
    */
-  async renameFile(
+  async updateFileName(
     userId: string,
     oldFileName: string,
     newName: string,
-    category?: 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo'
+    category?: 'sika' | 'simja' | 'hsse' | 'hsse-worker' | 'document' | 'worker-photo'
   ): Promise<FileInfo | null> {
     try {
       const folders = this.getUserFolderStructure(userId);
@@ -210,8 +218,9 @@ export class FileManager {
       for (const [cat, folder] of Object.entries({
         sika: folders.sika,
         simja: folders.simja,
-        id_card: folders.idCard,
-        other: folders.other,
+        hsse: folders.hsse,
+        'hsse-worker': folders.hsseWorker,
+        document: folders.document,
         'worker-photo': folders.workerPhoto
       })) {
         const testPath = join(folder, oldFileName);
@@ -227,7 +236,7 @@ export class FileManager {
       }
 
       // Determine new category (use provided or keep current)
-      const targetCategory = category || currentCategory as 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo';
+      const targetCategory = category || currentCategory as 'sika' | 'simja' | 'hsse' | 'hsse-worker' | 'document' | 'worker-photo';
       
       // Generate new filename
       const extension = oldFileName.split('.').pop()?.toLowerCase() || '';
@@ -241,8 +250,9 @@ export class FileManager {
       const targetFolder = {
         sika: folders.sika,
         simja: folders.simja,
-        id_card: folders.idCard,
-        other: folders.other,
+        hsse: folders.hsse,
+        'hsse-worker': folders.hsseWorker,
+        document: folders.document,
         'worker-photo': folders.workerPhoto
       }[targetCategory];
 
@@ -285,8 +295,9 @@ export class FileManager {
       for (const folder of Object.values({
         sika: folders.sika,
         simja: folders.simja,
-        id_card: folders.idCard,
-        other: folders.other,
+        hsse: folders.hsse,
+        'hsse-worker': folders.hsseWorker,
+        document: folders.document,
         'worker-photo': folders.workerPhoto
       })) {
         const filePath = join(folder, fileName);
@@ -311,16 +322,18 @@ export class FileManager {
     const result: { [category: string]: FileInfo[] } = {
       sika: [],
       simja: [],
-      id_card: [],
-      other: [],
+      hsse: [],
+      'hsse-worker': [],
+      document: [],
       'worker-photo': []
     };
 
     for (const [category, folder] of Object.entries({
       sika: folders.sika,
       simja: folders.simja,
-      id_card: folders.idCard,
-      other: folders.other,
+      hsse: folders.hsse,
+      'hsse-worker': folders.hsseWorker,
+      document: folders.document,
       'worker-photo': folders.workerPhoto
     })) {
       try {
@@ -339,7 +352,7 @@ export class FileManager {
                 url: `/api/files/${userId}/${category}/${fileName}`,
                 size: stats.size,
                 type: this.getFileType(fileName),
-                category: category as 'sika' | 'simja' | 'id_card' | 'other' | 'worker-photo'
+                category: category as 'sika' | 'simja' | 'hsse' | 'hsse-worker' | 'document' | 'worker-photo'
               });
             }
           }
@@ -406,8 +419,9 @@ export class FileManager {
           const targetFolder = {
             sika: folders.sika,
             simja: folders.simja,
-            id_card: folders.idCard,
-            other: folders.other,
+            hsse: folders.hsse,
+            'hsse-worker': folders.hsseWorker,
+            document: folders.document,
             'worker-photo': folders.workerPhoto
           }[category];
 

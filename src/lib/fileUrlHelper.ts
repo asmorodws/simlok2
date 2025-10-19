@@ -36,18 +36,23 @@ export class FileUrlHelper {
    */
   static getCategoryFromField(fieldName?: string, filename?: string): string {
     if (fieldName) {
-      if (fieldName.includes('sika')) return 'sika';
-      if (fieldName.includes('simja')) return 'simja';
+      const lowerField = fieldName.toLowerCase();
+      if (lowerField.includes('sika')) return 'sika';
+      if (lowerField.includes('simja')) return 'simja';
+      if (lowerField.includes('hsse')) return 'hsse';
+      if (lowerField.includes('foto') || lowerField.includes('photo') || lowerField.includes('pekerja') || lowerField.includes('worker')) return 'worker-photo';
     }
     
     if (filename) {
       const lowerName = filename.toLowerCase();
       if (lowerName.includes('sika')) return 'sika';
       if (lowerName.includes('simja')) return 'simja';
+      if (lowerName.includes('hsse')) return 'hsse';
       if (lowerName.includes('ktp') || lowerName.includes('id') || lowerName.includes('identitas')) return 'id_card';
+      if (lowerName.includes('foto') || lowerName.includes('photo') || lowerName.includes('pekerja') || lowerName.includes('worker')) return 'worker-photo';
     }
     
-    return 'other';
+    return 'document';
   }
 
   /**

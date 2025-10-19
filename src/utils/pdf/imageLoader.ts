@@ -220,8 +220,9 @@ export async function loadWorkerPhoto(
             const categoryFolders: Record<string, string> = {
               sika: 'dokumen-sika',
               simja: 'dokumen-simja',
-              'id-card': 'id-card',
-              other: 'lainnya',
+              hsse: 'dokumen-hsse',
+              'hsse-worker': 'dokumen-hsse-pekerja',
+              document: 'dokumen',
               'worker-photo': 'foto-pekerja'  // This is the key mapping!
             };
             
@@ -337,6 +338,130 @@ export async function preloadWorkerPhotos(
   }
 
   console.log('Worker photo preloading completed');
+}
+
+/**
+ * Result type for document loading
+ */
+export interface DocumentLoadResult {
+  type: 'image' | 'pdf' | 'unsupported';
+  image?: PDFImage;
+  pdfPages?: PDFDocument;
+  error?: string;
+}
+
+/**
+ * Load worker document (can be image or PDF)
+ * Returns information about the document type and content
+ */
+export async function loadWorkerDocument(
+  pdfDoc: PDFDocument,
+  documentPath?: string | null
+): Promise<DocumentLoadResult> {
+  if (!documentPath) {
+    console.log('LoadWorkerDocument: No document path provided');
+    return { type: 'unsupported', error: 'No path provided' };
+  }
+
+  console.log('LoadWorkerDocument: Loading document from path:', documentPath);
+
+  try {
+    // Determine file type from extension
+    const lowerPath = documentPath.toLowerCase();
+    const isPdf = lowerPath.endsWith('.pdf');
+    const isImage = lowerPath.match(/\.(jpg|jpeg|png|webp)$/);
+
+    if (!isPdf && !isImage) {
+      console.warn('LoadWorkerDocument: Unsupported file type:', documentPath);
+      return { type: 'unsupported', error: 'Unsupported file type' };
+    }
+
+    // For images, use existing loadWorkerPhoto function
+    if (isImage) {
+      console.log('LoadWorkerDocument: Loading as image');
+      const image = await loadWorkerPhoto(pdfDoc, documentPath);
+      if (image) {
+        return { type: 'image', image };
+      } else {
+        return { type: 'unsupported', error: 'Failed to load image' };
+      }
+    }
+
+    // For PDF, load the PDF file
+    if (isPdf) {
+      console.log('LoadWorkerDocument: Loading as PDF');
+      const path = await import('path');
+      const { readFile } = await import('fs/promises');
+      
+      let finalPath: string;
+      
+      if (documentPath.startsWith('/api/files/')) {
+        // Parse API file path: /api/files/{userId}/{category}/{filename}
+        const apiParts = documentPath.split('/');
+        if (apiParts.length >= 5) {
+          const [, , , userId, category, ...filenameParts] = apiParts;
+          const filename = filenameParts.join('/');
+          
+          if (!userId || !category || !filename) {
+            console.warn('LoadWorkerDocument: Invalid API path structure');
+            finalPath = path.join(process.cwd(), 'public', documentPath.replace('/api/files/', '/uploads/'));
+          } else {
+            const categoryFolders: Record<string, string> = {
+              sika: 'dokumen-sika',
+              simja: 'dokumen-simja',
+              hsse: 'dokumen-hsse',
+              'hsse-worker': 'dokumen-hsse-pekerja',
+              document: 'dokumen',
+              'worker-photo': 'foto-pekerja'
+            };
+            
+            const folderName = categoryFolders[category] || category;
+            finalPath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+          }
+        } else {
+          finalPath = path.join(process.cwd(), 'public', documentPath.replace('/api/files/', '/uploads/'));
+        }
+      } else if (documentPath.startsWith('/uploads/')) {
+        finalPath = path.join(process.cwd(), 'public', documentPath);
+      } else if (documentPath.startsWith('/')) {
+        finalPath = path.join(process.cwd(), 'public', documentPath);
+      } else {
+        finalPath = documentPath;
+      }
+
+      console.log('LoadWorkerDocument: Reading PDF from:', finalPath);
+      
+      try {
+        // Check if file exists
+        const { existsSync } = await import('fs');
+        if (!existsSync(finalPath)) {
+          console.error('LoadWorkerDocument: PDF file not found at:', finalPath);
+          return { type: 'unsupported', error: 'PDF file not found' };
+        }
+
+        const pdfBytes = await readFile(finalPath);
+        console.log('LoadWorkerDocument: PDF file read, size:', pdfBytes.length, 'bytes');
+        
+        const loadedPdf = await PDFDocument.load(pdfBytes, { 
+          ignoreEncryption: true,
+          updateMetadata: false 
+        });
+        
+        console.log('LoadWorkerDocument: Successfully loaded PDF with', loadedPdf.getPageCount(), 'pages');
+        return { type: 'pdf', pdfPages: loadedPdf };
+      } catch (error) {
+        console.error('LoadWorkerDocument: Failed to load PDF:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return { type: 'unsupported', error: `Failed to load PDF: ${errorMessage}` };
+      }
+    }
+
+    return { type: 'unsupported', error: 'Unknown file type' };
+  } catch (error) {
+    console.error('LoadWorkerDocument: Error loading document:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { type: 'unsupported', error: errorMessage };
+  }
 }
 
 /**

@@ -13,7 +13,6 @@ import {
 } from '@heroicons/react/24/outline';
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
-import PieChart from '@/components/ui/chart/PieChart';
 
 interface StatsData {
   pendingReview: number;
@@ -30,14 +29,51 @@ interface StatsData {
   todayQrScans: number;
 }
 
-
+interface ChartData {
+  lineChart: {
+    labels: string[];
+    series: Array<{
+      name: string;
+      data: number[];
+    }>;
+  };
+  barChart: {
+    labels: string[];
+    series: Array<{
+      name: string;
+      data: number[];
+    }>;
+  };
+}
 
 export default function VisitorDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
+
+  // Fetch chart data separately
+  const fetchChartData = useCallback(async () => {
+    try {
+      const response = await fetch('/api/dashboard/visitor-charts', {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setChartData(data);
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Chart Data Error:', err);
+      }
+      // Don't set error state for charts - just use fallback data
+    }
+  }, []);
 
   // Stable fetch function to prevent infinite re-renders
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
@@ -113,7 +149,8 @@ export default function VisitorDashboard() {
 
   const handleRefresh = useCallback(() => {
     fetchDashboardData(true);
-  }, [fetchDashboardData]);
+    fetchChartData();
+  }, [fetchDashboardData, fetchChartData]);
 
   // Single effect to fetch data on mount only
   useEffect(() => {
@@ -122,6 +159,7 @@ export default function VisitorDashboard() {
     const loadData = async () => {
       if (isMounted) {
         await fetchDashboardData(false);
+        await fetchChartData();
       }
     };
     
@@ -183,7 +221,10 @@ export default function VisitorDashboard() {
             <h2 className="text-sm font-medium text-gray-700">Chart SIMLOK</h2>
           </div>
           <div className="w-full">
-            <LineChartOne />
+            <LineChartOne 
+              {...(chartData?.lineChart.labels && { labels: chartData.lineChart.labels })}
+              {...(chartData?.lineChart.series && { series: chartData.lineChart.series })}
+            />
           </div>
         </div>
 
@@ -193,48 +234,14 @@ export default function VisitorDashboard() {
             <h2 className="text-sm font-medium text-gray-700">Chart User</h2>
           </div>
           <div className="w-full">
-            <BarChartOne />
-          </div>
-        </div>
-
-        {/* Two Pie Charts: QR scan status & comparison between simlok and vendor */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-xl border shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">QR SIMLOK</h3>
-              <p className="text-xs text-gray-500">Jumlah QR yang sudah / belum di-scan</p>
-            </div>
-            <PieChart
-              series={[240, 60]}
-              labels={["Sudah di-scan", "Belum di-scan"]}
-              colors={["#465FFF", "#10B981"]}
-              height={280}
-              donut={true}
+            <BarChartOne 
+              {...(chartData?.barChart.labels && { labels: chartData.barChart.labels })}
+              {...(chartData?.barChart.series && { series: chartData.barChart.series })}
             />
           </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-gray-700">Jumlah SIMLOK dan Vendor</h3>
-              <p className="text-xs text-gray-500">Jumlah Simlok dibandingkan dengan jumlah Vendor</p>
-            </div>
-            {/* compute vendor total from the same sample monthly data used in BarChart */}
-            {(() => {
-              const sampleVendorsMonthly = [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27];
-              const vendorTotal = sampleVendorsMonthly.reduce((a, b) => a + b, 0);
-              const simlokTotal = stats?.totalSubmissions || 0;
-              return (
-                <PieChart
-                  series={[simlokTotal, vendorTotal]}
-                  labels={["Jumlah Simlok", "Jumlah Vendor"]}
-                  colors={["#465FFF", "#F87171"]}
-                  height={280}
-                  donut={true}
-                />
-              );
-            })()}
-          </div>
         </div>
+
+        
 
         {/* Unified stats grid: show up to 5 cards per row on large screens */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
