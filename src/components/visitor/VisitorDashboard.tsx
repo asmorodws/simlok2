@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
+import { Badge } from '../ui/Badge';
 
 interface StatsData {
   pendingReview: number;
@@ -219,6 +220,11 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart SIMLOK</h2>
+            <div className="flex items-center space-x-2">
+              <Badge variant='default'>
+              2025
+              </Badge>
+            </div>
           </div>
           <div className="w-full">
             <LineChartOne 
@@ -232,6 +238,11 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart User</h2>
+            <div className="flex items-center space-x-2">
+              <Badge variant='default'>
+              2025
+              </Badge>
+            </div>
           </div>
           <div className="w-full">
             <BarChartOne 
