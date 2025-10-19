@@ -13,6 +13,7 @@ import { useStatsStore } from "@/store/useStatsStore";
 import { useSubmissionStore } from "@/store/useSubmissionStore";
 import { useSocket } from "@/components/common/RealtimeUpdates";
 import { useToast } from "@/hooks/useToast";
+import { SkeletonDashboardCard, SkeletonTable } from "@/components/ui/skeleton";
 
 import { SubmissionsTable } from "@/components/submissions/SubmissionsTable";
 import SubmissionsCardView from "@/components/submissions/SubmissionsCardView";
@@ -131,24 +132,34 @@ export default function VendorDashboard() {
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6">
-          <p className="text-sm text-gray-600">Total Disetujui</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">
-            {statsLoading ? "..." : vendorStats?.totalApproved || 0}
-          </p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-600">Total Menunggu</p>
-          <p className="text-3xl font-bold text-yellow-600 mt-2">
-            {statsLoading ? "..." : vendorStats?.totalPending || 0}
-          </p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-gray-600">Total Ditolak</p>
-          <p className="text-3xl font-bold text-red-600 mt-2">
-            {statsLoading ? "..." : vendorStats?.totalRejected || 0}
-          </p>
-        </Card>
+        {statsLoading ? (
+          <>
+            <SkeletonDashboardCard />
+            <SkeletonDashboardCard />
+            <SkeletonDashboardCard />
+          </>
+        ) : (
+          <>
+            <Card className="p-6">
+              <p className="text-sm text-gray-600">Total Disetujui</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">
+                {vendorStats?.totalApproved || 0}
+              </p>
+            </Card>
+            <Card className="p-6">
+              <p className="text-sm text-gray-600">Total Menunggu</p>
+              <p className="text-3xl font-bold text-yellow-600 mt-2">
+                {vendorStats?.totalPending || 0}
+              </p>
+            </Card>
+            <Card className="p-6">
+              <p className="text-sm text-gray-600">Total Ditolak</p>
+              <p className="text-3xl font-bold text-red-600 mt-2">
+                {vendorStats?.totalRejected || 0}
+              </p>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Recent Submissions */}
@@ -158,45 +169,51 @@ export default function VendorDashboard() {
           <Link href="/vendor/submissions" className="text-sm text-blue-600">Lihat Semua</Link>
         </div>
 
-        <div className="hidden sm:block">
-          <SubmissionsTable
-          submissions={submissions.slice(0, 10).map((submission: any) => ({
-            id: submission.id,
-            job_description: submission.job_description,
-            officer_name: submission.officer_name,
-            work_location: submission.work_location,
-            work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
-            approval_status: submission.approval_status,
-            review_status: submission.review_status ?? 'PENDING_REVIEW',
-            simlok_number: submission.simlok_number,
-            created_at: submission.created_at,
-          }))}
-          loading={submissionsLoading}
-          onView={handleViewDetail}
-          onDelete={handleDelete}
-          formatDate={formatDate}
-        />
-        </div>
+        {submissionsLoading ? (
+          <SkeletonTable rows={5} cols={6} />
+        ) : (
+          <>
+            <div className="hidden sm:block">
+              <SubmissionsTable
+              submissions={submissions.slice(0, 10).map((submission: any) => ({
+                id: submission.id,
+                job_description: submission.job_description,
+                officer_name: submission.officer_name,
+                work_location: submission.work_location,
+                work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                approval_status: submission.approval_status,
+                review_status: submission.review_status ?? 'PENDING_REVIEW',
+                simlok_number: submission.simlok_number,
+                created_at: submission.created_at,
+              }))}
+              loading={false}
+              onView={handleViewDetail}
+              onDelete={handleDelete}
+              formatDate={formatDate}
+            />
+            </div>
 
-        <div className="block sm:hidden">
-          <SubmissionsCardView
-            submissions={submissions.slice(0, 10).map((submission: any) => ({
-              id: submission.id,
-              job_description: submission.job_description,
-              officer_name: submission.officer_name,
-              work_location: submission.work_location,
-              work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
-              approval_status: submission.approval_status,
-              review_status: submission.review_status ?? 'PENDING_REVIEW',
-              simlok_number: submission.simlok_number,
-              created_at: submission.created_at,
-            }))}
-            loading={submissionsLoading}
-            onView={handleViewDetail}
-            onDelete={handleDelete}
-            formatDate={formatDate}
-          />
-        </div>
+            <div className="block sm:hidden">
+              <SubmissionsCardView
+                submissions={submissions.slice(0, 10).map((submission: any) => ({
+                  id: submission.id,
+                  job_description: submission.job_description,
+                  officer_name: submission.officer_name,
+                  work_location: submission.work_location,
+                  work_hours: submission.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                  approval_status: submission.approval_status,
+                  review_status: submission.review_status ?? 'PENDING_REVIEW',
+                  simlok_number: submission.simlok_number,
+                  created_at: submission.created_at,
+                }))}
+                loading={false}
+                onView={handleViewDetail}
+                onDelete={handleDelete}
+                formatDate={formatDate}
+              />
+            </div>
+          </>
+        )}
       </Card>
 
       {selectedSubmission && (

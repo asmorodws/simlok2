@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      const result = await fileManager.renameFile(
+      const result = await fileManager.updateFileName(
         session.user.id,
         oldFileName,
         newName,

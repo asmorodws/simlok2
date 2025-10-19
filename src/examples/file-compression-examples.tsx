@@ -11,7 +11,7 @@ import { FileCompressor } from '@/utils/file-compressor';
 import { useState } from 'react';
 
 export function SimpleUploadExample() {
-  const [file, setFile] = useState<File | null>(null);
+  const [_file, setFile] = useState<File | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionStats, setCompressionStats] = useState('');
 
@@ -249,12 +249,15 @@ export function MultipleFilesUpload({ onFilesChange }: { onFilesChange: (files: 
     const fileResults: typeof results = [];
 
     for (let i = 0; i < files.length; i++) {
+      const currentFile = files[i];
+      if (!currentFile) continue;
+      
       try {
-        const result = await FileCompressor.compressFile(files[i]);
+        const result = await FileCompressor.compressFile(currentFile);
         
         compressedFiles.push(result.file);
         fileResults.push({
-          name: files[i].name,
+          name: currentFile.name,
           original: result.originalSize,
           compressed: result.compressedSize,
           ratio: result.compressionRatio
@@ -262,8 +265,8 @@ export function MultipleFilesUpload({ onFilesChange }: { onFilesChange: (files: 
 
         setProgress(Math.round(((i + 1) / files.length) * 100));
       } catch (error) {
-        console.error(`Failed to compress ${files[i].name}:`, error);
-        compressedFiles.push(files[i]); // Use original on error
+        console.error(`Failed to compress ${currentFile.name}:`, error);
+        compressedFiles.push(currentFile); // Use original on error
       }
     }
 
@@ -327,7 +330,7 @@ import { useFileCompression } from '@/utils/file-compressor';
 
 export function HookBasedUpload() {
   const { compressFile, isCompressing, progress } = useFileCompression();
-  const [file, setFile] = useState<File | null>(null);
+  const [_file, setFile] = useState<File | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

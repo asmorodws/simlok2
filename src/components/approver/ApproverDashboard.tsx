@@ -10,8 +10,7 @@ import {
 
 import { useToast } from '@/hooks/useToast';
 import { useSocket } from '@/components/common/RealtimeUpdates';
-import StatsCardsLoader from '@/components/ui/StatsCardsLoader';
-import TableLoader from '@/components/ui/TableLoader';
+import { SkeletonDashboardCard, SkeletonTable } from '@/components/ui/skeleton';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import Link from 'next/link';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
@@ -33,14 +32,16 @@ export default function ApproverDashboard() {
     approved: 0,
     rejected: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [submissionsLoading, setSubmissionsLoading] = useState(true);
   const { showError } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
-      setLoading(true);
+      setStatsLoading(true);
+      setSubmissionsLoading(true);
       
       // Fetch submissions and dashboard stats in parallel
       const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
@@ -69,7 +70,8 @@ export default function ApproverDashboard() {
       console.error('Error fetching dashboard data:', err);
       showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
+      setSubmissionsLoading(false);
     }
   }, []);
 
@@ -142,71 +144,69 @@ export default function ApproverDashboard() {
     handleCloseModal();
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <StatsCardsLoader count={4} />
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <TableLoader rows={5} columns={6} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Total Pengajuan</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <ClipboardDocumentListIcon className="w-6 h-6 text-blue-600" />
+      {statsLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Total Pengajuan</h3>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-full">
+                <ClipboardDocumentListIcon className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
-              <p className="text-2xl font-bold text-amber-600 mt-1">
-                {stats.pending_approval_meets + stats.pending_approval_not_meets}
-              </p>
-            </div>
-            <div className="p-3 bg-amber-100 rounded-full">
-              <ClockIcon className="w-6 h-6 text-amber-600" />
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
+                <p className="text-2xl font-bold text-amber-600 mt-1">
+                  {stats.pending_approval_meets + stats.pending_approval_not_meets}
+                </p>
+              </div>
+              <div className="p-3 bg-amber-100 rounded-full">
+                <ClockIcon className="w-6 h-6 text-amber-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
-              <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <CheckCircleIcon className="w-6 h-6 text-green-600" />
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
+                <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-full">
+                <CheckCircleIcon className="w-6 h-6 text-green-600" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-              <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-full">
-              <ChartBarIcon className="w-6 h-6 text-red-600" />
+          <div className="bg-white rounded-xl border shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
+                <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
+              </div>
+              <div className="p-3 bg-red-100 rounded-full">
+                <ChartBarIcon className="w-6 h-6 text-red-600" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Recent Submissions (tabel reusable, tampilan seragam dgn Reviewer) */}
       <div className="bg-white rounded-xl border shadow-sm">
@@ -225,15 +225,19 @@ export default function ApproverDashboard() {
           </div>
         </div>
 
-        <ApproverTable
-          data={submissions}
-          loading={loading}
-          sortBy="created_at"
-          sortOrder="desc"
-          onOpenDetail={handleViewDetail}
-          emptyTitle="Tidak ada pengajuan"
-          emptyDescription="Belum ada pengajuan yang perlu disetujui"
-        />
+        {submissionsLoading ? (
+          <SkeletonTable rows={10} cols={6} />
+        ) : (
+          <ApproverTable
+            data={submissions}
+            loading={false}
+            sortBy="created_at"
+            sortOrder="desc"
+            onOpenDetail={handleViewDetail}
+            emptyTitle="Tidak ada pengajuan"
+            emptyDescription="Belum ada pengajuan yang perlu disetujui"
+          />
+        )}
       </div>
 
       {/* Modal */}

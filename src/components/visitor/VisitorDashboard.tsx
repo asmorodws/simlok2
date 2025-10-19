@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
-import { Badge } from '../ui/Badge';
+import { SkeletonDashboardCard, SkeletonChart } from '@/components/ui/skeleton';
 
 interface StatsData {
   pendingReview: number;
@@ -220,17 +220,16 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart SIMLOK</h2>
-            <div className="flex items-center space-x-2">
-              <Badge variant='default'>
-              2025
-              </Badge>
-            </div>
           </div>
           <div className="w-full">
-            <LineChartOne 
-              {...(chartData?.lineChart.labels && { labels: chartData.lineChart.labels })}
-              {...(chartData?.lineChart.series && { series: chartData.lineChart.series })}
-            />
+            {loading && !chartData ? (
+              <SkeletonChart height="h-80" />
+            ) : (
+              <LineChartOne 
+                {...(chartData?.lineChart.labels && { labels: chartData.lineChart.labels })}
+                {...(chartData?.lineChart.series && { series: chartData.lineChart.series })}
+              />
+            )}
           </div>
         </div>
 
@@ -238,17 +237,16 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart User</h2>
-            <div className="flex items-center space-x-2">
-              <Badge variant='default'>
-              2025
-              </Badge>
-            </div>
           </div>
           <div className="w-full">
-            <BarChartOne 
-              {...(chartData?.barChart.labels && { labels: chartData.barChart.labels })}
-              {...(chartData?.barChart.series && { series: chartData.barChart.series })}
-            />
+            {loading && !chartData ? (
+              <SkeletonChart height="h-80" />
+            ) : (
+              <BarChartOne 
+                {...(chartData?.barChart.labels && { labels: chartData.barChart.labels })}
+                {...(chartData?.barChart.series && { series: chartData.barChart.series })}
+              />
+            )}
           </div>
         </div>
 
@@ -256,155 +254,165 @@ export default function VisitorDashboard() {
 
         {/* Unified stats grid: show up to 5 cards per row on large screens */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-          {/* Total Submission */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Total Submission</h3>
-                <p className="text-xl font-semibold text-blue-600 mt-1">{stats?.totalSubmissions || 0}</p>
+          {loading && !stats ? (
+            // Show skeleton loading for all stat cards
+            <>
+              {Array.from({ length: 11 }).map((_, i) => (
+                <SkeletonDashboardCard key={i} />
+              ))}
+            </>
+          ) : (
+            <>
+              {/* Total Submission */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Total Submission</h3>
+                    <p className="text-xl font-semibold text-blue-600 mt-1">{stats?.totalSubmissions || 0}</p>
+                  </div>
+                  <div className="p-2 bg-blue-100 rounded-full">
+                    <DocumentTextIcon className="w-5 h-5 text-blue-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <DocumentTextIcon className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Menunggu Review */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Menunggu Review</h3>
-                <p className="text-xl font-semibold text-amber-600 mt-1">{stats?.pendingReview || 0}</p>
+              {/* Menunggu Review */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Menunggu Review</h3>
+                    <p className="text-xl font-semibold text-amber-600 mt-1">{stats?.pendingReview || 0}</p>
+                  </div>
+                  <div className="p-2 bg-amber-100 rounded-full">
+                    <ClockIcon className="w-5 h-5 text-amber-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-amber-100 rounded-full">
-                <ClockIcon className="w-5 h-5 text-amber-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Memenuhi Syarat */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Memenuhi Syarat</h3>
-                <p className="text-xl font-semibold text-green-600 mt-1">{stats?.meetsRequirements || 0}</p>
+              {/* Memenuhi Syarat */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Memenuhi Syarat</h3>
+                    <p className="text-xl font-semibold text-green-600 mt-1">{stats?.meetsRequirements || 0}</p>
+                  </div>
+                  <div className="p-2 bg-green-100 rounded-full">
+                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircleIcon className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Tidak Memenuhi Syarat */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Tidak Memenuhi Syarat</h3>
-                <p className="text-xl font-semibold text-red-600 mt-1">{stats?.notMeetsRequirements || 0}</p>
+              {/* Tidak Memenuhi Syarat */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Tidak Memenuhi Syarat</h3>
+                    <p className="text-xl font-semibold text-red-600 mt-1">{stats?.notMeetsRequirements || 0}</p>
+                  </div>
+                  <div className="p-2 bg-red-100 rounded-full">
+                    <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-red-100 rounded-full">
-                <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Menunggu Persetujuan */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Menunggu Persetujuan</h3>
-                <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingApproval || 0}</p>
+              {/* Menunggu Persetujuan */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Menunggu Persetujuan</h3>
+                    <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingApproval || 0}</p>
+                  </div>
+                  <div className="p-2 bg-purple-100 rounded-full">
+                    <ClockIcon className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <ClockIcon className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Disetujui */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Disetujui</h3>
-                <p className="text-xl font-semibold text-green-600 mt-1">{stats?.approved || 0}</p>
+              {/* Disetujui */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Disetujui</h3>
+                    <p className="text-xl font-semibold text-green-600 mt-1">{stats?.approved || 0}</p>
+                  </div>
+                  <div className="p-2 bg-green-100 rounded-full">
+                    <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <CheckCircleIcon className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Ditolak */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Ditolak</h3>
-                <p className="text-xl font-semibold text-red-600 mt-1">{stats?.rejected || 0}</p>
+              {/* Ditolak */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Ditolak</h3>
+                    <p className="text-xl font-semibold text-red-600 mt-1">{stats?.rejected || 0}</p>
+                  </div>
+                  <div className="p-2 bg-red-100 rounded-full">
+                    <XCircleIcon className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-red-100 rounded-full">
-                <XCircleIcon className="w-5 h-5 text-red-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Total QR Scan */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Total QR Scan</h3>
-                <p className="text-xl font-semibold text-cyan-600 mt-1">{stats?.totalQrScans || 0}</p>
+              {/* Total QR Scan */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Total QR Scan</h3>
+                    <p className="text-xl font-semibold text-cyan-600 mt-1">{stats?.totalQrScans || 0}</p>
+                  </div>
+                  <div className="p-2 bg-cyan-100 rounded-full">
+                    <QrCodeIcon className="w-5 h-5 text-cyan-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-cyan-100 rounded-full">
-                <QrCodeIcon className="w-5 h-5 text-cyan-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* Total User */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">Total User</h3>
-                <p className="text-xl font-medium text-slate-600 mt-1">{stats?.totalUsers || 0}</p>
+              {/* Total User */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">Total User</h3>
+                    <p className="text-xl font-medium text-slate-600 mt-1">{stats?.totalUsers || 0}</p>
+                  </div>
+                  <div className="p-2 bg-slate-100 rounded-full">
+                    <UsersIcon className="w-5 h-5 text-slate-600" />
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-slate-100 rounded-full">
-                <UsersIcon className="w-5 h-5 text-slate-600" />
-              </div>
-            </div>
-          </div>
 
-          {/* User Perlu Verifikasi */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">User Perlu Verifikasi</h3>
-                <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingUserVerifications || 0}</p>
+              {/* User Perlu Verifikasi */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">User Perlu Verifikasi</h3>
+                    <p className="text-xl font-semibold text-purple-600 mt-1">{stats?.pendingUserVerifications || 0}</p>
+                  </div>
+                  <div className="p-2 bg-purple-100 rounded-full">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                </svg>
-              </div>
-            </div>
-          </div>
 
-          {/* User Terverifikasi */}
-          <div className="bg-white rounded-xl border shadow-sm p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-medium text-gray-500">User Terverifikasi</h3>
-                <p className="text-xl font-semibold text-indigo-600 mt-1">{stats?.totalVerifiedUsers || 0}</p>
+              {/* User Terverifikasi */}
+              <div className="bg-white rounded-xl border shadow-sm p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-500">User Terverifikasi</h3>
+                    <p className="text-xl font-semibold text-indigo-600 mt-1">{stats?.totalVerifiedUsers || 0}</p>
+                  </div>
+                  <div className="p-2 bg-indigo-100 rounded-full">
+                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div className="p-2 bg-indigo-100 rounded-full">
-                <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-
+            </>
+          )}
         </div>
 
         {/* End of unified stats grid */}

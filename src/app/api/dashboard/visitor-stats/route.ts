@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import cache, { CacheKeys, CacheTTL } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -14,6 +15,17 @@ export async function GET() {
     // Check if user has appropriate privileges for visitor dashboard
     if (!['VISITOR', 'SUPER_ADMIN'].includes(session.user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Check cache first
+    const cachedData = cache.get(CacheKeys.VISITOR_STATS);
+    if (cachedData) {
+      return NextResponse.json(cachedData, {
+        headers: {
+          'X-Cache': 'HIT',
+          'Cache-Control': 'private, max-age=60',
+        }
+      });
     }
 
     // Get submissions stats (visitors can view all submissions but read-only)
@@ -136,11 +148,13 @@ export async function GET() {
       }
     };
 
+    // Cache the response for 1 minute
+    cache.set(CacheKeys.VISITOR_STATS, dashboardStats, CacheTTL.ONE_MINUTE);
+
     return NextResponse.json(dashboardStats, {
       headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        'X-Cache': 'MISS',
+        'Cache-Control': 'private, max-age=60',
       }
     });
 

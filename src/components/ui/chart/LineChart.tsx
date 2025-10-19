@@ -1,12 +1,18 @@
 "use client";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { ApexOptions } from "apexcharts";
 
 import dynamic from "next/dynamic";
-// Dynamically import the ReactApexChart component
+
+// Dynamically import the ReactApexChart component with loading fallback
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[310px]">
+      <div className="animate-pulse text-gray-400">Loading chart...</div>
+    </div>
+  ),
 });
 
 interface LineChartProps {
@@ -17,45 +23,47 @@ interface LineChartProps {
   }>;
 }
 
-export default function LineChartOne({ labels, series: propSeries }: LineChartProps = {}) {
-  // Use provided labels or fallback to default months
-  const chartLabels = labels || [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
+const LineChartOne = React.memo<LineChartProps>(({ labels, series: propSeries }) => {
+  // Memoize chart data to prevent unnecessary recalculations
+  const chartLabels = useMemo(() => 
+    labels || [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ], [labels]
+  );
 
-  // Use provided series or fallback to dummy data
-  const chartSeries = propSeries || [
-    {
-      name: "Total Pengajuan",
-      data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
-    },
-    {
-      name: "Disetujui",
-      data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
-    },
-  ];
+  const chartSeries = useMemo(() => 
+    propSeries || [
+      {
+        name: "Total Pengajuan",
+        data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
+      },
+      {
+        name: "Disetujui",
+        data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
+      },
+    ], [propSeries]
+  );
 
-  const options: ApexOptions = {
+  const options = useMemo<ApexOptions>(() => ({
     legend: {
-      show: true, // Show legend to indicate which series is which
+      show: true,
       position: "top",
       horizontalAlign: "left",
     },
-    colors: ["#465FFF", "#10B981"], // Blue and green lines
+    colors: ["#465FFF", "#10B981"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       height: 310,
-      type: "line", // Set the chart type to 'line'
+      type: "line",
       toolbar: {
-        show: false, // Hide chart toolbar
+        show: false,
       },
     },
     stroke: {
-      curve: "straight", // Define the line style (straight, smooth, or step)
-      width: [2, 2], // Line width for each dataset
+      curve: "straight",
+      width: [2, 2],
     },
-
     fill: {
       type: "gradient",
       gradient: {
@@ -64,52 +72,52 @@ export default function LineChartOne({ labels, series: propSeries }: LineChartPr
       },
     },
     markers: {
-      size: 0, // Size of the marker points
-      strokeColors: "#fff", // Marker border color
+      size: 0,
+      strokeColors: "#fff",
       strokeWidth: 2,
       hover: {
-        size: 6, // Marker size on hover
+        size: 6,
       },
     },
     grid: {
       xaxis: {
         lines: {
-          show: false, // Hide grid lines on x-axis
+          show: false,
         },
       },
       yaxis: {
         lines: {
-          show: true, // Show grid lines on y-axis
+          show: true,
         },
       },
     },
     dataLabels: {
-      enabled: false, // Disable data labels
+      enabled: false,
     },
     tooltip: {
-      enabled: true, // Enable tooltip
+      enabled: true,
       x: {
-        format: "dd MMM yyyy", // Format for x-axis tooltip
+        format: "dd MMM yyyy",
       },
     },
     xaxis: {
-      type: "category", // Category-based x-axis
+      type: "category",
       categories: chartLabels,
       axisBorder: {
-        show: false, // Hide x-axis border
+        show: false,
       },
       axisTicks: {
-        show: false, // Hide x-axis ticks
+        show: false,
       },
       tooltip: {
-        enabled: false, // Disable tooltip for x-axis points
+        enabled: false,
       },
     },
     yaxis: {
       labels: {
         style: {
-          fontSize: "12px", // Adjust font size for y-axis labels
-          colors: ["#6B7280"], // Color of the labels
+          fontSize: "12px",
+          colors: ["#6B7280"],
         },
       },
       title: {
@@ -121,7 +129,8 @@ export default function LineChartOne({ labels, series: propSeries }: LineChartPr
         },
       },
     },
-  };
+  }), [chartLabels]);
+
   return (
     <div className="max-w-full overflow-x-auto custom-scrollbar">
       <div id="chartEight" className="min-w-[1000px]">
@@ -134,4 +143,8 @@ export default function LineChartOne({ labels, series: propSeries }: LineChartPr
       </div>
     </div>
   );
-}
+});
+
+LineChartOne.displayName = 'LineChartOne';
+
+export default LineChartOne;

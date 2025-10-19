@@ -1,12 +1,18 @@
 "use client";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { ApexOptions } from "apexcharts";
 
 import dynamic from "next/dynamic";
-// Dynamically import the ReactApexChart component
+
+// Dynamically import the ReactApexChart component with loading fallback
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-[310px]">
+      <div className="animate-pulse text-gray-400">Loading chart...</div>
+    </div>
+  ),
 });
 
 interface BarChartProps {
@@ -17,21 +23,25 @@ interface BarChartProps {
   }>;
 }
 
-export default function BarChartOne({ labels, series: propSeries }: BarChartProps = {}) {
-  // Use provided labels or fallback to default months
-  const chartLabels = labels || [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
+const BarChartOne = React.memo<BarChartProps>(({ labels, series: propSeries }) => {
+  // Memoize chart data to prevent unnecessary recalculations
+  const chartLabels = useMemo(() => 
+    labels || [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ], [labels]
+  );
 
-  // Use provided series or fallback to dummy data
-  const chartSeries = propSeries || [
-    {
-      name: "Jumlah User",
-      data: [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27],
-    },
-  ];
-  const options: ApexOptions = {
+  const chartSeries = useMemo(() => 
+    propSeries || [
+      {
+        name: "Jumlah User",
+        data: [12, 14, 11, 15, 18, 20, 22, 19, 24, 28, 30, 27],
+      },
+    ], [propSeries]
+  );
+
+  const options = useMemo<ApexOptions>(() => ({
     colors: ["#465fff"],
     chart: {
       fontFamily: "Outfit, sans-serif",
@@ -91,7 +101,6 @@ export default function BarChartOne({ labels, series: propSeries }: BarChartProp
     fill: {
       opacity: 1,
     },
-
     tooltip: {
       x: {
         show: false,
@@ -100,7 +109,8 @@ export default function BarChartOne({ labels, series: propSeries }: BarChartProp
         formatter: (val: number) => `${val}`,
       },
     },
-  };
+  }), [chartLabels]);
+
   return (
     <div className="max-w-full overflow-x-auto custom-scrollbar">
       <div id="chartOne" className="min-w-[1000px]">
@@ -113,4 +123,8 @@ export default function BarChartOne({ labels, series: propSeries }: BarChartProp
       </div>
     </div>
   );
-}
+});
+
+BarChartOne.displayName = 'BarChartOne';
+
+export default BarChartOne;

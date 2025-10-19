@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import cache, { CacheKeys, CacheTTL } from '@/lib/cache';
 
 export async function GET() {
   try {
@@ -9,6 +10,17 @@ export async function GET() {
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check cache first
+    const cachedData = cache.get(CacheKeys.VISITOR_CHARTS);
+    if (cachedData) {
+      return NextResponse.json(cachedData, {
+        headers: {
+          'X-Cache': 'HIT',
+          'Cache-Control': 'private, max-age=300', // 5 minutes
+        }
+      });
     }
 
     // Get current date and date one year ago
@@ -102,7 +114,7 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({
+    const chartData = {
       lineChart: {
         labels: monthLabels,
         series: [
@@ -125,6 +137,16 @@ export async function GET() {
           },
         ],
       },
+    };
+
+    // Cache the response for 5 minutes
+    cache.set(CacheKeys.VISITOR_CHARTS, chartData, CacheTTL.FIVE_MINUTES);
+
+    return NextResponse.json(chartData, {
+      headers: {
+        'X-Cache': 'MISS',
+        'Cache-Control': 'private, max-age=300', // 5 minutes
+      }
     });
   } catch (error) {
     console.error('Error fetching visitor charts data:', error);

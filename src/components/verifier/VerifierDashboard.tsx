@@ -24,7 +24,7 @@ import { id } from 'date-fns/locale';
 import { useToast } from '@/hooks/useToast';
 import Button from '../ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { Skeleton, SkeletonDashboardCard, SkeletonCard } from '@/components/ui/skeleton';
 import CameraQRScanner from '../scanner/CameraQRScanner';
 import ScanDetailModal from '@/components/common/ScanDetailModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
@@ -191,8 +191,28 @@ export default function VerifierDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <LoadingSpinner size="lg" />
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-5 w-72" />
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+          <SkeletonDashboardCard />
+        </div>
+
+        {/* Quick Scan Actions */}
+        <SkeletonCard className="h-48" />
+
+        {/* Recent Scans */}
+        <SkeletonCard className="h-96" />
       </div>
     );
   }
