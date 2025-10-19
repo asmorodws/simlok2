@@ -19,10 +19,13 @@ export default function SimlokPdfModal({
   submissionName,
   nomorSimlok,
 }: SimlokPdfModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null); // <-- ubah: null, bukan ""
-  const objectUrlRef = useRef<string | null>(null); // untuk blob URL cleanup
+  const [actualFilename, setActualFilename] = useState<string>('');
+
+  // Store reference to object URL for cleanup
+  const objectUrlRef = useRef<string | null>(null);
 
   // Cleanup object URL ketika modal ditutup/unmount
   useEffect(() => {
@@ -107,28 +110,35 @@ export default function SimlokPdfModal({
 
         console.log('SimlokPdfModal: PDF response received successfully');
 
-        // Get filename from Content-Disposition header if available
+        // Get filename from server's Content-Disposition header
         const contentDisposition = res.headers.get('Content-Disposition');
-        let serverFilename = filename; // fallback to our generated filename
+        let serverFilename = ''; // will be set from server
         
         if (contentDisposition) {
           const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
           if (filenameMatch && filenameMatch[1]) {
             serverFilename = filenameMatch[1].replace(/['"]/g, '');
+            console.log('SimlokPdfModal: Got filename from server:', serverFilename);
           }
         }
 
-        // Create a File object with proper filename (instead of plain Blob)
-        // This helps browser use the correct filename when saving from preview
+        // Also check X-PDF-Filename header (custom header from our API)
+        const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
+        if (pdfFilenameHeader) {
+          serverFilename = pdfFilenameHeader;
+          console.log('SimlokPdfModal: Got filename from X-PDF-Filename header:', serverFilename);
+        }
+
+        // Create blob URL directly (don't create File object as it doesn't help with download filename)
         const blob = await res.blob();
-        const file = new File([blob], serverFilename, { type: 'application/pdf' });
-        const url = URL.createObjectURL(file);
+        const url = URL.createObjectURL(blob);
         objectUrlRef.current = url;
 
-        console.log('SimlokPdfModal: PDF blob URL created with filename:', serverFilename, url);
+        console.log('SimlokPdfModal: PDF blob URL created, filename will be:', serverFilename);
 
         if (!cancelled) {
           setPdfUrl(url);
+          setActualFilename(serverFilename); // Save server filename for download
           setLoading(false);
           setError(null);
         }
@@ -165,22 +175,11 @@ export default function SimlokPdfModal({
     try {
       setError(null);
 
-      // Option 1: Use existing blob URL if available (more efficient and consistent)
-      if (pdfUrl && !loading) {
-        console.log('SimlokPdfModal: Using existing PDF blob for download');
-        
-        const a = document.createElement('a');
-        a.href = pdfUrl; // Use the same blob URL as preview
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
-      }
-
-      // Option 2: Fetch fresh PDF if no blob URL available
-      console.log('SimlokPdfModal: Fetching fresh PDF for download');
+      // Use actualFilename from state if available, otherwise use computed filename
+      const targetFilename = actualFilename || filename;
+      console.log('SimlokPdfModal: Starting download with filename:', targetFilename);
       
+      // Always fetch fresh PDF for download to get proper Content-Disposition header
       const t = Date.now();
       const apiUrl = `/api/submissions/${encodeURIComponent(
         submissionId
@@ -189,28 +188,52 @@ export default function SimlokPdfModal({
       const res = await fetch(apiUrl, {
         method: 'GET',
         credentials: 'include',
-        cache: 'no-store', // Prevent caching of PDF requests
+        cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'x-pdf-generation': 'true', // Mark as PDF generation request
+          'x-pdf-generation': 'true',
         }
       });
+      
       if (!res.ok) throw new Error('Gagal mendownload PDF');
+
+      // Get filename from server response headers (most reliable)
+      let downloadFilename = targetFilename; // fallback
+      
+      const contentDisposition = res.headers.get('Content-Disposition');
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          downloadFilename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+      
+      // Also check custom header
+      const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
+      if (pdfFilenameHeader) {
+        downloadFilename = pdfFilenameHeader;
+      }
+
+      console.log('SimlokPdfModal: Download filename from server:', downloadFilename);
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
 
+      // Create download link with proper filename
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = downloadFilename; // Use filename from server
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
+      // Cleanup
       URL.revokeObjectURL(url);
+      
+      console.log('SimlokPdfModal: Download completed with filename:', downloadFilename);
     } catch (err) {
-      console.error(err);
+      console.error('Download error:', err);
       setError('Gagal mendownload PDF SIMLOK');
     }
   };
@@ -252,6 +275,11 @@ export default function SimlokPdfModal({
                 <p className="text-sm text-blue-100">
                   {nomorSimlok ? `No: ${nomorSimlok}` : submissionName}
                 </p>
+                {actualFilename && (
+                  <p className="text-xs text-blue-200 mt-1">
+                    📄 {actualFilename}
+                  </p>
+                )}
               </div>
             </div>
 

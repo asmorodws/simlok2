@@ -21,6 +21,14 @@ interface Worker {
   foto_pekerja: string;
 }
 
+interface WorkerAPIResponse {
+  id: string;
+  worker_name?: string;
+  nama_pekerja?: string;
+  worker_photo?: string;
+  foto_pekerja?: string;
+}
+
 interface Submission {
   id: string;
   approval_status: string;
@@ -77,7 +85,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
           if (workersResponse.ok) {
             const workersData = await workersResponse.json();
             if (workersData.workers && workersData.workers.length > 0) {
-              setWorkers(workersData.workers.map((worker: any) => ({
+              setWorkers(workersData.workers.map((worker: WorkerAPIResponse) => ({
                 id: worker.id,
                 nama_pekerja: worker.worker_name || worker.nama_pekerja || '',
                 foto_pekerja: worker.worker_photo || worker.foto_pekerja || ''

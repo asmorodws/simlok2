@@ -70,6 +70,13 @@ class SimpleCache {
   }
 
   /**
+   * Get all cache keys
+   */
+  keys(): string[] {
+    return Array.from(this.cache.keys());
+  }
+
+  /**
    * Remove expired entries
    */
   cleanup(): void {
@@ -104,6 +111,10 @@ export default cache;
 export const CacheKeys = {
   VISITOR_STATS: 'visitor:stats',
   VISITOR_CHARTS: 'visitor:charts',
+  REVIEWER_STATS: 'reviewer:stats',
+  APPROVER_STATS: 'approver:stats',
+  VENDOR_STATS: 'vendor:stats',
+  VERIFIER_STATS: 'verifier:stats',
   USER_LIST: (page: number) => `users:list:${page}`,
   SUBMISSION_LIST: (page: number) => `submissions:list:${page}`,
   QR_SCANS: (submissionId: string) => `qr:scans:${submissionId}`,

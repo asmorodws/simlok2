@@ -15,7 +15,7 @@ import {
 import Button from '../ui/button/Button';
 import SubmissionDetailModal from '../vendor/SubmissionDetailModal';
 import ApproverSubmissionDetailModal from '../approver/ApproverSubmissionDetailModal';
-import ReviewerSubmissionDetailModal from '../reviewer/ImprovedReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from '../reviewer/ReviewerSubmissionDetailModal';
 import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
 import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';

@@ -166,26 +166,37 @@ async function generatePDF(submission: any) {
 
     // Generate filename based on simlok_number only (no vendor name)
     let filename: string;
-    if (pdfData.simlok_number) {
+    if (pdfData.simlok_number && !pdfData.simlok_number.startsWith('[DRAFT]')) {
+      // For approved submissions with real SIMLOK numbers
       // Clean simlok number: replace special chars with underscore
       const cleanSimlokNumber = pdfData.simlok_number.replace(/[\[\]/\\]/g, '_');
       filename = `SIMLOK_${cleanSimlokNumber}.pdf`;
+    } else if (pdfData.simlok_number && pdfData.simlok_number.startsWith('[DRAFT]')) {
+      // For draft submissions
+      const cleanSimlokNumber = pdfData.simlok_number.replace(/[\[\]/\\]/g, '_');
+      filename = `SIMLOK_${cleanSimlokNumber}.pdf`;
     } else {
-      // Fallback for preview mode
-      filename = `SIMLOK_PREVIEW_${submission.id}.pdf`;
+      // Fallback for submissions without simlok_number
+      filename = `SIMLOK_${submission.id}.pdf`;
     }
 
-    // Return PDF response with proper cache control
+    // Return PDF response with proper cache control and filename
     // Use both filename and filename* for better browser compatibility
     const encodedFilename = encodeURIComponent(filename);
+    
+    console.log('PDF Generation: Setting filename:', filename);
+    
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
+        // Use 'inline' to show in browser, but filename still applies when user clicks download
         'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
+        // Add custom header for debugging (can be removed in production)
+        'X-PDF-Filename': filename,
       },
     });
 

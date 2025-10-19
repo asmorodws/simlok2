@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withCache } from "@/lib/api-cache";
+import { CacheKeys, CacheTTL } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -16,25 +18,47 @@ export async function GET() {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Get submissions stats (role-based filtering)
-    let submissionWhereClause = {};
-    if (session.user.role === 'REVIEWER') {
-      // Reviewers can see all submissions for review
-      submissionWhereClause = {};
-    }
+    // Use cache for dashboard stats
+    const { data: dashboardStats, cached } = await withCache(
+      CacheKeys.REVIEWER_STATS,
+      CacheTTL.ONE_MINUTE,
+      async () => {
+        return await fetchReviewerStats(session.user.role);
+      }
+    );
 
-    // Get user verification stats (for reviewers who can verify users)
-    let userWhereClause = {};
-    if (session.user.role === 'REVIEWER') {
-      // Reviewers typically verify VENDOR users
-      userWhereClause = { role: 'VENDOR' };
-    } else if (session.user.role === 'ADMIN') {
-      // Admin can see all except SUPER_ADMIN
-      userWhereClause = { role: { not: 'SUPER_ADMIN' } };
-    } else if (session.user.role === 'SUPER_ADMIN') {
-      // Super admin can see all users
-      userWhereClause = {};
-    }
+    return NextResponse.json(dashboardStats, {
+      headers: {
+        'X-Cache': cached ? 'HIT' : 'MISS'
+      }
+    });
+
+  } catch (error) {
+    console.error("[REVIEWER_DASHBOARD_STATS]", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
+
+async function fetchReviewerStats(userRole: string) {
+  // Get submissions stats (role-based filtering)
+  let submissionWhereClause = {};
+  if (userRole === 'REVIEWER') {
+    // Reviewers can see all submissions for review
+    submissionWhereClause = {};
+  }
+
+  // Get user verification stats (for reviewers who can verify users)
+  let userWhereClause = {};
+  if (userRole === 'REVIEWER') {
+    // Reviewers typically verify VENDOR users
+    userWhereClause = { role: 'VENDOR' };
+  } else if (userRole === 'ADMIN') {
+    // Admin can see all except SUPER_ADMIN
+    userWhereClause = { role: { not: 'SUPER_ADMIN' } };
+  } else if (userRole === 'SUPER_ADMIN') {
+    // Super admin can see all users
+    userWhereClause = {};
+  }
 
     // Get submission statistics
     const totalSubmissions = await prisma.submission.count({
@@ -94,33 +118,26 @@ export async function GET() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Return dashboard stats
-    const dashboardStats = {
-      submissions: {
-        total: totalSubmissions,
-        byReviewStatus: {
-          PENDING_REVIEW: reviewStatusStats.PENDING_REVIEW || 0,
-          MEETS_REQUIREMENTS: reviewStatusStats.MEETS_REQUIREMENTS || 0,
-          NOT_MEETS_REQUIREMENTS: reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0,
-        },
-        byApprovalStatus: {
-          PENDING: approvalStatusStats.PENDING_APPROVAL || 0,
-          IN_REVIEW: approvalStatusStats.IN_REVIEW || 0,
-          APPROVED: approvalStatusStats.APPROVED || 0,
-          REJECTED: approvalStatusStats.REJECTED || 0,
-          REVISION_REQUIRED: approvalStatusStats.REVISION_REQUIRED || 0,
-        }
+  // Return dashboard stats
+  return {
+    submissions: {
+      total: totalSubmissions,
+      byReviewStatus: {
+        PENDING_REVIEW: reviewStatusStats.PENDING_REVIEW || 0,
+        MEETS_REQUIREMENTS: reviewStatusStats.MEETS_REQUIREMENTS || 0,
+        NOT_MEETS_REQUIREMENTS: reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0,
       },
-      users: {
-        pendingVerifications: pendingUserVerifications,
-        totalVerified: totalVerifiedUsers
+      byApprovalStatus: {
+        PENDING: approvalStatusStats.PENDING_APPROVAL || 0,
+        IN_REVIEW: approvalStatusStats.IN_REVIEW || 0,
+        APPROVED: approvalStatusStats.APPROVED || 0,
+        REJECTED: approvalStatusStats.REJECTED || 0,
+        REVISION_REQUIRED: approvalStatusStats.REVISION_REQUIRED || 0,
       }
-    };
-
-    return NextResponse.json(dashboardStats);
-
-  } catch (error) {
-    console.error("[REVIEWER_DASHBOARD_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
-  }
+    },
+    users: {
+      pendingVerifications: pendingUserVerifications,
+      totalVerified: totalVerifiedUsers
+    }
+  };
 }

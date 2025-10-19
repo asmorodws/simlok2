@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withCache } from "@/lib/api-cache";
+import { CacheKeys, CacheTTL } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -16,12 +18,30 @@ export async function GET() {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Get submissions stats (role-based filtering)
-    let submissionWhereClause = {};
-    if (session.user.role === 'APPROVER') {
-      // Approvers can see all submissions for approval
-      submissionWhereClause = {};
-    }
+    // Use cache for dashboard stats
+    const { data: dashboardStats, cached } = await withCache(
+      CacheKeys.APPROVER_STATS,
+      CacheTTL.ONE_MINUTE,
+      async () => {
+        return await fetchApproverStats();
+      }
+    );
+
+    return NextResponse.json(dashboardStats, {
+      headers: {
+        'X-Cache': cached ? 'HIT' : 'MISS'
+      }
+    });
+
+  } catch (error) {
+    console.error("[APPROVER_DASHBOARD_STATS]", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
+
+async function fetchApproverStats() {
+  // Get submissions stats (role-based filtering)
+  const submissionWhereClause = {};
 
     // Get submission statistics
     const totalSubmissions = await prisma.submission.count({
@@ -59,32 +79,25 @@ export async function GET() {
     const pendingApprovalMeets = reviewStatusStats.MEETS_REQUIREMENTS || 0;
     const pendingApprovalNotMeets = reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0;
 
-    // Return dashboard stats
-    const dashboardStats = {
-      total: totalSubmissions,
-      pending_approval_meets: pendingApprovalMeets,
-      pending_approval_not_meets: pendingApprovalNotMeets,
-      approved: approvalStatusStats.APPROVED || 0,
-      rejected: approvalStatusStats.REJECTED || 0,
-      // Additional detailed stats
-      byApprovalStatus: {
-        PENDING: approvalStatusStats.PENDING_APPROVAL || 0,
-        IN_REVIEW: approvalStatusStats.IN_REVIEW || 0,
-        APPROVED: approvalStatusStats.APPROVED || 0,
-        REJECTED: approvalStatusStats.REJECTED || 0,
-        REVISION_REQUIRED: approvalStatusStats.REVISION_REQUIRED || 0,
-      },
-      byReviewStatus: {
-        PENDING_REVIEW: reviewStatusStats.PENDING_REVIEW || 0,
-        MEETS_REQUIREMENTS: reviewStatusStats.MEETS_REQUIREMENTS || 0,
-        NOT_MEETS_REQUIREMENTS: reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0,
-      }
-    };
-
-    return NextResponse.json(dashboardStats);
-
-  } catch (error) {
-    console.error("[APPROVER_DASHBOARD_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
-  }
+  // Return dashboard stats
+  return {
+    total: totalSubmissions,
+    pending_approval_meets: pendingApprovalMeets,
+    pending_approval_not_meets: pendingApprovalNotMeets,
+    approved: approvalStatusStats.APPROVED || 0,
+    rejected: approvalStatusStats.REJECTED || 0,
+    // Additional detailed stats
+    byApprovalStatus: {
+      PENDING: approvalStatusStats.PENDING_APPROVAL || 0,
+      IN_REVIEW: approvalStatusStats.IN_REVIEW || 0,
+      APPROVED: approvalStatusStats.APPROVED || 0,
+      REJECTED: approvalStatusStats.REJECTED || 0,
+      REVISION_REQUIRED: approvalStatusStats.REVISION_REQUIRED || 0,
+    },
+    byReviewStatus: {
+      PENDING_REVIEW: reviewStatusStats.PENDING_REVIEW || 0,
+      MEETS_REQUIREMENTS: reviewStatusStats.MEETS_REQUIREMENTS || 0,
+      NOT_MEETS_REQUIREMENTS: reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0,
+    }
+  };
 }

@@ -14,6 +14,16 @@ import Card from "../ui/Card";
 import Button from "../ui/button/Button";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useSocket } from "@/components/common/RealtimeUpdates";
+import { Submission } from "@/types/submission";
+
+interface SearchParams {
+  page: number;
+  limit: number;
+  sortBy: string;
+  sortOrder: string;
+  search?: string;
+  status?: string;
+}
 
 export default function VendorSubmissionsContent() {
   const { showSuccess, showError } = useToast();
@@ -31,7 +41,7 @@ export default function VendorSubmissionsContent() {
   } = useSubmissionStore();
 
   // Modal states
-  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({
     show: false,
@@ -53,7 +63,7 @@ export default function VendorSubmissionsContent() {
   // Fetch data with proper debouncing and parameter handling
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const params: any = {
+      const params: SearchParams = {
         page: currentPage,
         limit: 10,
         sortBy,
@@ -134,7 +144,7 @@ export default function VendorSubmissionsContent() {
     });
   }, [submissions, showSuccess, showError, deleteSubmission, forceRefresh]);
 
-  const handleViewDetail = useCallback((submissionRow: any) => {
+  const handleViewDetail = useCallback((submissionRow: { id: string }) => {
     // Find the full submission data from the store using the ID
     const fullSubmission = submissions.find(s => s.id === submissionRow.id);
     if (fullSubmission) {
@@ -376,15 +386,15 @@ export default function VendorSubmissionsContent() {
           {/* Desktop / tablet: show table; Mobile: hide table and show card view */}
           <div className="hidden sm:block">
             <SubmissionsTable
-              submissions={submissions.map((s: any) => ({
+              submissions={submissions.map((s: Submission) => ({
                 id: s.id,
                 job_description: s.job_description,
                 officer_name: s.officer_name,
                 work_location: s.work_location,
-                work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                work_hours: s.working_hours ?? "",
                 approval_status: s.approval_status,
                 review_status: s.review_status ?? 'PENDING_REVIEW',
-                simlok_number: s.simlok_number,
+                simlok_number: s.simlok_number ?? "",
                 created_at: s.created_at,
               }))}
               loading={loading}
@@ -396,15 +406,15 @@ export default function VendorSubmissionsContent() {
 
           <div className="block sm:hidden">
             <SubmissionsCardView
-              submissions={submissions.map((s: any) => ({
+              submissions={submissions.map((s: Submission) => ({
                 id: s.id,
                 job_description: s.job_description,
                 officer_name: s.officer_name,
                 work_location: s.work_location,
-                work_hours: s.working_hours ?? "", // Fixed: API returns 'working_hours', not 'work_hours'
+                work_hours: s.working_hours ?? "",
                 approval_status: s.approval_status,
                 review_status: s.review_status ?? 'PENDING_REVIEW',
-                simlok_number: s.simlok_number,
+                simlok_number: s.simlok_number ?? "",
                 created_at: s.created_at,
               }))}
               loading={loading}

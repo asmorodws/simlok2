@@ -330,7 +330,7 @@ interface ReviewerSubmissionDetailModalProps {
   onReviewSubmitted: () => void;
 }
 
-const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps> = ({
+const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps> = ({
   isOpen,
   onClose,
   submissionId,
@@ -2025,4 +2025,4 @@ const ImprovedReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailMo
   );
 };
 
-export default ImprovedReviewerSubmissionDetailModal;
+export default ReviewerSubmissionDetailModal;

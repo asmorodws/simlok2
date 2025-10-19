@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import ReviewerTable, { ReviewerSubmission } from '@/components/reviewer/ReviewerTable';
-import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import { useToast } from '@/hooks/useToast';
 import { SkeletonDashboardCard, SkeletonTable } from '@/components/ui/skeleton';
 import Link from 'next/link';

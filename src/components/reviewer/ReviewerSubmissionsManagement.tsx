@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
-import ReviewerSubmissionDetailModal from './ImprovedReviewerSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import ExportFilterModal, { ExportFilters } from './ExportFilterModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ReviewerTable, { ReviewerSubmission } from '@/components/reviewer/ReviewerTable';
