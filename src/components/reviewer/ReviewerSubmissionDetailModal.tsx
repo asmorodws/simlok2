@@ -29,6 +29,7 @@ import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
+import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
 
@@ -103,6 +104,16 @@ interface SubmissionDetail {
   reviewed_at: string;
   approved_at: string;
   worker_list: WorkerPhoto[];
+  support_documents?: Array<{
+    id: string;
+    document_type: string;
+    document_subtype?: string | null;
+    document_number?: string | null;
+    document_date?: Date | null;
+    document_upload: string;
+    uploaded_at: Date;
+    uploaded_by: string;
+  }>;
 }
 
 // Date Range Component
@@ -1118,35 +1129,77 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                 {(() => {
                                   let template = "Izin diberikan berdasarkan:";
 
-                                  // SIMJA
-                                  if (submission.simja_number && submission.simja_date) {
-                                    const simjaText = submission.simja_type 
-                                      ? `\n• SIMJA ${submission.simja_type}` 
-                                      : `\n• SIMJA`;
-                                    template += `${simjaText}\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
-                                  }
+                                  // Use new support_documents if available
+                                  if (submission.support_documents && submission.support_documents.length > 0) {
+                                    // Group documents by type
+                                    const simjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIMJA');
+                                    const sikaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIKA');
+                                    const hsseDocuments = submission.support_documents.filter(doc => doc.document_type === 'HSSE');
 
-                                  // SIKA
-                                  if (submission.sika_number && submission.sika_date) {
-                                    const sikaText = submission.sika_type 
-                                      ? `\n• SIKA ${submission.sika_type}` 
-                                      : `\n• SIKA`;
-                                    template += `${sikaText}\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
-                                  }
+                                    // SIMJA documents
+                                    simjaDocuments.forEach(doc => {
+                                      const docLabel = doc.document_subtype 
+                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
+                                        : `• ${doc.document_type}`;
+                                      template += `\n${docLabel}`;
+                                      if (doc.document_number && doc.document_date) {
+                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
+                                      }
+                                    });
 
-                                  // HSSE Pass (submission level - optional)
-                                  if (submission.hsse_pass_number && submission.hsse_pass_valid_thru) {
-                                    template += `\n• HSSE Pass\n  ${submission.hsse_pass_number} Tgl. ${formatDate(submission.hsse_pass_valid_thru)}`;
-                                  }
+                                    // SIKA documents
+                                    sikaDocuments.forEach(doc => {
+                                      const docLabel = doc.document_subtype 
+                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
+                                        : `• ${doc.document_type}`;
+                                      template += `\n${docLabel}`;
+                                      if (doc.document_number && doc.document_date) {
+                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
+                                      }
+                                    });
 
-                                  // Dokumen Pendukung 1
-                                  if (submission.supporting_doc1_type && submission.supporting_doc1_number && submission.supporting_doc1_date) {
-                                    template += `\n• ${submission.supporting_doc1_type}\n  ${submission.supporting_doc1_number} Tgl. ${formatDate(submission.supporting_doc1_date)}`;
-                                  }
+                                    // HSSE documents
+                                    hsseDocuments.forEach(doc => {
+                                      const docLabel = doc.document_subtype 
+                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
+                                        : `• ${doc.document_type}`;
+                                      template += `\n${docLabel} Pass`;
+                                      if (doc.document_number && doc.document_date) {
+                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
+                                      }
+                                    });
+                                  } else {
+                                    // Fallback to legacy fields if no support_documents
+                                    // SIMJA
+                                    if (submission.simja_number && submission.simja_date) {
+                                      const simjaText = submission.simja_type 
+                                        ? `\n• SIMJA ${submission.simja_type}` 
+                                        : `\n• SIMJA`;
+                                      template += `${simjaText}\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
+                                    }
 
-                                  // Dokumen Pendukung 2
-                                  if (submission.supporting_doc2_type && submission.supporting_doc2_number && submission.supporting_doc2_date) {
-                                    template += `\n• ${submission.supporting_doc2_type}\n  ${submission.supporting_doc2_number} Tgl. ${formatDate(submission.supporting_doc2_date)}`;
+                                    // SIKA
+                                    if (submission.sika_number && submission.sika_date) {
+                                      const sikaText = submission.sika_type 
+                                        ? `\n• SIKA ${submission.sika_type}` 
+                                        : `\n• SIKA`;
+                                      template += `${sikaText}\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
+                                    }
+
+                                    // HSSE Pass (submission level - optional)
+                                    if (submission.hsse_pass_number && submission.hsse_pass_valid_thru) {
+                                      template += `\n• HSSE Pass\n  ${submission.hsse_pass_number} Tgl. ${formatDate(submission.hsse_pass_valid_thru)}`;
+                                    }
+
+                                    // Dokumen Pendukung 1
+                                    if (submission.supporting_doc1_type && submission.supporting_doc1_number && submission.supporting_doc1_date) {
+                                      template += `\n• ${submission.supporting_doc1_type}\n  ${submission.supporting_doc1_number} Tgl. ${formatDate(submission.supporting_doc1_date)}`;
+                                    }
+
+                                    // Dokumen Pendukung 2
+                                    if (submission.supporting_doc2_type && submission.supporting_doc2_number && submission.supporting_doc2_date) {
+                                      template += `\n• ${submission.supporting_doc2_type}\n  ${submission.supporting_doc2_number} Tgl. ${formatDate(submission.supporting_doc2_date)}`;
+                                    }
                                   }
 
                                   // Head of Security section - akan diisi saat approval dengan tanggal SIMLOK
@@ -1157,7 +1210,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                               </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
-                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data SIMJA, SIKA, HSSE Pass dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
+                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data dokumen pendukung (SIMJA, SIKA, HSSE) dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
                             </p>
                           </div>
                         </div>
@@ -1381,13 +1434,40 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
               {activeTab === 'details' && (
                 <div className="space-y-6">
                   {/* Header dengan Status dan Review */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm text-gray-500">Review:</span>
-                      {getReviewStatusBadge(submission.review_status)}
-                      <span className="text-sm text-gray-500">Status:</span>
-                      {getFinalStatusBadge(submission.approval_status)}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
+                    </div>
+                    
+                    {/* Info Cards - Responsive */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Tanggal Pengajuan */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Tanggal Pengajuan</span>
+                          <span className="text-sm font-semibold text-gray-900">{formatDate(submission.created_at)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Status Review */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Status Review</span>
+                          <div className="sm:mt-1">
+                            {getReviewStatusBadge(submission.review_status)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status Approval */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Status Persetujuan</span>
+                          <div className="sm:mt-1">
+                            {getFinalStatusBadge(submission.approval_status)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -1404,90 +1484,25 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       <InfoCard
                         label="Nama Petugas"
                         value={submission.officer_name}
-                        icon={<UserIcon className="h-4 w-4 text-gray-500" />}
+
                       />
                       <InfoCard
                         label="Alamat Email"
                         value={submission.user_email || '-'}
-                        icon={<EnvelopeIcon className="h-4 w-4 text-gray-500" />}
+
                       />
                       <InfoCard
                         label="Nomor Telepon"
                         value={submission.vendor_phone || '-'}
                       />
-                      <InfoCard
+                      {/* <InfoCard
                         label="Berdasarkan"
                         value={submission.based_on}
-                      />
+                      /> */}
                     </div>
                   </DetailSection>
 
-                  {/* Informasi Dokumen SIMJA/SIKA/HSSE - tetap tampilkan data legacy */}
-                  <DetailSection
-                    title="Informasi Dokumen (SIMJA/SIKA/HSSE)"
-                    icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* SIMJA Section */}
-                      {submission.simja_number && (
-                        <InfoCard
-                          label="Nomor SIMJA"
-                          value={submission.simja_number}
-                        />
-                      )}
-                      {/* {submission.simja_type && (
-                        <InfoCard
-                          label="Tipe SIMJA"
-                          value={submission.simja_type}
-                        />
-                      )} */}
-                      {submission.simja_date && (
-                        <InfoCard
-                          label="Tanggal SIMJA"
-                          value={formatDate(submission.simja_date)}
-                        />
-                      )}
-                      
-                      {/* SIKA Section */}
-                      {submission.sika_number && (
-                        <InfoCard
-                          label="Nomor SIKA"
-                          value={submission.sika_number}
-                        />
-                      )}
-                      {/* {submission.sika_type && (
-                        <InfoCard
-                          label="Tipe SIKA"
-                          value={submission.sika_type}
-                        />
-                      )} */}
-                      {submission.sika_date && (
-                        <InfoCard
-                          label="Tanggal SIKA"
-                          value={formatDate(submission.sika_date)}
-                        />
-                      )}
-                      
-                      {/* HSSE Pass Section */}
-                      {submission.hsse_pass_number && (
-                        <InfoCard
-                          label="Nomor HSSE Pass"
-                          value={submission.hsse_pass_number}
-                        />
-                      )}
-                      {submission.hsse_pass_valid_thru && (
-                        <InfoCard
-                          label="Masa berlaku HSSE pass"
-                          value={formatDate(submission.hsse_pass_valid_thru)}
-                        />
-                      )}
-                      
-                      <InfoCard
-                        label="Tanggal Pengajuan"
-                        value={formatDate(submission.created_at)}
-                      />
-                    </div>
-                  </DetailSection>
+
 
                   {/* Dokumen Pendukung - tampilan bersebelahan */}
                   {(submission.supporting_doc1_type || submission.supporting_doc2_type) && (
@@ -1601,10 +1616,18 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     </DetailSection>
                   )}
 
-                  {/* SIMJA/SIKA/HSSE Document Uploads - jika ada */}
-                  {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
+                  {/* Support Documents Section - New */}
+                  {submission.support_documents && submission.support_documents.length > 0 && (
+                    <SupportDocumentsSection
+                      supportDocuments={submission.support_documents}
+                      onViewDocument={handleFileView}
+                    />
+                  )}
+
+                  {/* SIMJA/SIKA/HSSE Document Uploads - Legacy fallback */}
+                  {!submission.support_documents?.length && (submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                     <DetailSection
-                      title="File Dokumen SIMJA/SIKA/HSSE"
+                      title="File Dokumen SIMJA/SIKA/HSSE (Legacy)"
                       icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
                     >
                       <div className={`grid grid-cols-1 gap-4 ${
@@ -1679,7 +1702,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                   )}
 
                   {/* Message if no documents */}
-                  {!submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
+                  {!submission.support_documents?.length && !submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
                    !submission.simja_document_upload && !submission.sika_document_upload && 
                    !submission.hsse_pass_document_upload && (
                     <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

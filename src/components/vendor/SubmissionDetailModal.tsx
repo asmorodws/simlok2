@@ -20,6 +20,7 @@ import WorkersList from '@/components/common/WorkersList';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import NoteCard from '@/components/common/NoteCard';
+import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import type { Submission } from '@/types/submission';
@@ -181,96 +182,32 @@ export default function SubmissionDetailModal({
                   <InfoCard
                     label="Nama Petugas"
                     value={submission.officer_name || '-'}
-                    icon={<UserIcon className="h-4 w-4 text-gray-500" />}
                   />
                   <InfoCard
                     label="Alamat Email"
                     value={submission.user_email || submission.user?.email || '-'}
                   />
-                  <InfoCard
+                  {/* <InfoCard
                     label="Berdasarkan"
                     value={submission.based_on || '-'}
-                  />
+                  /> */}
                 </div>
               </DetailSection>
 
-              {/* Informasi Dokumen SIMJA/SIKA/HSSE - unified section */}
-              <DetailSection 
-                title="Informasi Dokumen (SIMJA/SIKA/HSSE)" 
-                icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {submission.simja_number && (
-                    <InfoCard
-                      label="Nomor SIMJA"
-                      value={submission.simja_number}
-                    />
-                  )}
-                  {submission.simja_date && (
-                    <InfoCard
-                      label="Tanggal SIMJA"
-                      value={formatDate(submission.simja_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                  {/* {submission.simja_type && (
-                    <InfoCard
-                      label="Tipe SIMJA"
-                      value={submission.simja_type}
-                    />
-                  )} */}
-                  {submission.sika_number && (
-                    <InfoCard
-                      label="Nomor SIKA"
-                      value={submission.sika_number}
-                    />
-                  )}
-                  {submission.sika_date && (
-                    <InfoCard
-                      label="Tanggal SIKA"
-                      value={formatDate(submission.sika_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                  {/* {submission.sika_type && (
-                    <InfoCard
-                      label="Tipe SIKA"
-                      value={submission.sika_type}
-                    />
-                  )} */}
-                  {submission.hsse_pass_number && (
-                    <InfoCard
-                      label="Nomor HSSE Pass"
-                      value={submission.hsse_pass_number}
-                    />
-                  )}
-                  {submission.hsse_pass_valid_thru && (
-                    <InfoCard
-                      label="Masa berlaku HSSE pass"
-                      value={formatDate(submission.hsse_pass_valid_thru)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                  {submission.approval_status === 'APPROVED' && submission.simlok_number && (
-                    <InfoCard
-                      label="Nomor SIMLOK"
-                      value={submission.simlok_number}
-                    />
-                  )}
-                  {submission.approval_status === 'APPROVED' && submission.simlok_date && (
-                    <InfoCard
-                      label="Tanggal SIMLOK"
-                      value={formatDate(submission.simlok_date)}
-                      icon={<CalendarIcon className="h-4 w-4 text-gray-500" />}
-                    />
-                  )}
-                </div>
-              </DetailSection>
 
-              {/* File Dokumen SIMJA/SIKA/HSSE - unified section with flexible grid */}
-              {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
+
+              {/* Support Documents Section - New */}
+              {submission.support_documents && submission.support_documents.length > 0 && (
+                <SupportDocumentsSection
+                  supportDocuments={submission.support_documents}
+                  onViewDocument={handleFileView}
+                />
+              )}
+
+              {/* Legacy Document Section - Fallback for old submissions */}
+              {!submission.support_documents?.length && (submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                 <DetailSection
-                  title="File Dokumen SIMJA/SIKA/HSSE"
+                  title="File Dokumen SIMJA/SIKA/HSSE (Legacy)"
                   icon={<DocumentIcon className="h-5 w-5 text-gray-500" />}
                 >
                   <div className={`grid grid-cols-1 md:grid-cols-${submission.hsse_pass_document_upload ? '3' : '2'} gap-4`}>

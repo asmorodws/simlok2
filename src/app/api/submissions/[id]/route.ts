@@ -106,6 +106,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           orderBy: {
             created_at: 'asc'
           }
+        },
+        support_documents: {
+          select: {
+            id: true,
+            document_subtype: true,
+            document_type: true,
+            document_number: true,
+            document_date: true,
+            document_upload: true,
+            uploaded_at: true,
+            uploaded_by: true,
+          },
+          orderBy: {
+            uploaded_at: 'desc'
+          }
         }
       }
     });

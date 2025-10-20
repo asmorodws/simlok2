@@ -28,6 +28,7 @@ import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import NoteCard from '@/components/common/NoteCard';
+import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 
 import DatePicker from '@/components/form/DatePicker';
 
@@ -97,6 +98,14 @@ interface SubmissionDetail {
     hsse_pass_valid_thru?: string | null;
     hsse_pass_document_upload?: string | null;
     created_at: string;
+  }>;
+  support_documents?: Array<{
+    id: string;
+    document_name: string;
+    document_type: string;
+    document_upload: string;
+    uploaded_at: Date;
+    uploaded_by: string;
   }>;
 }
 
@@ -618,13 +627,40 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
               {activeTab === 'details' && (
                 <div className="space-y-6">
                   {/* Header dengan Status */}
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm text-gray-500">Review:</span>
-                      {getStatusBadge(submission.review_status)}
-                      <span className="text-sm text-gray-500">Status:</span>
-                      {getStatusBadge(submission.approval_status)}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
+                    </div>
+                    
+                    {/* Info Cards - Responsive */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {/* Tanggal Pengajuan */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Tanggal Pengajuan</span>
+                          <span className="text-sm font-semibold text-gray-900">{formatDate(submission.created_at)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Status Review */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Status Review</span>
+                          <div className="sm:mt-1">
+                            {getStatusBadge(submission.review_status)}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Status Approval */}
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
+                        <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
+                          <span className="text-xs text-gray-500 font-medium">Status Persetujuan</span>
+                          <div className="sm:mt-1">
+                            {getStatusBadge(submission.approval_status)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -650,85 +686,29 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         label="Nomor Telepon"
                         value={submission.vendor_phone || '-'}
                       />
-                      <InfoCard
+                      {/* <InfoCard
                         label="Berdasarkan"
                         value={submission.based_on}
                         className="md:col-span-2"
-                      />
+                      /> */}
                     </div>
                   </DetailSection>
 
                   {/* Informasi Dokumen SIMJA/SIKA/HSSE - tetap tampilkan data legacy */}
-                  <DetailSection 
-                    title="Informasi Dokumen (SIMJA/SIKA/HSSE)" 
-                    icon={<DocumentIcon className="h-5 w-5 text-orange-500" />}
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* SIMJA Section */}
-                      {submission.simja_number && (
-                        <InfoCard
-                          label="Nomor SIMJA"
-                          value={submission.simja_number}
-                        />
-                      )}
-                      {/* {submission.simja_type && (
-                        <InfoCard
-                          label="Tipe SIMJA"
-                          value={submission.simja_type}
-                        />
-                      )} */}
-                      {submission.simja_date && (
-                        <InfoCard
-                          label="Tanggal SIMJA"
-                          value={formatDate(submission.simja_date)}
-                        />
-                      )}
-                      
-                      {/* SIKA Section */}
-                      {submission.sika_number && (
-                        <InfoCard
-                          label="Nomor SIKA"
-                          value={submission.sika_number}
-                        />
-                      )}
-                      {/* {submission.sika_type && (
-                        <InfoCard
-                          label="Tipe SIKA"
-                          value={submission.sika_type}
-                        />
-                      )} */}
-                      {submission.sika_date && (
-                        <InfoCard
-                          label="Tanggal SIKA"
-                          value={formatDate(submission.sika_date)}
-                        />
-                      )}
-                      
-                      {/* HSSE Pass Section */}
-                      {submission.hsse_pass_number && (
-                        <InfoCard
-                          label="Nomor HSSE Pass"
-                          value={submission.hsse_pass_number}
-                        />
-                      )}
-                      {submission.hsse_pass_valid_thru && (
-                        <InfoCard
-                          label="Masa berlaku HSSE pass"
-                          value={formatDate(submission.hsse_pass_valid_thru)}
-                        />
-                      )}
-                      
-                      <InfoCard
-                        label="Tanggal Pengajuan"
-                        value={formatDate(submission.created_at)}
-                      />
-                    </div>
-                  </DetailSection>
 
-                  {/* SIMJA/SIKA/HSSE Document Uploads - jika ada */}
-                  {(submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
+
+                  {/* Support Documents Section - New */}
+                  {submission.support_documents && submission.support_documents.length > 0 && (
+                    <SupportDocumentsSection
+                      supportDocuments={submission.support_documents}
+                      onViewDocument={handleFileView}
+                    />
+                  )}
+
+                  {/* SIMJA/SIKA/HSSE Document Uploads - Legacy fallback */}
+                  {!submission.support_documents?.length && (submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                     <DetailSection
-                      title="File Dokumen SIMJA/SIKA/HSSE"
+                      title="File Dokumen SIMJA/SIKA/HSSE (Legacy)"
                       icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
                     >
                       <div className={`grid grid-cols-1 gap-4 ${

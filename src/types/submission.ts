@@ -4,6 +4,16 @@
 
 import { ReviewStatus } from '@prisma/client';
 
+// Support Document Interface
+export interface SupportDocument {
+  id: string;
+  document_subtype?: string; // Subtype untuk SIMJA/SIKA (e.g., "Pekerjaan Panas", "Ast. Man. Production")
+  document_number?: string;
+  document_date?: string;
+  document_type: 'SIMJA' | 'SIKA' | 'HSSE';
+  document_upload: string;
+}
+
 export interface SubmissionData {
   vendor_name: string;
   vendor_phone?: string;
@@ -15,24 +25,22 @@ export interface SubmissionData {
   working_hours: string;
   work_facilities: string;
   worker_count?: number; // jumlah pekerja
+  
+  // Legacy fields - akan dihapus
   simja_number?: string;
   simja_date?: string;
   sika_number?: string;
   sika_date?: string;
   simja_type?: string;
   sika_type?: string;
-
-  
-  // HSSE Pass Document
   hsse_pass_number?: string;
   hsse_pass_valid_thru?: Date | null;
   hsse_pass_document_upload?: string;
-  
+  sika_document_upload?: string;
+  simja_document_upload?: string;
 
   worker_names: string;
   content?: string; // akan diisi oleh admin saat approve
-  sika_document_upload?: string;
-  simja_document_upload?: string;
 }
 
 export interface SubmissionApprovalData {
@@ -58,6 +66,18 @@ export interface WorkerList {
   hsse_pass_document_upload?: string | null;
   submission_id: string;
   created_at: Date;
+}
+
+// Support Document for submissions
+export interface SubmissionSupportDocument {
+  id: string;
+  document_subtype?: string | null; // Subtype untuk SIMJA/SIKA
+  document_type: string;
+  document_number?: string | null;
+  document_date?: Date | null;
+  document_upload: string;
+  uploaded_at: Date;
+  uploaded_by: string;
 }
 
 // Complete submission interface for frontend
@@ -121,6 +141,7 @@ export interface Submission {
     email: string;
   } | null;
   worker_list?: WorkerList[];
+  support_documents?: SubmissionSupportDocument[];
 }
 
 // PDF Template data interface
@@ -145,6 +166,17 @@ export interface SubmissionPDFData {
   hsse_pass_number?: string | null;
   hsse_pass_valid_thru?: string | Date | null | undefined;
   hsse_pass_document_upload?: string | null;
+  
+  // New support documents structure
+  support_documents?: Array<{
+    id: string;
+    document_name: string;
+    document_type: string;
+    document_subtype?: string | null;
+    document_number?: string | null;
+    document_date?: string | Date | null;
+    document_upload: string;
+  }>;
   
   job_description: string;
   work_location: string;

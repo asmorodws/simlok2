@@ -469,7 +469,7 @@ for (let idx = 0; idx < lines.length; idx++) {
     k.y -= k.lineGap * 0.4;
 
   } else {
-    // Generate template preview when no actual data
+    // Generate template based on available data (new or legacy structure)
     await k.pageBreak();
     
     // Label kiri (bold)
@@ -480,7 +480,7 @@ for (let idx = 0; idx < lines.length; idx++) {
     const colonX = k.x + k.leftLabelWidth - k.measure(":", { size: k.fs }) - 2;
     k.text(":", colonX, k.y);
 
-    // Generate template preview
+    // Generate content based on available documents
     const rightX = k.x + k.leftLabelWidth + 4;
     const rightW = A4.w - MARGIN - rightX;
     
@@ -490,60 +490,144 @@ for (let idx = 0; idx < lines.length; idx++) {
     // Minimal spacing
     k.y -= k.lineGap * 0.2;
     
-    // SIMJA section
-    await k.pageBreak();
     const bulletX = rightX;
-    k.text(" • ", bulletX, k.y, { bold: false });
-    const simjaX = bulletX + k.measure(" • ", { bold: false });
-    k.text("SIMJA", simjaX, k.y, { bold: true });
     
-    // Add SIMJA type if available (not bold, same line)
-    if (s.simja_type) {
-      const simjaTextWidth = k.measure("SIMJA", { bold: true });
-      const simjaTypeX = simjaX + simjaTextWidth + k.measure(" ", { bold: false });
-      k.text(` ${s.simja_type}`, simjaTypeX, k.y, { bold: false });
-    }
-    k.y -= k.lineGap;
-    
-    await k.pageBreak();
-    const simjaNum = s.simja_number || '[Nomor SIMJA]';
-    const simjaDate = s.simja_date ? fmtDateID(s.simja_date) : '[Tanggal SIMJA]';
-    await k.wrap(`   No. ${simjaNum} Tanggal ${simjaDate}`, rightX, rightW, { bold: true });
-    k.y -= k.lineGap * 0.2;
-    
-    // SIKA section
-    await k.pageBreak();
-    k.text(" • ", bulletX, k.y, { bold: false });
-    const sikaX = bulletX + k.measure(" • ", { bold: false });
-    k.text("SIKA", sikaX, k.y, { bold: true });
-    
-    // Add SIKA type if available (not bold, same line)
-    if (s.sika_type) {
-      const sikaTextWidth = k.measure("SIKA", { bold: true });
-      const sikaTypeX = sikaX + sikaTextWidth + k.measure(" ", { bold: false });
-      k.text(` ${s.sika_type}`, sikaTypeX, k.y, { bold: false });
-    }
-    k.y -= k.lineGap;
-    
-    await k.pageBreak();
-    const sikaNum = s.sika_number || '[Nomor SIKA]';
-    const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
-    await k.wrap(`   No. ${sikaNum} Tanggal ${sikaDate}`, rightX, rightW, { bold: true });
-    k.y -= k.lineGap * 0.2;
-    
-    // HSSE Pass section (jika ada)
-    if (s.hsse_pass_number || s.hsse_pass_valid_thru) {
-      await k.pageBreak();
-      k.text(" • ", bulletX, k.y, { bold: false });
-      const hsseX = bulletX + k.measure(" • ", { bold: false });
-      k.text("HSSE Pass", hsseX, k.y, { bold: true });
-      k.y -= k.lineGap;
+    // Check for new support_documents structure
+    if (s.support_documents && s.support_documents.length > 0) {
+      // Group by type
+      const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
+      const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
+      const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
       
-      await k.pageBreak();
-      const hsseNum = s.hsse_pass_number || '[Nomor HSSE Pass]';
-      const hsseValidThru = s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '[Berlaku Sampai]';
-      await k.wrap(`   No. ${hsseNum} Berlaku sampai ${hsseValidThru}`, rightX, rightW, { bold: true });
-      k.y -= k.lineGap * 0.2;
+      // SIMJA documents
+      if (simjaDocs.length > 0) {
+        for (const doc of simjaDocs) {
+          if (!doc) continue;
+          await k.pageBreak();
+          k.text(" • ", bulletX, k.y, { bold: false });
+          const docX = bulletX + k.measure(" • ", { bold: false });
+          k.text("SIMJA", docX, k.y, { bold: true });
+          
+          if (doc.document_subtype) {
+            const typeWidth = k.measure("SIMJA", { bold: true });
+            const subtypeX = docX + typeWidth + k.measure(" ", { bold: false });
+            k.text(` ${doc.document_subtype}`, subtypeX, k.y, { bold: false });
+          }
+          k.y -= k.lineGap;
+          
+          await k.pageBreak();
+          const docNum = doc.document_number || '[Nomor]';
+          const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
+          await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
+          k.y -= k.lineGap * 0.2;
+        }
+      }
+      
+      // SIKA documents
+      if (sikaDocs.length > 0) {
+        for (const doc of sikaDocs) {
+          if (!doc) continue;
+          await k.pageBreak();
+          k.text(" • ", bulletX, k.y, { bold: false });
+          const docX = bulletX + k.measure(" • ", { bold: false });
+          k.text("SIKA", docX, k.y, { bold: true });
+          
+          if (doc.document_subtype) {
+            const typeWidth = k.measure("SIKA", { bold: true });
+            const subtypeX = docX + typeWidth + k.measure(" ", { bold: false });
+            k.text(` ${doc.document_subtype}`, subtypeX, k.y, { bold: false });
+          }
+          k.y -= k.lineGap;
+          
+          await k.pageBreak();
+          const docNum = doc.document_number || '[Nomor]';
+          const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
+          await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
+          k.y -= k.lineGap * 0.2;
+        }
+      }
+      
+      // HSSE documents
+      if (hsseDocs.length > 0) {
+        for (const doc of hsseDocs) {
+          if (!doc) continue;
+          await k.pageBreak();
+          k.text(" • ", bulletX, k.y, { bold: false });
+          const docX = bulletX + k.measure(" • ", { bold: false });
+          k.text("HSSE Pass", docX, k.y, { bold: true });
+          
+          if (doc.document_subtype) {
+            const typeWidth = k.measure("HSSE Pass", { bold: true });
+            const subtypeX = docX + typeWidth + k.measure(" ", { bold: false });
+            k.text(` ${doc.document_subtype}`, subtypeX, k.y, { bold: false });
+          }
+          k.y -= k.lineGap;
+          
+          await k.pageBreak();
+          const docNum = doc.document_number || '[Nomor]';
+          const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
+          await k.wrap(`   No. ${docNum} Berlaku sampai ${docDate}`, rightX, rightW, { bold: true });
+          k.y -= k.lineGap * 0.2;
+        }
+      }
+    } else {
+      // Fallback to legacy structure
+      // SIMJA section
+      if (s.simja_number || s.simja_document_upload) {
+        await k.pageBreak();
+        k.text(" • ", bulletX, k.y, { bold: false });
+        const simjaX = bulletX + k.measure(" • ", { bold: false });
+        k.text("SIMJA", simjaX, k.y, { bold: true });
+        
+        if (s.simja_type) {
+          const simjaTextWidth = k.measure("SIMJA", { bold: true });
+          const simjaTypeX = simjaX + simjaTextWidth + k.measure(" ", { bold: false });
+          k.text(` ${s.simja_type}`, simjaTypeX, k.y, { bold: false });
+        }
+        k.y -= k.lineGap;
+        
+        await k.pageBreak();
+        const simjaNum = s.simja_number || '[Nomor SIMJA]';
+        const simjaDate = s.simja_date ? fmtDateID(s.simja_date) : '[Tanggal SIMJA]';
+        await k.wrap(`   No. ${simjaNum} Tanggal ${simjaDate}`, rightX, rightW, { bold: true });
+        k.y -= k.lineGap * 0.2;
+      }
+      
+      // SIKA section
+      if (s.sika_number || s.sika_document_upload) {
+        await k.pageBreak();
+        k.text(" • ", bulletX, k.y, { bold: false });
+        const sikaX = bulletX + k.measure(" • ", { bold: false });
+        k.text("SIKA", sikaX, k.y, { bold: true });
+        
+        if (s.sika_type) {
+          const sikaTextWidth = k.measure("SIKA", { bold: true });
+          const sikaTypeX = sikaX + sikaTextWidth + k.measure(" ", { bold: false });
+          k.text(` ${s.sika_type}`, sikaTypeX, k.y, { bold: false });
+        }
+        k.y -= k.lineGap;
+        
+        await k.pageBreak();
+        const sikaNum = s.sika_number || '[Nomor SIKA]';
+        const sikaDate = s.sika_date ? fmtDateID(s.sika_date) : '[Tanggal SIKA]';
+        await k.wrap(`   No. ${sikaNum} Tanggal ${sikaDate}`, rightX, rightW, { bold: true });
+        k.y -= k.lineGap * 0.2;
+      }
+      
+      // HSSE Pass section
+      if (s.hsse_pass_number || s.hsse_pass_document_upload) {
+        await k.pageBreak();
+        k.text(" • ", bulletX, k.y, { bold: false });
+        const hsseX = bulletX + k.measure(" • ", { bold: false });
+        k.text("HSSE Pass", hsseX, k.y, { bold: true });
+        k.y -= k.lineGap;
+        
+        await k.pageBreak();
+        const hsseNum = s.hsse_pass_number || '[Nomor HSSE Pass]';
+        const hsseValidThru = s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '[Berlaku Sampai]';
+        await k.wrap(`   No. ${hsseNum} Berlaku sampai ${hsseValidThru}`, rightX, rightW, { bold: true });
+        k.y -= k.lineGap * 0.2;
+      }
     }
     
     // Head of Security section with bold date
@@ -630,7 +714,12 @@ for (let idx = 0; idx < lines.length; idx++) {
   k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
 
   // Add second page with supporting documents (SIMJA, SIKA, HSSE Pass) if available
-  const hasDocuments = s.simja_document_upload || s.sika_document_upload || s.hsse_pass_document_upload;
+  // Check both new support_documents structure and legacy fields
+  const hasDocuments = (s.support_documents && s.support_documents.length > 0) || 
+                       s.simja_document_upload || 
+                       s.sika_document_upload || 
+                       s.hsse_pass_document_upload;
+  
   if (hasDocuments) {
     await addSupportingDocumentsPage(k, s);
   }
@@ -648,153 +737,296 @@ for (let idx = 0; idx < lines.length; idx++) {
 import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos } from './imageLoader';
 
 /**
- * Add page with supporting documents (SIMJA, SIKA, HSSE Pass)
- * Documents are displayed in a grid layout: 2 columns x 2 rows
+ * Add pages with supporting documents (SIMJA, SIKA, HSSE Pass)
+ * Each output page shows maximum 2 document pages side by side.
+ * For multi-page PDFs, pages continue on next output page.
  */
 async function addSupportingDocumentsPage(
   k: PDFKit,
   s: SubmissionPDFData
 ) {
-  console.log('[AddSupportingDocumentsPage] Creating documents page...');
+  console.log('[AddSupportingDocumentsPage] Creating documents pages...');
   
-  // Add new page for documents with specific header type
-  await k.addPage('documents');
-  
-  const { page } = k;
-  const { width, height } = page.getSize();
-  
- 
-
-  
-  // Calculate layout for documents (2 columns x 2 rows)
-  const columns = 2;
-  const docWidth = 220;  // Width for each document
-  const docHeight = 280; // Height for each document
-  const horizontalGap = 30;
-  const verticalGap = 30;
-  const startY = height - 140;
-  
-  // Calculate starting X to center the grid
-  const totalWidth = (docWidth * columns) + (horizontalGap * (columns - 1));
-  const startX = (width - totalWidth) / 2;
-  
-  const documents = [];
-  
-  // Collect documents to display
-  if (s.simja_document_upload) {
-    documents.push({
-      path: s.simja_document_upload,
-      title: 'SIMJA',
-      subtitle: s.simja_type || '',
-      number: s.simja_number || '-',
-      date: s.simja_date ? fmtDateID(s.simja_date) : '-'
-    });
+  // Collect all documents to display
+  interface DocInfo {
+    path: string;
+    title: string;
+    subtitle?: string;
+    number?: string;
+    date?: string;
   }
   
-  if (s.sika_document_upload) {
-    documents.push({
-      path: s.sika_document_upload,
-      title: 'SIKA',
-      subtitle: s.sika_type || '',
-      number: s.sika_number || '-',
-      date: s.sika_date ? fmtDateID(s.sika_date) : '-'
+  const documents: DocInfo[] = [];
+  
+  // Check if new support_documents structure exists
+  if (s.support_documents && s.support_documents.length > 0) {
+    console.log('[AddSupportingDocumentsPage] Using new support_documents structure');
+    
+    // Group by document type: SIMJA, SIKA, HSSE
+    const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
+    const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
+    const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
+    
+    // Add SIMJA documents first
+    simjaDocs.forEach(doc => {
+      documents.push({
+        path: doc.document_upload,
+        title: 'SIMJA',
+        subtitle: doc.document_subtype || '',
+        number: doc.document_number || '-',
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+      });
     });
+    
+    // Add SIKA documents
+    sikaDocs.forEach(doc => {
+      documents.push({
+        path: doc.document_upload,
+        title: 'SIKA',
+        subtitle: doc.document_subtype || '',
+        number: doc.document_number || '-',
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+      });
+    });
+    
+    // Add HSSE documents
+    hsseDocs.forEach(doc => {
+      documents.push({
+        path: doc.document_upload,
+        title: 'HSSE Pass',
+        subtitle: doc.document_subtype || '',
+        number: doc.document_number || '-',
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+      });
+    });
+  } else {
+    // Fallback to legacy structure
+    console.log('[AddSupportingDocumentsPage] Using legacy document structure');
+    
+    if (s.simja_document_upload) {
+      documents.push({
+        path: s.simja_document_upload,
+        title: 'SIMJA',
+        subtitle: s.simja_type || '',
+        number: s.simja_number || '-',
+        date: s.simja_date ? fmtDateID(s.simja_date) : '-'
+      });
+    }
+    
+    if (s.sika_document_upload) {
+      documents.push({
+        path: s.sika_document_upload,
+        title: 'SIKA',
+        subtitle: s.sika_type || '',
+        number: s.sika_number || '-',
+        date: s.sika_date ? fmtDateID(s.sika_date) : '-'
+      });
+    }
+    
+    if (s.hsse_pass_document_upload) {
+      documents.push({
+        path: s.hsse_pass_document_upload,
+        title: 'HSSE Pass',
+        subtitle: '',
+        number: s.hsse_pass_number || '-',
+        date: s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '-'
+      });
+    }
   }
   
-  if (s.hsse_pass_document_upload) {
-    documents.push({
-      path: s.hsse_pass_document_upload,
-      title: 'HSSE Pass',
-      subtitle: '',
-      number: s.hsse_pass_number || '-',
-      date: s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '-'
-    });
+  console.log(`[AddSupportingDocumentsPage] Found ${documents.length} documents to process`);
+  
+  if (documents.length === 0) {
+    console.log('[AddSupportingDocumentsPage] No documents to display');
+    return;
   }
   
-  console.log(`[AddSupportingDocumentsPage] Found ${documents.length} documents to display`);
+  // Load all documents and extract pages
+  interface PageInfo {
+    docTitle: string;
+    docSubtitle: string;
+    docNumber: string;
+    docDate: string;
+    pageNumber: number;
+    totalPages: number;
+    embeddedPage: any;
+    isImage: boolean;
+    image?: any;
+  }
   
-  // Draw each document
-  for (let i = 0; i < documents.length; i++) {
-    const doc = documents[i];
-    if (!doc) continue; // TypeScript safety check
-    
-    const row = Math.floor(i / columns);
-    const col = i % columns;
-    
-    const x = startX + (col * (docWidth + horizontalGap));
-    const y = startY - (row * (docHeight + verticalGap));
-    
-    console.log(`[AddSupportingDocumentsPage] Drawing ${doc.title} at position (${x}, ${y})`);
-    
-    // Draw document frame
-    page.drawRectangle({
-      x: x,
-      y: y - docHeight,
-      width: docWidth,
-      height: docHeight,
-      borderColor: rgb(0.7, 0.7, 0.7),
-      borderWidth: 1,
-    });
-    
-    // Draw document title only (no subtitle, no number, no date)
-    const titleY = y - 15;
-    k.text(doc.title, x + 10, titleY, { bold: true, size: 12 });
-    
-    // Load and draw document image/PDF - Use more space since we removed info
-    const imageY = titleY - 10; // Start image closer to title
-    const imageHeight = docHeight - 30; // More space for document (removed info section)
-    const imageWidth = docWidth - 20;
+  const allPages: PageInfo[] = [];
+  
+  for (const doc of documents) {
+    console.log(`[AddSupportingDocumentsPage] Loading document: ${doc.title} - ${doc.subtitle || 'no subtitle'}`);
     
     try {
       const documentResult = await loadWorkerDocument(k.doc, doc.path);
       
       if (documentResult.type === 'image' && documentResult.image) {
-        // Draw image
-        const img = documentResult.image;
-        const imgDims = img.scale(1);
-        const aspectRatio = imgDims.width / imgDims.height;
-        
-        let drawWidth = imageWidth;
-        let drawHeight = imageHeight;
-        
-        if (aspectRatio > (imageWidth / imageHeight)) {
-          drawHeight = drawWidth / aspectRatio;
-        } else {
-          drawWidth = drawHeight * aspectRatio;
-        }
-        
-        const drawX = x + 10 + (imageWidth - drawWidth) / 2;
-        const drawY = imageY - drawHeight;
-        
-        page.drawImage(img, {
-          x: drawX,
-          y: drawY,
-          width: drawWidth,
-          height: drawHeight,
+        // Single image - treat as 1 page
+        allPages.push({
+          docTitle: doc.title,
+          docSubtitle: doc.subtitle || '',
+          docNumber: doc.number || '',
+          docDate: doc.date || '',
+          pageNumber: 1,
+          totalPages: 1,
+          embeddedPage: null,
+          isImage: true,
+          image: documentResult.image
         });
-        
-        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image drawn successfully`);
+        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
         
       } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
-        // Embed first page of PDF
-        const embeddedPages = await k.doc.embedPdf(documentResult.pdfPages, [0]);
-        const embeddedPage = embeddedPages[0];
+        // Multi-page PDF - extract all pages
+        const sourcePdf = documentResult.pdfPages;
+        const pageCount = sourcePdf.getPageCount();
+        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF loaded (${pageCount} pages)`);
         
-        if (embeddedPage) {
-          const pageDims = embeddedPage.scale(1);
-          const aspectRatio = pageDims.width / pageDims.height;
+        // Create array of page indices to embed
+        const pageIndices = Array.from({ length: pageCount }, (_, i) => i);
+        
+        // Embed all pages at once
+        const embeddedPages = await k.doc.embedPdf(sourcePdf, pageIndices);
+        
+        // Add each page to our list
+        embeddedPages.forEach((embeddedPage, index) => {
+          allPages.push({
+            docTitle: doc.title,
+            docSubtitle: doc.subtitle || '',
+            docNumber: doc.number || '',
+            docDate: doc.date || '',
+            pageNumber: index + 1,
+            totalPages: pageCount,
+            embeddedPage,
+            isImage: false
+          });
+        });
+        
+        console.log(`[AddSupportingDocumentsPage] ✅ Embedded ${embeddedPages.length} pages from ${doc.title}`);
+      } else {
+        console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
+      }
+    } catch (error) {
+      console.error(`[AddSupportingDocumentsPage] ❌ Error loading ${doc.title}:`, error);
+    }
+  }
+  
+  console.log(`[AddSupportingDocumentsPage] Total pages to render: ${allPages.length}`);
+  
+  if (allPages.length === 0) {
+    console.log('[AddSupportingDocumentsPage] No pages to render');
+    return;
+  }
+  
+  // Layout: 2 pages per output page, side by side
+  const pagesPerOutputPage = 2;
+  const pageWidth = 240;  // Width for each document page
+  const pageHeight = 340; // Height for each document page
+  const horizontalGap = 30;
+  
+  let currentPageIndex = 0;
+  
+  while (currentPageIndex < allPages.length) {
+    // Add new output page
+    await k.addPage('documents');
+    const { page } = k;
+    const { width, height } = page.getSize();
+    
+    const startY = height - 140;
+    
+    // Calculate how many pages to render on this output page (max 2)
+    const endIndex = Math.min(currentPageIndex + pagesPerOutputPage, allPages.length);
+    const pagesToRender = endIndex - currentPageIndex;
+    
+    // Calculate starting X to center the pages
+    const totalWidth = (pageWidth * pagesToRender) + (horizontalGap * (pagesToRender - 1));
+    const startX = (width - totalWidth) / 2;
+    
+    console.log(`[AddSupportingDocumentsPage] Rendering output page ${k.pageCount}, showing ${pagesToRender} document pages`);
+    
+    // Render pages for this output page
+    for (let i = 0; i < pagesToRender; i++) {
+      const pageInfo = allPages[currentPageIndex + i];
+      if (!pageInfo) continue;
+      
+      const x = startX + (i * (pageWidth + horizontalGap));
+      const y = startY;
+      
+      // Draw frame
+      page.drawRectangle({
+        x: x,
+        y: y - pageHeight,
+        width: pageWidth,
+        height: pageHeight,
+        borderColor: rgb(0.7, 0.7, 0.7),
+        borderWidth: 1,
+      });
+      
+      // Draw title and page number
+      const titleY = y - 15;
+      const titleText = pageInfo.totalPages > 1 
+        ? `${pageInfo.docTitle} ${pageInfo.docSubtitle} (${pageInfo.pageNumber}/${pageInfo.totalPages})`
+        : `${pageInfo.docTitle} ${pageInfo.docSubtitle}`.trim();
+      
+      k.text(titleText, x + 10, titleY, { bold: true, size: 10 });
+      
+      // Draw document number and date below title
+      if (pageInfo.pageNumber === 1) { // Only show on first page
+        const infoY = titleY - 12;
+        const infoText = `No. ${pageInfo.docNumber} - ${pageInfo.docDate}`;
+        k.text(infoText, x + 10, infoY, { bold: false, size: 8, color: rgb(0.4, 0.4, 0.4) });
+      }
+      
+      // Calculate image/page area
+      const contentStartY = pageInfo.pageNumber === 1 ? titleY - 25 : titleY - 10;
+      const contentHeight = pageInfo.pageNumber === 1 ? pageHeight - 45 : pageHeight - 30;
+      const contentWidth = pageWidth - 20;
+      
+      // Draw content (image or PDF page)
+      try {
+        if (pageInfo.isImage && pageInfo.image) {
+          // Draw image
+          const img = pageInfo.image;
+          const imgDims = img.scale(1);
+          const aspectRatio = imgDims.width / imgDims.height;
           
-          let drawWidth = imageWidth;
-          let drawHeight = imageHeight;
+          let drawWidth = contentWidth;
+          let drawHeight = contentHeight;
           
-          if (aspectRatio > (imageWidth / imageHeight)) {
+          if (aspectRatio > (contentWidth / contentHeight)) {
             drawHeight = drawWidth / aspectRatio;
           } else {
             drawWidth = drawHeight * aspectRatio;
           }
           
-          const drawX = x + 10 + (imageWidth - drawWidth) / 2;
-          const drawY = imageY - drawHeight;
+          const drawX = x + 10 + (contentWidth - drawWidth) / 2;
+          const drawY = contentStartY - drawHeight;
+          
+          page.drawImage(img, {
+            x: drawX,
+            y: drawY,
+            width: drawWidth,
+            height: drawHeight,
+          });
+          
+        } else if (!pageInfo.isImage && pageInfo.embeddedPage) {
+          // Draw PDF page
+          const embeddedPage = pageInfo.embeddedPage;
+          const pageDims = embeddedPage.scale(1);
+          const aspectRatio = pageDims.width / pageDims.height;
+          
+          let drawWidth = contentWidth;
+          let drawHeight = contentHeight;
+          
+          if (aspectRatio > (contentWidth / contentHeight)) {
+            drawHeight = drawWidth / aspectRatio;
+          } else {
+            drawWidth = drawHeight * aspectRatio;
+          }
+          
+          const drawX = x + 10 + (contentWidth - drawWidth) / 2;
+          const drawY = contentStartY - drawHeight;
           
           page.drawPage(embeddedPage, {
             x: drawX,
@@ -802,31 +1034,24 @@ async function addSupportingDocumentsPage(
             width: drawWidth,
             height: drawHeight,
           });
-          
-          console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF drawn successfully`);
         }
         
-      } else {
-        // Draw placeholder for error
-        const placeholderY = imageY - imageHeight / 2;
-        k.text('Dokumen tidak tersedia', x + 10, placeholderY, {
+        console.log(`[AddSupportingDocumentsPage] ✅ Rendered page ${currentPageIndex + i + 1}/${allPages.length}`);
+        
+      } catch (error) {
+        console.error(`[AddSupportingDocumentsPage] ❌ Error rendering page:`, error);
+        const placeholderY = y - pageHeight / 2;
+        k.text('Error memuat dokumen', x + 10, placeholderY, {
           size: 10,
-          color: rgb(0.6, 0.6, 0.6),
+          color: rgb(0.8, 0.2, 0.2),
         });
-        console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
       }
-      
-    } catch (error) {
-      console.error(`[AddSupportingDocumentsPage] ❌ Error loading ${doc.title}:`, error);
-      const placeholderY = imageY - imageHeight / 2;
-      k.text('Error memuat dokumen', x + 10, placeholderY, {
-        size: 10,
-        color: rgb(0.8, 0.2, 0.2),
-      });
     }
+    
+    currentPageIndex = endIndex;
   }
   
-  console.log('[AddSupportingDocumentsPage] Documents page completed');
+  console.log('[AddSupportingDocumentsPage] All documents pages completed');
 }
 
 /**

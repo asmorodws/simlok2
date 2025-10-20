@@ -123,6 +123,21 @@ export async function GET(request: NextRequest) {
               email: true,
               vendor_name: true,
             }
+          },
+          support_documents: {
+            select: {
+              id: true,
+              document_subtype: true,
+              document_type: true,
+              document_number: true,
+              document_date: true,
+              document_upload: true,
+              uploaded_at: true,
+              uploaded_by: true,
+            },
+            orderBy: {
+              uploaded_at: 'desc'
+            }
           }
         },
         orderBy: orderBy,
@@ -255,8 +270,8 @@ export async function POST(request: NextRequest) {
 
     console.log('POST /api/submissions - User verified:', userExists.email);
 
-    // Extract workers data and remove it from body since it's not part of Submission model
-    const { workers, ...submissionData } = body as any;
+    // Extract workers and documents data from body
+    const { workers, simjaDocuments, sikaDocuments, hsseDocuments, ...submissionData } = body as any;
 
     // Debug: Log data yang masuk
     console.log('Submission data received:', JSON.stringify(submissionData, null, 2));
@@ -265,32 +280,36 @@ export async function POST(request: NextRequest) {
     const qrData = `${session.user.id}-${Date.now()}`;
 
     try {
-      // Validate dan clean numeric fields
-      const cleanedData = {
-        ...submissionData,
-        worker_count: submissionData.worker_count && !isNaN(Number(submissionData.worker_count)) 
-          ? Number(submissionData.worker_count) 
-          : null,
-      };
-
-      // Create submission first
+      // Create submission first - hanya field yang ada di schema
       const submission = await prisma.submission.create({
         data: {
-          ...cleanedData,
+          // Basic submission data
+          vendor_name: submissionData.vendor_name,
+          based_on: submissionData.based_on,
+          officer_name: submissionData.officer_name,
+          job_description: submissionData.job_description,
+          work_location: submissionData.work_location,
+          working_hours: submissionData.working_hours,
+          work_facilities: submissionData.work_facilities,
+          worker_names: submissionData.worker_names,
+          worker_count: submissionData.worker_count && !isNaN(Number(submissionData.worker_count)) 
+            ? Number(submissionData.worker_count) 
+            : null,
+          
+          // User data
           user_id: session.user.id,
-          // Denormalized user data - preserved if user is deleted
           user_email: userExists.email,
           user_officer_name: userExists.officer_name,
           user_vendor_name: userExists.vendor_name,
           user_phone_number: userExists.phone_number,
           user_address: userExists.address,
-          vendor_phone: userExists.phone_number, // Auto-fill dari data user
-          simja_date: submissionData.simja_date ? new Date(submissionData.simja_date) : null,
-          simja_type: submissionData.simja_type || null,
-          sika_date: submissionData.sika_date ? new Date(submissionData.sika_date) : null,
-          sika_type: submissionData.sika_type || null,
-          hsse_pass_valid_thru: submissionData.hsse_pass_valid_thru ? new Date(submissionData.hsse_pass_valid_thru) : null,
+          vendor_phone: userExists.phone_number,
+          
+          // QR Code
           qrcode: qrData,
+          
+          // Note: simja_number, simja_date, sika_number, sika_date, dll 
+          // sudah tidak ada di schema karena sekarang menggunakan SupportDocument table
         },
         include: {
           user: {
@@ -320,6 +339,74 @@ export async function POST(request: NextRequest) {
         });
 
         console.log('POST /api/submissions - Workers created:', workersData.length);
+      }
+
+      // Create support documents if they exist
+      const allDocuments = [];
+
+      // SIMJA documents
+      if (simjaDocuments && Array.isArray(simjaDocuments) && simjaDocuments.length > 0) {
+        const simjaDocs = simjaDocuments
+          .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+          .map((doc: any) => ({
+            document_subtype: doc.document_subtype || 'Ast. Man. Facility Management', // Auto-set untuk SIMJA
+            document_type: 'SIMJA',
+            document_number: doc.document_number || null,
+            document_date: doc.document_date ? new Date(doc.document_date) : null,
+            document_upload: doc.document_upload,
+            submission_id: submission.id,
+            uploaded_by: session.user.id,
+            uploaded_at: new Date(),
+          }));
+        allDocuments.push(...simjaDocs);
+      }
+
+      // SIKA documents
+      if (sikaDocuments && Array.isArray(sikaDocuments) && sikaDocuments.length > 0) {
+        const sikaDocs = sikaDocuments
+          .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+          .map((doc: any) => ({
+            document_subtype: doc.document_subtype || null,
+            document_type: 'SIKA',
+            document_number: doc.document_number || null,
+            document_date: doc.document_date ? new Date(doc.document_date) : null,
+            document_upload: doc.document_upload,
+            submission_id: submission.id,
+            uploaded_by: session.user.id,
+            uploaded_at: new Date(),
+          }));
+        allDocuments.push(...sikaDocs);
+      }
+
+      // HSSE documents (optional)
+      if (hsseDocuments && Array.isArray(hsseDocuments) && hsseDocuments.length > 0) {
+        const hsseDocs = hsseDocuments
+          .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+          .map((doc: any) => ({
+            document_subtype: null, // HSSE tidak punya subtype
+            document_type: 'HSSE',
+            document_number: doc.document_number || null,
+            document_date: doc.document_date ? new Date(doc.document_date) : null,
+            document_upload: doc.document_upload,
+            submission_id: submission.id,
+            uploaded_by: session.user.id,
+            uploaded_at: new Date(),
+          }));
+        allDocuments.push(...hsseDocs);
+      }
+
+      // Save all documents at once
+      if (allDocuments.length > 0) {
+        await prisma.supportDocument.createMany({
+          data: allDocuments,
+        });
+
+        console.log('POST /api/submissions - Support documents created:', {
+          simja: simjaDocuments?.length || 0,
+          sika: sikaDocuments?.length || 0,
+          hsse: hsseDocuments?.length || 0,
+          total: allDocuments.length
+        });
       }
 
       // Notify admin about new submission

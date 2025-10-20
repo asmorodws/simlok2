@@ -7,10 +7,12 @@ import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
+import {Badge} from '@/components/ui/Badge';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
+import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types';
 
@@ -43,6 +45,9 @@ type DraftShape = {
   workerCountInput: string;
   showBulk: boolean;
   bulkNames: string;
+  simjaDocuments: SupportDoc[];
+  sikaDocuments: SupportDoc[];
+  hsseDocuments: SupportDoc[];
 };
 
 // ===============================
@@ -88,6 +93,39 @@ export default function SubmissionForm() {
 
   // autofocus name input setelah tambah baris
   const lastAddedRef = useRef<HTMLInputElement | null>(null);
+
+  // -------------------------------
+  // Support Documents state
+  // -------------------------------
+  const [simjaDocuments, setSimjaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_simja`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [sikaDocuments, setSikaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_sika`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [hsseDocuments, setHsseDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_hsse`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
 
   // -------------------------------
   // Form data
@@ -139,6 +177,11 @@ export default function SubmissionForm() {
       setWorkerCountInput(parsed.workerCountInput ?? String(parsed.workers?.length ?? 1));
       setShowBulk(Boolean(parsed.showBulk));
       setBulkNames(parsed.bulkNames ?? '');
+
+      // Load documents
+      if (parsed.simjaDocuments?.length) setSimjaDocuments(parsed.simjaDocuments);
+      if (parsed.sikaDocuments?.length) setSikaDocuments(parsed.sikaDocuments);
+      if (parsed.hsseDocuments?.length) setHsseDocuments(parsed.hsseDocuments);
 
       setHasDraft(true);
 
@@ -195,6 +238,9 @@ export default function SubmissionForm() {
         workerCountInput,
         showBulk,
         bulkNames,
+        simjaDocuments,
+        sikaDocuments,
+        hsseDocuments,
       };
       saveDraft(draft);
     }, 500) as unknown as number;
@@ -203,7 +249,7 @@ export default function SubmissionForm() {
   useEffect(() => {
     scheduleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames]);
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, hsseDocuments]);
 
   useEffect(() => {
     return () => {
@@ -244,10 +290,6 @@ export default function SubmissionForm() {
   // -------------------------------
   // Handlers: generic fields
   // -------------------------------
-  const handleFileUpload = (fieldName: keyof SubmissionData) => (url: string) => {
-    setFormData((prev) => ({ ...prev, [fieldName]: url }));
-  };
-
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -273,10 +315,6 @@ export default function SubmissionForm() {
         [name]: value === null || value === undefined ? '' : String(value),
       }));
     }
-  };
-
-  const handleDateChange = (name: keyof SubmissionData) => (value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleTimeChange = (value: string) => {
@@ -441,6 +479,29 @@ export default function SubmissionForm() {
       setShowBulk(false);
       setBulkNames('');
 
+      // Reset documents
+      setSimjaDocuments([{
+        id: `${Date.now()}_simja`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+      setSikaDocuments([{
+        id: `${Date.now()}_sika`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+      setHsseDocuments([{
+        id: `${Date.now()}_hsse`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+
       showSuccess('Draft Berhasil Dihapus', 'Semua data draft telah dihapus dan form dikembalikan ke kondisi awal.');
     } finally {
       setIsDeletingDraft(false);
@@ -456,64 +517,114 @@ export default function SubmissionForm() {
     setIsLoading(true);
 
     try {
-      // Validasi nomor dokumen wajib
-      if (!formData.sika_number || !formData.sika_number.trim()) {
-        showError('Nomor Dokumen Tidak Lengkap', 'Nomor SIKA wajib diisi sebelum membuat pengajuan.');
+      // ========== VALIDASI DOKUMEN SIMJA ==========
+      // Filter dokumen yang memiliki data (tidak kosong semua field)
+      const filledSimjaDocs = simjaDocuments.filter(doc => 
+        doc && (doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim())
+      );
+
+      if (filledSimjaDocs.length === 0) {
+        showError('Dokumen SIMJA Wajib', 'Minimal harus ada 1 dokumen SIMJA yang lengkap.');
         setIsLoading(false);
         return;
       }
 
-      if (!formData.simja_number || !formData.simja_number.trim()) {
-        showError('Nomor Dokumen Tidak Lengkap', 'Nomor SIMJA wajib diisi sebelum membuat pengajuan.');
+      // Validasi setiap dokumen SIMJA yang terisi
+      for (let i = 0; i < simjaDocuments.length; i++) {
+        const doc = simjaDocuments[i];
+        if (!doc) continue;
+        
+        // Cek apakah ada field yang terisi
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        
+        // Jika ada data, semua field harus lengkap
+        if (hasData) {
+          const missingFields = [];
+          
+          // SIMJA subtype otomatis terisi 'Ast. Man. Facility Management'
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError(
+              'Dokumen SIMJA Tidak Lengkap',
+              `SIMJA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // ========== VALIDASI DOKUMEN SIKA ==========
+      // Filter dokumen yang memiliki data
+      const filledSikaDocs = sikaDocuments.filter(doc => 
+        doc && (doc.document_subtype?.trim() || doc.document_number?.trim() || 
+                doc.document_date?.trim() || doc.document_upload?.trim())
+      );
+
+      if (filledSikaDocs.length === 0) {
+        showError('Dokumen SIKA Wajib', 'Minimal harus ada 1 dokumen SIKA yang lengkap.');
         setIsLoading(false);
         return;
       }
 
-      // Validasi tanggal wajib
-      if (!formData.sika_date || !formData.sika_date.trim()) {
-        showError('Tanggal Tidak Lengkap', 'Tanggal SIKA wajib diisi sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
+      // Validasi setiap dokumen SIKA yang terisi
+      for (let i = 0; i < sikaDocuments.length; i++) {
+        const doc = sikaDocuments[i];
+        if (!doc) continue;
+        
+        // Cek apakah ada field yang terisi
+        const hasData = doc.document_subtype?.trim() || doc.document_number?.trim() || 
+                       doc.document_date?.trim() || doc.document_upload?.trim();
+        
+        // Jika ada data, semua field harus lengkap
+        if (hasData) {
+          const missingFields = [];
+          
+          if (!doc.document_subtype?.trim()) missingFields.push('Jenis SIKA');
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError(
+              'Dokumen SIKA Tidak Lengkap',
+              `SIKA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
       }
 
-      if (!formData.simja_date || !formData.simja_date.trim()) {
-        showError('Tanggal Tidak Lengkap', 'Tanggal SIMJA wajib diisi sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
-      }
+      // ========== VALIDASI DOKUMEN HSSE (OPSIONAL) ==========
+      // HSSE bersifat opsional, tapi jika ada yang terisi maka harus lengkap
+      for (let i = 0; i < hsseDocuments.length; i++) {
+        const doc = hsseDocuments[i];
+        if (!doc) continue;
+        
+        // Cek apakah ada field yang terisi (HSSE tidak punya subtype)
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        
+        // Jika ada data, semua field harus lengkap
+        if (hasData) {
+          const missingFields = [];
+          
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
 
-      // Validasi dokumen wajib
-      if (!formData.sika_document_upload || !formData.sika_document_upload.trim()) {
-        showError('Dokumen Tidak Lengkap', 'Dokumen SIKA wajib diunggah sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (!formData.simja_document_upload || !formData.simja_document_upload.trim()) {
-        showError('Dokumen Tidak Lengkap', 'Dokumen SIMJA wajib diunggah sebelum membuat pengajuan.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Validasi HSSE Pass (opsional, tapi jika diisi harus lengkap semua)
-      const hssePassNumber = formData.hsse_pass_number?.trim() || '';
-      const hssePassValidThru = formData.hsse_pass_valid_thru ? String(formData.hsse_pass_valid_thru).trim() : '';
-      const hssePassDocument = formData.hsse_pass_document_upload?.trim() || '';
-
-      const hssePassFilled = [hssePassNumber, hssePassValidThru, hssePassDocument].filter(Boolean);
-
-      if (hssePassFilled.length > 0 && hssePassFilled.length < 3) {
-        const missingFields = [];
-        if (!hssePassNumber) missingFields.push('Nomor HSSE Pass');
-        if (!hssePassValidThru) missingFields.push('Tanggal Berlaku');
-        if (!hssePassDocument) missingFields.push('Dokumen HSSE Pass');
-
-        showError(
-          'Data HSSE Pass Tidak Lengkap', 
-          `HSSE Pass bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi. Field yang belum diisi: ${missingFields.join(', ')}.`
-        );
-        setIsLoading(false);
-        return;
+          if (missingFields.length > 0) {
+            showError(
+              'Dokumen HSSE Tidak Lengkap',
+              `HSSE #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
       }
 
       if (workers.length === 0) {
@@ -559,11 +670,39 @@ export default function SubmissionForm() {
 
       const workerNames = workers.map((w) => w.worker_name.trim()).join('\n');
 
-      const payload: SubmissionData & { workers: Worker[] } = {
+      // Filter hanya dokumen yang terisi lengkap (tidak kirim card kosong)
+      const validSimjaDocuments = simjaDocuments.filter(doc => 
+        doc.document_number?.trim() && 
+        doc.document_date?.trim() && 
+        doc.document_upload?.trim()
+      );
+
+      const validSikaDocuments = sikaDocuments.filter(doc => 
+        doc.document_subtype?.trim() &&
+        doc.document_number?.trim() && 
+        doc.document_date?.trim() && 
+        doc.document_upload?.trim()
+      );
+
+      const validHsseDocuments = hsseDocuments.filter(doc => 
+        doc.document_number?.trim() && 
+        doc.document_date?.trim() && 
+        doc.document_upload?.trim()
+      );
+
+      const payload: SubmissionData & { 
+        workers: Worker[];
+        simjaDocuments: SupportDoc[];
+        sikaDocuments: SupportDoc[];
+        hsseDocuments: SupportDoc[];
+      } = {
         ...formData,
         worker_count: Math.max(1, desiredCount || 1),
         worker_names: workerNames,
         workers,
+        simjaDocuments: validSimjaDocuments,
+        sikaDocuments: validSikaDocuments,
+        hsseDocuments: validHsseDocuments,
       };
 
       const response = await fetch('/api/submissions', {
@@ -668,177 +807,53 @@ export default function SubmissionForm() {
                     placeholder="Contoh: Surat Izin Kerja No. 123/2024"
                   />
                 </div>
+              </div>
+            </div>
 
-                {/* Dokumen */}
-                <div>
-                  <Label htmlFor="simja_number">Nomor SIMJA <span className="ml-1 text-red-500">*</span></Label>
-                  <Input
-                    id="simja_number"
-                    name="simja_number"
-                    type="text"
-                    value={formData.simja_number || ''}
-                    onChange={handleChange}
-                    required
-                    placeholder="Contoh: SIMJA/2024/001"
-                  />
-                </div>
+            {/* ================= Dokumen Pendukung ================= */}
+            <div className="p-6 rounded-lg space-y-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">
+                Dokumen Pendukung
+              </h2>
 
-                
-                <div>
-                  <Label htmlFor="sika_number">Nomor SIKA <span className="ml-1 text-red-500">*</span></Label>
-                  <Input
-                    id="sika_number"
-                    name="sika_number"
-                    type="text"
-                    value={formData.sika_number || ''}
-                    onChange={handleChange}
-                    required
-                    placeholder="Contoh: SIKA/2024/001"
-                  />
-                </div>
-<div>
-                  <Label htmlFor="simja_type">Tipe SIMJA <span className="ml-1 text-red-500">*</span></Label>
-                  <Input
-                    id="simja_type"
-                    name="simja_type"
-                    type="text"
-                    value={formData.simja_type || ''}
-                    onChange={handleChange}
-                    required
-                    placeholder="Contoh: Ast. Man. Facility Management"
-                    />
-                </div>
+              {/* SIMJA Documents */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                <SupportDocumentList
+                  title="Dokumen SIMJA"
+                  documentType="SIMJA"
+                  documents={simjaDocuments}
+                  onDocumentsChange={setSimjaDocuments}
+                  disabled={isLoading}
+                />
+              </div>
 
-                <div>
-                  <Label htmlFor="sika_type">Tipe SIKA <span className="ml-1 text-red-500">*</span></Label>
-                  <Input
-                    id="sika_type"
-                    name="sika_type"
-                    type="text"
-                    value={formData.sika_type || ''}
-                    onChange={handleChange}
-                    required
-                    placeholder="Contoh: Pekerjaan dingin / panas"
-                  />
-                </div>
+              {/* SIKA Documents */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                <SupportDocumentList
+                  title="Dokumen SIKA"
+                  documentType="SIKA"
+                  documents={sikaDocuments}
+                  onDocumentsChange={setSikaDocuments}
+                  disabled={isLoading}
+                />
+              </div>
 
-                <div>
-                  <Label htmlFor="simja_date">Tanggal SIMJA <span className="ml-1 text-red-500">*</span></Label>
-                  <DatePicker
-                    id="simja_date"
-                    name="simja_date"
-                    value={formData.simja_date || ''}
-                    onChange={handleDateChange('simja_date')}
-                    placeholder="Pilih tanggal SIMJA"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="sika_date">Tanggal SIKA <span className="ml-1 text-red-500">*</span></Label>
-                  <DatePicker
-                    id="sika_date"
-                    name="sika_date"
-                    value={formData.sika_date || ''}
-                    onChange={handleDateChange('sika_date')}
-                    placeholder="Pilih tanggal SIKA"
-                    required
-                  />
-                </div>
-
-                {/* Upload dokumen */}
-                <div className="space-y-2">
-                  <Label htmlFor="simja_document_upload">
-                    UPLOAD DOKUMEN SIMJA
-                    <span className="ml-1 text-red-500"><span className="ml-1 text-red-500">*</span></span>
-                  </Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <EnhancedFileUpload
-                      id="simja_document_upload"
-                      name="simja_document_upload"
-                      value={formData.simja_document_upload || ''}
-                      onChange={handleFileUpload('simja_document_upload')}
-                      uploadType="document"
-                      label=""
-                      
-                      required={false}
-                    />
+              {/* HSSE Documents */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="warning">
+                      Dokumen HSSE bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                    </Badge>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="sika_document_upload">
-                    UPLOAD DOKUMEN SIKA
-                    <span className="ml-1 text-red-500"><span className="ml-1 text-red-500">*</span></span>
-                  </Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <EnhancedFileUpload
-                      id="sika_document_upload"
-                      name="sika_document_upload"
-                      value={formData.sika_document_upload || ''}
-                      onChange={handleFileUpload('sika_document_upload')}
-                      uploadType="document"
-                      required={false}
-                      label=""
-                      
-                    />
-                  </div>
-                </div>
-
-                {/* HSSE Pass Section */}
-                <div className="md:col-span-2 mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-md font-semibold text-gray-900">
-                      HSSE Pass (Opsional)
-                    </h3>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      Jika diisi, semua field harus lengkap
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <Label htmlFor="hsse_pass_number">Nomor HSSE Pass</Label>
-                      <Input
-                        id="hsse_pass_number"
-                        name="hsse_pass_number"
-                        type="text"
-                        value={formData.hsse_pass_number || ''}
-                        onChange={handleChange}
-                        placeholder="Contoh: HSSE/2024/001"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="hsse_pass_valid_thru">Berlaku Sampai</Label>
-                      <DatePicker
-                        id="hsse_pass_valid_thru"
-                        name="hsse_pass_valid_thru"
-                        value={formData.hsse_pass_valid_thru ? String(formData.hsse_pass_valid_thru) : ''}
-                        onChange={handleDateChange('hsse_pass_valid_thru')}
-                        placeholder="Pilih tanggal berlaku"
-                        required={false}
-                      />
-                    </div>
-
-                    <div className="md:col-span-2 space-y-2">
-                      <Label htmlFor="hsse_pass_document_upload">
-                        Upload Dokumen HSSE Pass
-                      </Label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                        <EnhancedFileUpload
-                          id="hsse_pass_document_upload"
-                          name="hsse_pass_document_upload"
-                          value={formData.hsse_pass_document_upload || ''}
-                          onChange={handleFileUpload('hsse_pass_document_upload')}
-                          uploadType="document"
-                          label=""
-                          
-                          required={false}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <SupportDocumentList
+                  title="Dokumen HSSE Pass"
+                  documentType="HSSE"
+                  documents={hsseDocuments}
+                  onDocumentsChange={setHsseDocuments}
+                  disabled={isLoading}
+                />
               </div>
             </div>
 

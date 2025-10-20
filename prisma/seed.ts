@@ -17,6 +17,9 @@ async function cleanDatabase() {
     await prisma.qrScan.deleteMany({});
     console.log("   ✓ Semua data QR scans dihapus");
     
+    await prisma.supportDocument.deleteMany({});
+    console.log("   ✓ Semua data support documents dihapus");
+    
     await prisma.workerList.deleteMany({});
     console.log("   ✓ Semua data worker list dihapus");
     
@@ -367,13 +370,15 @@ async function main() {
         worker_names: template.worker_names,
         worker_count: workerCount, // Hitung dari worker_names
         content: null, // akan diisi setelah diapprove
-        user_id: vendorData.id,
-  // Denormalized user fields to preserve vendor info if user is deleted
-  user_email: vendorData.email,
-  user_officer_name: vendorData.officer_name,
-  user_vendor_name: vendorData.vendor_name,
-  user_phone_number: vendorData.phone_number,
-  user_address: vendorData.address,
+        user: {
+          connect: { id: vendorData.id }
+        },
+        // Denormalized user fields to preserve vendor info if user is deleted
+        user_email: vendorData.email,
+        user_officer_name: vendorData.officer_name,
+        user_vendor_name: vendorData.vendor_name,
+        user_phone_number: vendorData.phone_number,
+        user_address: vendorData.address,
         review_status: "PENDING_REVIEW", // Semua pending review dari reviewer
         approval_status: "PENDING_APPROVAL", // Semua pending final approval dari approver
         note_for_approver: null, // belum ada review
@@ -381,29 +386,15 @@ async function main() {
         reviewed_by: null, // belum di-review
         reviewed_at: null, // belum di-review
         approved_by: null, // belum diapprove
-        approved_by_final_id: null, // belum diapprove final
         approved_at: null, // belum diapprove
         qrcode: '', // akan diisi setelah diapprove
         created_at: createdDate,
-        // Semua submission memiliki nomor dan tanggal SIKA dan SIMJA
-        simja_number: `SIMJA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
-        simja_date: new Date(createdDate.getTime() - Math.random() * 10 * 24 * 60 * 60 * 1000), // 0-10 hari sebelum created_at
-        simja_type: ['Ast. Man. Facility Management', 'Ast. Man. Engineering', 'Ast. Man. Production', 'Manager Operasional'][Math.floor(Math.random() * 4)], // Random SIMJA type
-        sika_number: `SIKA/2024/${String(submissionCount + 1).padStart(4, '0')}`,
-        sika_date: new Date(createdDate.getTime() - Math.random() * 15 * 24 * 60 * 60 * 1000), // 0-15 hari sebelum created_at
-        sika_type: ['Pekerjaan Dingin', 'Pekerjaan Panas', 'Bekerja di Ketinggian', 'Confined Space'][Math.floor(Math.random() * 4)], // Random SIKA type
-        // HSSE Pass at submission level (optional)
-        hsse_pass_number: Math.random() > 0.5 ? `HSSE/2024/${String(submissionCount + 1).padStart(4, '0')}` : null,
-        hsse_pass_valid_thru: Math.random() > 0.5 ? new Date(createdDate.getTime() + Math.random() * 365 * 24 * 60 * 60 * 1000) : null, // 0-365 hari ke depan
-        hsse_pass_document_upload: null, // bisa diupload vendor
         simlok_number: null, // akan diisi setelah diapprove
         simlok_date: null, // akan diisi setelah diapprove
         implementation_start_date: null, // akan diisi setelah diapprove
         implementation_end_date: null, // akan diisi setelah diapprove
         signer_position: null, // akan diisi setelah diapprove
         signer_name: null, // akan diisi setelah diapprove
-        sika_document_upload: null, // bisa diupload vendor
-        simja_document_upload: null, // bisa diupload vendor
       };
 
       // Semua submission dibuat dengan status PENDING untuk testing review workflow
@@ -413,6 +404,61 @@ async function main() {
 
       const createdSubmission = await prisma.submission.create({
         data: submissionData,
+      });
+
+      // Create support documents for each submission
+      // SIMJA always uses fixed subtype: 'Ast. Man. Facility Management'
+      // SIKA has 3 options: 'Pekerjaan Dingin', 'Pekerjaan Panas', 'Confined Space'
+      const sikaTypes = ['Pekerjaan Dingin', 'Pekerjaan Panas', 'Confined Space'];
+      
+      const supportDocs: any[] = [
+        // SIMJA documents (2-3 docs per submission) - always use fixed subtype
+        {
+          document_subtype: 'Ast. Man. Facility Management',
+          document_type: 'SIMJA',
+          document_upload: `/uploads/documents/simja-${submissionCount + 1}-1.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        },
+        {
+          document_subtype: 'Ast. Man. Facility Management',
+          document_type: 'SIMJA',
+          document_upload: `/uploads/documents/simja-${submissionCount + 1}-2.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        },
+        // SIKA documents (2-3 docs per submission) - random from 3 options
+        {
+          document_subtype: sikaTypes[Math.floor(Math.random() * sikaTypes.length)],
+          document_type: 'SIKA',
+          document_upload: `/uploads/documents/sika-${submissionCount + 1}-1.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        },
+        {
+          document_subtype: sikaTypes[Math.floor(Math.random() * sikaTypes.length)],
+          document_type: 'SIKA',
+          document_upload: `/uploads/documents/sika-${submissionCount + 1}-2.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        },
+        // HSSE document (1-2 docs per submission, optional) - no subtype
+        ...(Math.random() > 0.3 ? [{
+          document_subtype: null,
+          document_type: 'HSSE',
+          document_upload: `/uploads/documents/hsse-${submissionCount + 1}.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        }] : []),
+      ];
+
+      await prisma.supportDocument.createMany({
+        data: supportDocs,
       });
 
       // Create worker list for this submission
@@ -469,7 +515,9 @@ async function main() {
         reviewed_by: reviewerUser.officer_name,
         reviewed_at: reviewedAt,
         approved_by: approverUser.officer_name,
-        approved_by_final_id: approverUser.id,
+        approved_by_final_user: {
+          connect: { id: approverUser.id }
+        },
         approved_at: approvedAt,
         simlok_number: simlokNumber,
         simlok_date: approvedAt,

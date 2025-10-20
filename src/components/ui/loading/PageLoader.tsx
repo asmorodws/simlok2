@@ -31,11 +31,11 @@ export const PageLoader: React.FC<PageLoaderProps> = ({
         {/* Message */}
         <div className="flex flex-col items-center space-y-2">
           <p className="text-sm font-medium text-gray-700">{message}</p>
-          <div className="flex space-x-1">
+          {/* <div className="flex space-x-1">
             <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600 [animation-delay:-0.3s]"></div>
             <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600 [animation-delay:-0.15s]"></div>
             <div className="h-2 w-2 animate-bounce rounded-full bg-blue-600"></div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
