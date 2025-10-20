@@ -36,7 +36,7 @@ export default function VerificationPendingPage() {
 
   useEffect(() => {
     // Redirect jika user sudah terverifikasi
-    if (session?.user?.verified_at) {
+    if (session?.user?.verified_at && session?.user) {
       const role = session.user.role;
       if (role === "VENDOR") {
         router.push("/vendor");
