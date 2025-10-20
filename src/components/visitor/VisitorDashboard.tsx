@@ -14,6 +14,7 @@ import {
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
 import { SkeletonDashboardCard, SkeletonChart } from '@/components/ui/skeleton';
+import { Badge } from '../ui/Badge';
 
 interface StatsData {
   pendingReview: number;
@@ -220,6 +221,9 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart SIMLOK</h2>
+            <Badge variant='info'>
+              2025
+            </Badge>
           </div>
           <div className="w-full">
             {loading && !chartData ? (
@@ -237,6 +241,9 @@ export default function VisitorDashboard() {
         <div className="bg-white rounded-xl border shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-gray-700">Chart User</h2>
+            <Badge variant='info'>
+              2025
+            </Badge>
           </div>
           <div className="w-full">
             {loading && !chartData ? (

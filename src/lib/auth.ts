@@ -6,6 +6,7 @@ import type { NextAuthOptions } from "next-auth";
 import { JWT_CONFIG } from "@/utils/jwt-config";
 import { TokenManager } from "@/utils/token-manager";
 import { verifyTurnstileToken } from "@/utils/turnstile-middleware";
+import { SessionService } from "@/services/session.service";
 
 
 export const authOptions: NextAuthOptions = {
@@ -97,72 +98,106 @@ export const authOptions: NextAuthOptions = {
   ],
   session: { 
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 24 * 60 * 60, // 24 hours (1 day)
+    updateAge: 2 * 60 * 60, // Update session every 2 hours if active
   },
   callbacks: {
     async jwt({ token, user }) {
       try {
-        // Check if token is expired
         const now = Date.now() / 1000; // Current time in seconds
       
-      // user only exists on first sign-in, but we need to refresh verification status
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.officer_name = user.officer_name;
-        token.vendor_name = user.vendor_name || null;
-        token.verified_at = user.verified_at || null;
-        token.verification_status = user.verification_status || 'PENDING';
-        if (user.created_at) {
-          token.created_at = user.created_at;
-        }
-        // Set issued at time and expiry using configured values
-        token.iat = now;
-        token.exp = now + JWT_CONFIG.JWT_EXPIRE_TIME;
-        console.log('JWT callback - storing user.id:', user.id);
-        console.log('JWT callback - token expires at:', new Date((now + JWT_CONFIG.JWT_EXPIRE_TIME) * 1000));
-      } else if (token.id) {
-        // Check if token is expired
-        if (token.exp && typeof token.exp === 'number') {
-          const now = Date.now() / 1000;
-          if (now >= token.exp) {
-            console.log('JWT callback - token expired, clearing session');
-            return {}; // Return empty object to clear token
+        // Initial sign-in - create new session
+        if (user) {
+          token.id = user.id;
+          token.role = user.role;
+          token.officer_name = user.officer_name;
+          token.vendor_name = user.vendor_name || null;
+          token.verified_at = user.verified_at || null;
+          token.verification_status = user.verification_status || 'PENDING';
+          if (user.created_at) {
+            token.created_at = user.created_at;
           }
+          
+          // Set issued at time and expiry
+          token.iat = now;
+          token.exp = now + JWT_CONFIG.JWT_EXPIRE_TIME;
+          
+          // Create database session for tracking
+          try {
+            const sessionData = await SessionService.createSession(
+              user.id,
+              JWT_CONFIG.SESSION_MAX_AGE * 1000
+            );
+            token.sessionToken = sessionData.sessionToken;
+            console.log('JWT callback - created database session:', sessionData.sessionToken);
+          } catch (error) {
+            console.error('Error creating database session:', error);
+          }
+          
+          console.log('JWT callback - storing user.id:', user.id);
+          console.log('JWT callback - token expires at:', new Date((now + JWT_CONFIG.JWT_EXPIRE_TIME) * 1000));
+        } 
+        // Subsequent requests - validate existing session
+        else if (token.id && token.sessionToken) {
+          // Check JWT expiry first
+          if (token.exp && typeof token.exp === 'number') {
+            if (now >= token.exp) {
+              console.log('JWT callback - JWT token expired, clearing session');
+              if (token.sessionToken) {
+                await SessionService.deleteSession(token.sessionToken as string);
+              }
+              return {}; // Clear token
+            }
+          }
+          
+          // Validate database session
+          const validation = await SessionService.validateSession(token.sessionToken as string);
+          
+          if (!validation.isValid) {
+            console.log('JWT callback - database session invalid:', validation.reason);
+            return {}; // Clear token
+          }
+          
+          // Check if user still exists and is active
+          if (!validation.user) {
+            console.log('JWT callback - user not found in database, clearing session');
+            return {};
+          }
+          
+          if (!validation.user.isActive) {
+            console.log('JWT callback - user deactivated, clearing session');
+            return {};
+          }
+          
+          // Update token with latest user data
+          token.verified_at = validation.user.verified_at;
+          token.verification_status = validation.user.verification_status;
+          token.role = validation.user.role;
+          
+          console.log('JWT callback - session valid, user active');
+        }
+        // No valid session data
+        else if (token.id && !token.sessionToken) {
+          console.log('JWT callback - no session token, clearing');
+          return {};
         }
         
-        // Refresh user data from database to get latest verification status
-        try {
-          const latestUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { verified_at: true, role: true, verification_status: true, isActive: true }
-          });
-          
-          if (latestUser) {
-            // If user is no longer active, clear the token
-            if (!latestUser.isActive) {
-              console.log('JWT callback - user deactivated, clearing session');
-              return {}; // Return empty object to clear token
-            }
-            
-            token.verified_at = latestUser.verified_at;
-            token.verification_status = latestUser.verification_status || 'PENDING';
-            console.log('JWT callback - refreshed verified_at:', latestUser.verified_at);
-            console.log('JWT callback - refreshed verification_status:', latestUser.verification_status);
-          }
-        } catch (error) {
-          console.error('Error refreshing user verification status:', error);
-        }
-      }
-      return token;
+        return token;
       } catch (error) {
         console.error('JWT callback error:', error);
-        // Return empty token on error to force re-authentication
-        return {};
+        // Clean up session on error
+        if (token.sessionToken) {
+          try {
+            await SessionService.deleteSession(token.sessionToken as string);
+          } catch (e) {
+            console.error('Error cleaning up session:', e);
+          }
+        }
+        return {}; // Force re-authentication
       }
     },
     async session({ session, token }) {
-      if (token) {
+      if (token && token.id) {
         session.user.id = token.id as string;
         session.user.role = token.role as import("@prisma/client").User_role;
         session.user.officer_name = token.officer_name as string;
@@ -170,34 +205,9 @@ export const authOptions: NextAuthOptions = {
         session.user.verified_at = token.verified_at as Date | null;
         session.user.verification_status = token.verification_status as import("@prisma/client").VerificationStatus;
         session.user.created_at = token.created_at as Date;
-
-        // Get active refresh token
-        // const activeRefreshToken = await prisma.refreshToken.findFirst({
-        //   where: {
-        //     userId: token.id as string,
-        //     expiresAt: { gt: new Date() }
-        //   },
-        //   orderBy: { expiresAt: 'desc' }
-        // });
-
-        // if (activeRefreshToken) {
-        //   (session.user as any).refreshToken = activeRefreshToken.token;
-        // }
-
-        // Update session in database for tracking
-        // await prisma.session.upsert({
-        //   where: {
-        //     sessionToken: activeRefreshToken?.token || 'temp-token',
-        //   },
-        //   create: {
-        //     sessionToken: activeRefreshToken?.token || 'temp-token',
-        //     userId: token.id as string,
-        //     expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
-        //   },
-        //   update: {
-        //     expires: new Date(Date.now() + JWT_CONFIG.SESSION_MAX_AGE * 1000),
-        //   },
-        // });
+        
+        // Add session token to session for frontend access
+        (session as any).sessionToken = token.sessionToken;
         
         console.log('Session callback - session.user.id:', session.user.id);
       }
@@ -207,15 +217,34 @@ export const authOptions: NextAuthOptions = {
   events: {
     async signIn({ user }) {
       console.log(`User ${user.email} signed in at ${new Date()}`);
-      // Clean up expired tokens on sign in
+      
+      // Update user's last active time
+      if (user.id) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastActiveAt: new Date() },
+        });
+      }
+      
+      // Clean up expired tokens and sessions
       await TokenManager.cleanupExpiredTokens();
+      await SessionService.cleanupExpiredSessions();
     },
     async signOut({ token }) {
-      if (token?.sub) {
-        // Invalidate all refresh tokens on signout
-        await TokenManager.invalidateAllUserTokens(token.sub);
-      }
       console.log(`User signed out at ${new Date()}`);
+      
+      if (token?.sub) {
+        // Invalidate all refresh tokens
+        await TokenManager.invalidateAllUserTokens(token.sub);
+        
+        // Delete all user sessions
+        await SessionService.deleteAllUserSessions(token.sub);
+      }
+      
+      // Also clean up by session token if available
+      if (token?.sessionToken) {
+        await SessionService.deleteSession(token.sessionToken as string);
+      }
     },
     async session({ token }) {
       // Called whenever a session is checked
@@ -223,6 +252,9 @@ export const authOptions: NextAuthOptions = {
         const now = Date.now() / 1000;
         if (now >= token.exp) {
           console.log('Session expired, will be cleared');
+          if (token.sessionToken) {
+            await SessionService.deleteSession(token.sessionToken as string);
+          }
         }
       }
     }

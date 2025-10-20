@@ -68,13 +68,19 @@ model Account {
 }
 
 model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  sessionToken   String    @unique
+  userId         String
+  expires        DateTime
+  createdAt      DateTime  @default(now())
+  lastActivityAt DateTime  @default(now())
+  ipAddress      String?
+  userAgent      String?   @db.Text
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "Session_userId_fkey")
+  @@index([expires], map: "Session_expires_idx")
+  @@index([lastActivityAt], map: "Session_lastActivityAt_idx")
 }
 
 model VerificationToken {

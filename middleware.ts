@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
-import { SessionValidationService } from "@/middleware/SessionValidation";
+import { SessionService } from "@/services/session.service";
 
 const roleHierarchy = {
   SUPER_ADMIN: 6,
@@ -29,39 +29,101 @@ const protectedRoutes: { prefix: string; minRole: Role }[] = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip verification check for public paths
-  if (pathname === "/verification-pending" || 
-      pathname === "/login" || 
+  // Skip all checks for public paths (no authentication needed)
+  if (pathname === "/login" || 
       pathname === "/signup" || 
       pathname.startsWith("/api/auth") ||
       pathname === "/") {
     return NextResponse.next();
   }
 
-  // Session validation with auto-logout
-  if (!SessionValidationService.shouldExcludePath(pathname)) {
-    const sessionResult = await SessionValidationService.validateSession(req);
-    if (!sessionResult.isValid && sessionResult.shouldLogout) {
-      console.log(`Auto-logout triggered: ${sessionResult.reason}`);
-      return SessionValidationService.createLogoutResponse(req, sessionResult.reason);
-    }
-  }
-
-  // check if this path is protected
-  const matched = protectedRoutes.find((r) => pathname.startsWith(r.prefix));
-  if (!matched) return NextResponse.next();
-
-  // read token (jwt) from cookie (NEXTAUTH_TOKEN)
+  // read token (jwt) from cookie for all other paths
   const token = await getToken({ 
     req, 
     secret: process.env.NEXTAUTH_SECRET || 'fallback-secret' 
   });
+  
+  // If no token, redirect to login (except for verification-pending which needs session check first)
+  if (!token && pathname !== "/verification-pending") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+  
+  // At this point, token must exist for protected routes (we checked above)
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("callbackUrl", req.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
+
+  // Validate session against database for ALL authenticated paths
+  // (including /verification-pending - must validate BEFORE allowing access)
+  const sessionToken = (token as any).sessionToken as string | undefined;
+  const userId = token.sub;
+  
+  // If no session token in JWT, this is an old session - force logout
+  if (!sessionToken) {
+    console.log('No session token found in JWT (old session), forcing logout');
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("session_expired", "true");
+    url.searchParams.set("reason", "Sesi lama terdeteksi, silakan login kembali");
+    
+    // Clear ALL auth cookies
+    const response = NextResponse.redirect(url);
+    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('next-auth.callback-url', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.callback-url', '', { maxAge: 0, path: '/' });
+    response.cookies.set('next-auth.csrf-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Host-next-auth.csrf-token', '', { maxAge: 0, path: '/' });
+    
+    // Also clean up any database sessions for this user if userId exists
+    if (userId) {
+      try {
+        await SessionService.deleteAllUserSessions(userId);
+        console.log(`Cleaned up all sessions for user: ${userId}`);
+      } catch (error) {
+        console.error('Error cleaning up user sessions:', error);
+      }
+    }
+    
+    return response;
+  }
+  
+  // Validate session against database
+  const validation = await SessionService.validateSession(sessionToken);
+  
+  if (!validation.isValid) {
+    console.log(`Session validation failed: ${validation.reason}`);
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("session_expired", "true");
+    url.searchParams.set("reason", validation.reason || "Sesi tidak valid");
+    
+    // Clear ALL auth cookies
+    const response = NextResponse.redirect(url);
+    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('next-auth.callback-url', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.callback-url', '', { maxAge: 0, path: '/' });
+    response.cookies.set('next-auth.csrf-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Host-next-auth.csrf-token', '', { maxAge: 0, path: '/' });
+    return response;
+  }
+
+  // Session is valid, now check if this is /verification-pending
+  // Allow access with valid session (even if not verified)
+  if (pathname === "/verification-pending") {
+    return NextResponse.next();
+  }
+
+  // For other protected routes, continue with role and verification checks
+  const matched = protectedRoutes.find((r) => pathname.startsWith(r.prefix));
+  if (!matched) return NextResponse.next();
 
   // token may have role (set in callbacks.jwt)
   const userRole = (token as any).role as string | undefined;

@@ -6,20 +6,26 @@
  */
 
 export const JWT_CONFIG = {
-  // Default: 24 hours (86400 seconds)
+  // Default: 24 hours (86400 seconds) - JWT token expiry
   JWT_EXPIRE_TIME: parseInt(process.env.JWT_EXPIRE_TIME || '86400'),
   
-  // Default: 24 hours (86400 seconds)
+  // Default: 24 hours (86400 seconds) - Database session max age  
   SESSION_MAX_AGE: parseInt(process.env.SESSION_MAX_AGE || '86400'),
   
-  // Default: 1 hour (3600 seconds) - how often session gets updated when user is active
-  SESSION_UPDATE_AGE: parseInt(process.env.SESSION_UPDATE_AGE || '3600'),
+  // Default: 2 hours (7200 seconds) - How often session gets updated when user is active
+  SESSION_UPDATE_AGE: parseInt(process.env.SESSION_UPDATE_AGE || '7200'),
+  
+  // Default: 2 hours (7200 seconds) - Idle timeout before auto-logout
+  SESSION_IDLE_TIMEOUT: parseInt(process.env.SESSION_IDLE_TIMEOUT || '7200'),
+  
+  // Default: 7 days (604800 seconds) - Absolute session timeout
+  SESSION_ABSOLUTE_TIMEOUT: parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT || '604800'),
   
   // Client-side warning time (in minutes before expiry)
-  WARNING_BEFORE_EXPIRY: parseInt(process.env.WARNING_BEFORE_EXPIRY || '5'),
+  WARNING_BEFORE_EXPIRY: parseInt(process.env.WARNING_BEFORE_EXPIRY || '10'),
   
   // Auto refresh interval (in minutes)
-  AUTO_REFRESH_INTERVAL: parseInt(process.env.AUTO_REFRESH_INTERVAL || '30'),
+  AUTO_REFRESH_INTERVAL: parseInt(process.env.AUTO_REFRESH_INTERVAL || '15'),
 } as const;
 
 export const formatExpiryTime = (seconds: number): string => {

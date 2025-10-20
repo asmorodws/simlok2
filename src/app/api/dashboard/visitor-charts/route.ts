@@ -104,15 +104,32 @@ export async function GET() {
       }
     });
 
-    // Process users data
+    // Process users data - count NEW users per month, then calculate cumulative
+    const newUsersMonthly: number[] = new Array(12).fill(0);
     usersData.forEach((item: any) => {
       const date = new Date(item.created_at);
       const monthDiff = (date.getFullYear() - oneYearAgo.getFullYear()) * 12 + 
                         (date.getMonth() - oneYearAgo.getMonth());
       if (monthDiff >= 0 && monthDiff < 12) {
-        usersMonthly[monthDiff] += item._count.id;
+        newUsersMonthly[monthDiff] += item._count.id;
       }
     });
+
+    // Get total users created before the 12-month period (baseline)
+    const baselineUsers = await prisma.user.count({
+      where: {
+        created_at: {
+          lt: oneYearAgo,
+        },
+      },
+    });
+
+    // Calculate cumulative user count (akumulasi total user)
+    let cumulativeCount = baselineUsers;
+    for (let i = 0; i < 12; i++) {
+      cumulativeCount += newUsersMonthly[i] || 0;
+      usersMonthly[i] = cumulativeCount;
+    }
 
     const chartData = {
       lineChart: {

@@ -1,10 +1,11 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignInForm from "@/components/auth/SignInForm";
+import { clearOldSessions } from "@/utils/session-utils";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,24 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Check for session expired message
+  useEffect(() => {
+    const sessionExpired = searchParams.get('session_expired');
+    const reason = searchParams.get('reason');
+    
+    if (sessionExpired === 'true') {
+      if (reason) {
+        setError(decodeURIComponent(reason));
+      } else {
+        setError('Sesi Anda telah berakhir. Silakan login kembali.');
+      }
+      
+      // Clear old sessions on mount if session expired
+      clearOldSessions();
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent, turnstileToken?: string) {
     e.preventDefault();

@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
+    const reviewStatus = searchParams.get('reviewStatus');
+    const finalStatus = searchParams.get('finalStatus');
     const search = searchParams.get('search') || '';
     const sortBy = searchParams.get('sortBy') || 'created_at';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
@@ -42,9 +44,10 @@ export async function GET(request: NextRequest) {
         break;
         
       case 'APPROVER':
-        // Approvers see submissions that have been reviewed and meet requirements
+        // Approvers see all reviewed submissions (both MEETS and NOT_MEETS requirements)
+        // They need to see NOT_MEETS to make final rejection decision
         if (!status) {
-          whereClause.review_status = 'MEETS_REQUIREMENTS';
+          whereClause.review_status = { in: ['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
           whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
         }
         break;
@@ -74,6 +77,15 @@ export async function GET(request: NextRequest) {
       } else {
         whereClause.approval_status = status;
       }
+    }
+
+    // Handle separate reviewStatus and finalStatus filters (used by Approver UI)
+    if (reviewStatus) {
+      whereClause.review_status = reviewStatus;
+    }
+    
+    if (finalStatus) {
+      whereClause.approval_status = finalStatus;
     }
 
     // Filter by vendor name if provided (admin/verifier only)

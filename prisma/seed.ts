@@ -188,8 +188,28 @@ async function main() {
   console.log("👥 Membuat users...");
   const createdUsers: { [key: string]: any } = {};
 
+  // Helper function to create varied user creation dates
+  const getVariedUserDate = (index: number, totalUsers: number): Date => {
+    const now = new Date();
+    const monthsBack = Math.floor((index / totalUsers) * 11); // Spread across 11 months
+    const daysVariation = Math.floor(Math.random() * 28); // Random day within month
+    
+    const createdDate = new Date(now);
+    createdDate.setMonth(createdDate.getMonth() - monthsBack);
+    createdDate.setDate(Math.max(1, Math.min(28, daysVariation))); // Keep within valid date range
+    createdDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0, 0);
+    
+    return createdDate;
+  };
+
+  let userIndex = 0;
   for (const user of users) {
     const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    // Create varied dates for users (except first few system users)
+    const createdDate = userIndex < 4 
+      ? new Date(Date.now() - (365 - userIndex * 30) * 24 * 60 * 60 * 1000) // System users created earlier
+      : getVariedUserDate(userIndex - 4, users.length - 4);
 
     const createdUser = await prisma.user.upsert({
       where: { email: user.email },
@@ -206,13 +226,15 @@ async function main() {
         verified_at: user.verified_at,
         verified_by: user.verified_by,
         verification_status: user.verification_status,
+        created_at: createdDate,
       },
     });
 
     createdUsers[user.email] = createdUser;
+    userIndex++;
   }
 
-  console.log(`   ✓ ${Object.keys(createdUsers).length} users berhasil dibuat`);
+  console.log(`   ✓ ${Object.keys(createdUsers).length} users berhasil dibuat dengan variasi tanggal pembuatan`);
 
   // Create sample submissions
   console.log("📋 Membuat sample submissions...");
@@ -285,10 +307,32 @@ async function main() {
     },
   ];
 
-  const currentDate = new Date();
+  // Helper function to create varied submission dates spread across 12 months
+  const getVariedSubmissionDate = (index: number, totalSubmissions: number): Date => {
+    const now = new Date();
+    // Spread submissions across 11 months (not current month to have some variety)
+    const monthsBack = Math.floor((index / totalSubmissions) * 11);
+    const daysInMonth = 28; // Safe value that works for all months
+    const dayVariation = Math.floor(Math.random() * daysInMonth) + 1;
+    
+    const submissionDate = new Date(now);
+    submissionDate.setMonth(submissionDate.getMonth() - monthsBack);
+    submissionDate.setDate(dayVariation);
+    submissionDate.setHours(
+      Math.floor(Math.random() * 10) + 8, // 8-17 hours (business hours)
+      Math.floor(Math.random() * 60),
+      0,
+      0
+    );
+    
+    return submissionDate;
+  };
   
   // Create multiple submissions for each vendor
   let submissionCount = 0;
+  
+  // First, count total submissions to calculate distribution
+  const totalSubmissionsEstimate = vendorUsers.length * 3; // Average 3 per vendor
   
   for (const vendor of vendorUsers) {
     const vendorData = vendor as any;
@@ -304,9 +348,8 @@ async function main() {
         continue;
       }
       
-      // Create date variations
-      const createdDate = new Date(currentDate);
-      createdDate.setDate(createdDate.getDate() - Math.floor(Math.random() * 60)); // Random date within last 60 days
+      // Create date variations - spread across 12 months for better chart visualization
+      const createdDate = getVariedSubmissionDate(submissionCount, totalSubmissionsEstimate);
       
       const workerNamesArray = template.worker_names.split('\n');
       const workerCount = workerNamesArray.length;
@@ -391,7 +434,7 @@ async function main() {
     }
   }
 
-  console.log(`   ✓ ${submissionCount} submissions berhasil dibuat`);
+  console.log(`   ✓ ${submissionCount} submissions berhasil dibuat dengan variasi tanggal pembuatan di 12 bulan terakhir`);
 
   // Update some submissions to APPROVED status so we can create QR scans for them
   console.log("🔄 Mengupdate beberapa submissions menjadi APPROVED untuk testing QR scan...");
