@@ -43,15 +43,7 @@ export async function middleware(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET || 'fallback-secret' 
   });
   
-  // If no token, redirect to login (except for verification-pending which needs session check first)
-  if (!token && pathname !== "/verification-pending") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-  
-  // At this point, token must exist for protected routes (we checked above)
+  // If no token, redirect to login for ALL paths (including verification-pending)
   if (!token) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
@@ -116,7 +108,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Session is valid, now check if this is /verification-pending
-  // Allow access with valid session (even if not verified)
+  // Allow access to verification-pending page with valid session (even if not verified)
   if (pathname === "/verification-pending") {
     return NextResponse.next();
   }
@@ -134,11 +126,17 @@ export async function middleware(req: NextRequest) {
   console.log('Middleware - verified_at:', verified_at);
 
   if (!userRole) {
-    // forbidden
-    return new NextResponse("Forbidden", { status: 403 });
+    // No role means invalid session - redirect to login, NOT verification-pending
+    console.log('Middleware - No user role found, redirecting to login');
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("session_expired", "true");
+    url.searchParams.set("reason", "Sesi tidak valid, silakan login kembali");
+    return NextResponse.redirect(url);
   }
 
   // Check if user is verified (except for super admin, reviewer, and approver)
+  // Only redirect to verification-pending if user has valid session but not verified
   if (userRole !== "SUPER_ADMIN" && userRole !== "REVIEWER" && userRole !== "APPROVER" && !verified_at) {
     console.log('Middleware - User not verified, redirecting to verification-pending');
     const url = req.nextUrl.clone();

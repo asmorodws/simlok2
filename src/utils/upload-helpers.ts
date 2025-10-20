@@ -202,11 +202,11 @@ export async function uploadWorkerPhoto(
 }
 
 /**
- * Upload HSSE/SIKA/SIMJA document with optimized settings
+ * Upload HSSE/SIKA/SIMJA/JSA document with optimized settings
  */
 export async function uploadDocument(
   file: File,
-  documentType: 'hsse' | 'sika' | 'simja',
+  documentType: 'hsse' | 'sika' | 'simja' | 'jsa',
   submissionId: string,
   options: Partial<UploadOptions> = {}
 ): Promise<UploadResult> {

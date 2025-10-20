@@ -48,6 +48,7 @@ type DraftShape = {
   simjaDocuments: SupportDoc[];
   sikaDocuments: SupportDoc[];
   hsseDocuments: SupportDoc[];
+  jsaDocuments: SupportDoc[];
 };
 
 // ===============================
@@ -127,6 +128,16 @@ export default function SubmissionForm() {
     },
   ]);
 
+  const [jsaDocuments, setJsaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_jsa`,
+      document_subtype: '', // JSA tidak memiliki subtype
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
   // -------------------------------
   // Form data
   // -------------------------------
@@ -136,6 +147,8 @@ export default function SubmissionForm() {
     officer_name: '',
     job_description: '',
     work_location: '',
+    implementation_start_date: '',
+    implementation_end_date: '',
     working_hours: '',
     work_facilities: '',
     worker_count: 1,
@@ -182,6 +195,7 @@ export default function SubmissionForm() {
       if (parsed.simjaDocuments?.length) setSimjaDocuments(parsed.simjaDocuments);
       if (parsed.sikaDocuments?.length) setSikaDocuments(parsed.sikaDocuments);
       if (parsed.hsseDocuments?.length) setHsseDocuments(parsed.hsseDocuments);
+      if (parsed.jsaDocuments?.length) setJsaDocuments(parsed.jsaDocuments);
 
       setHasDraft(true);
 
@@ -241,6 +255,7 @@ export default function SubmissionForm() {
         simjaDocuments,
         sikaDocuments,
         hsseDocuments,
+        jsaDocuments,
       };
       saveDraft(draft);
     }, 500) as unknown as number;
@@ -249,7 +264,7 @@ export default function SubmissionForm() {
   useEffect(() => {
     scheduleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, hsseDocuments]);
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, hsseDocuments, jsaDocuments]);
 
   useEffect(() => {
     return () => {
@@ -501,6 +516,13 @@ export default function SubmissionForm() {
         document_date: '',
         document_upload: '',
       }]);
+      setJsaDocuments([{
+        id: `${Date.now()}_jsa`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
 
       showSuccess('Draft Berhasil Dihapus', 'Semua data draft telah dihapus dan form dikembalikan ke kondisi awal.');
     } finally {
@@ -517,6 +539,32 @@ export default function SubmissionForm() {
     setIsLoading(true);
 
     try {
+      // ========== VALIDASI TANGGAL PELAKSANAAN ==========
+      if (!formData.implementation_start_date?.trim()) {
+        showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Mulai Pelaksanaan wajib diisi.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!formData.implementation_end_date?.trim()) {
+        showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Selesai Pelaksanaan wajib diisi.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Validasi tanggal selesai tidak boleh kurang dari tanggal mulai
+      const startDate = new Date(formData.implementation_start_date);
+      const endDate = new Date(formData.implementation_end_date);
+
+      if (endDate < startDate) {
+        showError(
+          'Tanggal Pelaksanaan Tidak Valid', 
+          'Tanggal Selesai Pelaksanaan tidak boleh lebih awal dari Tanggal Mulai Pelaksanaan.'
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // ========== VALIDASI DOKUMEN SIMJA ==========
       // Filter dokumen yang memiliki data (tidak kosong semua field)
       const filledSimjaDocs = simjaDocuments.filter(doc => 
@@ -627,6 +675,34 @@ export default function SubmissionForm() {
         }
       }
 
+      // ========== VALIDASI DOKUMEN JSA (OPSIONAL) ==========
+      // JSA bersifat opsional, tapi jika ada yang terisi maka harus lengkap
+      for (let i = 0; i < jsaDocuments.length; i++) {
+        const doc = jsaDocuments[i];
+        if (!doc) continue;
+        
+        // Cek apakah ada field yang terisi (JSA tidak punya subtype)
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        
+        // Jika ada data, semua field harus lengkap
+        if (hasData) {
+          const missingFields = [];
+          
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError(
+              'Dokumen JSA Tidak Lengkap',
+              `JSA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
       if (workers.length === 0) {
         showError('Data Pekerja Tidak Lengkap', 'Minimal harus ada satu pekerja dalam pengajuan.');
         setIsLoading(false);
@@ -690,11 +766,18 @@ export default function SubmissionForm() {
         doc.document_upload?.trim()
       );
 
+      const validJsaDocuments = jsaDocuments.filter(doc => 
+        doc.document_number?.trim() && 
+        doc.document_date?.trim() && 
+        doc.document_upload?.trim()
+      );
+
       const payload: SubmissionData & { 
         workers: Worker[];
         simjaDocuments: SupportDoc[];
         sikaDocuments: SupportDoc[];
         hsseDocuments: SupportDoc[];
+        jsaDocuments: SupportDoc[];
       } = {
         ...formData,
         worker_count: Math.max(1, desiredCount || 1),
@@ -703,6 +786,7 @@ export default function SubmissionForm() {
         simjaDocuments: validSimjaDocuments,
         sikaDocuments: validSikaDocuments,
         hsseDocuments: validHsseDocuments,
+        jsaDocuments: validJsaDocuments,
       };
 
       const response = await fetch('/api/submissions', {
@@ -855,6 +939,24 @@ export default function SubmissionForm() {
                   disabled={isLoading}
                 />
               </div>
+
+              {/* JSA Documents */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="warning">
+                      Dokumen JSA bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                    </Badge>
+                  </div>
+                </div>
+                <SupportDocumentList
+                  title="Dokumen Job Safety Analysis"
+                  documentType="JSA"
+                  documents={jsaDocuments}
+                  onDocumentsChange={setJsaDocuments}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             {/* ================= Pekerjaan ================= */}
@@ -886,6 +988,34 @@ export default function SubmissionForm() {
                     onChange={handleChange}
                     required
                     placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="implementation_start_date">Tanggal Mulai Pelaksanaan <span className="ml-1 text-red-500">*</span></Label>
+                  <DatePicker
+                    id="implementation_start_date"
+                    name="implementation_start_date"
+                    value={formData.implementation_start_date || ''}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, implementation_start_date: value }))
+                    }
+                    placeholder="Pilih tanggal mulai"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="implementation_end_date">Tanggal Selesai Pelaksanaan <span className="ml-1 text-red-500">*</span></Label>
+                  <DatePicker
+                    id="implementation_end_date"
+                    name="implementation_end_date"
+                    value={formData.implementation_end_date || ''}
+                    onChange={(value) =>
+                      setFormData((prev) => ({ ...prev, implementation_end_date: value }))
+                    }
+                    placeholder="Pilih tanggal selesai"
+                    required
                   />
                 </div>
 

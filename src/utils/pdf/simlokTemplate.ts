@@ -498,6 +498,7 @@ for (let idx = 0; idx < lines.length; idx++) {
       const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
       const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
       const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
+      const jsaDocs = s.support_documents.filter(d => d.document_type === 'JSA');
       
       // SIMJA documents
       if (simjaDocs.length > 0) {
@@ -567,6 +568,24 @@ for (let idx = 0; idx < lines.length; idx++) {
           const docNum = doc.document_number || '[Nomor]';
           const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
           await k.wrap(`   No. ${docNum} Berlaku sampai ${docDate}`, rightX, rightW, { bold: true });
+          k.y -= k.lineGap * 0.2;
+        }
+      }
+
+      // JSA documents
+      if (jsaDocs.length > 0) {
+        for (const doc of jsaDocs) {
+          if (!doc) continue;
+          await k.pageBreak();
+          k.text(" • ", bulletX, k.y, { bold: false });
+          const docX = bulletX + k.measure(" • ", { bold: false });
+          k.text("Job Safety Analysis", docX, k.y, { bold: true });
+          k.y -= k.lineGap;
+          
+          await k.pageBreak();
+          const docNum = doc.document_number || '[Nomor]';
+          const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
+          await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
           k.y -= k.lineGap * 0.2;
         }
       }
@@ -762,10 +781,11 @@ async function addSupportingDocumentsPage(
   if (s.support_documents && s.support_documents.length > 0) {
     console.log('[AddSupportingDocumentsPage] Using new support_documents structure');
     
-    // Group by document type: SIMJA, SIKA, HSSE
+    // Group by document type: SIMJA, SIKA, HSSE, JSA
     const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
     const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
     const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
+    const jsaDocs = s.support_documents.filter(d => d.document_type === 'JSA');
     
     // Add SIMJA documents first
     simjaDocs.forEach(doc => {
@@ -795,6 +815,17 @@ async function addSupportingDocumentsPage(
         path: doc.document_upload,
         title: 'HSSE Pass',
         subtitle: doc.document_subtype || '',
+        number: doc.document_number || '-',
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+      });
+    });
+
+    // Add JSA documents
+    jsaDocs.forEach(doc => {
+      documents.push({
+        path: doc.document_upload,
+        title: 'Job Safety Analysis',
+        subtitle: '',
         number: doc.document_number || '-',
         date: doc.document_date ? fmtDateID(doc.document_date) : '-'
       });

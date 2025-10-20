@@ -299,6 +299,14 @@ export default function SubmissionDetailModal({
                     value={submission.work_location || '-'}
                   />
                   <InfoCard
+                    label="Tanggal Mulai Pelaksanaan"
+                    value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
+                  />
+                  <InfoCard
+                    label="Tanggal Selesai Pelaksanaan"
+                    value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
+                  />
+                  <InfoCard
                     label="Pelaksanaan"
                     value={submission.implementation || 'Akan diisi otomatis ketika sudah di setujui'}
                   />

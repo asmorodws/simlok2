@@ -909,10 +909,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         value={submission.work_location}
                       />
                       <InfoCard
-                        label="Pelaksanaan"
-                        value={submission.implementation || 'Belum diisi'}
-                      />
-                      <InfoCard
                         label="Jam Kerja"
                         value={submission.working_hours}
                       />

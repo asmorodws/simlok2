@@ -10,7 +10,7 @@ export interface SupportDocument {
   document_subtype?: string; // Subtype untuk SIMJA/SIKA (e.g., "Pekerjaan Panas", "Ast. Man. Production")
   document_number?: string;
   document_date?: string;
-  document_type: 'SIMJA' | 'SIKA' | 'HSSE';
+  document_type: 'SIMJA' | 'SIKA' | 'HSSE' | 'JSA';
   document_upload: string;
 }
 
@@ -22,6 +22,8 @@ export interface SubmissionData {
   job_description: string;
   work_location: string;
   implementation?: string; // akan diisi oleh admin saat approve
+  implementation_start_date?: string; // tanggal mulai pelaksanaan
+  implementation_end_date?: string; // tanggal selesai pelaksanaan
   working_hours: string;
   work_facilities: string;
   worker_count?: number; // jumlah pekerja

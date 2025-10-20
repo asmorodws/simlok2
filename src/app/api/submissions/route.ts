@@ -217,6 +217,11 @@ export async function POST(request: NextRequest) {
         working_hours: !!body.working_hours,
         work_facilities: !!body.work_facilities,
         worker_names: !!body.worker_names
+      },
+      // Log implementation dates
+      implementationDates: {
+        implementation_start_date: body.implementation_start_date,
+        implementation_end_date: body.implementation_end_date
       }
     });
 
@@ -271,7 +276,7 @@ export async function POST(request: NextRequest) {
     console.log('POST /api/submissions - User verified:', userExists.email);
 
     // Extract workers and documents data from body
-    const { workers, simjaDocuments, sikaDocuments, hsseDocuments, ...submissionData } = body as any;
+    const { workers, simjaDocuments, sikaDocuments, hsseDocuments, jsaDocuments, ...submissionData } = body as any;
 
     // Debug: Log data yang masuk
     console.log('Submission data received:', JSON.stringify(submissionData, null, 2));
@@ -289,6 +294,12 @@ export async function POST(request: NextRequest) {
           officer_name: submissionData.officer_name,
           job_description: submissionData.job_description,
           work_location: submissionData.work_location,
+          implementation_start_date: submissionData.implementation_start_date 
+            ? new Date(submissionData.implementation_start_date) 
+            : null,
+          implementation_end_date: submissionData.implementation_end_date 
+            ? new Date(submissionData.implementation_end_date) 
+            : null,
           working_hours: submissionData.working_hours,
           work_facilities: submissionData.work_facilities,
           worker_names: submissionData.worker_names,
@@ -395,6 +406,23 @@ export async function POST(request: NextRequest) {
         allDocuments.push(...hsseDocs);
       }
 
+      // JSA documents (optional)
+      if (jsaDocuments && Array.isArray(jsaDocuments) && jsaDocuments.length > 0) {
+        const jsaDocs = jsaDocuments
+          .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+          .map((doc: any) => ({
+            document_subtype: null, // JSA tidak punya subtype
+            document_type: 'JSA',
+            document_number: doc.document_number || null,
+            document_date: doc.document_date ? new Date(doc.document_date) : null,
+            document_upload: doc.document_upload,
+            submission_id: submission.id,
+            uploaded_by: session.user.id,
+            uploaded_at: new Date(),
+          }));
+        allDocuments.push(...jsaDocs);
+      }
+
       // Save all documents at once
       if (allDocuments.length > 0) {
         await prisma.supportDocument.createMany({
@@ -405,6 +433,7 @@ export async function POST(request: NextRequest) {
           simja: simjaDocuments?.length || 0,
           sika: sikaDocuments?.length || 0,
           hsse: hsseDocuments?.length || 0,
+          jsa: jsaDocuments?.length || 0,
           total: allDocuments.length
         });
       }

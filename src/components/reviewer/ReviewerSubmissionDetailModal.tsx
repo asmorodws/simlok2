@@ -393,11 +393,24 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   // Working hours state - editable by reviewer
   const [workingHours, setWorkingHours] = useState('08:00 WIB - 17:00 WIB');
 
+  // Implementation dates state - editable by reviewer
+  const [implementationStartDate, setImplementationStartDate] = useState('');
+  const [implementationEndDate, setImplementationEndDate] = useState('');
+
   const { showSuccess, showError } = useToast();
 
   // Handle working hours change
   const handleWorkingHoursChange = useCallback((value: string) => {
     setWorkingHours(value);
+  }, []);
+
+  // Handle implementation dates change
+  const handleImplementationStartDateChange = useCallback((value: string) => {
+    setImplementationStartDate(value);
+  }, []);
+
+  const handleImplementationEndDateChange = useCallback((value: string) => {
+    setImplementationEndDate(value);
   }, []);
 
   // Helper function to format date for Indonesian locale
@@ -545,6 +558,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       // Initialize working hours from submission data
       setWorkingHours(sub.working_hours || '08:00 WIB - 17:00 WIB');
 
+      // Initialize implementation dates from submission data
+      setImplementationStartDate(sub.implementation_start_date || '');
+      setImplementationEndDate(sub.implementation_end_date || '');
+
     } catch (err: any) {
       console.error('Error fetching submission:', err);
       if (err.name !== 'AbortError') {
@@ -598,20 +615,24 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       return;
     }
 
+    // Gunakan tanggal dari state lokal (yang diedit reviewer) atau fallback ke hook
+    const finalStartDate = implementationStartDate || implementationDatesHook.dates.startDate;
+    const finalEndDate = implementationEndDate || implementationDatesHook.dates.endDate;
+
     // Validasi tanggal implementasi wajib
-    if (!implementationDatesHook.dates.startDate || !implementationDatesHook.dates.startDate.trim()) {
+    if (!finalStartDate || !finalStartDate.trim()) {
       showError('Tanggal Mulai Belum Diisi', 'Tanggal mulai pelaksanaan wajib diisi sebelum mengirim review.');
       return;
     }
 
-    if (!implementationDatesHook.dates.endDate || !implementationDatesHook.dates.endDate.trim()) {
+    if (!finalEndDate || !finalEndDate.trim()) {
       showError('Tanggal Selesai Belum Diisi', 'Tanggal selesai pelaksanaan wajib diisi sebelum mengirim review.');
       return;
     }
 
     // Validasi bahwa tanggal selesai tidak boleh lebih awal dari tanggal mulai
-    const startDate = new Date(implementationDatesHook.dates.startDate);
-    const endDate = new Date(implementationDatesHook.dates.endDate);
+    const startDate = new Date(finalStartDate);
+    const endDate = new Date(finalEndDate);
     
     if (endDate < startDate) {
       showError('Tanggal Tidak Valid', 'Tanggal selesai pelaksanaan tidak boleh lebih awal dari tanggal mulai.');
@@ -623,8 +644,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
       // 1. Save implementation dates and template data
       const updatePayload = {
-        implementation_start_date: implementationDatesHook.dates.startDate,
-        implementation_end_date: implementationDatesHook.dates.endDate,
+        implementation_start_date: finalStartDate,
+        implementation_end_date: finalEndDate,
         implementation: approvalForm.pelaksanaan,
         content: approvalForm.content,
         signer_position: approvalForm.jabatan_signer,
@@ -711,6 +732,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     reviewData,
     implementationDatesHook.dates.startDate,
     implementationDatesHook.dates.endDate,
+    implementationStartDate,
+    implementationEndDate,
     approvalForm,
     workingHours,
     editableWorkerCount,
@@ -777,6 +800,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
           nama_signer: 'Julianto Santoso'
         });
         setWorkingHours('08:00 WIB - 17:00 WIB');
+        setImplementationStartDate('');
+        setImplementationEndDate('');
         implementationDatesHook.reset();
       }, 50);
 
@@ -1086,6 +1111,9 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       {/* Pelaksanaan Input Fields */}
                       {implementationDatesHook.template.pelaksanaan && (
                         <div className="mt-6 space-y-4">
+                          {/* Tanggal Pelaksanaan Input - Editable */}
+                          
+
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               5. Pelaksanaan
@@ -1135,6 +1163,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     const simjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIMJA');
                                     const sikaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIKA');
                                     const hsseDocuments = submission.support_documents.filter(doc => doc.document_type === 'HSSE');
+                                    const jsaDocuments = submission.support_documents.filter(doc => doc.document_type === 'JSA');
 
                                     // SIMJA documents
                                     simjaDocuments.forEach(doc => {
@@ -1164,6 +1193,14 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                         ? `• ${doc.document_type} ${doc.document_subtype}` 
                                         : `• ${doc.document_type}`;
                                       template += `\n${docLabel} Pass`;
+                                      if (doc.document_number && doc.document_date) {
+                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
+                                      }
+                                    });
+
+                                    // JSA documents
+                                    jsaDocuments.forEach(doc => {
+                                      template += `\n• Job Safety Analysis`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
                                       }
@@ -1210,7 +1247,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                               </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">
-                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data dokumen pendukung (SIMJA, SIKA, HSSE) dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
+                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data dokumen pendukung (SIMJA, SIKA, HSSE, JSA) dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
                             </p>
                           </div>
                         </div>
@@ -1725,6 +1762,14 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       <InfoCard
                         label="Lokasi Kerja"
                         value={submission.work_location}
+                      />
+                      <InfoCard
+                        label="Tanggal Mulai Pelaksanaan"
+                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
+                      />
+                      <InfoCard
+                        label="Tanggal Selesai Pelaksanaan"
+                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
                       />
                       <InfoCard
                         label="Pelaksanaan"

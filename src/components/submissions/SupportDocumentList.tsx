@@ -16,7 +16,7 @@ export interface SupportDoc {
 
 interface SupportDocumentListProps {
   title: string;
-  documentType: 'SIMJA' | 'SIKA' | 'HSSE';
+  documentType: 'SIMJA' | 'SIKA' | 'HSSE' | 'JSA';
   documents: SupportDoc[];
   onDocumentsChange: (docs: SupportDoc[]) => void;
   disabled?: boolean;
@@ -37,6 +37,8 @@ export default function SupportDocumentList({
       defaultSubtype = 'Ast. Man. Facility Management';
     } else if (documentType === 'SIKA') {
       defaultSubtype = '';
+    } else if (documentType === 'JSA') {
+      defaultSubtype = ''; // JSA tidak memiliki subtype
     } else {
       defaultSubtype = undefined; // HSSE
     }
@@ -84,7 +86,7 @@ export default function SupportDocumentList({
             {/* Header with number and delete button */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-700">
-                {documentType === 'HSSE' ? 'HSSE Pass' : documentType} #{index + 1}
+                {documentType === 'HSSE' ? 'HSSE Pass' : documentType === 'JSA' ? 'JSA' : documentType} #{index + 1}
               </span>
               {documents.length > 1 && (
                 <button
@@ -167,14 +169,24 @@ export default function SupportDocumentList({
                 {/* Document Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {documentType === 'HSSE' ? 'Masa Berlaku HSSE Pass' : 'Tanggal Dokumen'} <span className="text-red-500">*</span>
+                    {documentType === 'HSSE' 
+                      ? 'Masa Berlaku HSSE Pass' 
+                      : documentType === 'JSA'
+                      ? 'Tanggal Dokumen JSA'
+                      : 'Tanggal Dokumen'} <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
                     value={doc.document_date || ''}
                     onChange={(value) =>
                       updateDocument(doc.id, 'document_date', value)
                     }
-                    placeholder={documentType === 'HSSE' ? 'Pilih masa berlaku HSSE Pass' : 'Pilih tanggal dokumen'}
+                    placeholder={
+                      documentType === 'HSSE' 
+                        ? 'Pilih masa berlaku HSSE Pass' 
+                        : documentType === 'JSA'
+                        ? 'Pilih tanggal JSA'
+                        : 'Pilih tanggal dokumen'
+                    }
                     disabled={disabled}
                   />
                 </div>

@@ -24,12 +24,14 @@ export default function SupportDocumentsSection({
   const simjaDocuments = supportDocuments.filter(doc => doc.document_type === 'SIMJA');
   const sikaDocuments = supportDocuments.filter(doc => doc.document_type === 'SIKA');
   const hsseDocuments = supportDocuments.filter(doc => doc.document_type === 'HSSE');
+  const jsaDocuments = supportDocuments.filter(doc => doc.document_type === 'JSA');
 
   // Count how many document sections we have (for dynamic grid)
   const documentSections = [
     simjaDocuments.length > 0,
     sikaDocuments.length > 0,
     hsseDocuments.length > 0,
+    jsaDocuments.length > 0,
   ].filter(Boolean).length;
 
   // Determine grid columns based on number of sections
@@ -38,8 +40,10 @@ export default function SupportDocumentsSection({
       return 'grid-cols-1'; // Single column if only one section
     } else if (documentSections === 2) {
       return 'grid-cols-1 md:grid-cols-2'; // 2 columns on tablet+ if 2 sections
-    } else {
+    } else if (documentSections === 3) {
       return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'; // 3 columns on desktop if 3 sections
+    } else {
+      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'; // 4 columns on desktop if 4 sections
     }
   };
 
@@ -51,6 +55,8 @@ export default function SupportDocumentsSection({
         return 'text-green-500';
       case 'HSSE':
         return 'text-yellow-500';
+      case 'JSA':
+        return 'text-purple-500';
       default:
         return 'text-gray-500';
     }
@@ -92,7 +98,12 @@ export default function SupportDocumentsSection({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-xs text-gray-900 truncate leading-tight">
-                      {doc.document_subtype || `${doc.document_type === 'HSSE' ? 'HSSE Pass' : doc.document_type} #${index + 1}`}
+                      {doc.document_subtype || 
+                        `${doc.document_type === 'HSSE' 
+                          ? 'HSSE Pass' 
+                          : doc.document_type === 'JSA' 
+                          ? 'JSA' 
+                          : doc.document_type} #${index + 1}`}
                     </p>
                   </div>
                 </div>
@@ -112,7 +123,11 @@ export default function SupportDocumentsSection({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       <span className="text-gray-500 text-[10px] mr-0.5">
-                        {doc.document_type === 'HSSE' ? 'Berlaku s/d:' : 'Tgl:'}
+                        {doc.document_type === 'HSSE' 
+                          ? 'Berlaku s/d:' 
+                          : doc.document_type === 'JSA'
+                          ? 'Tgl:'
+                          : 'Tgl:'}
                       </span>
                       <span>
                         {new Date(doc.document_date).toLocaleDateString('id-ID', {
@@ -133,7 +148,12 @@ export default function SupportDocumentsSection({
                     onClick={() =>
                       onViewDocument(
                         fileUrlHelper.convertLegacyUrl(doc.document_upload),
-                        doc.document_subtype || `${doc.document_type === 'HSSE' ? 'HSSE Pass' : doc.document_type} Document`
+                        doc.document_subtype || 
+                          `${doc.document_type === 'HSSE' 
+                            ? 'HSSE Pass' 
+                            : doc.document_type === 'JSA' 
+                            ? 'JSA' 
+                            : doc.document_type} Document`
                       )
                     }
                     className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs"
@@ -160,6 +180,7 @@ export default function SupportDocumentsSection({
         {renderDocumentGroup(simjaDocuments, 'Dokumen SIMJA', 'bg-blue-50', 'text-blue-600')}
         {renderDocumentGroup(sikaDocuments, 'Dokumen SIKA', 'bg-green-50', 'text-green-600')}
         {renderDocumentGroup(hsseDocuments, 'Dokumen HSSE Pass', 'bg-yellow-50', 'text-yellow-600')}
+        {renderDocumentGroup(jsaDocuments, 'Dokumen JSA', 'bg-purple-50', 'text-purple-600')}
       </div>
     </DetailSection>
   );
