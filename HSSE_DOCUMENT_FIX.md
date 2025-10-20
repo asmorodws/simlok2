@@ -1,4 +1,4 @@
-# 📄 Fix: Dokumen HSSE Pekerja Error untuk Gambar
+#  Fix: Dokumen HSSE Pekerja Error untuk Gambar
 
 **Tanggal**: 20 Oktober 2025  
 **Status**: ✅ FIXED  

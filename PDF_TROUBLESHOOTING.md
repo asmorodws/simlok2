@@ -67,7 +67,7 @@ const categoryFolders: Record<string, string> = {
 
 ---
 
-### Error 3: Emoji "📄" tidak tampil di PDF
+### Error 3: Emoji "" tidak tampil di PDF
 
 **Penyebab:**
 - StandardFonts di pdf-lib tidak support emoji
@@ -78,7 +78,7 @@ const categoryFolders: Record<string, string> = {
 
 ```typescript
 // OLD (with emoji):
-page.drawText("📄", { ... });  // ❌ Causes error
+page.drawText("", { ... });  // ❌ Causes error
 
 // NEW (without emoji):
 page.drawText("PDF", {         // ✅ Works!

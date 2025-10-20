@@ -85,7 +85,7 @@ export default function SimlokPdfModal({
 
         if (serverFilename) {
           setActualFilename(serverFilename);
-          console.log('📄 PDF filename from server:', serverFilename);
+          console.log(' PDF filename from server:', serverFilename);
         }
       } catch (err) {
         console.warn('Error fetching PDF filename:', err);
@@ -214,7 +214,7 @@ export default function SimlokPdfModal({
                 </p>
                 {actualFilename && (
                   <p className="text-xs text-blue-200 mt-1">
-                    📄 {actualFilename}
+                     {actualFilename}
                   </p>
                 )}
               </div>

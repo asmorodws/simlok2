@@ -152,7 +152,7 @@ export default function DocumentPreviewModal({
         return (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
-              <div className="text-6xl mb-4">📄</div>
+              <div className="text-6xl mb-4"></div>
               <p className="text-gray-600 mb-4">
                 Dokumen Word tidak dapat ditampilkan langsung.
               </p>

@@ -135,9 +135,11 @@ export interface SubmissionPDFData {
   simja_number?: string | null;
   simja_date?: string | Date | null | undefined;
   simja_type?: string | null;
+  simja_document_upload?: string | null;
   sika_number?: string | null;
   sika_date?: string | Date | null | undefined;
   sika_type?: string | null;
+  sika_document_upload?: string | null;
   
   // HSSE Pass
   hsse_pass_number?: string | null;

@@ -181,7 +181,7 @@ const handleDownload = async () => {
   </p>
   {actualFilename && (
     <p className="text-xs text-blue-200 mt-1">
-      📄 {actualFilename}
+       {actualFilename}
     </p>
   )}
 </div>
@@ -329,7 +329,7 @@ const pdfApiUrl = `/api/submissions/${submissionId}?format=pdf&t=${timestamp}`;
 1. Open submission with SIMLOK number
 2. Click "Lihat PDF" button
 3. Modal opens with PDF preview
-4. Check header - should show filename (e.g., 📄 SIMLOK_56_S00330_2025.pdf)
+4. Check header - should show filename (e.g.,  SIMLOK_56_S00330_2025.pdf)
 5. Click Download button (arrow down icon)
 6. File downloads as: SIMLOK_56_S00330_2025.pdf ✅
 ```

@@ -13,7 +13,7 @@
 - **🔄 Event-Driven**: Arsitektur berbasis events untuk scalability
 - **🎨 Modern UI**: Responsive design dengan TailwindCSS 4
 - **📁 File Management**: Upload, preview, dan manajemen dokumen
-- **📄 PDF Generation**: Auto-generate PDF SIMLOK dengan template
+- ** PDF Generation**: Auto-generate PDF SIMLOK dengan template
 
 ## 🏗️ Tech Stack (Optimized)
 
@@ -622,7 +622,7 @@ services:
 - Tulis tests untuk fitur baru
 - Update dokumentasi untuk API changes
 
-## 📄 License
+##  License
 
 Aplikasi ini untuk keperluan internal dan tidak untuk didistribusikan secara komersial.
 

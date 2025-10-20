@@ -133,13 +133,13 @@ let filename = 'simlok_export.xlsx'; // Default fallback
 // Try custom header first (most reliable)
 if (excelFilenameHeader) {
   filename = excelFilenameHeader;
-  console.log('📄 Excel filename from X-Excel-Filename header:', filename);
+  console.log(' Excel filename from X-Excel-Filename header:', filename);
 } else if (contentDisposition) {
   // Parse from Content-Disposition header
   const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
   if (match && match[1]) {
     filename = match[1].replace(/['"]/g, '');
-    console.log('📄 Excel filename from Content-Disposition:', filename);
+    console.log(' Excel filename from Content-Disposition:', filename);
   }
 }
 
@@ -479,7 +479,7 @@ filename = `simlok_${start}-${end}_${time}.xlsx`;
    2. Export Excel with dates
    3. Should see:
       - 📊 Excel export filename: ...
-      - 📄 Excel filename from X-Excel-Filename header: ...
+      -  Excel filename from X-Excel-Filename header: ...
       - 📥 Downloading Excel file: ...
    ```
 

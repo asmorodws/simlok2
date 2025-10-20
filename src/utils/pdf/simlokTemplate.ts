@@ -159,21 +159,21 @@ class PDFKit {
     this.pageCount = 1;
   }
 
-  async addPage() {
+  async addPage(pageType?: 'documents' | 'workers') {
     this.page = this.doc.addPage([A4.w, A4.h]);
     this.pageCount++;
     this.x = MARGIN;
     
     // Add header to pages 2 and beyond
     if (this.pageCount > 1 && this.submissionData) {
-      await this.addHeader();
+      await this.addHeader(pageType);
       this.y = A4.h - 140; // Start content below header
     } else {
       this.y = A4.h - MARGIN;
     }
   }
 
-  async addHeader() {
+  async addHeader(pageType?: 'documents' | 'workers') {
     if (!this.submissionData) return;
     
     // Add logo - await untuk memastikan logo ter-load
@@ -200,16 +200,21 @@ class PDFKit {
       color: rgb(0, 0, 0),
     });
 
-    // Add nama vendor di bawah lampiran
-    this.text("Nama petugas ", MARGIN, A4.h - 100, {
+    // Add text di bawah lampiran - berbeda untuk halaman dokumen vs halaman pekerja
+    let labelText = "Nama Pekerja ";
+    if (pageType === 'documents') {
+      labelText = "Dokumen SIMJA/SIKA/HSSE ";
+    }
+    
+    this.text(labelText, MARGIN, A4.h - 100, {
       size: 11,
       bold: false,
       color: rgb(0, 0, 0),
     });
 
-    // Hitung lebar text "Nama petugas " untuk positioning nama vendor
-    const namaPetugasWidth = this.measure("Nama petugas ", { size: 11, bold: false });
-    this.text(this.submissionData.vendor_name, MARGIN + namaPetugasWidth, A4.h - 100, {
+    // Hitung lebar text label untuk positioning nama vendor
+    const labelWidth = this.measure(labelText, { size: 11, bold: false });
+    this.text(this.submissionData.vendor_name, MARGIN + labelWidth, A4.h - 100, {
       size: 11,
       bold: true,
       color: rgb(0, 0, 0),
@@ -624,7 +629,13 @@ for (let idx = 0; idx < lines.length; idx++) {
   // Draw nama
   k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
 
-  // Add second page with worker photos if available
+  // Add second page with supporting documents (SIMJA, SIKA, HSSE Pass) if available
+  const hasDocuments = s.simja_document_upload || s.sika_document_upload || s.hsse_pass_document_upload;
+  if (hasDocuments) {
+    await addSupportingDocumentsPage(k, s);
+  }
+
+  // Add worker photos page if available
   // Handle both workerList (interface) and worker_list (database)
   const workerData = s.workerList || (s as any).worker_list;
   if (workerData && workerData.length > 0) {
@@ -635,6 +646,188 @@ for (let idx = 0; idx < lines.length; idx++) {
 }
 
 import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos } from './imageLoader';
+
+/**
+ * Add page with supporting documents (SIMJA, SIKA, HSSE Pass)
+ * Documents are displayed in a grid layout: 2 columns x 2 rows
+ */
+async function addSupportingDocumentsPage(
+  k: PDFKit,
+  s: SubmissionPDFData
+) {
+  console.log('[AddSupportingDocumentsPage] Creating documents page...');
+  
+  // Add new page for documents with specific header type
+  await k.addPage('documents');
+  
+  const { page } = k;
+  const { width, height } = page.getSize();
+  
+ 
+
+  
+  // Calculate layout for documents (2 columns x 2 rows)
+  const columns = 2;
+  const docWidth = 220;  // Width for each document
+  const docHeight = 280; // Height for each document
+  const horizontalGap = 30;
+  const verticalGap = 30;
+  const startY = height - 140;
+  
+  // Calculate starting X to center the grid
+  const totalWidth = (docWidth * columns) + (horizontalGap * (columns - 1));
+  const startX = (width - totalWidth) / 2;
+  
+  const documents = [];
+  
+  // Collect documents to display
+  if (s.simja_document_upload) {
+    documents.push({
+      path: s.simja_document_upload,
+      title: 'SIMJA',
+      subtitle: s.simja_type || '',
+      number: s.simja_number || '-',
+      date: s.simja_date ? fmtDateID(s.simja_date) : '-'
+    });
+  }
+  
+  if (s.sika_document_upload) {
+    documents.push({
+      path: s.sika_document_upload,
+      title: 'SIKA',
+      subtitle: s.sika_type || '',
+      number: s.sika_number || '-',
+      date: s.sika_date ? fmtDateID(s.sika_date) : '-'
+    });
+  }
+  
+  if (s.hsse_pass_document_upload) {
+    documents.push({
+      path: s.hsse_pass_document_upload,
+      title: 'HSSE Pass',
+      subtitle: '',
+      number: s.hsse_pass_number || '-',
+      date: s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '-'
+    });
+  }
+  
+  console.log(`[AddSupportingDocumentsPage] Found ${documents.length} documents to display`);
+  
+  // Draw each document
+  for (let i = 0; i < documents.length; i++) {
+    const doc = documents[i];
+    if (!doc) continue; // TypeScript safety check
+    
+    const row = Math.floor(i / columns);
+    const col = i % columns;
+    
+    const x = startX + (col * (docWidth + horizontalGap));
+    const y = startY - (row * (docHeight + verticalGap));
+    
+    console.log(`[AddSupportingDocumentsPage] Drawing ${doc.title} at position (${x}, ${y})`);
+    
+    // Draw document frame
+    page.drawRectangle({
+      x: x,
+      y: y - docHeight,
+      width: docWidth,
+      height: docHeight,
+      borderColor: rgb(0.7, 0.7, 0.7),
+      borderWidth: 1,
+    });
+    
+    // Draw document title only (no subtitle, no number, no date)
+    const titleY = y - 15;
+    k.text(doc.title, x + 10, titleY, { bold: true, size: 12 });
+    
+    // Load and draw document image/PDF - Use more space since we removed info
+    const imageY = titleY - 10; // Start image closer to title
+    const imageHeight = docHeight - 30; // More space for document (removed info section)
+    const imageWidth = docWidth - 20;
+    
+    try {
+      const documentResult = await loadWorkerDocument(k.doc, doc.path);
+      
+      if (documentResult.type === 'image' && documentResult.image) {
+        // Draw image
+        const img = documentResult.image;
+        const imgDims = img.scale(1);
+        const aspectRatio = imgDims.width / imgDims.height;
+        
+        let drawWidth = imageWidth;
+        let drawHeight = imageHeight;
+        
+        if (aspectRatio > (imageWidth / imageHeight)) {
+          drawHeight = drawWidth / aspectRatio;
+        } else {
+          drawWidth = drawHeight * aspectRatio;
+        }
+        
+        const drawX = x + 10 + (imageWidth - drawWidth) / 2;
+        const drawY = imageY - drawHeight;
+        
+        page.drawImage(img, {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight,
+        });
+        
+        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image drawn successfully`);
+        
+      } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
+        // Embed first page of PDF
+        const embeddedPages = await k.doc.embedPdf(documentResult.pdfPages, [0]);
+        const embeddedPage = embeddedPages[0];
+        
+        if (embeddedPage) {
+          const pageDims = embeddedPage.scale(1);
+          const aspectRatio = pageDims.width / pageDims.height;
+          
+          let drawWidth = imageWidth;
+          let drawHeight = imageHeight;
+          
+          if (aspectRatio > (imageWidth / imageHeight)) {
+            drawHeight = drawWidth / aspectRatio;
+          } else {
+            drawWidth = drawHeight * aspectRatio;
+          }
+          
+          const drawX = x + 10 + (imageWidth - drawWidth) / 2;
+          const drawY = imageY - drawHeight;
+          
+          page.drawPage(embeddedPage, {
+            x: drawX,
+            y: drawY,
+            width: drawWidth,
+            height: drawHeight,
+          });
+          
+          console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF drawn successfully`);
+        }
+        
+      } else {
+        // Draw placeholder for error
+        const placeholderY = imageY - imageHeight / 2;
+        k.text('Dokumen tidak tersedia', x + 10, placeholderY, {
+          size: 10,
+          color: rgb(0.6, 0.6, 0.6),
+        });
+        console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
+      }
+      
+    } catch (error) {
+      console.error(`[AddSupportingDocumentsPage] ❌ Error loading ${doc.title}:`, error);
+      const placeholderY = imageY - imageHeight / 2;
+      k.text('Error memuat dokumen', x + 10, placeholderY, {
+        size: 10,
+        color: rgb(0.8, 0.2, 0.2),
+      });
+    }
+  }
+  
+  console.log('[AddSupportingDocumentsPage] Documents page completed');
+}
 
 /**
  * Add second page with worker photos and HSSE documents
@@ -657,8 +850,8 @@ async function addWorkerPhotosPage(
   // Preload all worker photos in batch for better performance
   await preloadWorkerPhotos(k.doc, workerList);
 
-  // Add new page - header akan otomatis ditambahkan
-  await k.addPage();
+  // Add new page - header akan otomatis ditambahkan with workers type
+  await k.addPage('workers');
 
   // Calculate grid layout for 2 columns x 3 rows (6 workers per page)
   const columns = 2; // 2 kolom
@@ -686,7 +879,7 @@ async function addWorkerPhotosPage(
   while (workerIndex < workerList.length) {
     // Add new page if not first batch
     if (workerIndex > 0) {
-      await k.addPage();
+      await k.addPage('workers');
     }
     
     // Draw workers for current page (up to workersPerPage)

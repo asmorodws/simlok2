@@ -11,7 +11,7 @@
 
 ### 1. **Emoji Not Supported**
 - StandardFonts di pdf-lib tidak support emoji Unicode
-- Emoji "📄" menyebabkan error saat `page.drawText()`
+- Emoji "" menyebabkan error saat `page.drawText()`
 - **Impact:** PDF generation fails dengan character encoding error
 
 ### 2. **Insufficient Error Handling**
@@ -33,7 +33,7 @@
 
 **Before:**
 ```typescript
-page.drawText("📄", {  // ❌ Emoji causes error
+page.drawText("", {  // ❌ Emoji causes error
   size: 20,
   font: font,
   color: rgb(0.2, 0.4, 0.8)

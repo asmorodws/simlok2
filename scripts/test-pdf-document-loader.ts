@@ -59,7 +59,7 @@ async function testDocumentLoader() {
         const fileType = file.toLowerCase().endsWith('.pdf') ? 'PDF' : 
                         file.toLowerCase().match(/\.(jpg|jpeg|png)$/) ? 'Image' : 'Unknown';
         
-        console.log(`\n  📄 Testing: ${file}`);
+        console.log(`\n   Testing: ${file}`);
         console.log(`     Type: ${fileType}`);
         console.log(`     API Path: ${apiPath}`);
         
@@ -72,7 +72,7 @@ async function testDocumentLoader() {
             console.log(`     📐 Dimensions: ${imgDims.width}x${imgDims.height}`);
           } else if (result.type === 'pdf') {
             console.log(`     ✅ Result: PDF loaded successfully`);
-            console.log(`     📄 Pages: ${result.pdfPages!.getPageCount()}`);
+            console.log(`      Pages: ${result.pdfPages!.getPageCount()}`);
           } else {
             console.log(`     ❌ Result: Unsupported/Error`);
             console.log(`     ⚠️  Error: ${result.error}`);

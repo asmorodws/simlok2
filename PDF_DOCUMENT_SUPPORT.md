@@ -57,7 +57,7 @@ if (documentResult.type === 'image' && documentResult.image) {
 } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
   // Tampilkan placeholder untuk PDF
   // - Background biru muda
-  // - Icon 📄
+  // - Icon 
   // - Text "Dokumen PDF"
   // - Info jumlah halaman
   
@@ -73,7 +73,7 @@ Ketika dokumen HSSE Pass adalah PDF, akan ditampilkan:
 ```
 ┌─────────────────┐
 │                 │
-│       📄        │
+│               │
 │  Dokumen PDF    │
 │  X halaman      │
 │                 │
@@ -83,7 +83,7 @@ Ketika dokumen HSSE Pass adalah PDF, akan ditampilkan:
 **Visual:**
 - Background: Light blue (`rgb(0.95, 0.97, 1.0)`)
 - Border: Blue (`rgb(0.2, 0.4, 0.8)`)
-- Icon: 📄 (size 20, blue)
+- Icon:  (size 20, blue)
 - Text: "Dokumen PDF" + jumlah halaman
 
 ## Format File yang Didukung
@@ -140,7 +140,7 @@ Expected: Gambar ter-render di PDF SIMLOK
 ### Test Case 2: Worker dengan PDF HSSE
 ```
 Input: worker.hsse_pass_document_upload = "/api/files/.../hsse-worker/HSSE_456.pdf"
-Expected: Placeholder "📄 Dokumen PDF, X halaman" di PDF SIMLOK
+Expected: Placeholder " Dokumen PDF, X halaman" di PDF SIMLOK
 ```
 
 ### Test Case 3: Worker tanpa HSSE
