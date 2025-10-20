@@ -763,9 +763,11 @@ async function drawWorkerPhotoAndDocument(
 
   // Load and draw photo if available (NO LABEL - full frame)
   if (worker.worker_photo) {
+    console.log(`[DrawWorkerPhoto] Loading photo for worker: ${worker.worker_name}`);
     const photoImage = await loadWorkerPhoto(doc, worker.worker_photo);
     
     if (photoImage) {
+      console.log(`[DrawWorkerPhoto] ✅ Photo loaded successfully for: ${worker.worker_name}`);
       try {
         // Calculate dimensions to maintain aspect ratio
         const imgDims = photoImage.scale(1);
@@ -792,8 +794,9 @@ async function drawWorkerPhotoAndDocument(
           width: drawWidth,
           height: drawHeight,
         });
+        console.log(`[DrawWorkerPhoto] ✅ Photo drawn at (${drawX}, ${drawY}) with size ${drawWidth}x${drawHeight}`);
       } catch (error) {
-        console.error(`Error drawing photo for ${worker.worker_name}:`, error);
+        console.error(`[DrawWorkerPhoto] ❌ Error drawing photo for ${worker.worker_name}:`, error);
         
         // Draw error placeholder (smaller text)
         page.drawText("Error", { 
@@ -812,6 +815,7 @@ async function drawWorkerPhotoAndDocument(
         });
       }
     } else {
+      console.warn(`[DrawWorkerPhoto] ⚠️ Photo not loaded for worker: ${worker.worker_name}`);
       // Draw placeholder for failed load (smaller text)
       page.drawText("Foto", { 
         x: photoX + itemWidth/2 - 12, 
@@ -829,6 +833,7 @@ async function drawWorkerPhotoAndDocument(
       });
     }
   } else {
+    console.log(`[DrawWorkerPhoto] No photo path provided for worker: ${worker.worker_name}`);
     // Draw placeholder for no photo (smaller text)
     page.drawText("Tidak", { 
       x: photoX + itemWidth/2 - 12, 
@@ -860,11 +865,12 @@ async function drawWorkerPhotoAndDocument(
 
   // Load and draw HSSE document if available (NO LABEL - full frame)
   if (worker.hsse_pass_document_upload) {
-    console.log(`Loading HSSE document for ${worker.worker_name}:`, worker.hsse_pass_document_upload);
+    console.log(`[DrawHSSEDocument] Loading document for ${worker.worker_name}: ${worker.hsse_pass_document_upload}`);
     const documentResult = await loadWorkerDocument(doc, worker.hsse_pass_document_upload);
-    console.log(`Document result for ${worker.worker_name}:`, documentResult.type, documentResult.error || 'no error');
+    console.log(`[DrawHSSEDocument] Result for ${worker.worker_name}: type=${documentResult.type}, error=${documentResult.error || 'none'}`);
     
     if (documentResult.type === 'image' && documentResult.image) {
+      console.log(`[DrawHSSEDocument] ✅ Processing as IMAGE for ${worker.worker_name}`);
       try {
         // Calculate dimensions to maintain aspect ratio
         const imgDims = documentResult.image.scale(1);
@@ -890,8 +896,10 @@ async function drawWorkerPhotoAndDocument(
           width: drawWidth,
           height: drawHeight,
         });
+        
+        console.log(`[DrawHSSEDocument] ✅ Image drawn at (${drawX}, ${drawY}) with size ${drawWidth}x${drawHeight}`);
       } catch (error) {
-        console.error(`Error drawing HSSE document for ${worker.worker_name}:`, error);
+        console.error(`[DrawHSSEDocument] ❌ Error drawing image for ${worker.worker_name}:`, error);
         
         // Draw error placeholder
         page.drawText("Error", { 
@@ -910,9 +918,10 @@ async function drawWorkerPhotoAndDocument(
         });
       }
     } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
+      console.log(`[DrawHSSEDocument] ✅ Processing as PDF for ${worker.worker_name}`);
       try {
         // For PDF documents, embed first page using pdf-lib embedPages
-        console.log(`Embedding PDF page for ${worker.worker_name}`);
+        console.log(`[DrawHSSEDocument] Embedding PDF page...`);
         
         const sourcePdf = documentResult.pdfPages;
         
@@ -923,7 +932,7 @@ async function drawWorkerPhotoAndDocument(
           throw new Error('Failed to embed PDF page');
         }
         
-        console.log(`Successfully embedded page for ${worker.worker_name}`);
+        console.log(`[DrawHSSEDocument] ✅ PDF page embedded successfully`);
         
         // Get embedded page dimensions
         const { width: pdfWidth, height: pdfHeight } = embeddedPage.scale(1);
@@ -952,10 +961,10 @@ async function drawWorkerPhotoAndDocument(
           height: scaledHeight,
         });
         
-        console.log(`Successfully drew embedded PDF page for ${worker.worker_name}`);
+        console.log(`[DrawHSSEDocument] ✅ PDF page drawn at (${drawX}, ${drawY}) with size ${scaledWidth}x${scaledHeight}`);
         
       } catch (error) {
-        console.error(`Error embedding PDF for ${worker.worker_name}:`, error);
+        console.error(`[DrawHSSEDocument] ❌ Error embedding PDF for ${worker.worker_name}:`, error);
         
         // Draw simple placeholder text without emoji
         page.drawText("PDF", { 
@@ -981,8 +990,10 @@ async function drawWorkerPhotoAndDocument(
         });
       }
     } else {
-      // Draw placeholder for unsupported type or failed load
-      const errorMsg = documentResult.error || 'Format tidak didukung';
+      console.warn(`[DrawHSSEDocument] ⚠️ Failed to load document for ${worker.worker_name}: ${documentResult.error || 'unknown error'}`);
+      // Draw error/unavailable placeholder
+      const errorText = documentResult.error || 'Dokumen Error';
+      
       page.drawText("Dokumen", { 
         x: documentX + itemWidth/2 - 20, 
         y: y - imageHeight/2 + 10, 
@@ -997,9 +1008,10 @@ async function drawWorkerPhotoAndDocument(
         font: font,
         color: rgb(0.8, 0.2, 0.2) 
       });
-      console.warn(`HSSE document error for ${worker.worker_name}:`, errorMsg);
+      console.warn(`[DrawHSSEDocument] Error details: ${errorText}`);
     }
   } else {
+    console.log(`[DrawHSSEDocument] No document path provided for ${worker.worker_name}`);
     // Draw placeholder for no document (smaller text)
     page.drawText("Tidak", { 
       x: documentX + itemWidth/2 - 12, 

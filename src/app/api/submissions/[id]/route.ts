@@ -20,7 +20,7 @@ async function generateSimlokNumber(): Promise<string> {
       simlok_number: {
         not: null,
         // Filter untuk tahun yang sama: format nomor/S00330/YYYY
-        contains: `/S00330/${year}`
+        contains: `/S00330/${year}-S0`
       }
     },
     orderBy: [
@@ -41,7 +41,7 @@ async function generateSimlokNumber(): Promise<string> {
 
   // Format: autoincrement/S00330/tahun
   // Nomor akan mulai dari 1 lagi setiap tahun baru
-  return `${nextNumber}/S00330/${year}`;
+  return `${nextNumber}/S00330/${year}-S0`;
 }
 
 import { RouteParams } from '@/types';
@@ -157,7 +157,7 @@ async function generatePDF(submission: any) {
       const now = new Date();
       const year = now.getFullYear();
       // const month = String(now.getMonth() + 1).padStart(2, '0');
-      pdfData.simlok_number = `[DRAFT]/S00330/${year}`;
+      pdfData.simlok_number = `[DRAFT]/S00330/${year}-S0`;
       pdfData.simlok_date = now;
     }
 

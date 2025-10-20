@@ -6,27 +6,30 @@ if (typeof window !== 'undefined') {
   throw new Error('imageLoader should only be used on server-side');
 }
 
-const MAX_CACHE_SIZE = 20;
-const MAX_BATCH_SIZE = 3;
-const BATCH_DELAY = 100; // ms between batches
+// 🎯 PERFORMANCE FIX: Increased batch size and reduced delays
+const MAX_CACHE_SIZE = 50; // Increased from 20
+const MAX_BATCH_SIZE = 10; // Increased from 3 for faster parallel loading
+const BATCH_DELAY = 50; // Reduced from 100ms to 50ms
+const LOAD_TIMEOUT = 5000; // 5 second timeout for image loading
 
-// LRU Cache for processed images
+// 🎯 CRITICAL FIX: Cache optimized buffers instead of PDFImage objects
+// PDFImage objects are bound to specific PDFDocument instances and cannot be reused
 class ImageCache {
   private cache = new Map<string, {
-    image: PDFImage;
+    buffer: Buffer; // Store optimized buffer, not PDFImage
     lastAccessed: number;
   }>();
 
-  get(key: string): PDFImage | undefined {
+  get(key: string): Buffer | undefined {
     const item = this.cache.get(key);
     if (item) {
       item.lastAccessed = Date.now();
-      return item.image;
+      return item.buffer;
     }
     return undefined;
   }
 
-  set(key: string, image: PDFImage): void {
+  set(key: string, buffer: Buffer): void {
     // Clean old entries if needed
     if (this.cache.size >= MAX_CACHE_SIZE) {
       // Sort by last accessed time and remove oldest
@@ -39,7 +42,7 @@ class ImageCache {
     }
 
     this.cache.set(key, {
-      image,
+      buffer,
       lastAccessed: Date.now()
     });
   }
@@ -66,112 +69,123 @@ const imageCache = new ImageCache();
 
 /**
  * Load and process image from base64 string
+ * 🎯 FIXED: Always embed as JPG after optimization (optimizeImage converts to JPEG)
+ * 🎯 FIXED: Cache optimized buffers instead of PDFImage objects
  */
 async function loadBase64Image(
   pdfDoc: PDFDocument,
-  base64Data: string,
-  isPng: boolean
+  base64Data: string
 ): Promise<PDFImage | null> {
   try {
-    // Convert base64 to buffer
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-    console.log(`LoadBase64Image: Original image size: ${imageBuffer.length} bytes`);
+    // Check cache first
+    const cacheKey = `base64:${base64Data.substring(0, 50)}`; // Use first 50 chars as key
+    const cachedBuffer = imageCache.get(cacheKey);
     
-    // Optimize image
-    const optimizedBuffer = await optimizeImage(imageBuffer);
-    console.log(`LoadBase64Image: Optimized image size: ${optimizedBuffer.length} bytes`);
+    let optimizedBuffer: Buffer;
     
-    // Embed in PDF
-    console.log(`LoadBase64Image: Embedding ${isPng ? 'PNG' : 'JPG'} image in PDF`);
-    const result = isPng
-      ? await pdfDoc.embedPng(optimizedBuffer)
-      : await pdfDoc.embedJpg(optimizedBuffer);
+    if (cachedBuffer) {
+      console.log(`[LoadBase64Image] ✅ Using cached buffer`);
+      optimizedBuffer = cachedBuffer;
+    } else {
+      // Convert base64 to buffer
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+      console.log(`[LoadBase64Image] Original image size: ${imageBuffer.length} bytes`);
+      
+      // Optimize image (IMPORTANT: This converts to JPEG format!)
+      optimizedBuffer = await optimizeImage(imageBuffer);
+      console.log(`[LoadBase64Image] Optimized image size: ${optimizedBuffer.length} bytes`);
+      
+      // Cache the optimized buffer
+      imageCache.set(cacheKey, optimizedBuffer);
+    }
     
-    console.log(`LoadBase64Image: Successfully embedded image in PDF`);
+    // 🎯 CRITICAL FIX: Always embed as JPG after optimization
+    // optimizeImage() converts all images to JPEG format for better compression
+    console.log(`[LoadBase64Image] Embedding as JPG (optimized format)`);
+    const result = await pdfDoc.embedJpg(optimizedBuffer);
+    
+    console.log(`[LoadBase64Image] ✅ Successfully embedded image in PDF`);
     return result;
   } catch (error) {
-    console.warn('Failed to process base64 image:', error);
+    console.warn('[LoadBase64Image] ❌ Failed to process base64 image:', error);
     return null;
   }
 }
 
 /**
  * Load and process image from filesystem
+ * 🎯 FIXED: Always embed as JPG after optimization (optimizeImage converts to JPEG)
+ * 🎯 FIXED: Return both PDFImage and optimized buffer for caching
  */
 async function loadFileImage(
   pdfDoc: PDFDocument,
-  filePath: string,
-  isPng: boolean
-): Promise<PDFImage | null> {
+  filePath: string
+): Promise<{ image: PDFImage; buffer: Buffer } | null> {
   try {
     const fs = await import('fs');
     if (!fs.existsSync(filePath)) {
-      console.warn('File does not exist:', filePath);
+      console.warn(`[LoadFileImage] File does not exist: ${filePath}`);
       return null;
     }
 
     // Read and optimize image
     const imageBuffer = fs.readFileSync(filePath);
-    console.log(`LoadFileImage: Original image size: ${imageBuffer.length} bytes`);
+    console.log(`[LoadFileImage] Original image size: ${imageBuffer.length} bytes, path: ${filePath}`);
     
+    // Optimize image (IMPORTANT: This converts to JPEG format!)
     const optimizedBuffer = await optimizeImage(imageBuffer);
-    console.log(`LoadFileImage: Optimized image size: ${optimizedBuffer.length} bytes`);
+    console.log(`[LoadFileImage] Optimized image size: ${optimizedBuffer.length} bytes`);
 
-    // Embed in PDF
-    console.log(`LoadFileImage: Embedding ${isPng ? 'PNG' : 'JPG'} image in PDF`);
-    const result = isPng
-      ? await pdfDoc.embedPng(optimizedBuffer)
-      : await pdfDoc.embedJpg(optimizedBuffer);
+    // 🎯 CRITICAL FIX: Always embed as JPG after optimization
+    // optimizeImage() converts all images to JPEG format for better compression
+    console.log(`[LoadFileImage] Embedding as JPG (optimized format)`);
+    const result = await pdfDoc.embedJpg(optimizedBuffer);
     
-    console.log(`LoadFileImage: Successfully embedded image in PDF`);
-    return result;
+    console.log(`[LoadFileImage] ✅ Successfully embedded image in PDF`);
+    return { image: result, buffer: optimizedBuffer };
   } catch (error) {
-    console.warn('Failed to process file image:', error);
+    console.error(`[LoadFileImage] ❌ Failed to process file image:`, error);
     return null;
   }
 }
 
 /**
- * Load worker photo with improved error handling and caching
+ * Load worker photo with smart caching and fallback path resolution
+ * 🎯 FIXED: Cache optimized buffers and re-embed for each PDFDocument
+ * 🐛 DEBUG: Enhanced logging for troubleshooting missing photos
  */
 export async function loadWorkerPhoto(
   pdfDoc: PDFDocument,
   photoPath?: string | null
 ): Promise<PDFImage | null> {
   if (!photoPath) {
-    console.log('LoadWorkerPhoto: No photo path provided');
     return null;
   }
 
-  console.log('LoadWorkerPhoto: Loading photo from path:', photoPath);
+  console.log(`[LoadWorkerPhoto] Starting load for: ${photoPath}`);
 
   try {
-    // Check cache first with validation
-    const cached = imageCache.get(photoPath);
-    if (cached) {
+    // Check if we have cached optimized buffer
+    const cachedBuffer = imageCache.get(photoPath);
+    if (cachedBuffer) {
+      console.log(`[LoadWorkerPhoto] ✅ Using cached buffer, embedding in new PDF: ${photoPath}`);
       try {
-        // Validate cached image
-        const imgDims = cached.scale(1);
-        if (imgDims.width > 0 && imgDims.height > 0) {
-          console.log('LoadWorkerPhoto: Using cached image for:', photoPath);
-          return cached;
-        } else {
-          console.warn('LoadWorkerPhoto: Removing invalid cached image with zero dimensions');
-          imageCache.delete(photoPath);
-        }
+        // Re-embed cached buffer into this PDFDocument instance
+        const resultImage = await pdfDoc.embedJpg(cachedBuffer);
+        return resultImage;
       } catch (error) {
-        console.warn('LoadWorkerPhoto: Invalid cached image, removing from cache:', error);
+        console.warn(`[LoadWorkerPhoto] ⚠️ Failed to embed cached buffer, reloading:`, error);
         imageCache.delete(photoPath);
       }
     }
 
     let resultImage: PDFImage | null = null;
+    let optimizedBuffer: Buffer | null = null;
     const timestamp = Date.now();
 
     if (photoPath.startsWith('data:image/') || photoPath.match(/^[A-Za-z0-9+/=]+$/)) {
-      console.log('LoadWorkerPhoto: Processing base64 image');
+      console.log(`[LoadWorkerPhoto] Processing base64 image`);
       // Handle base64 data
-      const isPng = photoPath.includes('image/png');
       let base64Data = photoPath;
 
       if (photoPath.startsWith('data:')) {
@@ -179,31 +193,36 @@ export async function loadWorkerPhoto(
         base64Data = parts[parts.length - 1] || '';
       }
 
-      resultImage = await loadBase64Image(pdfDoc, base64Data, isPng);
+      resultImage = await loadBase64Image(pdfDoc, base64Data);
+      console.log(`[LoadWorkerPhoto] ${resultImage ? '✅' : '❌'} Base64 image loaded`);
     } else if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
-      console.log('LoadWorkerPhoto: Processing remote URL with cache busting');
+      console.log(`[LoadWorkerPhoto] Processing remote URL: ${photoPath}`);
       // Handle remote URLs with cache busting
       try {
         const response = await fetch(`${photoPath}?t=${timestamp}`);
         if (!response.ok) throw new Error('Failed to fetch image');
-        const buffer = await response.arrayBuffer();
-        const isPng = photoPath.toLowerCase().endsWith('.png');
-        resultImage = isPng 
-          ? await pdfDoc.embedPng(new Uint8Array(buffer))
-          : await pdfDoc.embedJpg(new Uint8Array(buffer));
-        console.log('LoadWorkerPhoto: Successfully loaded remote image');
+        const buffer = Buffer.from(await response.arrayBuffer());
+        
+        // Optimize and cache
+        optimizedBuffer = await optimizeImage(buffer);
+        imageCache.set(photoPath, optimizedBuffer);
+        
+        resultImage = await pdfDoc.embedJpg(optimizedBuffer);
+        console.log(`[LoadWorkerPhoto] ✅ Remote image loaded successfully`);
       } catch (error) {
-        console.warn('LoadWorkerPhoto: Failed to fetch remote image:', error);
+        console.warn(`[LoadWorkerPhoto] ❌ Failed to fetch remote image:`, error);
         return null;
       }
     } else {
-      console.log('LoadWorkerPhoto: Processing local file path');
-      // Handle local file path with improved path resolution
+      console.log(`[LoadWorkerPhoto] Processing local file path`);
+      // 🎯 OPTIMIZED: Smart local file path resolution with fallback
       const path = await import('path');
-      const isPng = photoPath.toLowerCase().endsWith('.png');
+      const { existsSync } = await import('fs');
 
-      // Determine final path based on input with proper error handling
+      // Determine primary path
       let finalPath: string;
+      let found = false;
+      
       if (photoPath.startsWith('/api/files/')) {
         // Parse API file path: /api/files/{userId}/{category}/{filename}
         const apiParts = photoPath.split('/');
@@ -211,96 +230,146 @@ export async function loadWorkerPhoto(
           const [, , , userId, category, ...filenameParts] = apiParts;
           const filename = filenameParts.join('/');
           
-          // Validate required parts exist
-          if (!userId || !category || !filename) {
-            console.warn('LoadWorkerPhoto: Invalid API path structure:', { userId, category, filename });
-            finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
-          } else {
-            // Map API categories to actual directory names - harus sama dengan mapping di API endpoint files
+          if (userId && category && filename) {
+            // Map category to folder - CRITICAL for worker photos
             const categoryFolders: Record<string, string> = {
               sika: 'dokumen-sika',
               simja: 'dokumen-simja',
               hsse: 'dokumen-hsse',
-              'hsse-worker': 'dokumen-hsse-pekerja',
+              'hsse-worker': 'dokumen-hsse-pekerja',  // ⭐ CRITICAL for HSSE docs
+              'worker-hsse': 'dokumen-hsse-pekerja',  // ⭐ Alternative naming
               document: 'dokumen',
-              'worker-photo': 'foto-pekerja'  // This is the key mapping!
+              'worker-photo': 'foto-pekerja',  // ⭐ CRITICAL MAPPING
+              'foto-pekerja': 'foto-pekerja'   // ⭐ Alternative format
             };
             
             const folderName = categoryFolders[category] || category;
             finalPath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+            console.log(`[LoadWorkerPhoto] API path parsed: userId=${userId}, category=${category}, filename=${filename}`);
+            console.log(`[LoadWorkerPhoto] Mapped category "${category}" → folder "${folderName}"`);
+          } else {
+            finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
           }
         } else {
-          // Fallback to simple replacement for malformed paths
           finalPath = path.join(process.cwd(), 'public', photoPath.replace('/api/files/', '/uploads/'));
         }
       } else if (photoPath.startsWith('/uploads/')) {
         finalPath = path.join(process.cwd(), 'public', photoPath);
       } else {
-        finalPath = path.join(process.cwd(), 'public', `/uploads/${photoPath}`);
+        finalPath = photoPath.startsWith('/') 
+          ? path.join(process.cwd(), 'public', photoPath)
+          : path.join(process.cwd(), 'public', 'uploads', photoPath);
       }
-
-      console.log('LoadWorkerPhoto: Resolved file path:', finalPath);
       
-      // Add existence check with detailed logging
-      const fs = await import('fs');
-      if (!fs.existsSync(finalPath)) {
-        console.warn('LoadWorkerPhoto: File does not exist at resolved path:', finalPath);
+      // Check primary path first
+      if (existsSync(finalPath)) {
+        found = true;
+        console.log(`[LoadWorkerPhoto] ✅ Found at primary path: ${finalPath}`);
+      } else {
+        console.log(`[LoadWorkerPhoto] ⚠️ Not found at primary path: ${finalPath}`);
+        // 🎯 SMART FALLBACK: Try common alternative paths
+        const alternatives: string[] = [];
         
-        // Try alternative paths for debugging
-        const alternativePaths = [
-          path.join(process.cwd(), 'public', photoPath),
-          path.join(process.cwd(), 'public', 'uploads', photoPath),
-          photoPath.startsWith('/') ? path.join(process.cwd(), 'public', photoPath.substring(1)) : path.join(process.cwd(), 'public', photoPath)
-        ];
+        // Extract filename from original path
+        const filename = photoPath.split('/').pop() || '';
         
-        for (const altPath of alternativePaths) {
-          if (fs.existsSync(altPath)) {
-            console.log('LoadWorkerPhoto: Found file at alternative path:', altPath);
+        if (photoPath.startsWith('/api/files/')) {
+          // Try alternative API path formats
+          const apiParts = photoPath.split('/');
+          if (apiParts.length >= 5) {
+            const userId = apiParts[3];
+            const category = apiParts[4];
+            const fname = apiParts.slice(5).join('/');
+            
+            if (userId && fname) {
+              alternatives.push(
+                // Try category-specific folders
+                path.join(process.cwd(), 'public', 'uploads', userId, 'foto-pekerja', fname),
+                path.join(process.cwd(), 'public', 'uploads', userId, 'dokumen-hsse-pekerja', fname), // ⭐ HSSE docs
+                // Try direct uploads
+                path.join(process.cwd(), 'public', 'uploads', userId, fname),
+                // Try without category folder
+                path.join(process.cwd(), 'public', 'uploads', fname)
+              );
+              
+              console.log(`[LoadWorkerPhoto] Parsed API path: userId=${userId}, category=${category}, filename=${fname}`);
+            }
+          }
+        } else {
+          // Try standard fallback paths
+          alternatives.push(
+            path.join(process.cwd(), 'public', photoPath),
+            path.join(process.cwd(), 'public', 'uploads', photoPath),
+            path.join(process.cwd(), 'public', 'uploads', filename),
+            photoPath.startsWith('/') 
+              ? path.join(process.cwd(), 'public', photoPath.substring(1))
+              : path.join(process.cwd(), 'public', photoPath)
+          );
+        }
+        
+        // Try each alternative (deduplicated)
+        const uniqueAlternatives = [...new Set(alternatives)];
+        console.log(`[LoadWorkerPhoto] Trying ${uniqueAlternatives.length} alternative paths...`);
+        
+        for (const altPath of uniqueAlternatives) {
+          if (altPath !== finalPath && existsSync(altPath)) {
+            console.log(`[LoadWorkerPhoto] ✅ Found at alternative path: ${altPath}`);
             finalPath = altPath;
+            found = true;
             break;
           }
         }
-        
-        if (!fs.existsSync(finalPath)) {
-          console.error('LoadWorkerPhoto: File not found at any path. Tried:', [finalPath, ...alternativePaths]);
-          return null;
-        }
       }
       
-      resultImage = await loadFileImage(pdfDoc, finalPath, isPng);
+      if (!found) {
+        console.error(`[LoadWorkerPhoto] ❌ File not found at any path:`, {
+          originalPath: photoPath,
+          primaryPath: finalPath,
+          cwd: process.cwd()
+        });
+        return null;
+      }
+      
+      console.log(`[LoadWorkerPhoto] Loading file from: ${finalPath}`);
+      const loadResult = await loadFileImage(pdfDoc, finalPath);
+      
+      if (loadResult) {
+        resultImage = loadResult.image;
+        optimizedBuffer = loadResult.buffer;
+      }
     }
 
     // Validate and cache result
     if (resultImage) {
       try {
         const imgDims = resultImage.scale(1);
-        console.log(`LoadWorkerPhoto: Image dimensions for ${photoPath}: ${imgDims.width}x${imgDims.height}`);
-        
         if (imgDims.width > 0 && imgDims.height > 0) {
-          console.log(`LoadWorkerPhoto: Successfully loaded and cached image: ${photoPath} (${imgDims.width}x${imgDims.height})`);
-          imageCache.set(photoPath, resultImage);
-          console.log(`LoadWorkerPhoto: Image cached. Cache size now: ${imageCache.size}`);
+          // Cache the optimized buffer if we have it
+          if (optimizedBuffer) {
+            imageCache.set(photoPath, optimizedBuffer);
+          }
+          console.log(`[LoadWorkerPhoto] ✅ SUCCESS - Loaded and cached: ${photoPath} (${imgDims.width}x${imgDims.height})`);
           return resultImage;
         } else {
-          console.warn('LoadWorkerPhoto: Skipping invalid image with zero dimensions:', photoPath);
+          console.warn(`[LoadWorkerPhoto] ⚠️ Invalid image dimensions (0x0): ${photoPath}`);
           return null;
         }
       } catch (error) {
-        console.warn('LoadWorkerPhoto: Failed to validate image dimensions:', error);
+        console.warn(`[LoadWorkerPhoto] ⚠️ Failed to validate image:`, error);
         return null;
       }
     }
 
-    console.warn('LoadWorkerPhoto: Failed to load image (resultImage is null):', photoPath);
+    console.warn(`[LoadWorkerPhoto] ❌ Result image is null for: ${photoPath}`);
     return null;
   } catch (error) {
-    console.warn('LoadWorkerPhoto: Error loading worker photo:', error);
+    console.error(`[LoadWorkerPhoto] ❌ Error loading photo:`, error);
     return null;
   }
 }
 
 /**
- * Load worker photos in batches with improved error handling
+ * Load worker photos in batches with improved error handling and parallel processing
  */
 export async function preloadWorkerPhotos(
   pdfDoc: PDFDocument,
@@ -311,33 +380,57 @@ export async function preloadWorkerPhotos(
     .filter(w => w.worker_photo && !imageCache.has(w.worker_photo))
     .map(w => w.worker_photo as string);
 
-  console.log(`Preloading ${photosToLoad.length} worker photos...`);
+  if (photosToLoad.length === 0) {
+    console.log('PreloadWorkerPhotos: All photos already cached or empty');
+    return;
+  }
 
-  // Process in small batches
+  console.log(`PreloadWorkerPhotos: Loading ${photosToLoad.length} worker photos in batches of ${MAX_BATCH_SIZE}...`);
+  const startTime = Date.now();
+
+  // 🎯 PERFORMANCE FIX: Process in larger batches with Promise.allSettled
   for (let i = 0; i < photosToLoad.length; i += MAX_BATCH_SIZE) {
     const batch = photosToLoad.slice(i, i + MAX_BATCH_SIZE);
+    const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(photosToLoad.length / MAX_BATCH_SIZE);
+    
+    console.log(`PreloadWorkerPhotos: Processing batch ${batchNumber}/${totalBatches} (${batch.length} photos)`);
     
     try {
-      // Load batch in parallel with proper error handling
-      await Promise.all(batch.map(async (photo) => {
-        try {
-          await loadWorkerPhoto(pdfDoc, photo);
-        } catch (error) {
-          console.warn(`Failed to preload photo: ${photo}`, error);
-        }
-      }));
+      // Use Promise.allSettled to continue even if some images fail
+      const results = await Promise.allSettled(
+        batch.map(async (photo) => {
+          try {
+            const loadPromise = loadWorkerPhoto(pdfDoc, photo);
+            // Add timeout to prevent hanging on slow images
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Load timeout')), LOAD_TIMEOUT)
+            );
+            await Promise.race([loadPromise, timeoutPromise]);
+          } catch (error) {
+            console.warn(`PreloadWorkerPhotos: Failed to load photo: ${photo}`, error);
+            // Don't throw - continue with other photos
+          }
+        })
+      );
       
-      // Small delay between batches
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      console.log(`PreloadWorkerPhotos: Batch ${batchNumber} complete - ${successful} successful, ${failed} failed`);
+      
+      // Reduced delay between batches for better performance
       if (i + MAX_BATCH_SIZE < photosToLoad.length) {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     } catch (error) {
-      console.warn('Batch processing failed:', error);
+      console.warn(`PreloadWorkerPhotos: Batch ${batchNumber} processing failed:`, error);
       // Continue with next batch
     }
   }
 
-  console.log('Worker photo preloading completed');
+  const elapsed = Date.now() - startTime;
+  console.log(`PreloadWorkerPhotos: Completed loading ${photosToLoad.length} photos in ${elapsed}ms (avg ${Math.round(elapsed / photosToLoad.length)}ms per photo)`);
+  console.log(`PreloadWorkerPhotos: Cache size: ${imageCache.size} images`);
 }
 
 /**
@@ -353,17 +446,19 @@ export interface DocumentLoadResult {
 /**
  * Load worker document (can be image or PDF)
  * Returns information about the document type and content
+ * 🎯 IMPROVED: Better error handling, flexible image/PDF support
+ * 🐛 DEBUG: Enhanced logging for troubleshooting
  */
 export async function loadWorkerDocument(
   pdfDoc: PDFDocument,
   documentPath?: string | null
 ): Promise<DocumentLoadResult> {
   if (!documentPath) {
-    console.log('LoadWorkerDocument: No document path provided');
+    console.log('[LoadWorkerDocument] No document path provided');
     return { type: 'unsupported', error: 'No path provided' };
   }
 
-  console.log('LoadWorkerDocument: Loading document from path:', documentPath);
+  console.log(`[LoadWorkerDocument] Starting load for: ${documentPath}`);
 
   try {
     // Determine file type from extension
@@ -372,28 +467,40 @@ export async function loadWorkerDocument(
     const isImage = lowerPath.match(/\.(jpg|jpeg|png|webp)$/);
 
     if (!isPdf && !isImage) {
-      console.warn('LoadWorkerDocument: Unsupported file type:', documentPath);
+      console.warn(`[LoadWorkerDocument] ⚠️ Unsupported file type: ${documentPath}`);
       return { type: 'unsupported', error: 'Unsupported file type' };
     }
 
-    // For images, use existing loadWorkerPhoto function
+    // 🎯 FIX: For images, use loadWorkerPhoto with proper path handling
     if (isImage) {
-      console.log('LoadWorkerDocument: Loading as image');
-      const image = await loadWorkerPhoto(pdfDoc, documentPath);
-      if (image) {
-        return { type: 'image', image };
-      } else {
-        return { type: 'unsupported', error: 'Failed to load image' };
+      console.log(`[LoadWorkerDocument] Processing as IMAGE: ${documentPath}`);
+      console.log(`[LoadWorkerDocument] 🔍 DEBUG - Full document path: ${documentPath}`);
+      console.log(`[LoadWorkerDocument] 🔍 DEBUG - File extension: ${documentPath.split('.').pop()}`);
+      
+      try {
+        const image = await loadWorkerPhoto(pdfDoc, documentPath);
+        if (image) {
+          console.log(`[LoadWorkerDocument] ✅ Image loaded successfully`);
+          return { type: 'image', image };
+        } else {
+          console.warn(`[LoadWorkerDocument] ⚠️ Image loading returned null for: ${documentPath}`);
+          return { type: 'unsupported', error: 'Failed to load image' };
+        }
+      } catch (error) {
+        console.error(`[LoadWorkerDocument] ❌ Image loading failed for: ${documentPath}`, error);
+        return { type: 'unsupported', error: `Image loading error: ${error}` };
       }
     }
 
-    // For PDF, load the PDF file
+    // For PDF, load the PDF file with enhanced error handling
     if (isPdf) {
-      console.log('LoadWorkerDocument: Loading as PDF');
+      console.log(`[LoadWorkerDocument] Processing as PDF: ${documentPath}`);
       const path = await import('path');
       const { readFile } = await import('fs/promises');
+      const { existsSync } = await import('fs');
       
       let finalPath: string;
+      let found = false;
       
       if (documentPath.startsWith('/api/files/')) {
         // Parse API file path: /api/files/{userId}/{category}/{filename}
@@ -403,21 +510,24 @@ export async function loadWorkerDocument(
           const filename = filenameParts.join('/');
           
           if (!userId || !category || !filename) {
-            console.warn('LoadWorkerDocument: Invalid API path structure');
-            finalPath = path.join(process.cwd(), 'public', documentPath.replace('/api/files/', '/uploads/'));
-          } else {
-            const categoryFolders: Record<string, string> = {
-              sika: 'dokumen-sika',
-              simja: 'dokumen-simja',
-              hsse: 'dokumen-hsse',
-              'hsse-worker': 'dokumen-hsse-pekerja',
-              document: 'dokumen',
-              'worker-photo': 'foto-pekerja'
-            };
-            
-            const folderName = categoryFolders[category] || category;
-            finalPath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+            console.warn('[LoadWorkerDocument] ⚠️ Invalid API path structure');
+            return { type: 'unsupported', error: 'Invalid path structure' };
           }
+          
+          // 🎯 CRITICAL: Enhanced category mapping for HSSE worker documents
+          const categoryFolders: Record<string, string> = {
+            sika: 'dokumen-sika',
+            simja: 'dokumen-simja',
+            hsse: 'dokumen-hsse',
+            'hsse-worker': 'dokumen-hsse-pekerja',  // ⭐ CRITICAL for HSSE docs
+            'worker-hsse': 'dokumen-hsse-pekerja',  // ⭐ Alternative naming
+            document: 'dokumen',
+            'worker-photo': 'foto-pekerja'
+          };
+          
+          const folderName = categoryFolders[category] || category;
+          finalPath = path.join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
+          console.log(`[LoadWorkerDocument] Mapped category "${category}" → folder "${folderName}"`);
         } else {
           finalPath = path.join(process.cwd(), 'public', documentPath.replace('/api/files/', '/uploads/'));
         }
@@ -429,36 +539,150 @@ export async function loadWorkerDocument(
         finalPath = documentPath;
       }
 
-      console.log('LoadWorkerDocument: Reading PDF from:', finalPath);
+      console.log(`[LoadWorkerDocument] Resolved primary path: ${finalPath}`);
       
-      try {
-        // Check if file exists
-        const { existsSync } = await import('fs');
-        if (!existsSync(finalPath)) {
-          console.error('LoadWorkerDocument: PDF file not found at:', finalPath);
+      // 🎯 FIX: Check file existence with smart fallback
+      if (!existsSync(finalPath)) {
+        console.log(`[LoadWorkerDocument] ⚠️ Not found at primary path`);
+        
+        // 🎯 SMART FALLBACK: Try alternative paths for HSSE worker documents
+        const alternatives: string[] = [];
+        
+        // Extract filename for alternative attempts
+        const filename = documentPath.split('/').pop() || '';
+        
+        if (documentPath.startsWith('/api/files/')) {
+          const apiParts = documentPath.split('/');
+          if (apiParts.length >= 5) {
+            const userId = apiParts[3];
+            const fname = apiParts.slice(5).join('/');
+            
+            if (userId && fname) {
+              alternatives.push(
+                // Try dokumen-hsse-pekerja folder
+                path.join(process.cwd(), 'public', 'uploads', userId, 'dokumen-hsse-pekerja', fname),
+                // Try direct uploads
+                path.join(process.cwd(), 'public', 'uploads', userId, fname),
+                // Try without category folder
+                path.join(process.cwd(), 'public', 'uploads', fname)
+              );
+            }
+          }
+        }
+        
+        // Standard fallback paths
+        alternatives.push(
+          path.join(process.cwd(), 'public', documentPath.replace('/api/files/', '/uploads/')),
+          path.join(process.cwd(), 'public', documentPath),
+          path.join(process.cwd(), 'public', 'uploads', documentPath),
+          path.join(process.cwd(), 'public', 'uploads', filename)
+        );
+        
+        // Try each unique alternative
+        const uniqueAlternatives = [...new Set(alternatives)];
+        console.log(`[LoadWorkerDocument] Trying ${uniqueAlternatives.length} alternative paths...`);
+        
+        found = false;
+        for (const altPath of uniqueAlternatives) {
+          if (altPath !== finalPath && existsSync(altPath)) {
+            console.log(`[LoadWorkerDocument] ✅ Found at alternative path: ${altPath}`);
+            finalPath = altPath;
+            found = true;
+            break;
+          }
+        }
+        
+        if (!found) {
+          console.error(`[LoadWorkerDocument] ❌ PDF not found at any location:`, {
+            originalPath: documentPath,
+            primaryPath: finalPath,
+            alternativesTried: uniqueAlternatives.length
+          });
           return { type: 'unsupported', error: 'PDF file not found' };
         }
+      } else {
+        console.log(`[LoadWorkerDocument] ✅ Found at primary path`);
+        found = true;
+      }
 
-        const pdfBytes = await readFile(finalPath);
-        console.log('LoadWorkerDocument: PDF file read, size:', pdfBytes.length, 'bytes');
+      try {
+        console.log(`[LoadWorkerDocument] Reading PDF file: ${finalPath}`);
         
-        const loadedPdf = await PDFDocument.load(pdfBytes, { 
-          ignoreEncryption: true,
-          updateMetadata: false 
-        });
+        // 🎯 FIX: Add timeout for file reading
+        const readPromise = readFile(finalPath);
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('File read timeout')), LOAD_TIMEOUT)
+        );
         
-        console.log('LoadWorkerDocument: Successfully loaded PDF with', loadedPdf.getPageCount(), 'pages');
-        return { type: 'pdf', pdfPages: loadedPdf };
+        const pdfBytes = await Promise.race([readPromise, timeoutPromise]);
+        console.log(`[LoadWorkerDocument] PDF bytes loaded: ${pdfBytes.length} bytes`);
+        
+        // 🎯 FIX: Validate PDF size (reject empty or too large PDFs)
+        if (pdfBytes.length === 0) {
+          console.error('[LoadWorkerDocument] ❌ PDF file is empty (0 bytes)');
+          return { type: 'unsupported', error: 'PDF file is empty' };
+        }
+        
+        if (pdfBytes.length > 50 * 1024 * 1024) { // 50MB max
+          console.error(`[LoadWorkerDocument] ❌ PDF file too large: ${pdfBytes.length} bytes`);
+          return { type: 'unsupported', error: 'PDF file too large (>50MB)' };
+        }
+        
+        console.log('[LoadWorkerDocument] Loading PDF with pdf-lib...');
+        
+        // 🎯 FIX: Try to load PDF with better error handling
+        try {
+          const loadedPdf = await PDFDocument.load(pdfBytes, { 
+            ignoreEncryption: true,
+            updateMetadata: false,
+            throwOnInvalidObject: false // Don't throw on minor PDF errors
+          });
+          
+          console.log('[LoadWorkerDocument] PDF loaded successfully');
+          
+          const pageCount = loadedPdf.getPageCount();
+          console.log(`[LoadWorkerDocument] PDF has ${pageCount} pages`);
+          
+          if (pageCount === 0) {
+            console.error('[LoadWorkerDocument] ❌ PDF has no pages');
+            return { type: 'unsupported', error: 'PDF has no pages' };
+          }
+          
+          console.log(`[LoadWorkerDocument] ✅ SUCCESS - PDF loaded with ${pageCount} page(s)`);
+          return { type: 'pdf', pdfPages: loadedPdf };
+          
+        } catch (pdfError) {
+          console.error('[LoadWorkerDocument] ❌ PDF parsing failed:', pdfError);
+          
+          // Try to determine error type
+          const errorStr = String(pdfError);
+          if (errorStr.includes('encrypt') || errorStr.includes('password')) {
+            return { type: 'unsupported', error: 'PDF is encrypted or password protected' };
+          } else if (errorStr.includes('Invalid PDF') || errorStr.includes('corrupted')) {
+            return { type: 'unsupported', error: 'PDF file is corrupted or invalid' };
+          } else {
+            return { type: 'unsupported', error: `PDF parsing error: ${errorStr.substring(0, 100)}` };
+          }
+        }
+        
       } catch (error) {
-        console.error('LoadWorkerDocument: Failed to load PDF:', error);
+        console.error('[LoadWorkerDocument] ❌ Failed to read/process PDF:', error);
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return { type: 'unsupported', error: `Failed to load PDF: ${errorMessage}` };
+        
+        if (errorMessage.includes('timeout')) {
+          return { type: 'unsupported', error: 'PDF file loading timeout (>5s)' };
+        }
+        
+        return { type: 'unsupported', error: `Failed to read PDF: ${errorMessage}` };
       }
     }
 
+    // Fallback for unknown file types
+    console.warn(`[LoadWorkerDocument] ⚠️ Unknown file type: ${documentPath}`);
     return { type: 'unsupported', error: 'Unknown file type' };
+    
   } catch (error) {
-    console.error('LoadWorkerDocument: Error loading document:', error);
+    console.error('[LoadWorkerDocument] ❌ Unexpected error:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     return { type: 'unsupported', error: errorMessage };
   }

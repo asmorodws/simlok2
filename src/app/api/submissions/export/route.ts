@@ -150,17 +150,48 @@ export async function GET(request: NextRequest) {
     // Generate Excel buffer
     const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
-    // Create filename with timestamp
-    const timestamp = new Date().toISOString().split('T')[0];
-    const rolePrefix = session.user.role === 'REVIEWER' ? 'reviewer' : 
-                      session.user.role === 'APPROVER' ? 'approver' : 'admin';
-    const filename = `submissions-export-${rolePrefix}-${timestamp}.xlsx`;
+    // Helper function to format date as YYYYMMDD
+    const formatDateForFilename = (dateString: string): string => {
+      const date = new Date(dateString);
+      const isoString = date.toISOString();
+      const datePart = isoString.split('T')[0];
+      return datePart ? datePart.replace(/-/g, '') : '';
+    };
+
+    // Create filename based on date range
+    let filename: string;
+    if (startDate && endDate) {
+      // Format: simlok_YYYYMMDD-YYYYMMDD.xlsx
+      const start = formatDateForFilename(startDate as string);
+      const end = formatDateForFilename(endDate as string);
+      filename = `simlok_${start}-${end}.xlsx`;
+    } else if (startDate) {
+      // Format: simlok_YYYYMMDD.xlsx (from start date onwards)
+      const start = formatDateForFilename(startDate as string);
+      const today = formatDateForFilename(new Date().toISOString());
+      filename = `simlok_${start}-${today}.xlsx`;
+    } else if (endDate) {
+      // Format: simlok_YYYYMMDD.xlsx (up to end date)
+      const end = formatDateForFilename(endDate as string);
+      filename = `simlok_until_${end}.xlsx`;
+    } else {
+      // No date filter - use export date
+      const today = formatDateForFilename(new Date().toISOString());
+      filename = `simlok_export_${today}.xlsx`;
+    }
+
+    console.log('📊 Excel export filename:', filename, {
+      startDate,
+      endDate,
+      submissionsCount: submissions.length
+    });
 
     // Return Excel file
     return new NextResponse(excelBuffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        'X-Excel-Filename': filename, // Custom header for reliable access
       },
     });
 

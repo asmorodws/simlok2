@@ -166,11 +166,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       // Format: sequential_number/S00330/YYYY (contoh: 1/S00330/2025, 2/S00330/2025)
       const timestamp = Date.now();
       const fallbackNumber = timestamp % 1000; // Simple fallback untuk preview
-      return `${fallbackNumber}/S00330/${year}`;
+      return `${fallbackNumber}/S00330/${year}-S0`;
     } catch (error) {
       // Fallback jika error
       const fallbackNumber = Math.floor(Math.random() * 1000) + 1;
-      return `${fallbackNumber}/S00330/${year}`;
+      return `${fallbackNumber}/S00330/${year}-S0`;
     }
   };
 

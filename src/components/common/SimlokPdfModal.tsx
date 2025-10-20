@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
@@ -19,23 +19,17 @@ export default function SimlokPdfModal({
   submissionName,
   nomorSimlok,
 }: SimlokPdfModalProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actualFilename, setActualFilename] = useState<string>('');
 
-  // Store reference to object URL for cleanup
-  const objectUrlRef = useRef<string | null>(null);
-
-  // Cleanup object URL ketika modal ditutup/unmount
-  useEffect(() => {
-    return () => {
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-    };
-  }, []);
+  // 🎯 KEY FIX: Generate API URL to point iframe DIRECTLY to endpoint
+  // This allows browser's "Save as" to read Content-Disposition header!
+  const pdfApiUrl = useMemo(() => {
+    if (!submissionId || !isOpen) return null;
+    const timestamp = Date.now();
+    return `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${timestamp}`;
+  }, [submissionId, isOpen]);
 
   // Esc key + body scroll lock
   useEffect(() => {
@@ -54,108 +48,51 @@ export default function SimlokPdfModal({
     };
   }, [isOpen, onClose]);
 
-  // Siapkan URL/pdf saat modal dibuka, cleanup saat ditutup
+  // Fetch filename from server for display (optional)
   useEffect(() => {
-    let cancelled = false;
-
-    async function prepare() {
-      if (!isOpen || !submissionId) {
-        // Reset state when modal is closed
-        setPdfUrl(null);
-        setError(null);
-        setLoading(true);
-        return;
-      }
-
-      setLoading(true);
+    if (!isOpen || !submissionId) {
+      setActualFilename('');
       setError(null);
+      return;
+    }
 
-      // bersihkan object URL lama
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
-      setPdfUrl(null);
-
+    const fetchFilename = async () => {
       try {
-        // Pakai timestamp supaya bypass cache dan clear server cache
-        const t = Date.now();
-        const apiUrl = `/api/submissions/${encodeURIComponent(
-          submissionId
-        )}?format=pdf&t=${t}&clearCache=true`;
-
-        console.log('SimlokPdfModal: Requesting PDF from:', apiUrl);
-
-        // Kalau endpoint protected, pakai credentials: 'include'
-        // dan mode 'same-origin' (default) supaya cookie terkirim
-        const res = await fetch(apiUrl, {
+        const res = await fetch(`/api/submissions/${submissionId}?format=pdf&t=${Date.now()}`, {
+          method: 'HEAD', // HEAD request to only get headers
           credentials: 'include',
-          cache: 'no-store', // Prevent caching of PDF requests
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'x-pdf-generation': 'true', // Mark as PDF generation request
-          }
         });
 
         if (!res.ok) {
-          // Try to get error details from response
-          try {
-            const errorData = await res.json();
-            throw new Error(errorData.error || `Gagal memuat PDF (${res.status})`);
-          } catch (jsonError) {
-            throw new Error(`Gagal memuat PDF (${res.status})`);
-          }
+          console.warn('Failed to fetch PDF headers');
+          return;
         }
 
-        console.log('SimlokPdfModal: PDF response received successfully');
-
-        // Get filename from server's Content-Disposition header
-        const contentDisposition = res.headers.get('Content-Disposition');
-        let serverFilename = ''; // will be set from server
-        
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (filenameMatch && filenameMatch[1]) {
-            serverFilename = filenameMatch[1].replace(/['"]/g, '');
-            console.log('SimlokPdfModal: Got filename from server:', serverFilename);
-          }
-        }
-
-        // Also check X-PDF-Filename header (custom header from our API)
+        // Get filename from headers
         const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
+        const contentDisposition = res.headers.get('Content-Disposition');
+        
+        let serverFilename = '';
+        
         if (pdfFilenameHeader) {
           serverFilename = pdfFilenameHeader;
-          console.log('SimlokPdfModal: Got filename from X-PDF-Filename header:', serverFilename);
+        } else if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            serverFilename = match[1].replace(/['"]/g, '');
+          }
         }
 
-        // Create blob URL directly (don't create File object as it doesn't help with download filename)
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        objectUrlRef.current = url;
-
-        console.log('SimlokPdfModal: PDF blob URL created, filename will be:', serverFilename);
-
-        if (!cancelled) {
-          setPdfUrl(url);
-          setActualFilename(serverFilename); // Save server filename for download
-          setLoading(false);
-          setError(null);
+        if (serverFilename) {
+          setActualFilename(serverFilename);
+          console.log('📄 PDF filename from server:', serverFilename);
         }
-      } catch (e: any) {
-        console.error('SimlokPdfModal: Error loading PDF:', e);
-        if (!cancelled) {
-          setError(e?.message || 'Gagal memuat dokumen PDF SIMLOK.');
-          setLoading(false);
-        }
+      } catch (err) {
+        console.warn('Error fetching PDF filename:', err);
       }
-    }
-
-    prepare();
-
-    return () => {
-      cancelled = true;
     };
+
+    fetchFilename();
   }, [isOpen, submissionId]);
 
   // Generate filename with SIMLOK number only (no vendor name)
@@ -336,31 +273,10 @@ export default function SimlokPdfModal({
                   <div className="space-x-4">
                     <button
                       onClick={() => {
-                        // trigger ulang effect dengan toggle isOpen sebentar
                         setError(null);
-                        // force reload dengan ganti submissionId param waktu
-                        // (cukup biarkan effect di atas jalan otomatis saat error==null + isOpen true)
-                        const t = Date.now();
-                        const apiUrl = `/api/submissions/${encodeURIComponent(
-                          submissionId
-                        )}?format=pdf&t=${t}`;
                         setLoading(true);
-                        fetch(apiUrl, { credentials: 'include' })
-                          .then(r => {
-                            if (!r.ok) throw new Error('Gagal memuat ulang');
-                            return r.blob();
-                          })
-                          .then(b => {
-                            if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-                            const url = URL.createObjectURL(b);
-                            objectUrlRef.current = url;
-                            setPdfUrl(url);
-                            setLoading(false);
-                          })
-                          .catch(e => {
-                            setLoading(false);
-                            setError(e?.message || 'Gagal memuat ulang dokumen');
-                          });
+                        // Force reload
+                        window.location.reload();
                       }}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
@@ -377,16 +293,21 @@ export default function SimlokPdfModal({
               </div>
             )}
 
-            {/* Hanya render iframe saat pdfUrl siap */}
-            {!error && pdfUrl && pdfUrl.trim() !== '' && (
+            {/* 🎯 KEY FIX: iframe points DIRECTLY to API endpoint, not blob URL! */}
+            {/* This allows browser's "Save as" to read Content-Disposition header */}
+            {!error && pdfApiUrl && (
               <iframe
-                key={pdfUrl} // re-mount saat URL berubah
-                src={pdfUrl}
+                key={pdfApiUrl}
+                src={pdfApiUrl}
                 className="w-full h-full border-0"
                 title={`SIMLOK - ${submissionName}`}
                 onLoad={() => {
-                  // sebagian browser tidak memanggil ini untuk blob URL; tidak masalah
                   setLoading(false);
+                  setError(null);
+                }}
+                onError={() => {
+                  setLoading(false);
+                  setError('Gagal memuat dokumen PDF SIMLOK');
                 }}
               />
             )}

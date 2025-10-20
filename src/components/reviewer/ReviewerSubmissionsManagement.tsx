@@ -125,12 +125,26 @@ export default function ReviewerSubmissionsManagement() {
         throw new Error('Gagal mengekspor data');
       }
 
+      // Get filename from server headers (most reliable)
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = 'Data_Pengajuan_SIMLOK.xlsx';
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/);
-        if (match && match[1]) filename = match[1];
+      const excelFilenameHeader = response.headers.get('X-Excel-Filename');
+      
+      let filename = 'simlok_export.xlsx'; // Default fallback
+      
+      // Try custom header first (most reliable)
+      if (excelFilenameHeader) {
+        filename = excelFilenameHeader;
+        console.log('📄 Excel filename from X-Excel-Filename header:', filename);
+      } else if (contentDisposition) {
+        // Parse from Content-Disposition header
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, '');
+          console.log('📄 Excel filename from Content-Disposition:', filename);
+        }
       }
+
+      console.log('📥 Downloading Excel file:', filename);
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);

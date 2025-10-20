@@ -414,7 +414,7 @@ async function main() {
     
     // Generate SIMLOK number with new format: autoincrement/S00330/tahun
     const year = approvedAt.getFullYear();
-    const simlokNumber = `${approvedSubmissions.length + 1}/S00330/${year}`;
+    const simlokNumber = `${approvedSubmissions.length + 1}/S00330/${year}-S0`;
     
     const updatedSubmission = await prisma.submission.update({
       where: { id: submission.id },

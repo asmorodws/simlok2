@@ -25,7 +25,7 @@ async function generateSimlokNumber(): Promise<string> {
       simlok_number: {
         not: null,
         // Filter untuk tahun yang sama: format nomor/S00330/YYYY
-        contains: `/S00330/${year}`
+        contains: `/S00330/${year}-S0`
       }
     },
     orderBy: [
@@ -46,7 +46,7 @@ async function generateSimlokNumber(): Promise<string> {
 
   // Format: autoincrement/S00330/tahun
   // Nomor akan mulai dari 1 lagi setiap tahun baru
-  return `${nextNumber}/S00330/${year}`;
+  return `${nextNumber}/S00330/${year}-S0`;
 }
 
 import { RouteParams } from '@/types';
