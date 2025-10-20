@@ -932,7 +932,7 @@ export default function SubmissionForm() {
                   </div>
                 </div>
                 <SupportDocumentList
-                  title="Dokumen HSSE Pass"
+                  title="Dokumen HSSE Pass (Opsional)"
                   documentType="HSSE"
                   documents={hsseDocuments}
                   onDocumentsChange={setHsseDocuments}
@@ -950,7 +950,7 @@ export default function SubmissionForm() {
                   </div>
                 </div>
                 <SupportDocumentList
-                  title="Dokumen Job Safety Analysis"
+                  title="Dokumen Job Safety Analysis (Opsional)"
                   documentType="JSA"
                   documents={jsaDocuments}
                   onDocumentsChange={setJsaDocuments}

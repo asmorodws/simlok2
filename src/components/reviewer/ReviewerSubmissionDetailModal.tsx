@@ -12,12 +12,10 @@ import {
   PencilIcon,
   TrashIcon,
   BuildingOfficeIcon,
-  UserIcon,
   BriefcaseIcon,
   DocumentIcon,
   DocumentArrowUpIcon,
   EyeIcon,
-  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
@@ -404,14 +402,14 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     setWorkingHours(value);
   }, []);
 
-  // Handle implementation dates change
-  const handleImplementationStartDateChange = useCallback((value: string) => {
-    setImplementationStartDate(value);
-  }, []);
+  // // Handle implementation dates change
+  // const handleImplementationStartDateChange = useCallback((value: string) => {
+  //   setImplementationStartDate(value);
+  // }, []);
 
-  const handleImplementationEndDateChange = useCallback((value: string) => {
-    setImplementationEndDate(value);
-  }, []);
+  // const handleImplementationEndDateChange = useCallback((value: string) => {
+  //   setImplementationEndDate(value);
+  // }, []);
 
   // Helper function to format date for Indonesian locale
   const formatDate = useCallback((dateStr: string | Date) => {

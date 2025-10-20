@@ -8,7 +8,7 @@ import {
   BuildingOfficeIcon,
   UserIcon,
   BriefcaseIcon,
-  CalendarIcon,
+  // CalendarIcon,
   CheckCircleIcon,
   XCircleIcon,
   ClockIcon as PendingIcon

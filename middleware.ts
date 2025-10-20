@@ -32,12 +32,13 @@ export async function middleware(req: NextRequest) {
   // Skip all checks for public paths (no authentication needed)
   if (pathname === "/login" || 
       pathname === "/signup" || 
+      pathname === "/verification-rejected" ||
       pathname.startsWith("/api/auth") ||
       pathname === "/") {
     return NextResponse.next();
   }
 
-  // read token (jwt) from cookie for all other paths
+  // Read token (jwt) from cookie for all other paths
   const token = await getToken({ 
     req, 
     secret: process.env.NEXTAUTH_SECRET || 'fallback-secret' 
@@ -45,24 +46,32 @@ export async function middleware(req: NextRequest) {
   
   // If no token, redirect to login for ALL paths (including verification-pending)
   if (!token) {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
-
-  // Validate session against database for ALL authenticated paths
-  // (including /verification-pending - must validate BEFORE allowing access)
-  const sessionToken = (token as any).sessionToken as string | undefined;
-  const userId = token.sub;
-  
-  // If no session token in JWT, this is an old session - force logout
-  if (!sessionToken) {
-    console.log('No session token found in JWT (old session), forcing logout');
+    console.log('Middleware - No token found, redirecting to login');
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", "Sesi lama terdeteksi, silakan login kembali");
+    url.searchParams.set("reason", "Sesi tidak ditemukan, silakan login kembali");
+    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    
+    // Clear ALL auth cookies
+    const response = NextResponse.redirect(url);
+    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
+    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
+    return response;
+  }
+
+  // Validate session against database for ALL authenticated paths
+  // This is CRITICAL - even /verification-pending must have a VALID database session
+  const sessionToken = (token as any).sessionToken as string | undefined;
+  const userId = token.sub;
+  
+  // If no session token in JWT, this is an old/invalid session - force logout
+  if (!sessionToken) {
+    console.log('Middleware - No session token in JWT (old/invalid session), forcing logout');
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("session_expired", "true");
+    url.searchParams.set("reason", "Sesi tidak valid, silakan login kembali");
     
     // Clear ALL auth cookies
     const response = NextResponse.redirect(url);
@@ -73,28 +82,29 @@ export async function middleware(req: NextRequest) {
     response.cookies.set('next-auth.csrf-token', '', { maxAge: 0, path: '/' });
     response.cookies.set('__Host-next-auth.csrf-token', '', { maxAge: 0, path: '/' });
     
-    // Also clean up any database sessions for this user if userId exists
+    // Clean up any database sessions for this user if userId exists
     if (userId) {
       try {
         await SessionService.deleteAllUserSessions(userId);
-        console.log(`Cleaned up all sessions for user: ${userId}`);
+        console.log(`Middleware - Cleaned up all sessions for user: ${userId}`);
       } catch (error) {
-        console.error('Error cleaning up user sessions:', error);
+        console.error('Middleware - Error cleaning up user sessions:', error);
       }
     }
     
     return response;
   }
   
-  // Validate session against database
+  // CRITICAL: Validate session against database - this prevents access with expired/deleted sessions
+  console.log(`Middleware - Validating database session: ${sessionToken.substring(0, 10)}...`);
   const validation = await SessionService.validateSession(sessionToken);
   
   if (!validation.isValid) {
-    console.log(`Session validation failed: ${validation.reason}`);
+    console.log(`Middleware - Session validation FAILED: ${validation.reason}`);
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", validation.reason || "Sesi tidak valid");
+    url.searchParams.set("reason", validation.reason || "Sesi tidak valid atau sudah kadaluarsa");
     
     // Clear ALL auth cookies
     const response = NextResponse.redirect(url);
@@ -107,9 +117,29 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  // Session is valid, now check if this is /verification-pending
-  // Allow access to verification-pending page with valid session (even if not verified)
+  console.log(`Middleware - Session validation SUCCESS for user: ${validation.user?.email}`);
+
+  // Session is valid! Now check the specific path
+  // /verification-pending: Allow access with valid session (even if not verified)
   if (pathname === "/verification-pending") {
+    // Additional check: user must NOT be verified to access this page
+    const verified_at = (token as any).verified_at as string | undefined;
+    if (verified_at) {
+      console.log('Middleware - User already verified, redirecting from verification-pending');
+      // User is already verified, redirect to dashboard
+      const userRole = (token as any).role as string | undefined;
+      const url = req.nextUrl.clone();
+      if (userRole === 'VENDOR') url.pathname = '/vendor';
+      else if (userRole === 'VERIFIER') url.pathname = '/verifier';
+      else if (userRole === 'REVIEWER') url.pathname = '/reviewer';
+      else if (userRole === 'APPROVER') url.pathname = '/approver';
+      else if (userRole === 'SUPER_ADMIN') url.pathname = '/super-admin';
+      else if (userRole === 'VISITOR') url.pathname = '/visitor';
+      else url.pathname = '/dashboard';
+      return NextResponse.redirect(url);
+    }
+    // User has valid session but not verified - allow access to verification-pending
+    console.log('Middleware - Allowing access to verification-pending (valid session, not verified)');
     return NextResponse.next();
   }
 
