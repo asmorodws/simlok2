@@ -254,11 +254,19 @@ export class SessionService {
    */
   static async deleteSession(sessionToken: string): Promise<void> {
     try {
-      await prisma.session.delete({
+      // Use deleteMany instead of delete to avoid P2025 error when record doesn't exist
+      const result = await prisma.session.deleteMany({
         where: { sessionToken },
       });
+      
+      if (result.count === 0) {
+        console.log(`⚠️ Session not found for deletion: ${sessionToken.substring(0, 10)}...`);
+      } else {
+        console.log(`✅ Session deleted successfully: ${sessionToken.substring(0, 10)}...`);
+      }
     } catch (error) {
       console.error('Error deleting session:', error);
+      // Don't throw - just log the error
     }
   }
 

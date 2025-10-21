@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignUpForm from "@/components/auth/SignUpForm";
 
@@ -90,8 +91,29 @@ export default function SignupPage() {
       if (!res.ok) {
         setError(data.error || "Terjadi kesalahan saat mendaftar");
       } else {
-        // Registration successful - redirect to verification pending page
-        router.push("/verification-pending");
+        // Registration successful! Now auto-login the user
+        console.log("Registration successful, auto-logging in...");
+        
+        // Use NextAuth signIn to create a session
+        const signInResult = await signIn("credentials", {
+          redirect: false, // Don't auto-redirect, we'll handle it manually
+          email: email.trim().toLowerCase(),
+          password: password,
+        });
+
+        if (signInResult?.error) {
+          console.error("Auto-login failed:", signInResult.error);
+          // Even if auto-login fails, still inform user registration was successful
+          setError("Pendaftaran berhasil! Namun terjadi kesalahan saat login otomatis. Silakan login manual.");
+          // Redirect to login page after 2 seconds
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
+        } else {
+          // Auto-login successful! Redirect to verification-pending
+          console.log("Auto-login successful, redirecting to verification-pending");
+          router.push("/verification-pending");
+        }
       }
     } catch (error) {
       console.error("Registration error:", error);

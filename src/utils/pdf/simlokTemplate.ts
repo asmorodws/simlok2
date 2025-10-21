@@ -766,13 +766,14 @@ async function addSupportingDocumentsPage(
 ) {
   console.log('[AddSupportingDocumentsPage] Creating documents pages...');
   
-  // Collect all documents to display
+  // Collect all documents to display - GROUPED BY DOCUMENT TYPE
   interface DocInfo {
     path: string;
     title: string;
     subtitle?: string;
     number?: string;
     date?: string;
+    documentType: string; // NEW: Track document type for grouping
   }
   
   const documents: DocInfo[] = [];
@@ -794,7 +795,8 @@ async function addSupportingDocumentsPage(
         title: 'SIMJA',
         subtitle: doc.document_subtype || '',
         number: doc.document_number || '-',
-        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-',
+        documentType: 'SIMJA'
       });
     });
     
@@ -805,7 +807,8 @@ async function addSupportingDocumentsPage(
         title: 'SIKA',
         subtitle: doc.document_subtype || '',
         number: doc.document_number || '-',
-        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-',
+        documentType: 'SIKA'
       });
     });
     
@@ -816,7 +819,8 @@ async function addSupportingDocumentsPage(
         title: 'HSSE Pass',
         subtitle: doc.document_subtype || '',
         number: doc.document_number || '-',
-        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-',
+        documentType: 'HSSE'
       });
     });
 
@@ -827,7 +831,8 @@ async function addSupportingDocumentsPage(
         title: 'Job Safety Analysis',
         subtitle: '',
         number: doc.document_number || '-',
-        date: doc.document_date ? fmtDateID(doc.document_date) : '-'
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-',
+        documentType: 'JSA'
       });
     });
   } else {
@@ -840,7 +845,8 @@ async function addSupportingDocumentsPage(
         title: 'SIMJA',
         subtitle: s.simja_type || '',
         number: s.simja_number || '-',
-        date: s.simja_date ? fmtDateID(s.simja_date) : '-'
+        date: s.simja_date ? fmtDateID(s.simja_date) : '-',
+        documentType: 'SIMJA'
       });
     }
     
@@ -850,7 +856,8 @@ async function addSupportingDocumentsPage(
         title: 'SIKA',
         subtitle: s.sika_type || '',
         number: s.sika_number || '-',
-        date: s.sika_date ? fmtDateID(s.sika_date) : '-'
+        date: s.sika_date ? fmtDateID(s.sika_date) : '-',
+        documentType: 'SIKA'
       });
     }
     
@@ -860,7 +867,8 @@ async function addSupportingDocumentsPage(
         title: 'HSSE Pass',
         subtitle: '',
         number: s.hsse_pass_number || '-',
-        date: s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '-'
+        date: s.hsse_pass_valid_thru ? fmtDateID(s.hsse_pass_valid_thru) : '-',
+        documentType: 'HSSE'
       });
     }
   }
@@ -872,7 +880,7 @@ async function addSupportingDocumentsPage(
     return;
   }
   
-  // Load all documents and extract pages
+  // Load all documents and extract pages - WITH DOCUMENT TYPE TRACKING
   interface PageInfo {
     docTitle: string;
     docSubtitle: string;
@@ -883,6 +891,7 @@ async function addSupportingDocumentsPage(
     embeddedPage: any;
     isImage: boolean;
     image?: any;
+    documentType: string; // NEW: Track document type for grouping separators
   }
   
   const allPages: PageInfo[] = [];
@@ -904,7 +913,8 @@ async function addSupportingDocumentsPage(
           totalPages: 1,
           embeddedPage: null,
           isImage: true,
-          image: documentResult.image
+          image: documentResult.image,
+          documentType: doc.documentType
         });
         console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
         
@@ -930,7 +940,8 @@ async function addSupportingDocumentsPage(
             pageNumber: index + 1,
             totalPages: pageCount,
             embeddedPage,
-            isImage: false
+            isImage: false,
+            documentType: doc.documentType
           });
         });
         
@@ -950,24 +961,81 @@ async function addSupportingDocumentsPage(
     return;
   }
   
-  // Layout: 2 pages per output page, side by side
+  // Layout: 2 pages per output page, side by side - WITH DOCUMENT TYPE SEPARATORS
   const pagesPerOutputPage = 2;
   const pageWidth = 240;  // Width for each document page
   const pageHeight = 340; // Height for each document page
   const horizontalGap = 30;
   
   let currentPageIndex = 0;
+  let lastDocumentType = ''; // Track last document type to add separators
   
   while (currentPageIndex < allPages.length) {
+    // Check if we need a document type separator
+    const currentPage = allPages[currentPageIndex];
+    if (!currentPage) break;
+    
+    const currentDocType = currentPage.documentType;
+    const needsSeparator = currentDocType !== lastDocumentType;
+    
     // Add new output page
     await k.addPage('documents');
     const { page } = k;
     const { width, height } = page.getSize();
     
-    const startY = height - 140;
+    let startY = height - 140;
+    
+    // Add document type separator header if needed
+    if (needsSeparator) {
+      const separatorY = startY + 20;
+      
+      // Get document type label
+      let typeLabel = '';
+      switch (currentDocType) {
+        case 'SIMJA':
+          typeLabel = 'DOKUMEN SIMJA';
+          break;
+        case 'SIKA':
+          typeLabel = 'DOKUMEN SIKA';
+          break;
+        case 'HSSE':
+          typeLabel = 'DOKUMEN HSSE PASS';
+          break;
+        case 'JSA':
+          typeLabel = 'DOKUMEN JOB SAFETY ANALYSIS';
+          break;
+        default:
+          typeLabel = currentDocType;
+      }
+      
+
+      // Draw separator text
+      k.text(typeLabel, MARGIN + 15, separatorY - 30, { 
+        bold: true, 
+        size: 11,
+        color: rgb(0.2, 0.2, 0.2)
+      });
+      
+      // Adjust startY to account for separator
+      startY = separatorY - 45;
+      lastDocumentType = currentDocType;
+      
+      console.log(`[AddSupportingDocumentsPage] Added separator for document type: ${typeLabel}`);
+    }
     
     // Calculate how many pages to render on this output page (max 2)
-    const endIndex = Math.min(currentPageIndex + pagesPerOutputPage, allPages.length);
+    // BUT: If document type changes mid-page, only render 1 to keep grouping clean
+    let endIndex = Math.min(currentPageIndex + pagesPerOutputPage, allPages.length);
+    
+    // Check if next page has different document type - if so, only render current page
+    if (endIndex > currentPageIndex + 1) {
+      const nextPage = allPages[currentPageIndex + 1];
+      if (nextPage && nextPage.documentType !== currentDocType) {
+        endIndex = currentPageIndex + 1; // Only render current page
+        console.log(`[AddSupportingDocumentsPage] Document type change detected, rendering only 1 page to keep grouping`);
+      }
+    }
+    
     const pagesToRender = endIndex - currentPageIndex;
     
     // Calculate starting X to center the pages
