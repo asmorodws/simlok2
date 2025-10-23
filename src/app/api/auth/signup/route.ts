@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
         role: true,
         created_at: true,
         verified_at: true,
+        verification_status: true,
       }
     });
 
@@ -167,8 +168,9 @@ export async function POST(req: NextRequest) {
     await notifyReviewerNewUser(newUser.id);
 
     // Log successful registration (for audit purposes)
-    console.log(`New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);
+    console.log(`✅ New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);
 
+    // Return response - let NextAuth handle session creation
     return NextResponse.json(
       { 
         message: "Pendaftiran berhasil! Akun Anda sedang menunggu verifikasi admin.", 
@@ -179,7 +181,8 @@ export async function POST(req: NextRequest) {
           vendor_name: newUser.vendor_name,
           role: newUser.role,
           verified: !!newUser.verified_at,
-        }
+        },
+        redirectTo: "/verification-pending",
       },
       { status: 201 }
     );

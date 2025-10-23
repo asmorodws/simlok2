@@ -38,147 +38,132 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Read token (jwt) from cookie for all other paths
+  // Get JWT token from cookie
   const token = await getToken({ 
     req, 
     secret: process.env.NEXTAUTH_SECRET || 'fallback-secret' 
   });
   
-  // If no token, redirect to login for ALL paths (including verification-pending)
   if (!token) {
-    console.log('Middleware - No token found, redirecting to login');
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", "Sesi tidak ditemukan, silakan login kembali");
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname);
-    
-    // Clear ALL auth cookies
-    const response = NextResponse.redirect(url);
-    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
-    return response;
+    return redirectToLogin(req, 'Sesi tidak ditemukan, silakan login');
   }
 
-  // Validate session against database for ALL authenticated paths
-  // This is CRITICAL - even /verification-pending must have a VALID database session
+  // Extract sessionToken from JWT
   const sessionToken = (token as any).sessionToken as string | undefined;
   const userId = token.sub;
   
-  // If no session token in JWT, this is an old/invalid session - force logout
+  // No sessionToken = Old/Invalid JWT token
   if (!sessionToken) {
-    console.log('Middleware - No session token in JWT (old/invalid session), forcing logout');
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", "Sesi tidak valid, silakan login kembali");
-    
-    // Clear ALL auth cookies
-    const response = NextResponse.redirect(url);
-    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('next-auth.callback-url', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Secure-next-auth.callback-url', '', { maxAge: 0, path: '/' });
-    response.cookies.set('next-auth.csrf-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Host-next-auth.csrf-token', '', { maxAge: 0, path: '/' });
-    
-    // Clean up any database sessions for this user if userId exists
     if (userId) {
-      try {
-        await SessionService.deleteAllUserSessions(userId);
-        console.log(`Middleware - Cleaned up all sessions for user: ${userId}`);
-      } catch (error) {
-        console.error('Middleware - Error cleaning up user sessions:', error);
-      }
+      await SessionService.deleteAllUserSessions(userId).catch(() => {});
     }
-    
-    return response;
+    return redirectToLogin(req, 'Sesi tidak valid', true);
   }
   
-  // CRITICAL: Validate session against database - this prevents access with expired/deleted sessions
-  console.log(`Middleware - Validating database session: ${sessionToken.substring(0, 10)}...`);
+  // Validate session with database (single source of truth)
   const validation = await SessionService.validateSession(sessionToken);
   
   if (!validation.isValid) {
-    console.log(`Middleware - Session validation FAILED: ${validation.reason}`);
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", validation.reason || "Sesi tidak valid atau sudah kadaluarsa");
-    
-    // Clear ALL auth cookies
-    const response = NextResponse.redirect(url);
-    response.cookies.set('next-auth.session-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Secure-next-auth.session-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('next-auth.callback-url', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Secure-next-auth.callback-url', '', { maxAge: 0, path: '/' });
-    response.cookies.set('next-auth.csrf-token', '', { maxAge: 0, path: '/' });
-    response.cookies.set('__Host-next-auth.csrf-token', '', { maxAge: 0, path: '/' });
-    return response;
+    return redirectToLogin(req, validation.reason || 'Sesi tidak valid', true);
   }
 
-  console.log(`Middleware - Session validation SUCCESS for user: ${validation.user?.email}`);
-
-  // Session is valid! Now check the specific path
-  // /verification-pending: Allow access with valid session (even if not verified)
+  // Special handling for /verification-pending
   if (pathname === "/verification-pending") {
-    // Additional check: user must NOT be verified to access this page
-    const verified_at = (token as any).verified_at as string | undefined;
-    if (verified_at) {
-      console.log('Middleware - User already verified, redirecting from verification-pending');
-      // User is already verified, redirect to dashboard
-      const userRole = (token as any).role as string | undefined;
-      const url = req.nextUrl.clone();
-      if (userRole === 'VENDOR') url.pathname = '/vendor';
-      else if (userRole === 'VERIFIER') url.pathname = '/verifier';
-      else if (userRole === 'REVIEWER') url.pathname = '/reviewer';
-      else if (userRole === 'APPROVER') url.pathname = '/approver';
-      else if (userRole === 'SUPER_ADMIN') url.pathname = '/super-admin';
-      else if (userRole === 'VISITOR') url.pathname = '/visitor';
-      else url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+    if (validation.user?.verified_at) {
+      return redirectToDashboard(validation.user.role);
     }
-    // User has valid session but not verified - allow access to verification-pending
-    console.log('Middleware - Allowing access to verification-pending (valid session, not verified)');
     return NextResponse.next();
   }
 
-  // For other protected routes, continue with role and verification checks
+  // Check role-based access for protected routes
   const matched = protectedRoutes.find((r) => pathname.startsWith(r.prefix));
-  if (!matched) return NextResponse.next();
+  if (!matched) {
+    return NextResponse.next();
+  }
 
-  // token may have role (set in callbacks.jwt)
-  const userRole = (token as any).role as string | undefined;
-  const verified_at = (token as any).verified_at as string | undefined;
-
-  console.log('Middleware - pathname:', pathname);
-  console.log('Middleware - userRole:', userRole);
-  console.log('Middleware - verified_at:', verified_at);
-
+  const userRole = validation.user?.role;
   if (!userRole) {
-    // No role means invalid session - redirect to login, NOT verification-pending
-    console.log('Middleware - No user role found, redirecting to login');
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("session_expired", "true");
-    url.searchParams.set("reason", "Sesi tidak valid, silakan login kembali");
-    return NextResponse.redirect(url);
+    return redirectToLogin(req, 'Role tidak ditemukan', true);
   }
 
   // Check if user is verified (except for super admin, reviewer, and approver)
-  // Only redirect to verification-pending if user has valid session but not verified
-  if (userRole !== "SUPER_ADMIN" && userRole !== "REVIEWER" && userRole !== "APPROVER" && !verified_at) {
-    console.log('Middleware - User not verified, redirecting to verification-pending');
+  if (userRole !== "SUPER_ADMIN" && 
+      userRole !== "REVIEWER" && 
+      userRole !== "APPROVER" && 
+      !validation.user?.verified_at) {
     const url = req.nextUrl.clone();
     url.pathname = "/verification-pending";
     return NextResponse.redirect(url);
   }
 
+  // Check role hierarchy
   if (roleHierarchy[userRole as Role] < roleHierarchy[matched.minRole]) {
     return new NextResponse("Forbidden", { status: 403 });
   }
 
   return NextResponse.next();
+}
+
+/**
+ * Helper: Redirect to login with session cleanup
+ */
+function redirectToLogin(
+  req: NextRequest, 
+  reason: string, 
+  clearCookies: boolean = false
+): NextResponse {
+  const url = req.nextUrl.clone();
+  url.pathname = "/login";
+  url.searchParams.set("session_expired", "true");
+  url.searchParams.set("reason", reason);
+  url.searchParams.set("callbackUrl", req.nextUrl.pathname);
+  
+  const response = NextResponse.redirect(url);
+  
+  if (clearCookies) {
+    // Clear ALL NextAuth cookies
+    const cookieOptions = { maxAge: 0, path: '/' };
+    response.cookies.set('next-auth.session-token', '', cookieOptions);
+    response.cookies.set('__Secure-next-auth.session-token', '', cookieOptions);
+    response.cookies.set('next-auth.callback-url', '', cookieOptions);
+    response.cookies.set('__Secure-next-auth.callback-url', '', cookieOptions);
+    response.cookies.set('next-auth.csrf-token', '', cookieOptions);
+    response.cookies.set('__Host-next-auth.csrf-token', '', cookieOptions);
+  }
+  
+  return response;
+}
+
+/**
+ * Helper: Redirect to role-appropriate dashboard
+ */
+function redirectToDashboard(role: string): NextResponse {
+  const url = new URL('/', process.env.NEXTAUTH_URL || 'http://localhost:3000');
+  
+  switch (role) {
+    case 'SUPER_ADMIN':
+      url.pathname = '/super-admin';
+      break;
+    case 'APPROVER':
+      url.pathname = '/approver';
+      break;
+    case 'REVIEWER':
+      url.pathname = '/reviewer';
+      break;
+    case 'VERIFIER':
+      url.pathname = '/verifier';
+      break;
+    case 'VISITOR':
+      url.pathname = '/visitor';
+      break;
+    case 'VENDOR':
+      url.pathname = '/vendor';
+      break;
+    default:
+      url.pathname = '/dashboard';
+  }
+  
+  return NextResponse.redirect(url);
 }
 
 // apply to all routes; tune matcher as needed

@@ -91,28 +91,44 @@ export default function SignupPage() {
       if (!res.ok) {
         setError(data.error || "Terjadi kesalahan saat mendaftar");
       } else {
-        // Registration successful! Now auto-login the user
-        console.log("Registration successful, auto-logging in...");
+        // Registration successful!
+        console.log("✅ Registration successful!", data);
         
-        // Use NextAuth signIn to create a session
+        // Auto-login after registration
+        // Use skip_turnstile flag because Turnstile token was already used during signup
+        console.log("🔄 Auto-login after registration...");
+        
         const signInResult = await signIn("credentials", {
-          redirect: false, // Don't auto-redirect, we'll handle it manually
+          redirect: false,
           email: email.trim().toLowerCase(),
           password: password,
+          skip_turnstile: "true", // Skip Turnstile - already validated during signup
         });
 
+        console.log("🔍 SignIn result:", signInResult);
+
         if (signInResult?.error) {
-          console.error("Auto-login failed:", signInResult.error);
-          // Even if auto-login fails, still inform user registration was successful
+          console.error("❌ Auto-login failed:", signInResult.error);
           setError("Pendaftaran berhasil! Namun terjadi kesalahan saat login otomatis. Silakan login manual.");
-          // Redirect to login page after 2 seconds
           setTimeout(() => {
             router.push("/login");
           }, 2000);
+        } else if (signInResult?.ok) {
+          console.log("✅ Auto-login successful!");
+          console.log("⏳ Waiting for session to be ready...");
+          
+          // Wait a bit for session to be properly set before redirecting
+          // This ensures server-side session check will succeed
+          setTimeout(() => {
+            console.log("🔄 Redirecting to verification-pending...");
+            router.push("/verification-pending");
+          }, 1000); // 1 second delay to ensure session is set
         } else {
-          // Auto-login successful! Redirect to verification-pending
-          console.log("Auto-login successful, redirecting to verification-pending");
-          router.push("/verification-pending");
+          console.warn("⚠️ SignIn returned unexpected result:", signInResult);
+          setError("Pendaftaran berhasil! Silakan login manual.");
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
         }
       }
     } catch (error) {

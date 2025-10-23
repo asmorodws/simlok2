@@ -1,6 +1,13 @@
 /**
  * Session Service - Centralized session management
- * Best practices implementation for NextAuth + Database sessions
+ * Single Source of Truth: Database Only
+ * 
+ * Key Principles:
+ * 1. Database is the ONLY source of truth for sessions
+ * 2. JWT tokens are just identifiers to database sessions
+ * 3. Every request MUST validate against database
+ * 4. No session data stored in JWT (only sessionToken reference)
+ * 5. Auto-cleanup of expired/orphaned sessions
  */
 
 import { prisma } from '@/lib/singletons';
@@ -27,6 +34,7 @@ export interface UserSessionInfo {
   verified_at: Date | null;
   verification_status: VerificationStatus;
   isActive: boolean;
+  created_at: Date;
 }
 
 export interface SessionValidationResult {
@@ -42,9 +50,12 @@ export class SessionService {
   private static readonly SESSION_IDLE_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours idle timeout
   private static readonly SESSION_ABSOLUTE_TIMEOUT = 7 * 24 * 60 * 60 * 1000; // 7 days absolute timeout
   private static readonly ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Update activity every 5 minutes
+  private static readonly MAX_SESSIONS_PER_USER = 5; // Limit concurrent sessions per user
 
   /**
    * Create a new session in database
+   * This is the ONLY way to create a valid session
+   * Automatically limits concurrent sessions per user
    */
   static async createSession(
     userId: string,
@@ -59,9 +70,24 @@ export class SessionService {
       const now = new Date();
       const expires = new Date(now.getTime() + expiresInMs);
 
-      // Clean up old sessions for this user (keep only last 5)
-      await this.cleanupUserSessions(userId, 5);
+      // Verify user exists and is active
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, isActive: true }
+      });
 
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      if (!user.isActive) {
+        throw new Error('User account is deactivated');
+      }
+
+      // Clean up old sessions BEFORE creating new one (keep only N-1 most recent)
+      await this.cleanupUserSessions(userId, this.MAX_SESSIONS_PER_USER - 1);
+
+      // Create new session
       const session = await prisma.session.create({
         data: {
           sessionToken,
@@ -72,6 +98,19 @@ export class SessionService {
           ipAddress: metadata?.ipAddress || null,
           userAgent: metadata?.userAgent || null,
         },
+      });
+
+      console.log(`✅ Created new session for user ${userId}: ${sessionToken.substring(0, 10)}...`);
+
+      // Update user's last active time
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          lastActiveAt: now,
+          sessionExpiry: expires
+        }
+      }).catch(err => {
+        console.error('Error updating user lastActiveAt:', err);
       });
 
       return {
@@ -85,19 +124,21 @@ export class SessionService {
         userAgent: session.userAgent || null,
       };
     } catch (error) {
-      console.error('Error creating session:', error);
-      throw new Error('Failed to create session');
+      console.error('❌ Error creating session:', error);
+      throw error;
     }
   }
 
   /**
    * Validate session and get user data
+   * This is called on EVERY request to ensure session is still valid
+   * Database is the single source of truth
    */
   static async validateSession(sessionToken: string): Promise<SessionValidationResult> {
     try {
       const now = new Date();
 
-      // Find session with user data
+      // Find session with user data in ONE query (performance optimization)
       const session = await prisma.session.findUnique({
         where: { sessionToken },
         include: {
@@ -118,67 +159,80 @@ export class SessionService {
         },
       });
 
-      // Session not found
+      // Session not found in database = INVALID
       if (!session) {
+        console.log(`❌ Session validation failed: Session not found in database`);
         return {
           isValid: false,
-          reason: 'Session not found',
+          reason: 'Session tidak ditemukan di database',
         };
       }
 
-      // Session expired
+      // Session expired = INVALID (delete it)
       if (session.expires < now) {
+        console.log(`❌ Session expired: ${sessionToken.substring(0, 10)}...`);
         await this.deleteSession(sessionToken);
         return {
           isValid: false,
-          reason: 'Session expired',
+          reason: 'Session telah kadaluarsa',
         };
       }
 
-      // Check idle timeout
+      // Check idle timeout (last activity too long ago)
       const lastActivity = session.lastActivityAt || session.createdAt || now;
       const idleTime = now.getTime() - lastActivity.getTime();
       if (idleTime > this.SESSION_IDLE_TIMEOUT) {
+        console.log(`❌ Session idle timeout: ${Math.round(idleTime / 60000)} minutes`);
         await this.deleteSession(sessionToken);
         return {
           isValid: false,
-          reason: 'Session idle timeout',
+          reason: 'Session tidak aktif terlalu lama (idle timeout)',
         };
       }
 
-      // Check absolute timeout (from creation)
+      // Check absolute timeout (session age too old)
       const sessionAge = now.getTime() - (session.createdAt?.getTime() || 0);
       if (sessionAge > this.SESSION_ABSOLUTE_TIMEOUT) {
+        console.log(`❌ Session absolute timeout: ${Math.round(sessionAge / 86400000)} days old`);
         await this.deleteSession(sessionToken);
         return {
           isValid: false,
-          reason: 'Session absolute timeout reached',
+          reason: 'Session telah melewati batas waktu maksimum',
         };
       }
 
-      // User not found (shouldn't happen with foreign key, but check anyway)
+      // User not found (foreign key should prevent this, but check anyway)
       if (!session.user) {
+        console.log(`❌ User not found for session`);
         await this.deleteSession(sessionToken);
         return {
           isValid: false,
-          reason: 'User not found',
+          reason: 'User tidak ditemukan',
         };
       }
 
-      // User account is deactivated
+      // User account is deactivated = INVALID (delete session)
       if (!session.user.isActive) {
+        console.log(`❌ User account deactivated: ${session.user.email}`);
         await this.deleteSession(sessionToken);
         return {
           isValid: false,
-          reason: 'User account is deactivated',
+          reason: 'Akun telah dinonaktifkan',
         };
       }
 
-      // Update activity timestamp (throttled)
+      // ✅ ALL CHECKS PASSED - Session is VALID
+      
+      // Update activity timestamp (throttled to reduce DB writes)
       const timeSinceLastUpdate = now.getTime() - lastActivity.getTime();
       if (timeSinceLastUpdate > this.ACTIVITY_UPDATE_INTERVAL) {
-        await this.updateSessionActivity(sessionToken);
+        await this.updateSessionActivity(sessionToken).catch(err => {
+          console.error('Warning: Failed to update session activity:', err);
+          // Don't fail validation if activity update fails
+        });
       }
+
+      console.log(`✅ Session valid for user: ${session.user.email}`);
 
       return {
         isValid: true,
@@ -195,10 +249,10 @@ export class SessionService {
         },
       };
     } catch (error) {
-      console.error('Error validating session:', error);
+      console.error('❌ Error validating session:', error);
       return {
         isValid: false,
-        reason: 'Session validation error',
+        reason: 'Terjadi kesalahan saat validasi session',
       };
     }
   }
@@ -250,47 +304,60 @@ export class SessionService {
   }
 
   /**
-   * Delete a specific session
+   * Delete a specific session from database
+   * Called when session is invalid, expired, or user logs out
    */
   static async deleteSession(sessionToken: string): Promise<void> {
     try {
-      // Use deleteMany instead of delete to avoid P2025 error when record doesn't exist
+      // Use deleteMany to avoid P2025 error if record doesn't exist
       const result = await prisma.session.deleteMany({
         where: { sessionToken },
       });
       
       if (result.count === 0) {
-        console.log(`⚠️ Session not found for deletion: ${sessionToken.substring(0, 10)}...`);
+        console.log(`⚠️  Session not found for deletion: ${sessionToken.substring(0, 10)}...`);
       } else {
-        console.log(`✅ Session deleted successfully: ${sessionToken.substring(0, 10)}...`);
+        console.log(`✅ Session deleted: ${sessionToken.substring(0, 10)}...`);
       }
     } catch (error) {
-      console.error('Error deleting session:', error);
-      // Don't throw - just log the error
+      console.error('❌ Error deleting session:', error);
+      // Don't throw - session deletion should not break the flow
     }
   }
 
   /**
    * Delete all sessions for a user
+   * Called on logout, password change, or account deactivation
    */
-  static async deleteAllUserSessions(userId: string): Promise<void> {
+  static async deleteAllUserSessions(userId: string): Promise<number> {
     try {
-      await prisma.session.deleteMany({
+      const result = await prisma.session.deleteMany({
         where: { userId },
       });
 
-      // Also update user's lastActiveAt
+      console.log(`✅ Deleted ${result.count} sessions for user: ${userId}`);
+
+      // Clear user's session-related fields
       await prisma.user.update({
         where: { id: userId },
-        data: { lastActiveAt: null, sessionExpiry: null },
+        data: { 
+          lastActiveAt: null, 
+          sessionExpiry: null 
+        }
+      }).catch(err => {
+        console.error('Warning: Failed to clear user session fields:', err);
       });
+
+      return result.count;
     } catch (error) {
-      console.error('Error deleting user sessions:', error);
+      console.error('❌ Error deleting user sessions:', error);
+      return 0;
     }
   }
 
   /**
-   * Cleanup expired sessions (should be run periodically)
+   * Cleanup expired sessions
+   * Should be run periodically via cron job
    */
   static async cleanupExpiredSessions(): Promise<number> {
     try {
@@ -303,16 +370,19 @@ export class SessionService {
         },
       });
 
-      console.log(`Cleaned up ${result.count} expired sessions`);
+      if (result.count > 0) {
+        console.log(`🧹 Cleaned up ${result.count} expired sessions`);
+      }
       return result.count;
     } catch (error) {
-      console.error('Error cleaning up expired sessions:', error);
+      console.error('❌ Error cleaning up expired sessions:', error);
       return 0;
     }
   }
 
   /**
    * Cleanup idle sessions
+   * Should be run periodically via cron job
    */
   static async cleanupIdleSessions(): Promise<number> {
     try {
@@ -325,39 +395,70 @@ export class SessionService {
         },
       });
 
-      console.log(`Cleaned up ${result.count} idle sessions`);
+      if (result.count > 0) {
+        console.log(`🧹 Cleaned up ${result.count} idle sessions`);
+      }
       return result.count;
     } catch (error) {
-      console.error('Error cleaning up idle sessions:', error);
+      console.error('❌ Error cleaning up idle sessions:', error);
       return 0;
     }
   }
 
   /**
    * Cleanup old sessions for a user (keep only N most recent)
+   * Called automatically when creating new session
    */
   static async cleanupUserSessions(userId: string, keepCount: number = 5): Promise<void> {
     try {
-      // Get all sessions for user, ordered by creation date
+      // Get all sessions for user, ordered by most recent
       const sessions = await prisma.session.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        select: { id: true },
+        select: { id: true, sessionToken: true },
       });
 
       // If more than keepCount, delete the oldest ones
       if (sessions.length > keepCount) {
         const sessionsToDelete = sessions.slice(keepCount);
-        await prisma.session.deleteMany({
+        const deleteCount = await prisma.session.deleteMany({
           where: {
             id: {
               in: sessionsToDelete.map((s) => s.id),
             },
           },
         });
+        
+        if (deleteCount.count > 0) {
+          console.log(`🧹 Cleaned up ${deleteCount.count} old sessions for user ${userId}`);
+        }
       }
     } catch (error) {
-      console.error('Error cleaning up user sessions:', error);
+      console.error('❌ Error cleaning up user sessions:', error);
+    }
+  }
+
+  /**
+   * Cleanup ALL sessions (nuclear option for maintenance)
+   * Use with caution - will logout all users!
+   */
+  static async cleanupAllSessions(): Promise<number> {
+    try {
+      const result = await prisma.session.deleteMany({});
+      
+      // Reset all users' session fields
+      await prisma.user.updateMany({
+        data: {
+          lastActiveAt: null,
+          sessionExpiry: null,
+        }
+      });
+
+      console.log(`🧹 NUCLEAR CLEANUP: Deleted ALL ${result.count} sessions`);
+      return result.count;
+    } catch (error) {
+      console.error('❌ Error in nuclear cleanup:', error);
+      return 0;
     }
   }
 

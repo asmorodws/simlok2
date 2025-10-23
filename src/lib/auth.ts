@@ -3,7 +3,6 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "./singletons";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
-import { JWT_CONFIG } from "@/utils/jwt-config";
 import { TokenManager } from "@/utils/token-manager";
 import { verifyTurnstileToken } from "@/utils/turnstile-middleware";
 import { SessionService } from "@/services/session.service";
@@ -30,20 +29,23 @@ export const authOptions: NextAuthOptions = {
       credentials: { 
         email: { type: "email" }, 
         password: { type: "password" },
-        turnstile_token: { type: "text" }
+        turnstile_token: { type: "text" },
+        skip_turnstile: { type: "text" } // For auto-login after registration
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Verify Turnstile token if provided
-        if (credentials.turnstile_token && process.env.NODE_ENV === 'production') {
-          // Only verify Turnstile in production
+        // Skip Turnstile validation if this is auto-login after registration
+        const skipTurnstile = credentials.skip_turnstile === 'true';
+        
+        // Verify Turnstile token if provided and not skipped
+        if (!skipTurnstile && credentials.turnstile_token && process.env.NODE_ENV === 'production') {
           const isTurnstileValid = await verifyTurnstileToken(credentials.turnstile_token);
           if (!isTurnstileValid) {
             throw new Error('TURNSTILE_FAILED');
           }
-        } else if (process.env.NODE_ENV === 'production' && !credentials.turnstile_token) {
-          // Require Turnstile in production
+        } else if (!skipTurnstile && process.env.NODE_ENV === 'production' && !credentials.turnstile_token) {
+          // Require Turnstile in production (unless skipped for auto-login)
           throw new Error('TURNSTILE_REQUIRED');
         }
         // In development, skip Turnstile verification for easier testing
@@ -104,160 +106,96 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       try {
-        const now = Date.now() / 1000; // Current time in seconds
-      
-        // Initial sign-in - create new session
+        // Initial sign-in - create session
         if (user) {
-          token.id = user.id;
-          token.role = user.role;
-          token.officer_name = user.officer_name;
-          token.vendor_name = user.vendor_name || null;
-          token.verified_at = user.verified_at || null;
-          token.verification_status = user.verification_status || 'PENDING';
-          if (user.created_at) {
-            token.created_at = user.created_at;
-          }
+          const sessionData = await SessionService.createSession(
+            user.id,
+            24 * 60 * 60 * 1000 // 24 hours
+          );
           
-          // Set issued at time and expiry
-          token.iat = now;
-          token.exp = now + JWT_CONFIG.JWT_EXPIRE_TIME;
-          
-          // Create database session for tracking
-          try {
-            const sessionData = await SessionService.createSession(
-              user.id,
-              JWT_CONFIG.SESSION_MAX_AGE * 1000
-            );
-            token.sessionToken = sessionData.sessionToken;
-            console.log('JWT callback - created database session:', sessionData.sessionToken);
-          } catch (error) {
-            console.error('Error creating database session:', error);
-          }
-          
-          console.log('JWT callback - storing user.id:', user.id);
-          console.log('JWT callback - token expires at:', new Date((now + JWT_CONFIG.JWT_EXPIRE_TIME) * 1000));
-        } 
-        // Subsequent requests - validate existing session
-        else if (token.id && token.sessionToken) {
-          // Check JWT expiry first
-          if (token.exp && typeof token.exp === 'number') {
-            if (now >= token.exp) {
-              console.log('JWT callback - JWT token expired, clearing session');
-              if (token.sessionToken) {
-                await SessionService.deleteSession(token.sessionToken as string);
-              }
-              return {}; // Clear token
-            }
-          }
-          
-          // Validate database session
+          token.sub = user.id;
+          token.sessionToken = sessionData.sessionToken;
+          return token;
+        }
+        
+        // Subsequent requests - validate session
+        if (token.sub && token.sessionToken) {
           const validation = await SessionService.validateSession(token.sessionToken as string);
           
           if (!validation.isValid) {
-            console.log('JWT callback - database session invalid:', validation.reason);
-            return {}; // Clear token
+            throw new Error('SESSION_INVALID');
           }
           
-          // Check if user still exists and is active
-          if (!validation.user) {
-            console.log('JWT callback - user not found in database, clearing session');
-            return {};
-          }
-          
-          if (!validation.user.isActive) {
-            console.log('JWT callback - user deactivated, clearing session');
-            return {};
-          }
-          
-          // Update token with latest user data
-          token.verified_at = validation.user.verified_at;
-          token.verification_status = validation.user.verification_status;
-          token.role = validation.user.role;
-          
-          console.log('JWT callback - session valid, user active');
-        }
-        // No valid session data
-        else if (token.id && !token.sessionToken) {
-          console.log('JWT callback - no session token, clearing');
-          return {};
+          return token;
         }
         
-        return token;
+        // No session data
+        throw new Error('NO_SESSION_TOKEN');
+        
       } catch (error) {
-        console.error('JWT callback error:', error);
-        // Clean up session on error
+        // Clean up on error
         if (token.sessionToken) {
-          try {
-            await SessionService.deleteSession(token.sessionToken as string);
-          } catch (e) {
-            console.error('Error cleaning up session:', e);
-          }
+          await SessionService.deleteSession(token.sessionToken as string).catch(() => {});
         }
-        return {}; // Force re-authentication
+        return null as any;
       }
     },
+    
     async session({ session, token }) {
-      if (token && token.id) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as import("@prisma/client").User_role;
-        session.user.officer_name = token.officer_name as string;
-        session.user.vendor_name = token.vendor_name as string | null;
-        session.user.verified_at = token.verified_at as Date | null;
-        session.user.verification_status = token.verification_status as import("@prisma/client").VerificationStatus;
-        session.user.created_at = token.created_at as Date;
+      try {
+        if (!token || !token.sub || !token.sessionToken) {
+          return null as any;
+        }
+
+        const validation = await SessionService.validateSession(token.sessionToken as string);
         
-        // Add session token to session for frontend access
+        if (!validation.isValid || !validation.user) {
+          return null as any;
+        }
+
+        // Populate session with fresh data from database
+        session.user.id = validation.user.id;
+        session.user.email = validation.user.email;
+        session.user.role = validation.user.role;
+        session.user.officer_name = validation.user.officer_name;
+        session.user.vendor_name = validation.user.vendor_name;
+        session.user.verified_at = validation.user.verified_at;
+        session.user.verification_status = validation.user.verification_status;
+        session.user.created_at = validation.user.created_at;
+        
+        // IMPORTANT: Add sessionToken to session object for server-side validation
         (session as any).sessionToken = token.sessionToken;
         
-        console.log('Session callback - session.user.id:', session.user.id);
+        return session;
+      } catch (error) {
+        return null as any;
       }
-      return session;
     },
   },
   events: {
     async signIn({ user }) {
-      console.log(`User ${user.email} signed in at ${new Date()}`);
+      // SessionService.createSession() already updated lastActiveAt + sessionExpiry
+      // No need to update again here - would cause duplicate UPDATE query
       
-      // Update user's last active time
-      if (user.id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastActiveAt: new Date() },
-        });
-      }
-      
-      // Clean up expired tokens and sessions
-      await TokenManager.cleanupExpiredTokens();
-      await SessionService.cleanupExpiredSessions();
+      // Only do cleanup tasks (run in background)
+      SessionService.cleanupExpiredSessions().catch(() => {});
+      TokenManager.cleanupExpiredTokens().catch(() => {});
     },
+    
     async signOut({ token }) {
-      console.log(`User signed out at ${new Date()}`);
-      
-      if (token?.sub) {
-        // Invalidate all refresh tokens
-        await TokenManager.invalidateAllUserTokens(token.sub);
+      try {
+        if (token?.sub) {
+          await SessionService.deleteAllUserSessions(token.sub);
+          await TokenManager.invalidateAllUserTokens(token.sub);
+        }
         
-        // Delete all user sessions
-        await SessionService.deleteAllUserSessions(token.sub);
-      }
-      
-      // Also clean up by session token if available
-      if (token?.sessionToken) {
-        await SessionService.deleteSession(token.sessionToken as string);
+        if (token?.sessionToken) {
+          await SessionService.deleteSession(token.sessionToken as string);
+        }
+      } catch (error) {
+        console.error('Signout error:', error);
       }
     },
-    async session({ token }) {
-      // Called whenever a session is checked
-      if (token.exp && typeof token.exp === 'number') {
-        const now = Date.now() / 1000;
-        if (now >= token.exp) {
-          console.log('Session expired, will be cleared');
-          if (token.sessionToken) {
-            await SessionService.deleteSession(token.sessionToken as string);
-          }
-        }
-      }
-    }
   },
   pages: { signIn: "/login" },
 };

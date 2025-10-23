@@ -2,7 +2,6 @@ import { Metadata } from "next";
 import RoleGate from "@/components/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import VendorDashboard from "@/components/vendor/VendorDashboard";
-import VerificationGuard from "@/components/security/VerificationGuard";
 
 export const metadata: Metadata = {
   title: "Dashboard Vendor - SIMLOK",
@@ -11,12 +10,10 @@ export const metadata: Metadata = {
 
 export default function VendorPage() {
   return (
-    <VerificationGuard>
-      <RoleGate allowedRoles={["VENDOR"]}>
-        <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
-          <VendorDashboard />
-        </SidebarLayout>
-      </RoleGate>
-    </VerificationGuard>
+    <RoleGate allowedRoles={["VENDOR"]}>
+      <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
+        <VendorDashboard />
+      </SidebarLayout>
+    </RoleGate>
   );
 }

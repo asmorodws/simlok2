@@ -96,6 +96,8 @@ export default function VerificationPendingClient({ session: initialSession }: V
         console.log('👤 User ID:', initialSession.user.id);
         console.log('📧 Email:', initialSession.user.email);
         console.log('🏢 Vendor:', initialSession.user.vendor_name);
+        console.log('📅 Created At:', initialSession.user.created_at);
+        console.log('📅 Created At Type:', typeof initialSession.user.created_at);
         
         // User is unverified - THIS IS VALID for verification-pending page!
         // Server component already validated session with getServerSession
@@ -126,42 +128,16 @@ export default function VerificationPendingClient({ session: initialSession }: V
   }, [status, initialSession, clientSession, router]);
 
   // ============================================================================
-  // LAYER 2: Periodic Health Check (every 30 seconds)
+  // LAYER 2: Periodic Health Check - REMOVED
   // ============================================================================
-  useEffect(() => {
-    if (isValidating || status === 'loading') return;
-
-    const healthCheckInterval = setInterval(async () => {
-      console.log('💓 Periodic health check');
-
-      // Quick check: is user still authenticated?
-      if (status === 'unauthenticated') {
-        console.log('❌ Health check: user unauthenticated');
-        await forceLogout('Sesi hilang, silakan login kembali');
-        return;
-      }
-
-      // Validate with backend
-      try {
-        const response = await fetch('/api/session/validate', {
-          method: 'POST',
-          credentials: 'include',
-        });
-
-        if (!response.ok) {
-          console.log('❌ Health check: backend validation failed');
-          await forceLogout('Validasi sesi gagal, silakan login kembali');
-        } else {
-          console.log('✅ Health check: session valid');
-        }
-      } catch (error) {
-        console.error('⚠️ Health check error:', error);
-        // Don't force logout on network errors
-      }
-    }, 30000); // Every 30 seconds
-
-    return () => clearInterval(healthCheckInterval);
-  }, [isValidating, status]);
+  // Health check dihapus karena:
+  // 1. Server component sudah validasi session dengan getServerSession()
+  // 2. Middleware sudah validasi setiap request ke database
+  // 3. Periodic check menyebabkan overhead database yang tidak perlu
+  // 4. NextAuth useSession() sudah handle session monitoring
+  //
+  // Jika session invalid, middleware akan redirect otomatis
+  // Tidak perlu polling manual dari client-side
 
   // ============================================================================
   // LAYER 3: Real-time session monitoring
@@ -218,19 +194,33 @@ export default function VerificationPendingClient({ session: initialSession }: V
   }
 
   // Helper functions
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  const formatDate = (dateString: string | Date | undefined | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatTime = (dateString: string | Date | undefined | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const handleLogout = async () => {
@@ -300,19 +290,13 @@ export default function VerificationPendingClient({ session: initialSession }: V
                   <div className="flex justify-between">
                     <span>Tanggal Daftar:</span>
                     <span className="font-medium text-gray-900">
-                      {session.user.created_at ? 
-                        formatDate(session.user.created_at.toString()) : 
-                        'N/A'
-                      }
+                      {formatDate(session.user.created_at)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Waktu:</span>
                     <span className="font-medium text-gray-900">
-                      {session.user.created_at ? 
-                        formatTime(session.user.created_at.toString()) : 
-                        'N/A'
-                      }
+                      {formatTime(session.user.created_at)}
                     </span>
                   </div>
                 </div>

@@ -14,13 +14,9 @@ export default function AuthRedirect({
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    // If we're still loading session or already redirecting, do nothing
     if (status === "loading" || isRedirecting) return;
 
-    // If the current URL contains a session_expired flag (e.g. redirected from middleware)
-    // we must not auto-redirect away from the login page. Reading search params via
-    // next/navigation hooks can require Suspense and cause blank pages when used here
-    // (because AuthRedirect wraps the Suspense area). So we read window.location safely.
+    // Check if we're on login/signup page with session_expired flag
     let hasSessionExpired = false;
     try {
       if (typeof window !== 'undefined') {
@@ -28,17 +24,31 @@ export default function AuthRedirect({
         hasSessionExpired = url.searchParams.get('session_expired') === 'true';
       }
     } catch (e) {
-      // ignore - fallback to false
       hasSessionExpired = false;
     }
 
-    // If session_expired is present, do not redirect (we want to show the login form and message)
     if (hasSessionExpired) return;
 
-    // If the session is authenticated, redirect based on role.
-    if (status === "authenticated" && session?.user?.role) {
+    // If authenticated, redirect based on verification and role
+    if (status === "authenticated" && session?.user) {
       setIsRedirecting(true);
+      
+      // Check if user is rejected
+      if (session.user.verification_status === 'REJECTED') {
+        router.replace("/verification-rejected");
+        return;
+      }
+      
+      // Check if user needs verification (except super admin, reviewer, approver)
+      if (!session.user.verified_at && 
+          session.user.role !== 'SUPER_ADMIN' && 
+          session.user.role !== 'REVIEWER' && 
+          session.user.role !== 'APPROVER') {
+        router.replace("/verification-pending");
+        return;
+      }
 
+      // User is verified, redirect to dashboard
       switch (session.user.role) {
         case "VENDOR":
           router.replace("/vendor");
@@ -59,7 +69,7 @@ export default function AuthRedirect({
           router.replace("/visitor");
           break;
         default:
-          router.replace("/"); // fallback
+          router.replace("/");
       }
     }
   }, [session, status, router, isRedirecting]);
@@ -75,18 +85,11 @@ export default function AuthRedirect({
     );
   }
 
-  // Don't render anything while redirecting to prevent flash of login form
+  // Show redirecting state
   if (isRedirecting) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-          <p>Mengalihkan...</p>
-        </div>
-      </div>
-    );
+    return null; // Don't show anything while redirecting
   }
 
-  // Hanya render children kalau user TIDAK terautentikasi.
+  // Only render children if NOT authenticated
   return <>{status !== "authenticated" ? children : null}</>;
 }

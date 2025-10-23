@@ -9,7 +9,7 @@ import { ReactNode } from "react";
 
 export default function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
       <ThemeProvider>
         <SocketProvider>
           {/* <SessionExpiryHandler> */}
