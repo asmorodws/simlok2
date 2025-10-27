@@ -1160,7 +1160,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     // Group documents by type
                                     const simjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIMJA');
                                     const sikaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIKA');
-                                    const hsseDocuments = submission.support_documents.filter(doc => doc.document_type === 'HSSE');
+                                    const workOrderDocuments = submission.support_documents.filter(doc => doc.document_type === 'WORK_ORDER');
+                                    const kontrakKerjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'KONTRAK_KERJA');
                                     const jsaDocuments = submission.support_documents.filter(doc => doc.document_type === 'JSA');
 
                                     // SIMJA documents
@@ -1185,12 +1186,23 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                       }
                                     });
 
-                                    // HSSE documents
-                                    hsseDocuments.forEach(doc => {
+                                    // Work Order documents
+                                    workOrderDocuments.forEach(doc => {
                                       const docLabel = doc.document_subtype 
-                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
-                                        : `• ${doc.document_type}`;
-                                      template += `\n${docLabel} Pass`;
+                                        ? `• Work Order ${doc.document_subtype}` 
+                                        : `• Work Order`;
+                                      template += `\n${docLabel}`;
+                                      if (doc.document_number && doc.document_date) {
+                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
+                                      }
+                                    });
+
+                                    // Kontrak Kerja documents
+                                    kontrakKerjaDocuments.forEach(doc => {
+                                      const docLabel = doc.document_subtype 
+                                        ? `• Kontrak Kerja ${doc.document_subtype}` 
+                                        : `• Kontrak Kerja`;
+                                      template += `\n${docLabel}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
                                       }
@@ -2007,7 +2019,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                 )}
                                 {worker.hsse_pass_valid_thru && (
                                   <div className="flex justify-between">
-                                    <span className="font-medium">Masa berlaku HSSE pass:</span>
+                                    <span className="font-medium">Masa Berlaku HSSE Pass Sampai Dengan:</span>
                                     <span>{new Date(worker.hsse_pass_valid_thru).toLocaleDateString('id-ID')}</span>
                                   </div>
                                 )}

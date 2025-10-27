@@ -16,7 +16,7 @@ export interface SupportDoc {
 
 interface SupportDocumentListProps {
   title: string;
-  documentType: 'SIMJA' | 'SIKA' | 'HSSE' | 'JSA';
+  documentType: 'SIMJA' | 'SIKA' | 'JSA' | 'WORK_ORDER' | 'KONTRAK_KERJA';
   documents: SupportDoc[];
   onDocumentsChange: (docs: SupportDoc[]) => void;
   disabled?: boolean;
@@ -39,8 +39,10 @@ export default function SupportDocumentList({
       defaultSubtype = '';
     } else if (documentType === 'JSA') {
       defaultSubtype = ''; // JSA tidak memiliki subtype
+    } else if (documentType === 'WORK_ORDER' || documentType === 'KONTRAK_KERJA') {
+      defaultSubtype = undefined; // Work Order dan Kontrak Kerja tidak memiliki subtype
     } else {
-      defaultSubtype = undefined; // HSSE
+      defaultSubtype = undefined;
     }
 
     const newDoc: SupportDoc = {
@@ -86,7 +88,13 @@ export default function SupportDocumentList({
             {/* Header with number and delete button */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-700">
-                {documentType === 'HSSE' ? 'HSSE Pass' : documentType === 'JSA' ? 'JSA' : documentType} #{index + 1}
+                {documentType === 'JSA' 
+                  ? 'JSA' 
+                  : documentType === 'WORK_ORDER' 
+                  ? 'Work Order' 
+                  : documentType === 'KONTRAK_KERJA'
+                  ? 'Kontrak Kerja'
+                  : documentType} #{index + 1}
               </span>
               {documents.length > 1 && (
                 <button
@@ -169,10 +177,12 @@ export default function SupportDocumentList({
                 {/* Document Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {documentType === 'HSSE' 
-                      ? 'Masa Berlaku HSSE Pass' 
-                      : documentType === 'JSA'
+                    {documentType === 'JSA'
                       ? 'Tanggal Dokumen JSA'
+                      : documentType === 'WORK_ORDER'
+                      ? 'Tanggal Work Order'
+                      : documentType === 'KONTRAK_KERJA'
+                      ? 'Tanggal Kontrak Kerja'
                       : 'Tanggal Dokumen'} <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
@@ -181,10 +191,12 @@ export default function SupportDocumentList({
                       updateDocument(doc.id, 'document_date', value)
                     }
                     placeholder={
-                      documentType === 'HSSE' 
-                        ? 'Pilih masa berlaku HSSE Pass' 
-                        : documentType === 'JSA'
+                      documentType === 'JSA'
                         ? 'Pilih tanggal JSA'
+                        : documentType === 'WORK_ORDER'
+                        ? 'Pilih tanggal Work Order'
+                        : documentType === 'KONTRAK_KERJA'
+                        ? 'Pilih tanggal Kontrak Kerja'
                         : 'Pilih tanggal dokumen'
                     }
                     disabled={disabled}

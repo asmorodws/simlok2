@@ -207,7 +207,7 @@ export default function SubmissionDetailModal({
               {/* Legacy Document Section - Fallback for old submissions */}
               {!submission.support_documents?.length && (submission.simja_document_upload || submission.sika_document_upload || submission.hsse_pass_document_upload) && (
                 <DetailSection
-                  title="File Dokumen SIMJA/SIKA/HSSE (Legacy)"
+                  title="File Dokumen (Legacy - Data Lama)"
                   icon={<DocumentIcon className="h-5 w-5 text-gray-500" />}
                 >
                   <div className={`grid grid-cols-1 md:grid-cols-${submission.hsse_pass_document_upload ? '3' : '2'} gap-4`}>

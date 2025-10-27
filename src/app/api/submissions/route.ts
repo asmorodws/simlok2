@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
     console.log('POST /api/submissions - User verified:', userExists.email);
 
     // Extract workers and documents data from body
-    const { workers, simjaDocuments, sikaDocuments, hsseDocuments, jsaDocuments, ...submissionData } = body as any;
+    const { workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, ...submissionData } = body as any;
 
     // Debug: Log data yang masuk
     console.log('Submission data received:', JSON.stringify(submissionData, null, 2));
@@ -389,13 +389,13 @@ export async function POST(request: NextRequest) {
         allDocuments.push(...sikaDocs);
       }
 
-      // HSSE documents (optional)
-      if (hsseDocuments && Array.isArray(hsseDocuments) && hsseDocuments.length > 0) {
-        const hsseDocs = hsseDocuments
+      // Work Order documents (optional)
+      if (workOrderDocuments && Array.isArray(workOrderDocuments) && workOrderDocuments.length > 0) {
+        const workOrderDocs = workOrderDocuments
           .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
           .map((doc: any) => ({
-            document_subtype: null, // HSSE tidak punya subtype
-            document_type: 'HSSE',
+            document_subtype: null, // Work Order tidak punya subtype
+            document_type: 'WORK_ORDER',
             document_number: doc.document_number || null,
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
@@ -403,7 +403,24 @@ export async function POST(request: NextRequest) {
             uploaded_by: session.user.id,
             uploaded_at: new Date(),
           }));
-        allDocuments.push(...hsseDocs);
+        allDocuments.push(...workOrderDocs);
+      }
+
+      // Kontrak Kerja documents (optional)
+      if (kontrakKerjaDocuments && Array.isArray(kontrakKerjaDocuments) && kontrakKerjaDocuments.length > 0) {
+        const kontrakDocs = kontrakKerjaDocuments
+          .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+          .map((doc: any) => ({
+            document_subtype: null, // Kontrak Kerja tidak punya subtype
+            document_type: 'KONTRAK_KERJA',
+            document_number: doc.document_number || null,
+            document_date: doc.document_date ? new Date(doc.document_date) : null,
+            document_upload: doc.document_upload,
+            submission_id: submission.id,
+            uploaded_by: session.user.id,
+            uploaded_at: new Date(),
+          }));
+        allDocuments.push(...kontrakDocs);
       }
 
       // JSA documents (optional)
@@ -432,7 +449,8 @@ export async function POST(request: NextRequest) {
         console.log('POST /api/submissions - Support documents created:', {
           simja: simjaDocuments?.length || 0,
           sika: sikaDocuments?.length || 0,
-          hsse: hsseDocuments?.length || 0,
+          workOrder: workOrderDocuments?.length || 0,
+          kontrakKerja: kontrakKerjaDocuments?.length || 0,
           jsa: jsaDocuments?.length || 0,
           total: allDocuments.length
         });

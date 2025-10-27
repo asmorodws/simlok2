@@ -23,18 +23,20 @@ export default function SupportDocumentsSection({
   // Group documents by type
   const simjaDocuments = supportDocuments.filter(doc => doc.document_type === 'SIMJA');
   const sikaDocuments = supportDocuments.filter(doc => doc.document_type === 'SIKA');
-  const hsseDocuments = supportDocuments.filter(doc => doc.document_type === 'HSSE');
+  const workOrderDocuments = supportDocuments.filter(doc => doc.document_type === 'WORK_ORDER');
+  const kontrakKerjaDocuments = supportDocuments.filter(doc => doc.document_type === 'KONTRAK_KERJA');
   const jsaDocuments = supportDocuments.filter(doc => doc.document_type === 'JSA');
 
   // Count how many document sections we have (for dynamic grid)
   const documentSections = [
     simjaDocuments.length > 0,
     sikaDocuments.length > 0,
-    hsseDocuments.length > 0,
+    workOrderDocuments.length > 0,
+    kontrakKerjaDocuments.length > 0,
     jsaDocuments.length > 0,
   ].filter(Boolean).length;
 
-  // Determine grid columns based on number of sections
+  // Determine grid columns based on number of sections (maximum 4 columns)
   const getGridClass = () => {
     if (documentSections === 1) {
       return 'grid-cols-1'; // Single column if only one section
@@ -43,7 +45,7 @@ export default function SupportDocumentsSection({
     } else if (documentSections === 3) {
       return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'; // 3 columns on desktop if 3 sections
     } else {
-      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'; // 4 columns on desktop if 4 sections
+      return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'; // 4 columns on desktop if 4+ sections (maximum 4)
     }
   };
 
@@ -53,8 +55,10 @@ export default function SupportDocumentsSection({
         return 'text-blue-500';
       case 'SIKA':
         return 'text-green-500';
-      case 'HSSE':
-        return 'text-yellow-500';
+      case 'WORK_ORDER':
+        return 'text-orange-500';
+      case 'KONTRAK_KERJA':
+        return 'text-indigo-500';
       case 'JSA':
         return 'text-purple-500';
       default:
@@ -99,8 +103,10 @@ export default function SupportDocumentsSection({
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-xs text-gray-900 truncate leading-tight">
                       {doc.document_subtype || 
-                        `${doc.document_type === 'HSSE' 
-                          ? 'HSSE Pass' 
+                        `${doc.document_type === 'WORK_ORDER' 
+                          ? 'Work Order' 
+                          : doc.document_type === 'KONTRAK_KERJA'
+                          ? 'Kontrak Kerja'
                           : doc.document_type === 'JSA' 
                           ? 'JSA' 
                           : doc.document_type} #${index + 1}`}
@@ -122,13 +128,7 @@ export default function SupportDocumentsSection({
                       <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className="text-gray-500 text-[10px] mr-0.5">
-                        {doc.document_type === 'HSSE' 
-                          ? 'Berlaku s/d:' 
-                          : doc.document_type === 'JSA'
-                          ? 'Tgl:'
-                          : 'Tgl:'}
-                      </span>
+                      <span className="text-gray-500 text-[10px] mr-0.5">Tgl:</span>
                       <span>
                         {new Date(doc.document_date).toLocaleDateString('id-ID', {
                           day: 'numeric',
@@ -149,8 +149,10 @@ export default function SupportDocumentsSection({
                       onViewDocument(
                         fileUrlHelper.convertLegacyUrl(doc.document_upload),
                         doc.document_subtype || 
-                          `${doc.document_type === 'HSSE' 
-                            ? 'HSSE Pass' 
+                          `${doc.document_type === 'WORK_ORDER' 
+                            ? 'Work Order' 
+                            : doc.document_type === 'KONTRAK_KERJA'
+                            ? 'Kontrak Kerja'
                             : doc.document_type === 'JSA' 
                             ? 'JSA' 
                             : doc.document_type} Document`
@@ -179,7 +181,8 @@ export default function SupportDocumentsSection({
       <div className={`grid ${getGridClass()} gap-4`}>
         {renderDocumentGroup(simjaDocuments, 'Dokumen SIMJA', 'bg-blue-50', 'text-blue-600')}
         {renderDocumentGroup(sikaDocuments, 'Dokumen SIKA', 'bg-green-50', 'text-green-600')}
-        {renderDocumentGroup(hsseDocuments, 'Dokumen HSSE Pass', 'bg-yellow-50', 'text-yellow-600')}
+        {renderDocumentGroup(workOrderDocuments, 'Dokumen Work Order', 'bg-orange-50', 'text-orange-600')}
+        {renderDocumentGroup(kontrakKerjaDocuments, 'Dokumen Kontrak Kerja', 'bg-indigo-50', 'text-indigo-600')}
         {renderDocumentGroup(jsaDocuments, 'Dokumen JSA', 'bg-purple-50', 'text-purple-600')}
       </div>
     </DetailSection>

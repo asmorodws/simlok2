@@ -150,6 +150,7 @@ class PDFKit {
   leftLabelWidth = LEFT_LABEL_WIDTH_DEFAULT;
   pageCount = 0;
   submissionData?: SubmissionPDFData;
+  currentDocumentType?: string; // Track current document type for footer label
 
   async init() {
     this.doc = await PDFDocument.create();
@@ -203,7 +204,30 @@ class PDFKit {
     // Add text di bawah lampiran - berbeda untuk halaman dokumen vs halaman pekerja
     let labelText = "Nama Pekerja ";
     if (pageType === 'documents') {
-      labelText = "Dokumen SIMJA/SIKA/HSSE ";
+      // Use current document type if available, otherwise use generic label
+      if (this.currentDocumentType) {
+        switch (this.currentDocumentType) {
+          case 'SIMJA':
+            labelText = "Dokumen SIMJA ";
+            break;
+          case 'SIKA':
+            labelText = "Dokumen SIKA ";
+            break;
+          case 'WORK_ORDER':
+            labelText = "Dokumen Work Order ";
+            break;
+          case 'KONTRAK_KERJA':
+            labelText = "Dokumen Kontrak Kerja ";
+            break;
+          case 'JSA':
+            labelText = "Dokumen JSA ";
+            break;
+          default:
+            labelText = "Dokumen Pendukung ";
+        }
+      } else {
+        labelText = "Dokumen Pendukung ";
+      }
     }
     
     this.text(labelText, MARGIN, A4.h - 100, {
@@ -497,7 +521,8 @@ for (let idx = 0; idx < lines.length; idx++) {
       // Group by type
       const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
       const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
-      const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
+      const workOrderDocs = s.support_documents.filter(d => d.document_type === 'WORK_ORDER');
+      const kontrakKerjaDocs = s.support_documents.filter(d => d.document_type === 'KONTRAK_KERJA');
       const jsaDocs = s.support_documents.filter(d => d.document_type === 'JSA');
       
       // SIMJA documents
@@ -548,26 +573,38 @@ for (let idx = 0; idx < lines.length; idx++) {
         }
       }
       
-      // HSSE documents
-      if (hsseDocs.length > 0) {
-        for (const doc of hsseDocs) {
+      // Work Order documents
+      if (workOrderDocs.length > 0) {
+        for (const doc of workOrderDocs) {
           if (!doc) continue;
           await k.pageBreak();
           k.text(" • ", bulletX, k.y, { bold: false });
           const docX = bulletX + k.measure(" • ", { bold: false });
-          k.text("HSSE Pass", docX, k.y, { bold: true });
-          
-          if (doc.document_subtype) {
-            const typeWidth = k.measure("HSSE Pass", { bold: true });
-            const subtypeX = docX + typeWidth + k.measure(" ", { bold: false });
-            k.text(` ${doc.document_subtype}`, subtypeX, k.y, { bold: false });
-          }
+          k.text("Work Order", docX, k.y, { bold: true });
           k.y -= k.lineGap;
           
           await k.pageBreak();
           const docNum = doc.document_number || '[Nomor]';
           const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
-          await k.wrap(`   No. ${docNum} Berlaku sampai ${docDate}`, rightX, rightW, { bold: true });
+          await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
+          k.y -= k.lineGap * 0.2;
+        }
+      }
+
+      // Kontrak Kerja documents
+      if (kontrakKerjaDocs.length > 0) {
+        for (const doc of kontrakKerjaDocs) {
+          if (!doc) continue;
+          await k.pageBreak();
+          k.text(" • ", bulletX, k.y, { bold: false });
+          const docX = bulletX + k.measure(" • ", { bold: false });
+          k.text("Kontrak Kerja", docX, k.y, { bold: true });
+          k.y -= k.lineGap;
+          
+          await k.pageBreak();
+          const docNum = doc.document_number || '[Nomor]';
+          const docDate = doc.document_date ? fmtDateID(doc.document_date) : '[Tanggal]';
+          await k.wrap(`   No. ${docNum} Tanggal ${docDate}`, rightX, rightW, { bold: true });
           k.y -= k.lineGap * 0.2;
         }
       }
@@ -782,10 +819,11 @@ async function addSupportingDocumentsPage(
   if (s.support_documents && s.support_documents.length > 0) {
     console.log('[AddSupportingDocumentsPage] Using new support_documents structure');
     
-    // Group by document type: SIMJA, SIKA, HSSE, JSA
+    // Group by document type: SIMJA, SIKA, WORK_ORDER, KONTRAK_KERJA, JSA
     const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
     const sikaDocs = s.support_documents.filter(d => d.document_type === 'SIKA');
-    const hsseDocs = s.support_documents.filter(d => d.document_type === 'HSSE');
+    const workOrderDocs = s.support_documents.filter(d => d.document_type === 'WORK_ORDER');
+    const kontrakKerjaDocs = s.support_documents.filter(d => d.document_type === 'KONTRAK_KERJA');
     const jsaDocs = s.support_documents.filter(d => d.document_type === 'JSA');
     
     // Add SIMJA documents first
@@ -812,15 +850,27 @@ async function addSupportingDocumentsPage(
       });
     });
     
-    // Add HSSE documents
-    hsseDocs.forEach(doc => {
+    // Add Work Order documents
+    workOrderDocs.forEach(doc => {
       documents.push({
         path: doc.document_upload,
-        title: 'HSSE Pass',
+        title: 'Work Order',
         subtitle: doc.document_subtype || '',
         number: doc.document_number || '-',
         date: doc.document_date ? fmtDateID(doc.document_date) : '-',
-        documentType: 'HSSE'
+        documentType: 'WORK_ORDER'
+      });
+    });
+
+    // Add Kontrak Kerja documents
+    kontrakKerjaDocs.forEach(doc => {
+      documents.push({
+        path: doc.document_upload,
+        title: 'Kontrak Kerja',
+        subtitle: doc.document_subtype || '',
+        number: doc.document_number || '-',
+        date: doc.document_date ? fmtDateID(doc.document_date) : '-',
+        documentType: 'KONTRAK_KERJA'
       });
     });
 
@@ -963,8 +1013,10 @@ async function addSupportingDocumentsPage(
   
   // Layout: 2 pages per output page, side by side - WITH DOCUMENT TYPE SEPARATORS
   const pagesPerOutputPage = 2;
-  const pageWidth = 240;  // Width for each document page
-  const pageHeight = 340; // Height for each document page
+  const pageWidthDual = 240;  // Width for each document page when showing 2 pages
+  const pageWidthSingle = 360; // Width for single document page (larger)
+  const pageHeightDual = 340; // Height for each document page when showing 2 pages
+  const pageHeightSingle = 500; // Height for single document page (larger)
   const horizontalGap = 30;
   
   let currentPageIndex = 0;
@@ -978,50 +1030,19 @@ async function addSupportingDocumentsPage(
     const currentDocType = currentPage.documentType;
     const needsSeparator = currentDocType !== lastDocumentType;
     
-    // Add new output page
+    // Update current document type for footer label BEFORE adding page
+    if (needsSeparator) {
+      k.currentDocumentType = currentDocType;
+      lastDocumentType = currentDocType;
+      console.log(`[AddSupportingDocumentsPage] Document type changed to: ${currentDocType}`);
+    }
+    
+    // Add new output page (footer will use currentDocumentType)
     await k.addPage('documents');
     const { page } = k;
     const { width, height } = page.getSize();
     
-    let startY = height - 140;
-    
-    // Add document type separator header if needed
-    if (needsSeparator) {
-      const separatorY = startY + 20;
-      
-      // Get document type label
-      let typeLabel = '';
-      switch (currentDocType) {
-        case 'SIMJA':
-          typeLabel = 'DOKUMEN SIMJA';
-          break;
-        case 'SIKA':
-          typeLabel = 'DOKUMEN SIKA';
-          break;
-        case 'HSSE':
-          typeLabel = 'DOKUMEN HSSE PASS';
-          break;
-        case 'JSA':
-          typeLabel = 'DOKUMEN JOB SAFETY ANALYSIS';
-          break;
-        default:
-          typeLabel = currentDocType;
-      }
-      
-
-      // Draw separator text
-      k.text(typeLabel, MARGIN + 15, separatorY - 30, { 
-        bold: true, 
-        size: 11,
-        color: rgb(0.2, 0.2, 0.2)
-      });
-      
-      // Adjust startY to account for separator
-      startY = separatorY - 45;
-      lastDocumentType = currentDocType;
-      
-      console.log(`[AddSupportingDocumentsPage] Added separator for document type: ${typeLabel}`);
-    }
+    const startY = height - 140;
     
     // Calculate how many pages to render on this output page (max 2)
     // BUT: If document type changes mid-page, only render 1 to keep grouping clean
@@ -1037,6 +1058,10 @@ async function addSupportingDocumentsPage(
     }
     
     const pagesToRender = endIndex - currentPageIndex;
+    
+    // Use larger size if only rendering 1 page
+    const pageWidth = pagesToRender === 1 ? pageWidthSingle : pageWidthDual;
+    const pageHeight = pagesToRender === 1 ? pageHeightSingle : pageHeightDual;
     
     // Calculate starting X to center the pages
     const totalWidth = (pageWidth * pagesToRender) + (horizontalGap * (pagesToRender - 1));

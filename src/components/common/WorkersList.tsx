@@ -274,7 +274,7 @@ export default function WorkersList({
                     )}
                     {worker.hsse_pass_valid_thru && (
                       <div className="text-xs text-gray-600">
-                        <span className="font-medium">Masa berlaku HSSE pass:</span> {formatDate(worker.hsse_pass_valid_thru)}
+                        <span className="font-medium">Masa Berlaku HSSE Pass Sampai Dengan:</span> {formatDate(worker.hsse_pass_valid_thru)}
                       </div>
                     )}
                     {worker.hsse_pass_document_upload && (

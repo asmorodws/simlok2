@@ -47,7 +47,8 @@ type DraftShape = {
   bulkNames: string;
   simjaDocuments: SupportDoc[];
   sikaDocuments: SupportDoc[];
-  hsseDocuments: SupportDoc[];
+  workOrderDocuments: SupportDoc[];
+  kontrakKerjaDocuments: SupportDoc[];
   jsaDocuments: SupportDoc[];
 };
 
@@ -118,9 +119,19 @@ export default function SubmissionForm() {
     },
   ]);
 
-  const [hsseDocuments, setHsseDocuments] = useState<SupportDoc[]>([
+  const [workOrderDocuments, setWorkOrderDocuments] = useState<SupportDoc[]>([
     {
-      id: `${Date.now()}_hsse`,
+      id: `${Date.now()}_work_order`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [kontrakKerjaDocuments, setKontrakKerjaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_kontrak_kerja`,
       document_subtype: '',
       document_number: '',
       document_date: '',
@@ -194,7 +205,8 @@ export default function SubmissionForm() {
       // Load documents
       if (parsed.simjaDocuments?.length) setSimjaDocuments(parsed.simjaDocuments);
       if (parsed.sikaDocuments?.length) setSikaDocuments(parsed.sikaDocuments);
-      if (parsed.hsseDocuments?.length) setHsseDocuments(parsed.hsseDocuments);
+      if (parsed.workOrderDocuments?.length) setWorkOrderDocuments(parsed.workOrderDocuments);
+      if (parsed.kontrakKerjaDocuments?.length) setKontrakKerjaDocuments(parsed.kontrakKerjaDocuments);
       if (parsed.jsaDocuments?.length) setJsaDocuments(parsed.jsaDocuments);
 
       setHasDraft(true);
@@ -254,7 +266,8 @@ export default function SubmissionForm() {
         bulkNames,
         simjaDocuments,
         sikaDocuments,
-        hsseDocuments,
+        workOrderDocuments,
+        kontrakKerjaDocuments,
         jsaDocuments,
       };
       saveDraft(draft);
@@ -264,7 +277,7 @@ export default function SubmissionForm() {
   useEffect(() => {
     scheduleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, hsseDocuments, jsaDocuments]);
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments]);
 
   useEffect(() => {
     return () => {
@@ -509,8 +522,15 @@ export default function SubmissionForm() {
         document_date: '',
         document_upload: '',
       }]);
-      setHsseDocuments([{
-        id: `${Date.now()}_hsse`,
+      setWorkOrderDocuments([{
+        id: `${Date.now()}_work_order`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+      setKontrakKerjaDocuments([{
+        id: `${Date.now()}_kontrak_kerja`,
         document_subtype: '',
         document_number: '',
         document_date: '',
@@ -647,13 +667,13 @@ export default function SubmissionForm() {
         }
       }
 
-      // ========== VALIDASI DOKUMEN HSSE (OPSIONAL) ==========
-      // HSSE bersifat opsional, tapi jika ada yang terisi maka harus lengkap
-      for (let i = 0; i < hsseDocuments.length; i++) {
-        const doc = hsseDocuments[i];
+      // ========== VALIDASI DOKUMEN WORK ORDER (OPSIONAL) ==========
+      // Work Order bersifat opsional, tapi jika ada yang terisi maka harus lengkap
+      for (let i = 0; i < workOrderDocuments.length; i++) {
+        const doc = workOrderDocuments[i];
         if (!doc) continue;
         
-        // Cek apakah ada field yang terisi (HSSE tidak punya subtype)
+        // Cek apakah ada field yang terisi
         const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
         
         // Jika ada data, semua field harus lengkap
@@ -666,8 +686,36 @@ export default function SubmissionForm() {
 
           if (missingFields.length > 0) {
             showError(
-              'Dokumen HSSE Tidak Lengkap',
-              `HSSE #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+              'Dokumen Work Order Tidak Lengkap',
+              `Work Order #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
+            );
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // ========== VALIDASI DOKUMEN KONTRAK KERJA (OPSIONAL) ==========
+      // Kontrak Kerja bersifat opsional, tapi jika ada yang terisi maka harus lengkap
+      for (let i = 0; i < kontrakKerjaDocuments.length; i++) {
+        const doc = kontrakKerjaDocuments[i];
+        if (!doc) continue;
+        
+        // Cek apakah ada field yang terisi
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        
+        // Jika ada data, semua field harus lengkap
+        if (hasData) {
+          const missingFields = [];
+          
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError(
+              'Dokumen Kontrak Kerja Tidak Lengkap',
+              `Kontrak Kerja #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
             setIsLoading(false);
             return;
@@ -760,7 +808,13 @@ export default function SubmissionForm() {
         doc.document_upload?.trim()
       );
 
-      const validHsseDocuments = hsseDocuments.filter(doc => 
+      const validWorkOrderDocuments = workOrderDocuments.filter(doc => 
+        doc.document_number?.trim() && 
+        doc.document_date?.trim() && 
+        doc.document_upload?.trim()
+      );
+
+      const validKontrakKerjaDocuments = kontrakKerjaDocuments.filter(doc => 
         doc.document_number?.trim() && 
         doc.document_date?.trim() && 
         doc.document_upload?.trim()
@@ -776,7 +830,8 @@ export default function SubmissionForm() {
         workers: Worker[];
         simjaDocuments: SupportDoc[];
         sikaDocuments: SupportDoc[];
-        hsseDocuments: SupportDoc[];
+        workOrderDocuments: SupportDoc[];
+        kontrakKerjaDocuments: SupportDoc[];
         jsaDocuments: SupportDoc[];
       } = {
         ...formData,
@@ -785,7 +840,8 @@ export default function SubmissionForm() {
         workers,
         simjaDocuments: validSimjaDocuments,
         sikaDocuments: validSikaDocuments,
-        hsseDocuments: validHsseDocuments,
+        workOrderDocuments: validWorkOrderDocuments,
+        kontrakKerjaDocuments: validKontrakKerjaDocuments,
         jsaDocuments: validJsaDocuments,
       };
 
@@ -922,20 +978,38 @@ export default function SubmissionForm() {
                 />
               </div>
 
-              {/* HSSE Documents */}
+              {/* Work Order Documents */}
               <div className="border border-gray-200 p-6 rounded-lg bg-white">
                 <div className="mb-4">
                   <div className="flex items-center justify-between">
                     <Badge variant="warning">
-                      Dokumen HSSE bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                      Dokumen Work Order bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
                     </Badge>
                   </div>
                 </div>
                 <SupportDocumentList
-                  title="Dokumen HSSE Pass (Opsional)"
-                  documentType="HSSE"
-                  documents={hsseDocuments}
-                  onDocumentsChange={setHsseDocuments}
+                  title="Dokumen Work Order (Opsional)"
+                  documentType="WORK_ORDER"
+                  documents={workOrderDocuments}
+                  onDocumentsChange={setWorkOrderDocuments}
+                  disabled={isLoading}
+                />
+              </div>
+
+              {/* Kontrak Kerja Documents */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="warning">
+                      Dokumen Kontrak Kerja bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                    </Badge>
+                  </div>
+                </div>
+                <SupportDocumentList
+                  title="Dokumen Kontrak Kerja (Opsional)"
+                  documentType="KONTRAK_KERJA"
+                  documents={kontrakKerjaDocuments}
+                  onDocumentsChange={setKontrakKerjaDocuments}
                   disabled={isLoading}
                 />
               </div>

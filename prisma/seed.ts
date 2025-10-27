@@ -416,6 +416,8 @@ async function main() {
         {
           document_subtype: 'Ast. Man. Facility Management',
           document_type: 'SIMJA',
+          document_number: `SIMJA/${String(submissionCount + 1).padStart(4, '0')}/FM/2024`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000), // 0-7 hari sebelum created
           document_upload: `/uploads/documents/simja-${submissionCount + 1}-1.pdf`,
           submission_id: createdSubmission.id,
           uploaded_at: createdDate,
@@ -424,6 +426,8 @@ async function main() {
         {
           document_subtype: 'Ast. Man. Facility Management',
           document_type: 'SIMJA',
+          document_number: `SIMJA/${String(submissionCount + 1).padStart(4, '0')}/FM/2024-A`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000),
           document_upload: `/uploads/documents/simja-${submissionCount + 1}-2.pdf`,
           submission_id: createdSubmission.id,
           uploaded_at: createdDate,
@@ -433,6 +437,8 @@ async function main() {
         {
           document_subtype: sikaTypes[Math.floor(Math.random() * sikaTypes.length)],
           document_type: 'SIKA',
+          document_number: `SIKA/${String(submissionCount + 1).padStart(4, '0')}/2024`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000),
           document_upload: `/uploads/documents/sika-${submissionCount + 1}-1.pdf`,
           submission_id: createdSubmission.id,
           uploaded_at: createdDate,
@@ -441,16 +447,42 @@ async function main() {
         {
           document_subtype: sikaTypes[Math.floor(Math.random() * sikaTypes.length)],
           document_type: 'SIKA',
+          document_number: `SIKA/${String(submissionCount + 1).padStart(4, '0')}/2024-A`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000),
           document_upload: `/uploads/documents/sika-${submissionCount + 1}-2.pdf`,
           submission_id: createdSubmission.id,
           uploaded_at: createdDate,
           uploaded_by: vendor.id,
         },
-        // HSSE document (1-2 docs per submission, optional) - no subtype
-        ...(Math.random() > 0.3 ? [{
+        // Work Order document (optional, ~60% of submissions have it)
+        ...(Math.random() > 0.4 ? [{
           document_subtype: null,
-          document_type: 'HSSE',
-          document_upload: `/uploads/documents/hsse-${submissionCount + 1}.pdf`,
+          document_type: 'WORK_ORDER',
+          document_number: `WO/${String(submissionCount + 1).padStart(4, '0')}/2024`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 14 * 24 * 60 * 60 * 1000), // 0-14 hari sebelum created
+          document_upload: `/uploads/documents/work-order-${submissionCount + 1}.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        }] : []),
+        // Kontrak Kerja document (optional, ~50% of submissions have it)
+        ...(Math.random() > 0.5 ? [{
+          document_subtype: null,
+          document_type: 'KONTRAK_KERJA',
+          document_number: `KK/${String(submissionCount + 1).padStart(4, '0')}/2024`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000), // 0-30 hari sebelum created
+          document_upload: `/uploads/documents/kontrak-kerja-${submissionCount + 1}.pdf`,
+          submission_id: createdSubmission.id,
+          uploaded_at: createdDate,
+          uploaded_by: vendor.id,
+        }] : []),
+        // JSA document (optional, ~40% of submissions have it)
+        ...(Math.random() > 0.6 ? [{
+          document_subtype: null,
+          document_type: 'JSA',
+          document_number: `JSA/${String(submissionCount + 1).padStart(4, '0')}/2024`,
+          document_date: new Date(createdDate.getTime() - Math.random() * 3 * 24 * 60 * 60 * 1000), // 0-3 hari sebelum created
+          document_upload: `/uploads/documents/jsa-${submissionCount + 1}.pdf`,
           submission_id: createdSubmission.id,
           uploaded_at: createdDate,
           uploaded_by: vendor.id,

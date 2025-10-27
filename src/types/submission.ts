@@ -10,7 +10,7 @@ export interface SupportDocument {
   document_subtype?: string; // Subtype untuk SIMJA/SIKA (e.g., "Pekerjaan Panas", "Ast. Man. Production")
   document_number?: string;
   document_date?: string;
-  document_type: 'SIMJA' | 'SIKA' | 'HSSE' | 'JSA';
+  document_type: 'SIMJA' | 'SIKA' | 'WORK_ORDER' | 'KONTRAK_KERJA' | 'JSA';
   document_upload: string;
 }
 

@@ -1081,7 +1081,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                                 )}
                                 {worker.hsse_pass_valid_thru && (
                                   <div className="flex justify-between">
-                                    <span className="font-medium">Masa berlaku HSSE pass:</span>
+                                    <span className="font-medium">Masa Berlaku HSSE Pass Sampai Dengan:</span>
                                     <span>{new Date(worker.hsse_pass_valid_thru).toLocaleDateString('id-ID')}</span>
                                   </div>
                                 )}
