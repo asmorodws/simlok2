@@ -514,14 +514,15 @@ export async function loadWorkerDocument(
             return { type: 'unsupported', error: 'Invalid path structure' };
           }
           
-          // 🎯 CRITICAL: Enhanced category mapping for HSSE worker documents
+          // 🎯 CRITICAL: Enhanced category mapping for all document types
           const categoryFolders: Record<string, string> = {
             sika: 'dokumen-sika',
             simja: 'dokumen-simja',
-            hsse: 'dokumen-hsse',
+            'work-order': 'dokumen-work-order',
+            'kontrak-kerja': 'dokumen-kontrak-kerja',
+            jsa: 'dokumen-jsa',
             'hsse-worker': 'dokumen-hsse-pekerja',  // ⭐ CRITICAL for HSSE docs
             'worker-hsse': 'dokumen-hsse-pekerja',  // ⭐ Alternative naming
-            document: 'dokumen',
             'worker-photo': 'foto-pekerja'
           };
           

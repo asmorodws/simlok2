@@ -81,9 +81,9 @@ export function WorkerPhotoUpload({ onPhotoChange }: { onPhotoChange: (file: Fil
         throw new Error('File harus berupa gambar');
       }
 
-      // Validate file size (max 10MB before compression)
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Ukuran file maksimal 10MB');
+      // Validate file size (max 8MB before compression)
+      if (file.size > 8 * 1024 * 1024) {
+        throw new Error('Ukuran file maksimal 8MB');
       }
 
       // Compress worker photo with optimized settings

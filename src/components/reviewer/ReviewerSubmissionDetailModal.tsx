@@ -30,6 +30,7 @@ import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
+import { formatDocumentTypeLabel } from '@/utils/documentTypeFormatter';
 
 // Types
 interface WorkerPhoto {
@@ -1167,8 +1168,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     // SIMJA documents
                                     simjaDocuments.forEach(doc => {
                                       const docLabel = doc.document_subtype 
-                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
-                                        : `• ${doc.document_type}`;
+                                        ? `• ${formatDocumentTypeLabel('SIMJA')} ${doc.document_subtype}` 
+                                        : `• ${formatDocumentTypeLabel('SIMJA')}`;
                                       template += `\n${docLabel}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
@@ -1178,8 +1179,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     // SIKA documents
                                     sikaDocuments.forEach(doc => {
                                       const docLabel = doc.document_subtype 
-                                        ? `• ${doc.document_type} ${doc.document_subtype}` 
-                                        : `• ${doc.document_type}`;
+                                        ? `• ${formatDocumentTypeLabel('SIKA')} ${doc.document_subtype}` 
+                                        : `• ${formatDocumentTypeLabel('SIKA')}`;
                                       template += `\n${docLabel}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
@@ -1189,8 +1190,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     // Work Order documents
                                     workOrderDocuments.forEach(doc => {
                                       const docLabel = doc.document_subtype 
-                                        ? `• Work Order ${doc.document_subtype}` 
-                                        : `• Work Order`;
+                                        ? `• ${formatDocumentTypeLabel('WORK_ORDER')} ${doc.document_subtype}` 
+                                        : `• ${formatDocumentTypeLabel('WORK_ORDER')}`;
                                       template += `\n${docLabel}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
@@ -1200,8 +1201,8 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                                     // Kontrak Kerja documents
                                     kontrakKerjaDocuments.forEach(doc => {
                                       const docLabel = doc.document_subtype 
-                                        ? `• Kontrak Kerja ${doc.document_subtype}` 
-                                        : `• Kontrak Kerja`;
+                                        ? `• ${formatDocumentTypeLabel('KONTRAK_KERJA')} ${doc.document_subtype}` 
+                                        : `• ${formatDocumentTypeLabel('KONTRAK_KERJA')}`;
                                       template += `\n${docLabel}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
@@ -1210,7 +1211,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
                                     // JSA documents
                                     jsaDocuments.forEach(doc => {
-                                      template += `\n• Job Safety Analysis`;
+                                      template += `\n• ${formatDocumentTypeLabel('JSA')}`;
                                       if (doc.document_number && doc.document_date) {
                                         template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
                                       }

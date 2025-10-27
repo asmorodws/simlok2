@@ -145,12 +145,12 @@ export class ImageCompressor {
       };
     }
 
-    // Check file size (max 10MB before compression)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Check file size (max 8MB before compression)
+    const maxSize = 8 * 1024 * 1024; // 8MB
     if (file.size > maxSize) {
       return {
         isValid: false,
-        error: 'Ukuran file terlalu besar. Maksimal 10MB sebelum kompresi'
+        error: 'Ukuran file terlalu besar. Maksimal 8MB'
       };
     }
 
@@ -168,21 +168,52 @@ export class ImageCompressor {
   }
 
   /**
-   * Validate document files (for SIKA/SIMJA)
+   * Validate document files (for SIKA/SIMJA/Support Documents)
+   * Only PDF files are allowed for support documents
    */
   static validateDocumentFile(file: File): { isValid: boolean; error?: string } {
-    // Allow both images and documents for SIKA/SIMJA
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png',
-      'application/pdf', 
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
+    // Only allow PDF for support documents
+    const allowedTypes = ['application/pdf'];
 
     if (!allowedTypes.includes(file.type)) {
       return {
         isValid: false,
-        error: 'File harus berupa gambar (JPG, PNG) atau dokumen (PDF, DOC, DOCX)'
+        error: 'File harus berupa dokumen PDF'
+      };
+    }
+
+    // Check file size (max 8MB for PDF)
+    const maxSize = 8 * 1024 * 1024; // 8MB
+    if (file.size > maxSize) {
+      return {
+        isValid: false,
+        error: 'Ukuran file terlalu besar. Maksimal 8MB'
+      };
+    }
+
+    const allowedExtensions = ['.pdf'];
+    const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowedExtensions.includes(fileExt)) {
+      return {
+        isValid: false,
+        error: 'Ekstensi file harus .pdf'
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Validate HSSE worker document (can be image or PDF)
+   */
+  static validateHSSEWorkerDocument(file: File): { isValid: boolean; error?: string } {
+    // Allow both images and PDF for HSSE worker documents
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        isValid: false,
+        error: 'File harus berupa gambar (JPG, JPEG, PNG) atau PDF'
       };
     }
 
@@ -195,12 +226,12 @@ export class ImageCompressor {
       };
     }
 
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.doc', '.docx'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
     const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowedExtensions.includes(fileExt)) {
       return {
         isValid: false,
-        error: 'Ekstensi file tidak valid'
+        error: 'Ekstensi file harus .jpg, .jpeg, .png, atau .pdf'
       };
     }
 

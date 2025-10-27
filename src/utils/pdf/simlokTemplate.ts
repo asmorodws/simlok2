@@ -818,6 +818,7 @@ async function addSupportingDocumentsPage(
   // Check if new support_documents structure exists
   if (s.support_documents && s.support_documents.length > 0) {
     console.log('[AddSupportingDocumentsPage] Using new support_documents structure');
+    console.log(`[AddSupportingDocumentsPage] Total support documents: ${s.support_documents.length}`);
     
     // Group by document type: SIMJA, SIKA, WORK_ORDER, KONTRAK_KERJA, JSA
     const simjaDocs = s.support_documents.filter(d => d.document_type === 'SIMJA');
@@ -825,6 +826,8 @@ async function addSupportingDocumentsPage(
     const workOrderDocs = s.support_documents.filter(d => d.document_type === 'WORK_ORDER');
     const kontrakKerjaDocs = s.support_documents.filter(d => d.document_type === 'KONTRAK_KERJA');
     const jsaDocs = s.support_documents.filter(d => d.document_type === 'JSA');
+    
+    console.log(`[AddSupportingDocumentsPage] Document counts - SIMJA: ${simjaDocs.length}, SIKA: ${sikaDocs.length}, Work Order: ${workOrderDocs.length}, Kontrak Kerja: ${kontrakKerjaDocs.length}, JSA: ${jsaDocs.length}`);
     
     // Add SIMJA documents first
     simjaDocs.forEach(doc => {
@@ -941,13 +944,18 @@ async function addSupportingDocumentsPage(
     embeddedPage: any;
     isImage: boolean;
     image?: any;
-    documentType: string; // NEW: Track document type for grouping separators
+    documentType: string; // Track document type for grouping separators
+    documentId: string; // NEW: Unique identifier for each document (path + number)
   }
   
   const allPages: PageInfo[] = [];
   
   for (const doc of documents) {
-    console.log(`[AddSupportingDocumentsPage] Loading document: ${doc.title} - ${doc.subtitle || 'no subtitle'}`);
+    console.log(`[AddSupportingDocumentsPage] Loading document: ${doc.title} (${doc.documentType}) - ${doc.subtitle || 'no subtitle'}`);
+    console.log(`[AddSupportingDocumentsPage] Document path: ${doc.path}`);
+    
+    // Create unique document ID (combination of path and number)
+    const documentId = `${doc.path}_${doc.number || Date.now()}`;
     
     try {
       const documentResult = await loadWorkerDocument(k.doc, doc.path);
@@ -964,7 +972,8 @@ async function addSupportingDocumentsPage(
           embeddedPage: null,
           isImage: true,
           image: documentResult.image,
-          documentType: doc.documentType
+          documentType: doc.documentType,
+          documentId: documentId
         });
         console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
         
@@ -991,7 +1000,8 @@ async function addSupportingDocumentsPage(
             totalPages: pageCount,
             embeddedPage,
             isImage: false,
-            documentType: doc.documentType
+            documentType: doc.documentType,
+            documentId: documentId
           });
         });
         
@@ -1020,21 +1030,31 @@ async function addSupportingDocumentsPage(
   const horizontalGap = 30;
   
   let currentPageIndex = 0;
-  let lastDocumentType = ''; // Track last document type to add separators
+  let lastDocumentType = ''; // Track last document type
+  let lastDocumentSubtype = ''; // Track last document subtype for grouping
+  let lastDocumentId = ''; // Track last document ID to separate individual documents
   
   while (currentPageIndex < allPages.length) {
-    // Check if we need a document type separator
+    // Check if we need a document type/subtype separator
     const currentPage = allPages[currentPageIndex];
     if (!currentPage) break;
     
     const currentDocType = currentPage.documentType;
-    const needsSeparator = currentDocType !== lastDocumentType;
+    const currentDocSubtype = currentPage.docSubtitle || '';
+    const currentDocId = currentPage.documentId;
+    
+    // Need separator if type, subtype, OR document ID changed
+    const needsSeparator = currentDocType !== lastDocumentType || 
+                          currentDocSubtype !== lastDocumentSubtype ||
+                          currentDocId !== lastDocumentId;
     
     // Update current document type for footer label BEFORE adding page
     if (needsSeparator) {
       k.currentDocumentType = currentDocType;
       lastDocumentType = currentDocType;
-      console.log(`[AddSupportingDocumentsPage] Document type changed to: ${currentDocType}`);
+      lastDocumentSubtype = currentDocSubtype;
+      lastDocumentId = currentDocId;
+      console.log(`[AddSupportingDocumentsPage] Document changed to: ${currentDocType}${currentDocSubtype ? ' - ' + currentDocSubtype : ''} (ID: ${currentDocId})`);
     }
     
     // Add new output page (footer will use currentDocumentType)
@@ -1045,15 +1065,23 @@ async function addSupportingDocumentsPage(
     const startY = height - 140;
     
     // Calculate how many pages to render on this output page (max 2)
-    // BUT: If document type changes mid-page, only render 1 to keep grouping clean
+    // BUT: If document type, subtype, OR document ID changes mid-page, only render 1 to keep grouping clean
     let endIndex = Math.min(currentPageIndex + pagesPerOutputPage, allPages.length);
     
-    // Check if next page has different document type - if so, only render current page
+    // Check if next page has different document type, subtype, OR document ID - if so, only render current page
     if (endIndex > currentPageIndex + 1) {
       const nextPage = allPages[currentPageIndex + 1];
-      if (nextPage && nextPage.documentType !== currentDocType) {
+      if (nextPage && (nextPage.documentType !== currentDocType || 
+                       (nextPage.docSubtitle || '') !== currentDocSubtype ||
+                       nextPage.documentId !== currentDocId)) {
         endIndex = currentPageIndex + 1; // Only render current page
-        console.log(`[AddSupportingDocumentsPage] Document type change detected, rendering only 1 page to keep grouping`);
+        console.log(`[AddSupportingDocumentsPage] Document change detected (type/subtype/ID), rendering only 1 page to keep grouping`);
+      }
+      
+      // ADDITIONAL CHECK: If next page is pageNumber 1, it's a new document - start on new page
+      if (nextPage && nextPage.pageNumber === 1 && nextPage.documentId !== currentDocId) {
+        endIndex = currentPageIndex + 1; // Only render current page
+        console.log(`[AddSupportingDocumentsPage] New document detected (pageNumber=1), starting on new output page`);
       }
     }
     

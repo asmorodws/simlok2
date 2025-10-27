@@ -160,7 +160,7 @@ export default function SupportDocumentList({
                 {/* Document Number */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nomor Dokumen {documentType} <span className="text-red-500">*</span>
+                    Nomor Dokumen {documentType === 'WORK_ORDER' ? 'Work Order' : documentType === 'KONTRAK_KERJA' ? 'Kontrak Kerja' : documentType} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -207,7 +207,7 @@ export default function SupportDocumentList({
               {/* Right column: file upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload Dokumen {documentType} <span className="text-red-500">*</span>
+                  Upload Dokumen {documentType} (PDF) <span className="text-red-500">*</span>
                 </label>
                 <EnhancedFileUpload
                   id={`doc-${doc.id}`}
@@ -218,13 +218,14 @@ export default function SupportDocumentList({
                   }
                   uploadType="document"
                   disabled={disabled}
+                  description="Upload file PDF saja. Maksimal 8MB"
                 />
                 {doc.document_upload && (
                   <p className="mt-2 text-xs text-green-600 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    Dokumen berhasil diunggah
+                    Dokumen PDF berhasil diunggah
                   </p>
                 )}
               </div>
@@ -243,7 +244,7 @@ export default function SupportDocumentList({
           disabled={disabled}
         >
           <PlusIcon className="h-4 w-4 mr-1" />
-          Tambah {documentType}
+          Tambah {documentType === 'WORK_ORDER' ? 'Work Order' : documentType === 'KONTRAK_KERJA' ? 'Kontrak Kerja' : documentType}
         </Button>
       </div>
     </div>

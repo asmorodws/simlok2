@@ -5,9 +5,9 @@ import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
 import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
-import { 
-  XMarkIcon, 
-  CheckCircleIcon, 
+import {
+  XMarkIcon,
+  CheckCircleIcon,
   XCircleIcon,
   ExclamationTriangleIcon,
   UserIcon,
@@ -88,9 +88,9 @@ export default function ReviewerUserVerificationModal({
 
   const handleVerifyUser = async (action: 'approve' | 'reject') => {
     if (!currentUser) return;
-    
+
     setProcessing(currentUser.id);
-    
+
     try {
       const response = await fetch(`/api/users/${currentUser.id}`, {
         method: 'PATCH',
@@ -106,7 +106,7 @@ export default function ReviewerUserVerificationModal({
       }
 
       const result = await response.json();
-      
+
       if (action === 'approve' && result.user) {
         // Update local state immediately
         setCurrentUser(result.user);
@@ -120,7 +120,7 @@ export default function ReviewerUserVerificationModal({
       }
 
       setShowConfirmModal(null);
-      
+
     } catch (error) {
       console.error('Error updating user verification:', error);
       showError('Error', error instanceof Error ? error.message : 'Failed to update user verification');
@@ -174,13 +174,12 @@ export default function ReviewerUserVerificationModal({
                 {/* Status Section */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
-                      isVerified 
-                        ? 'bg-green-100 text-green-800' 
+                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${isVerified
+                        ? 'bg-green-100 text-green-800'
                         : isRejected
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-warning-100 text-warning-800'
-                    }`}>
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-warning-100 text-warning-800'
+                      }`}>
                       {isVerified ? (
                         <CheckCircleIcon className="w-4 h-4" />
                       ) : isRejected ? (
@@ -190,15 +189,14 @@ export default function ReviewerUserVerificationModal({
                       )}
                       {isVerified ? 'Terverifikasi' : isRejected ? 'Ditolak' : 'Menunggu Verifikasi'}
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      currentUser.role === 'VENDOR' 
-                        ? 'bg-blue-100 text-blue-800' 
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${currentUser.role === 'VENDOR'
+                        ? 'bg-blue-100 text-blue-800'
                         : currentUser.role === 'VERIFIER'
-                        ? 'bg-purple-100 text-purple-800'
-                        : currentUser.role === 'VISITOR'
-                        ? 'bg-cyan-100 text-cyan-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
+                          ? 'bg-purple-100 text-purple-800'
+                          : currentUser.role === 'VISITOR'
+                            ? 'bg-cyan-100 text-cyan-800'
+                            : 'bg-gray-100 text-gray-800'
+                      }`}>
                       <IdentificationIcon className="w-4 h-4 inline mr-1" />
                       {currentUser.role}
                     </div>
@@ -206,15 +204,16 @@ export default function ReviewerUserVerificationModal({
                 </div>
 
                 {/* User Info Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Personal Information */}
-                  <Card className="bg-gray-50">
+
+                <Card className="shadow-2xl rounded-none sm:rounded-lg">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Personal Information */}
                     <div className="p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
                         <UserIcon className="w-5 h-5 mr-2 text-gray-500" />
-                        Informasi Personal
+                        Informasi Akun
                       </h3>
-                      
+
                       <div className="space-y-4">
                         <div className="flex items-start">
                           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
@@ -269,14 +268,11 @@ export default function ReviewerUserVerificationModal({
                         )}
                       </div>
                     </div>
-                  </Card>
 
-                  {/* System Information */}
-                  <Card className="bg-gray-50">
+                    {/* System Information */}
+
                     <div className="p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                        <ShieldCheckIcon className="w-5 h-5 mr-2 text-gray-500" />
-                        Informasi Sistem
                       </h3>
 
                       <div className="space-y-4">
@@ -318,7 +314,7 @@ export default function ReviewerUserVerificationModal({
                               </p>
                               {currentUser.verified_by && (
                                 <p className="text-sm text-gray-600 mt-1">
-                                  
+
                                 </p>
                               )}
                             </div>
@@ -335,14 +331,14 @@ export default function ReviewerUserVerificationModal({
                               <p className="text-base font-medium text-gray-900">
                                 {formatDate(currentUser.rejected_at)}
                               </p>
-                              
+
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
-                  </Card>
-                </div>
+                  </div>
+                </Card>
 
                 {/* Actions for Pending Users */}
                 {isPending && (
@@ -353,7 +349,7 @@ export default function ReviewerUserVerificationModal({
                         Tindakan Verifikasi
                       </h3>
                       <p className="text-sm text-gray-600 mb-4">
-                        Pilih tindakan yang sesuai untuk user ini. Persetujuan akan memberikan akses sistem, 
+                        Pilih tindakan yang sesuai untuk user ini. Persetujuan akan memberikan akses sistem,
                         sedangkan penolakan akan mengubah status user menjadi ditolak.
                       </p>
 
@@ -396,7 +392,7 @@ export default function ReviewerUserVerificationModal({
                             User Sudah Terverifikasi
                           </h4>
                           <p className="text-green-700">
-                            User ini sudah dapat mengakses sistem sesuai dengan role yang diberikan dan 
+                            User ini sudah dapat mengakses sistem sesuai dengan role yang diberikan dan
                             memiliki akses penuh ke fitur yang tersedia.
                           </p>
                         </div>
@@ -418,7 +414,7 @@ export default function ReviewerUserVerificationModal({
                             User Telah Ditolak
                           </h4>
                           <p className="text-red-700">
-                            User ini telah ditolak dan tidak dapat mengakses sistem. User tidak dapat login dan 
+                            User ini telah ditolak dan tidak dapat mengakses sistem. User tidak dapat login dan
                             perlu menghubungi administrator untuk informasi lebih lanjut.
                           </p>
                         </div>
@@ -474,9 +470,8 @@ function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConf
       <Card className="max-w-md w-full mx-4">
         <div className="p-6">
           <div className="flex items-center mb-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              isApprove ? 'bg-green-100' : 'bg-red-100'
-            }`}>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isApprove ? 'bg-green-100' : 'bg-red-100'
+              }`}>
               {isApprove ? (
                 <CheckCircleIcon className="w-6 h-6 text-green-600" />
               ) : (

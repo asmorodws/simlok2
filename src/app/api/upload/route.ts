@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { fileManager } from '@/lib/fileManager';
+import { PDFCompressor } from '@/utils/pdf-compressor-server';
 
 // Configure maximum file size (8MB)
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
@@ -61,7 +62,30 @@ export async function POST(request: NextRequest) {
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    let buffer = Buffer.from(bytes);
+
+    // Compress PDF files before saving
+    if (file.type === 'application/pdf' || fileExtension === '.pdf') {
+      try {
+        const compressionResult = await PDFCompressor.compressPDF(buffer, {
+          skipIfSmall: true,
+          skipThresholdKB: 100, // Skip compression for files < 100KB
+        });
+
+        if (compressionResult.compressionApplied) {
+          buffer = Buffer.from(compressionResult.buffer);
+          console.log(
+            `PDF compressed: ${file.name} - ` +
+            `Original: ${(compressionResult.originalSize / 1024).toFixed(2)}KB, ` +
+            `Compressed: ${(compressionResult.compressedSize / 1024).toFixed(2)}KB, ` +
+            `Saved: ${compressionResult.compressionRatio.toFixed(1)}%`
+          );
+        }
+      } catch (error) {
+        console.error('PDF compression failed, using original file:', error);
+        // Continue with original buffer if compression fails
+      }
+    }
 
     // Save file using FileManager
     const fileInfo = await fileManager.saveFile(

@@ -97,7 +97,7 @@ export class FileValidationService {
     const config: ValidationOptions = {
       allowedTypes: options.allowedTypes || this.DEFAULT_ALLOWED_TYPES,
       allowedExtensions: options.allowedExtensions || this.DEFAULT_ALLOWED_EXTENSIONS,
-      maxSize: options.maxSize || 10 * 1024 * 1024, // 10MB default
+      maxSize: options.maxSize || 8 * 1024 * 1024, // 8MB default
       checkMagicBytes: options.checkMagicBytes ?? true,
       scanForMalware: options.scanForMalware ?? true,
     };
@@ -367,7 +367,7 @@ export class FileValidationService {
     return this.validateFile(filePath, originalName, {
       allowedTypes,
       allowedExtensions,
-      maxSize: 10 * 1024 * 1024, // 10MB
+      maxSize: 8 * 1024 * 1024, // 8MB
       checkMagicBytes: true,
       scanForMalware: true,
     });

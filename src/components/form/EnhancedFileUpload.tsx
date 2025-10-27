@@ -17,7 +17,7 @@ interface EnhancedFileUploadProps {
   value: string;
   onChange: (value: string) => void;
   onFileChange?: (file: File | null) => void;
-  uploadType: "worker-photo" | "document" | "other";
+  uploadType: "worker-photo" | "document" | "hsse-worker" | "other";
   multiple?: boolean;
   required?: boolean;
   disabled?: boolean;
@@ -57,11 +57,13 @@ export default function EnhancedFileUpload({
   const getAcceptTypes = () => {
     switch (uploadType) {
       case "worker-photo":
-        return ".jpg,.jpeg,.png,.webp";
+        return ".jpg,.jpeg,.png,";
       case "document":
-        return ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp";
+        return ".pdf"; // Only PDF for support documents
+      case "hsse-worker":
+        return ".jpg,.jpeg,.png,.pdf"; // Image or PDF for HSSE worker
       default:
-        return ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp";
+        return ".pdf";
     }
   };
 
@@ -70,13 +72,20 @@ export default function EnhancedFileUpload({
       return {
         title: "Unggah Foto Pekerja",
         subtitle: "Tarik & letakkan atau klik untuk memilih",
-        formats: "JPG, JPEG, PNG, WebP — maks 10MB",
+        formats: "JPG, JPEG, PNG — maks 8MB",
+      };
+    }
+    if (uploadType === "hsse-worker") {
+      return {
+        title: "Unggah Dokumen HSSE",
+        subtitle: "Tarik & letakkan atau klik untuk memilih",
+        formats: "JPG, JPEG, PNG, PDF — maks 8MB",
       };
     }
     return {
-      title: "Unggah Dokumen",
+      title: "Unggah Dokumen PDF",
       subtitle: "Tarik & letakkan atau klik untuk memilih",
-      formats: "PDF, DOC, DOCX, JPG, PNG, WebP — maks 8MB",
+      formats: "PDF — maks 8MB",
     };
   })();
 
@@ -115,6 +124,8 @@ export default function EnhancedFileUpload({
         return ImageCompressor.validateWorkerPhoto(file);
       case "document":
         return ImageCompressor.validateDocumentFile(file);
+      case "hsse-worker":
+        return ImageCompressor.validateHSSEWorkerDocument(file);
       default:
         return { isValid: false, error: "Tipe upload tidak valid" };
     }
@@ -123,7 +134,8 @@ export default function EnhancedFileUpload({
   const uploadFile = async (file: File): Promise<string> => {
     let fileToUpload = file;
 
-    if (uploadType === "worker-photo") {
+    // Compress images for worker photos and HSSE worker images
+    if (uploadType === "worker-photo" || (uploadType === "hsse-worker" && file.type.startsWith('image/'))) {
       try {
         const compressionResult = await ImageCompressor.compressWorkerPhoto(file, {
           maxWidth: 800,
@@ -324,7 +336,7 @@ export default function EnhancedFileUpload({
           <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
             <CloudArrowUpIcon className="h-10 w-10 text-blue-500 animate-bounce" />
             <p className="mt-3 text-sm font-medium text-gray-900">
-              Mengunggah{uploadType === "worker-photo" ? " & mengompres" : ""}…
+              Mengunggah{uploadType === "worker-photo" || (uploadType === "hsse-worker" && localPreview) ? " & mengompres" : ""}…
             </p>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200">
               <div
@@ -479,6 +491,12 @@ export default function EnhancedFileUpload({
           <div className="text-center min-h-[140px] flex flex-col items-center justify-center">
             {uploadType === "worker-photo" ? (
               <PhotoIcon className="h-10 w-10 text-blue-500" />
+            ) : uploadType === "hsse-worker" ? (
+              <div className="flex items-center gap-2">
+                <PhotoIcon className="h-10 w-10 text-blue-500" />
+                <span className="text-gray-400">/</span>
+                <DocumentIcon className="h-10 w-10 text-blue-500" />
+              </div>
             ) : (
               <DocumentIcon className="h-10 w-10 text-blue-500" />
             )}

@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 // Get upload limits and allowed types
 export async function GET() {
   const config = {
-    maxFileSize: '10MB',
+    maxFileSize: '8MB',
     allowedTypes: [
       'image/jpeg',
       'image/png',

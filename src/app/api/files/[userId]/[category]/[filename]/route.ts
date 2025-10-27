@@ -46,9 +46,10 @@ export async function GET(
     const categoryFolders = {
       sika: 'dokumen-sika',
       simja: 'dokumen-simja',
-      hsse: 'dokumen-hsse',
+      'work-order': 'dokumen-work-order',
+      'kontrak-kerja': 'dokumen-kontrak-kerja',
+      jsa: 'dokumen-jsa',
       'hsse-worker': 'dokumen-hsse-pekerja',
-      document: 'dokumen',
       'worker-photo': 'foto-pekerja'
     };
 

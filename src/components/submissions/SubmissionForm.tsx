@@ -1306,7 +1306,7 @@ export default function SubmissionForm() {
 
                           {/* Tanggal Berlaku HSSE */}
                           <div>
-                            <Label htmlFor={`hsse_valid_${w.id}`}>Berlaku Sampai <span className="ml-1 text-red-500">*</span></Label>
+                            <Label htmlFor={`hsse_valid_${w.id}`}>Masa Berlaku HSSE Pass Sampai Dengan<span className="ml-1 text-red-500">*</span></Label>
                             <DatePicker
                               id={`hsse_valid_${w.id}`}
                               name={`hsse_valid_${w.id}`}
@@ -1344,7 +1344,7 @@ export default function SubmissionForm() {
                               name={`hsse_doc_${w.id}`}
                               value={w.hsse_pass_document_upload || ''}
                               onChange={(url) => updateWorkerHsseDocument(w.id, url)}
-                              uploadType="document"
+                              uploadType="hsse-worker"
                               maxFileNameLength={15}
                               required={false}
                             />

@@ -4,7 +4,8 @@ import { DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import DetailSection from '@/components/common/DetailSection';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
-import type { SubmissionSupportDocument } from '@/types/submission';
+import { SubmissionSupportDocument } from '@/types/submission';
+import { formatDocumentTypeLabel } from '@/utils/documentTypeFormatter';
 
 interface SupportDocumentsSectionProps {
   supportDocuments?: SubmissionSupportDocument[];
@@ -103,13 +104,7 @@ export default function SupportDocumentsSection({
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-xs text-gray-900 truncate leading-tight">
                       {doc.document_subtype || 
-                        `${doc.document_type === 'WORK_ORDER' 
-                          ? 'Work Order' 
-                          : doc.document_type === 'KONTRAK_KERJA'
-                          ? 'Kontrak Kerja'
-                          : doc.document_type === 'JSA' 
-                          ? 'JSA' 
-                          : doc.document_type} #${index + 1}`}
+                        `${formatDocumentTypeLabel(doc.document_type as any)} #${index + 1}`}
                     </p>
                   </div>
                 </div>
@@ -149,13 +144,7 @@ export default function SupportDocumentsSection({
                       onViewDocument(
                         fileUrlHelper.convertLegacyUrl(doc.document_upload),
                         doc.document_subtype || 
-                          `${doc.document_type === 'WORK_ORDER' 
-                            ? 'Work Order' 
-                            : doc.document_type === 'KONTRAK_KERJA'
-                            ? 'Kontrak Kerja'
-                            : doc.document_type === 'JSA' 
-                            ? 'JSA' 
-                            : doc.document_type} Document`
+                          `${formatDocumentTypeLabel(doc.document_type as any)} Document`
                       )
                     }
                     className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-xs"
