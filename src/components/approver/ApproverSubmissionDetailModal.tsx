@@ -200,6 +200,28 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     });
   };
 
+  // Format work location - split by comma and display in separate lines with bullet points
+  const formatWorkLocation = (location: string) => {
+    if (!location) return '-';
+    
+    // Check if location contains comma
+    if (location.includes(',')) {
+      const locations = location.split(',').map(loc => loc.trim()).filter(loc => loc);
+      return (
+        <div className="space-y-1">
+          {locations.map((loc, index) => (
+            <div key={index} className="flex items-start text-sm font-normal text-gray-900">
+              <span className="mr-2 mt-1">•</span>
+              <span>{loc}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return location;
+  };
+
   // Handle file view
   const handleFileView = (fileUrl: string, fileName: string) => {
     if (fileUrl) {
@@ -906,7 +928,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       />
                       <InfoCard
                         label="Lokasi Kerja"
-                        value={submission.work_location}
+                        value={formatWorkLocation(submission.work_location)}
                       />
                       <InfoCard
                         label="Jam Kerja"

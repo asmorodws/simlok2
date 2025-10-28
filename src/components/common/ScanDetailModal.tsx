@@ -89,6 +89,28 @@ export default function ScanDetailModal({
 
   if (!isOpen || !scan) return null;
 
+  // Format work location - split by comma and display in separate lines with bullet points
+  const formatWorkLocation = (location: string) => {
+    if (!location) return '-';
+    
+    // Check if location contains comma
+    if (location.includes(',')) {
+      const locations = location.split(',').map(loc => loc.trim()).filter(loc => loc);
+      return (
+        <div className="space-y-1">
+          {locations.map((loc, index) => (
+            <div key={index} className="flex items-start">
+              <span className="mr-2 mt-1">•</span>
+              <span>{loc}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return location;
+  };
+
   const getStatusBanner = () => {
     switch (scan.submission.approval_status) {
       case 'PENDING_APPROVAL':
@@ -233,9 +255,9 @@ export default function ScanDetailModal({
                       <MapPinIcon className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-gray-600">Lokasi Kerja</span>
                     </div>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {scan.submission.work_location}
-                    </p>
+                    <div className="text-sm text-gray-700 leading-relaxed">
+                      {formatWorkLocation(scan.submission.work_location)}
+                    </div>
                   </div>
 
                   {scan.submission.working_hours && (

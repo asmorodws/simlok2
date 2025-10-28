@@ -154,7 +154,6 @@ export default function SubmissionForm() {
   // -------------------------------
   const [formData, setFormData] = useState<SubmissionData>({
     vendor_name: '',
-    based_on: '',
     officer_name: '',
     job_description: '',
     work_location: '',
@@ -297,13 +296,16 @@ export default function SubmissionForm() {
 
   // Tampilkan tombol hapus draft hanya jika:
   // - ada draft
-  // - "Berdasarkan" terisi
-  // - ada minimal satu pekerja dengan foto
+  // - ada minimal satu pekerja dengan foto atau dokumen pendukung terisi
   const canShowDelete = useMemo(() => {
-    const basedFilled = (formData.based_on || '').trim().length > 0;
     const hasAnyPhoto = workers.some((w) => (w.worker_photo || '').trim().length > 0);
-    return hasDraft && basedFilled || hasAnyPhoto;
-  }, [hasDraft, formData.based_on, workers]);
+    const hasAnyDocument = simjaDocuments.some(d => d.document_upload) || 
+                          sikaDocuments.some(d => d.document_upload) ||
+                          workOrderDocuments.some(d => d.document_upload) ||
+                          kontrakKerjaDocuments.some(d => d.document_upload) ||
+                          jsaDocuments.some(d => d.document_upload);
+    return hasDraft && (hasAnyPhoto || hasAnyDocument);
+  }, [hasDraft, workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments]);
 
   // -------------------------------
   // Utilities
@@ -934,19 +936,6 @@ export default function SubmissionForm() {
                     placeholder="Nama petugas yang bertanggung jawab"
                   />
                 </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="based_on">Berdasarkan <span className="ml-1 text-red-500">*</span></Label>
-                  <Input
-                    id="based_on"
-                    name="based_on"
-                    type="text"
-                    value={formData.based_on}
-                    onChange={handleChange}
-                    required
-                    placeholder="Contoh: Surat Izin Kerja No. 123/2024"
-                  />
-                </div>
               </div>
             </div>
 
@@ -1063,6 +1052,9 @@ export default function SubmissionForm() {
                     required
                     placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
                   />
+                  <Badge variant="warning">
+                    Jika lokasi kerja lebih dari satu, pisahkan dengan koma ( , )
+                  </Badge>
                 </div>
 
                 <div>
@@ -1299,7 +1291,7 @@ export default function SubmissionForm() {
                               type="text"
                               value={w.hsse_pass_number || ''}
                               onChange={(e) => updateWorkerHsseNumber(w.id, e.target.value)}
-                              placeholder="Contoh: HSSE/2024/001"
+                              placeholder="Contoh: 2024/V (angka romawi)/001"
                               required
                             />
                           </div>

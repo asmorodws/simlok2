@@ -5,6 +5,101 @@ import { prisma } from '@/lib/singletons';
 import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
 
+// Helper function to normalize document number
+// - Convert to uppercase
+// - Remove "No." or "No" prefix at the beginning
+// Examples:
+//   "simja/0202" -> "SIMJA/0202"
+//   "No. 096/SIMJA/S0700/2024-S0" -> "096/SIMJA/S0700/2024-S0"
+//   "no simja/123" -> "SIMJA/123"
+//   "NO. abc-123" -> "ABC-123"
+function normalizeDocumentNumber(docNumber: string | null | undefined): string | null {
+  if (!docNumber || typeof docNumber !== 'string') {
+    return null;
+  }
+
+  let normalized = docNumber.trim();
+  
+  // Remove "No." or "No" prefix (case insensitive)
+  // Matches: "No. ", "No ", "no. ", "no ", "NO. ", "NO "
+  normalized = normalized.replace(/^no\.?\s*/i, '');
+  
+  // Convert to uppercase
+  normalized = normalized.toUpperCase();
+  
+  return normalized || null;
+}
+
+// Helper function to generate "Berdasarkan" text from SIMJA documents
+function generateBasedOnText(simjaDocuments: any[]): string {
+  console.log('generateBasedOnText - Input:', JSON.stringify(simjaDocuments, null, 2));
+  
+  if (!simjaDocuments || simjaDocuments.length === 0) {
+    console.log('generateBasedOnText - No documents, returning default');
+    return 'Surat Permohonan Izin Kerja'; // Default text
+  }
+
+  const validSimjaDocs = simjaDocuments.filter(
+    doc => {
+      const hasNumber = doc.document_number && doc.document_number.trim() !== '';
+      const hasDate = doc.document_date && doc.document_date.trim() !== '';
+      console.log('generateBasedOnText - Checking doc:', { 
+        hasNumber, 
+        hasDate, 
+        document_number: doc.document_number,
+        document_date: doc.document_date 
+      });
+      return hasNumber && hasDate;
+    }
+  );
+
+  console.log('generateBasedOnText - Valid docs count:', validSimjaDocs.length);
+
+  if (validSimjaDocs.length === 0) {
+    console.log('generateBasedOnText - No valid documents, returning default');
+    return 'Surat Permohonan Izin Kerja'; // Default text
+  }
+
+  const simjaStrings = validSimjaDocs.map((doc) => {
+    const number = doc.document_number || '';
+    const date = doc.document_date || '';
+    
+    // Format tanggal dari YYYY-MM-DD ke format yang lebih readable
+    let formattedDate = date;
+    if (date && date.includes('-')) {
+      try {
+        const dateParts = date.split('-');
+        const year = dateParts[0];
+        const month = dateParts[1];
+        const day = dateParts[2];
+        
+        if (year && month && day) {
+          const monthNames = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+          ];
+          const monthIndex = parseInt(month, 10) - 1;
+          const monthName = monthNames[monthIndex] || month;
+          formattedDate = `${parseInt(day, 10)} ${monthName} ${year}`;
+        }
+      } catch (e) {
+        // Keep original format if parsing fails
+        console.log('generateBasedOnText - Date parsing error:', e);
+        formattedDate = date;
+      }
+    }
+
+    const result = `Simja No. ${number} Tgl. ${formattedDate}`;
+    console.log('generateBasedOnText - Generated string:', result);
+    return result;
+  });
+
+  // Gabungkan dengan koma jika lebih dari 1
+  const finalResult = simjaStrings.join(', ');
+  console.log('generateBasedOnText - Final result:', finalResult);
+  return finalResult;
+}
+
 // GET /api/submissions - Get all submissions
 export async function GET(request: NextRequest) {
   try {
@@ -203,37 +298,52 @@ export async function POST(request: NextRequest) {
     }
 
     const body: SubmissionData = await request.json();
+    const bodyWithDocs = body as any; // Cast untuk akses simjaDocuments
+
+    // Extract workers and documents data from body FIRST
+    const { 
+      workers, 
+      simjaDocuments, 
+      sikaDocuments, 
+      workOrderDocuments, 
+      kontrakKerjaDocuments, 
+      jsaDocuments, 
+      ...submissionData 
+    } = bodyWithDocs;
+
+    // Log SIMJA documents untuk debugging
+    console.log('POST /api/submissions - SIMJA Documents received:', JSON.stringify(simjaDocuments, null, 2));
 
     // Debug logging for received data
     console.log('POST /api/submissions - Received data:', {
-      ...body,
+      ...submissionData,
       // Don't log sensitive data, just check if required fields exist
       hasRequiredFields: {
-        vendor_name: !!body.vendor_name,
-        based_on: !!body.based_on,
-        officer_name: !!body.officer_name,
-        job_description: !!body.job_description,
-        work_location: !!body.work_location,
-        working_hours: !!body.working_hours,
-        work_facilities: !!body.work_facilities,
-        worker_names: !!body.worker_names
+        vendor_name: !!submissionData.vendor_name,
+        officer_name: !!submissionData.officer_name,
+        job_description: !!submissionData.job_description,
+        work_location: !!submissionData.work_location,
+        working_hours: !!submissionData.working_hours,
+        work_facilities: !!submissionData.work_facilities,
+        worker_names: !!submissionData.worker_names
       },
       // Log implementation dates
       implementationDates: {
-        implementation_start_date: body.implementation_start_date,
-        implementation_end_date: body.implementation_end_date
-      }
+        implementation_start_date: submissionData.implementation_start_date,
+        implementation_end_date: submissionData.implementation_end_date
+      },
+      // Log SIMJA documents count for based_on generation
+      simjaDocumentsCount: simjaDocuments?.length || 0
     });
 
     // Validate required fields (use Indonesian error messages and friendly labels)
     const requiredFields = [
-      'vendor_name', 'based_on', 'officer_name', 'job_description',
+      'vendor_name', 'officer_name', 'job_description',
       'work_location', 'working_hours', 'work_facilities', 'worker_names'
     ];
 
     const fieldLabels: Record<string, string> = {
       vendor_name: 'Nama Vendor',
-      based_on: 'Berdasarkan',
       officer_name: 'Nama Petugas',
       job_description: 'Deskripsi Pekerjaan',
       work_location: 'Lokasi Kerja',
@@ -275,11 +385,18 @@ export async function POST(request: NextRequest) {
 
     console.log('POST /api/submissions - User verified:', userExists.email);
 
-    // Extract workers and documents data from body
-    const { workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, ...submissionData } = body as any;
+    // Normalize document numbers in simjaDocuments BEFORE generating "Berdasarkan" text
+    const normalizedSimjaDocuments = (simjaDocuments || []).map((doc: any) => ({
+      ...doc,
+      document_number: normalizeDocumentNumber(doc.document_number)
+    }));
+
+    // Generate "Berdasarkan" text from SIMJA documents (dengan nomor yang sudah di-normalize)
+    const basedOnText = generateBasedOnText(normalizedSimjaDocuments);
 
     // Debug: Log data yang masuk
     console.log('Submission data received:', JSON.stringify(submissionData, null, 2));
+    console.log('Generated based_on text:', basedOnText);
 
     // Generate QR Code (simple implementation)
     const qrData = `${session.user.id}-${Date.now()}`;
@@ -290,7 +407,7 @@ export async function POST(request: NextRequest) {
         data: {
           // Basic submission data
           vendor_name: submissionData.vendor_name,
-          based_on: submissionData.based_on,
+          based_on: basedOnText, // Auto-generated from SIMJA documents
           officer_name: submissionData.officer_name,
           job_description: submissionData.job_description,
           work_location: submissionData.work_location,
@@ -362,7 +479,7 @@ export async function POST(request: NextRequest) {
           .map((doc: any) => ({
             document_subtype: doc.document_subtype || 'Ast. Man. Facility Management', // Auto-set untuk SIMJA
             document_type: 'SIMJA',
-            document_number: doc.document_number || null,
+            document_number: normalizeDocumentNumber(doc.document_number),
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
@@ -379,7 +496,7 @@ export async function POST(request: NextRequest) {
           .map((doc: any) => ({
             document_subtype: doc.document_subtype || null,
             document_type: 'SIKA',
-            document_number: doc.document_number || null,
+            document_number: normalizeDocumentNumber(doc.document_number),
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
@@ -396,7 +513,7 @@ export async function POST(request: NextRequest) {
           .map((doc: any) => ({
             document_subtype: null, // Work Order tidak punya subtype
             document_type: 'WORK_ORDER',
-            document_number: doc.document_number || null,
+            document_number: normalizeDocumentNumber(doc.document_number),
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
@@ -413,7 +530,7 @@ export async function POST(request: NextRequest) {
           .map((doc: any) => ({
             document_subtype: null, // Kontrak Kerja tidak punya subtype
             document_type: 'KONTRAK_KERJA',
-            document_number: doc.document_number || null,
+            document_number: normalizeDocumentNumber(doc.document_number),
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
@@ -430,7 +547,7 @@ export async function POST(request: NextRequest) {
           .map((doc: any) => ({
             document_subtype: null, // JSA tidak punya subtype
             document_type: 'JSA',
-            document_number: doc.document_number || null,
+            document_number: normalizeDocumentNumber(doc.document_number),
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,

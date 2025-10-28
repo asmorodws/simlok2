@@ -17,7 +17,7 @@ export interface SupportDocument {
 export interface SubmissionData {
   vendor_name: string;
   vendor_phone?: string;
-  based_on: string;
+  based_on?: string; // Auto-generated dari SIMJA documents di backend
   officer_name: string;
   job_description: string;
   work_location: string;
@@ -153,6 +153,7 @@ export interface SubmissionPDFData {
   implementation_start_date?: string | Date | null | undefined;
   implementation_end_date?: string | Date | null | undefined;
   vendor_name: string;
+  based_on?: string | null; // Auto-generated from SIMJA documents
   
   // Documents
   simja_number?: string | null;

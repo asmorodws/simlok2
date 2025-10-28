@@ -65,6 +65,16 @@ export default function SupportDocumentList({
     onDocumentsChange(documents.filter((doc) => doc.id !== id));
   };
 
+  const placeholderText = (type: string) => {
+    if (type === 'WORK_ORDER') {
+      return 'Nomor Work Order';
+    } else if (type === 'KONTRAK_KERJA') {
+      return 'Nomor Kontrak Kerja';
+    } else {
+      return `Nomor ${type}`;
+    }
+  }
+
   const updateDocument = (id: string, field: keyof SupportDoc, value: string) => {
     onDocumentsChange(
       documents.map((doc) =>
@@ -168,7 +178,7 @@ export default function SupportDocumentList({
                     onChange={(e) =>
                       updateDocument(doc.id, 'document_number', e.target.value)
                     }
-                    placeholder={`Nomor ${documentType}`}
+                    placeholder={placeholderText(documentType)}
                     disabled={disabled}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                   />

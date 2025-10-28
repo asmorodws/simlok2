@@ -436,8 +436,8 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
 
   await k.numberedRow(1, "Nama", s.vendor_name, { valueBold: false });
 
-  // Format berdasarkan dari field based_on atau default text
-  const berdasarkan = "Surat Permohonan Izin Kerja";
+  // Format berdasarkan dari field based_on yang sudah di-generate dari SIMJA documents di backend
+  const berdasarkan = s.based_on || "Surat Permohonan Izin Kerja";
   
   await k.numberedRow(2, "Berdasarkan", berdasarkan);
   await k.numberedRow(3, "Pekerjaan", s.job_description);
