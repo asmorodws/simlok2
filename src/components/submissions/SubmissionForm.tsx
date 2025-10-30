@@ -1053,7 +1053,7 @@ export default function SubmissionForm() {
                     placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
                   />
                   <Badge variant="warning">
-                    Jika lokasi kerja lebih dari satu, pisahkan dengan koma ( , )
+                    Jika lokasi kerja lebih dari satu, pisahkan dengan koma ( , ). Sesuaikan dengan lokasi kerja pada SIMJA.
                   </Badge>
                 </div>
 

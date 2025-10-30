@@ -13,6 +13,7 @@ model User {
   email                    String             @unique
   password                 String
   role                     User_role          @default(VENDOR)
+  position                 String?            // for approver position
   address                  String?
   created_at               DateTime           @default(now())
   profile_photo            String?
@@ -28,7 +29,7 @@ model User {
   rejected_by              String?
   rejection_reason         String?
   verification_status      VerificationStatus @default(PENDING)
-  accounts                 Account[]
+
   qrScans                  QrScan[]           @relation("QrScannedBy")
   refreshTokens            RefreshToken[]
   sessions                 Session[]
@@ -48,24 +49,7 @@ model RefreshToken {
 }
 
 /// ----------  NEXTAUTH LEGACY (bisa dihapus jika tidak dipakai)  ----------
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.LongText
-  access_token      String? @db.LongText
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.LongText
-  session_state     String?
-  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-  @@index([userId], map: "Account_userId_fkey")
-}
 
 model Session {
   id             String    @id @default(cuid())

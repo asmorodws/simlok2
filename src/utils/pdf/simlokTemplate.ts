@@ -738,8 +738,8 @@ for (let idx = 0; idx < lines.length; idx++) {
   k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
 
   // Right side - Head title and name (below location/date)
-  const jabatanSigner = s.signer_position || "Head Or Security Region I";
-  const namaSigner = s.signer_name || "Julianto Santoso";
+  const jabatanSigner = s.signer_position || "[Jabatan]";
+  const namaSigner = s.signer_name || "[Nama Penandatangan]";
   
   // Calculate precise positions for perfect centering - more compact
   const jabatanY = signatureY - 40; // Reduced spacing

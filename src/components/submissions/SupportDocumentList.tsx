@@ -217,7 +217,9 @@ export default function SupportDocumentList({
               {/* Right column: file upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload Dokumen {documentType} (PDF) <span className="text-red-500">*</span>
+                  Upload Dokumen {
+                    documentType === 'WORK_ORDER' ? 'Work Order' : documentType === 'KONTRAK_KERJA' ? 'Kontrak Kerja' : documentType
+                  } (PDF) <span className="text-red-500">*</span>
                 </label>
                 <EnhancedFileUpload
                   id={`doc-${doc.id}`}

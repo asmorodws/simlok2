@@ -96,12 +96,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 });
     }
 
+    // Get approver user data for auto-fill signer info
+    const approverUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        officer_name: true,
+        position: true,
+        email: true
+      }
+    });
+
+    if (!approverUser) {
+      return NextResponse.json({ 
+        error: 'Approver user not found in database' 
+      }, { status: 400 });
+    }
+
     let updateData: any = {
       approval_status: validatedData.approval_status,
       note_for_vendor: validatedData.note_for_vendor || '',
       approved_at: new Date(),
       approved_by: session.user.officer_name,
       approved_by_final_id: session.user.id,
+      // Auto-fill signer info from approver user
+      signer_name: approverUser.officer_name,
+      signer_position: approverUser.position || 'Sr Officer Security III', // Default jika belum ada
     };
 
     // If approved, generate SIMLOK number and QR code

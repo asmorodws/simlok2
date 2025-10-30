@@ -5,11 +5,11 @@ import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/Input";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import TermsModal from "@/components/ui/modal/TermsModal";
 import Link from "next/link";
 import Image from "next/image";
 import { Turnstile } from "next-turnstile";
-import { useState, useRef } from "react";
-import type { FC } from "react";
+import { useState, useRef, type FC } from "react";
 import { useToast } from "@/hooks/useToast";
 
 interface Props {
@@ -37,6 +37,8 @@ interface Props {
   setAgree: (v: boolean) => void;
   handleSubmit: (e: React.FormEvent, turnstileToken?: string) => void;
 }
+
+
 
 const SignUpForm: FC<Props> = ({
   email,
@@ -66,7 +68,9 @@ const SignUpForm: FC<Props> = ({
   const [turnstileStatus, setTurnstileStatus] = useState<
     "success" | "error" | "expired" | "required"
   >("required");
-  const [turnstileToken, setTurnstileToken] = useState<string>("");
+  const [turnstileToken, setTurnstileToken] = useState<string>(""
+  );
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const { showError, showWarning } = useToast();
 
@@ -345,13 +349,14 @@ const SignUpForm: FC<Props> = ({
                 />
                 <span className="text-xs text-gray-700">
                   Saya menyetujui{" "}
-                  <Link href="/terms" className="text-blue-600 hover:text-blue-800 underline">
+                  <button
+                    type="button"
+                    onClick={() => setIsTermsOpen(true)}
+                    className="text-blue-600 hover:text-blue-800 underline text-xs font-medium mr-1"
+                  >
                     Syarat dan Ketentuan
-                  </Link>{" "}
-                  serta{" "}
-                  <Link href="/privacy" className="text-blue-600 hover:text-blue-800 underline">
-                    Kebijakan Privasi
-                  </Link>{" "}
+                  </button>
+                  
                   yang berlaku. <span className="text-red-500">*</span>
                 </span>
               </div>
@@ -391,6 +396,8 @@ const SignUpForm: FC<Props> = ({
         </div>
       </div>
     </div>
+
+    <TermsModal open={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
   </div>
   );
 };

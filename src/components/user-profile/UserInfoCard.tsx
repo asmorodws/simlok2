@@ -16,6 +16,7 @@ interface UserInfoCardProps {
     phone_number: string | null;
     address: string | null;
     role: string;
+    position: string | null;
   };
 }
 
@@ -33,6 +34,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
     phone_number: "",
     address: "",
     email: "",
+    position: "",
   });
 
   const [formData, setFormData] = useState({
@@ -41,6 +43,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
     phone_number: user.phone_number ?? "",
     address: user.address ?? "",
     email: user.email ?? "",
+    position: user.position ?? "",
   });
 
   const validateEmail = (email: string) =>
@@ -87,6 +90,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         phone_number: "",
         address: "",
         email: "",
+        position: "",
       };
 
       if (!formData.officer_name.trim()) {
@@ -100,6 +104,10 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       }
       if (!formData.email.trim() || !validateEmail(formData.email.trim())) {
         newErrors.email = "Format email tidak valid";
+      }
+      // Validate position for APPROVER role
+      if (user.role === "APPROVER" && !formData.position.trim()) {
+        newErrors.position = "Jabatan wajib diisi untuk Approver";
       }
 
       const hasErrors = Object.values(newErrors).some((e) => e !== "");
@@ -118,6 +126,14 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               phone_number: formData.phone_number.trim(),
               address: formData.address.trim(),
               email: formData.email.trim(),
+            }
+          : user.role === "APPROVER"
+          ? {
+              officer_name: formData.officer_name.trim(),
+              phone_number: formData.phone_number.trim(),
+              address: formData.address.trim(),
+              email: formData.email.trim(),
+              position: formData.position.trim(),
             }
           : {
               officer_name: formData.officer_name.trim(),
@@ -156,6 +172,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       phone_number: "",
       address: "",
       email: "",
+      position: "",
     });
 
     if (!validateEmail(formData.email.trim())) {
@@ -197,6 +214,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                       phone_number: user.phone_number ?? "",
                       address: user.address ?? "",
                       email: user.email ?? "",
+                      position: user.position ?? "",
                     });
                     setIsEditing(false);
                   }}
@@ -258,6 +276,36 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
                 </p>
               )}
             </div>
+
+            {user.role === "APPROVER" && (
+              <div>
+                <p className="text-sm font-medium text-gray-500">
+                  Jabatan <span className="text-red-500">*</span>
+                </p>
+                {isEditing ? (
+                  <Input
+                    id="position"
+                    name="position"
+                    type="text"
+                    value={formData.position}
+                    onChange={handleChange}
+                    placeholder="Sr Officer Security III"
+                    required
+                    error={errors.position}
+                    className="mt-1"
+                  />
+                ) : (
+                  <p className="mt-1 text-base text-gray-900">
+                    {user.position || "-"}
+                  </p>
+                )}
+                {!isEditing && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Jabatan akan otomatis digunakan sebagai Signer Position saat menyetujui SIMLOK
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <p className="text-sm font-medium text-gray-500">Alamat Email</p>

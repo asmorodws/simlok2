@@ -32,8 +32,8 @@ async function cleanDatabase() {
     await prisma.session.deleteMany({});
     console.log("   ✓ Semua data sessions dihapus");
     
-    await prisma.account.deleteMany({});
-    console.log("   ✓ Semua data accounts dihapus");
+    // await prisma.account.deleteMany({});
+    // console.log("   ✓ Semua data accounts dihapus");
     
     await prisma.user.deleteMany({});
     console.log("   ✓ Semua data user dihapus");
@@ -88,6 +88,7 @@ async function main() {
       address: "Jl. Approver No. 3, Jakarta",
       phone_number: "081234567887",
       vendor_name: null, // kosong untuk approver
+      position: "Sr Officer Security III", // Jabatan untuk approver
       verified_at: new Date(), // approver sudah terverifikasi
       verified_by: "SUPER_ADMIN",
       verification_status: "VERIFIED" as const,

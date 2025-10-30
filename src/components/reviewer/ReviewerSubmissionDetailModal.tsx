@@ -88,16 +88,15 @@ interface SubmissionDetail {
   content: string;
   notes: string;
 
-  signer_position: string;
-  signer_name: string;
+
   review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
   note_for_approver?: string;
   note_for_vendor?: string;
-  reviewed_by_name?: string;
+  reviewed_by?: string;
   reviewed_by_email?: string;
   approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
   final_note?: string;
-  approved_by_name?: string;
+  approved_by?: string;
   approved_by_email?: string;
   created_at: string;
   reviewed_at: string;
@@ -385,8 +384,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   const [approvalForm, setApprovalForm] = useState({
     content: '',
     pelaksanaan: '',
-    jabatan_signer: 'Sr Officer Security III',
-    nama_signer: 'Julianto Santoso'
+  
   });
 
   // Working hours state - editable by reviewer
@@ -403,14 +401,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     setWorkingHours(value);
   }, []);
 
-  // // Handle implementation dates change
-  // const handleImplementationStartDateChange = useCallback((value: string) => {
-  //   setImplementationStartDate(value);
-  // }, []);
 
-  // const handleImplementationEndDateChange = useCallback((value: string) => {
-  //   setImplementationEndDate(value);
-  // }, []);
 
   // Helper function to format date for Indonesian locale
   const formatDate = useCallback((dateStr: string | Date) => {
@@ -479,7 +470,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     supportingDoc2Type: submission?.supporting_doc2_type ?? '',
     supportingDoc2Number: submission?.supporting_doc2_number ?? '',
     supportingDoc2Date: submission?.supporting_doc2_date ?? '',
-    signerPosition: approvalForm.jabatan_signer ?? 'Sr Officer Security III'
+
   });
 
   // Auto-fill pelaksanaan when implementation dates are set with correct template
@@ -572,8 +563,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       setApprovalForm({
         content: sub.content || 'Surat izin masuk lokasi ini diberikan dengan ketentuan agar mematuhi semua peraturan tentang keamanan dan keselamatan kerja dan ketertiban, apabila pihak ke-III melakukan kesalahan atau kelalaian yang mengakibatkan kerugian PT. Pertamina (Persero), maka kerugian tersebut menjadi tanggung jawab pihak ke-III/rekanan. Lakukan perpanjangan SIMLOK 2 hari sebelum masa berlaku habis.',
         pelaksanaan: sub.implementation || '',
-        jabatan_signer: sub.signer_position || 'Sr Officer Security III',
-        nama_signer: sub.signer_name || 'Julianto Santoso'
+
       });
 
       // Initialize working hours from submission data
@@ -669,8 +659,6 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         implementation_end_date: finalEndDate,
         implementation: approvalForm.pelaksanaan,
         content: approvalForm.content,
-        signer_position: approvalForm.jabatan_signer,
-        signer_name: approvalForm.nama_signer,
         working_hours: workingHours,  // kirim jam kerja yang diedit
         // Preserve SIMJA and SIKA dates to prevent them from being lost
         supporting_doc1_type: submission?.supporting_doc1_type,
@@ -817,8 +805,6 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         setApprovalForm({
           content: '',
           pelaksanaan: '',
-          jabatan_signer: 'Sr Officer Security III',
-          nama_signer: 'Julianto Santoso'
         });
         setWorkingHours('08:00 WIB - 17:00 WIB');
         setImplementationStartDate('');
@@ -863,54 +849,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   };
 
-  // Editing functions disabled - reviewer can only delete workers
-  // const updateWorkerName = (workerId: string, name: string) => {
-  //   setEditableWorkers(prev =>
-  //     prev.map(w => w.id === workerId ? { ...w, worker_name: name } : w)
-  //   );
-  // };
-
-  // const updateWorkerHsseNumber = (workerId: string, hsseNumber: string) => {
-  //   setEditableWorkers(prev =>
-  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_number: hsseNumber } : w)
-  //   );
-  // };
-
-  // const updateWorkerHsseValidThru = (workerId: string, validThru: string) => {
-  //   setEditableWorkers(prev =>
-  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_valid_thru: validThru } : w)
-  //   );
-  // };
-
-  // const updateWorkerHsseDocument = (workerId: string, documentUrl: string) => {
-  //   setEditableWorkers(prev =>
-  //     prev.map(w => w.id === workerId ? { ...w, hsse_pass_document_upload: documentUrl } : w)
-  //   );
-  // };
-
-  // const updateWorkerPhoto = async (workerId: string, file: File) => {
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('photo', file);
-
-  //     const response = await fetch(`/api/reviewer/worker-photos/${workerId}`, {
-  //       method: 'POST',
-  //       body: formData,
-  //     });
-
-  //     if (response.ok) {
-  //       const { photo_url } = await response.json();
-  //       setEditableWorkers(prev =>
-  //         prev.map(w => w.id === workerId ? { ...w, worker_photo: photo_url } : w)
-  //       );
-  //       showSuccess('Berhasil', 'Photo berhasil diunggah');
-  //     } else {
-  //       showError('Error', 'Gagal mengunggah photo');
-  //     }
-  //   } catch (error) {
-  //     showError('Error', 'Terjadi kesalahan saat mengunggah photo');
-  //   }
-  // };
+ 
 
   const saveWorkerChanges = async () => {
     // Validate worker count before saving
@@ -1031,6 +970,24 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     <span className="font-medium">No. SIMLOK:</span> {submission.simlok_number}
                   </p>
                 )}
+                
+                {/* Review and Approval Info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-2 pt-2 border-t border-gray-100">
+                  {submission.reviewed_by && submission.review_status !== 'PENDING_REVIEW' && (
+                    <p className="flex items-center">
+                      <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                      <span className="font-medium">Direview oleh:</span> 
+                      <span className="ml-1">{submission.reviewed_by}</span>
+                    </p>
+                  )}
+                  {submission.approved_by && submission.approval_status !== 'PENDING_APPROVAL' && (
+                    <p className="flex items-center">
+                      <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-green-500" />
+                      <span className="font-medium">Disetujui oleh:</span> 
+                      <span className="ml-1">{submission.approved_by}</span>
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1287,35 +1244,6 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       )}
                     </div>
 
-                    {/* Signer Information */}
-                    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-                      <h4 className="text-base font-medium text-gray-900 mb-4">Data Penandatangan</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Jabatan</label>
-                          <input
-                            type="text"
-                            value={approvalForm.jabatan_signer}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, jabatan_signer: e.target.value }))}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                              }`}
-                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Nama Lengkap</label>
-                          <input
-                            type="text"
-                            value={approvalForm.nama_signer}
-                            onChange={(e) => setApprovalForm(prev => ({ ...prev, nama_signer: e.target.value }))}
-                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                              }`}
-                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
                     {/* Content Field - Isi Surat Izin Masuk Lokasi */}
                     <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
                       <h4 className="text-base font-medium text-gray-900 mb-4">Content - Isi Surat Izin Masuk Lokasi</h4>
@@ -1488,9 +1416,9 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                               minute: '2-digit'
                             }) : '-'}
                           </p>
-                          {submission.reviewed_by_name && (
+                          {submission.reviewed_by && (
                             <p className="text-xs text-gray-400 mt-1">
-                              Direview oleh: {submission.reviewed_by_name}
+                              Direview oleh: {submission.reviewed_by}
                             </p>
                           )}
                         </div>

@@ -173,7 +173,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   events: {
-    async signIn({ user }) {
+    async signIn() {
       // SessionService.createSession() already updated lastActiveAt + sessionExpiry
       // No need to update again here - would cause duplicate UPDATE query
       

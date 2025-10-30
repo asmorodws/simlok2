@@ -29,8 +29,8 @@ async function cleanDatabase() {
     await prisma.session.deleteMany({});
     console.log("   ✓ Semua data sessions dihapus");
     
-    await prisma.account.deleteMany({});
-    console.log("   ✓ Semua data accounts dihapus");
+    // await prisma.account.deleteMany({});
+    // console.log("   ✓ Semua data accounts dihapus");
     
     await prisma.user.deleteMany({});
     console.log("   ✓ Semua data user dihapus");

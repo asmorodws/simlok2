@@ -59,7 +59,7 @@ export default function RoleGate({ allowedRoles, requireVerification = true, chi
     }
   }, [session, status, allowedRoles, requireVerification, router]);
 
-  // Show loading
+  // Show loadingx
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">

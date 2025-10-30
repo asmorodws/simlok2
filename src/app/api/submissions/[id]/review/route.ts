@@ -61,11 +61,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       reviewed_by: session.user.officer_name,
     };
 
-    // Previously reviewer could auto-reject the submission. Change behavior:
-    // - Do NOT change final `approval_status` when reviewer marks NOT_MEETS_REQUIREMENTS.
-    // - Leave `approval_status` as-is (usually PENDING_APPROVAL) so approver can still make final decision.
-    // If reviewer changes from NOT_MEETS_REQUIREMENTS -> MEETS_REQUIREMENTS and the submission
-    // was previously rejected by reviewer flow, reset approval to pending so approver can re-evaluate.
+
     if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
       // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
       // reset approval status back to PENDING_APPROVAL so approver can review again

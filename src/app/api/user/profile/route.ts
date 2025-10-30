@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { officer_name, vendor_name, address, phone_number, email } = body;
+    const { officer_name, vendor_name, address, phone_number, email, position } = body;
 
     // Check if email is being changed and already exists
     if (email && email !== session.user.email) {
@@ -73,6 +73,7 @@ export async function PUT(request: NextRequest) {
         vendor_name: vendor_name || undefined,
         address: address || undefined,
         phone_number: phone_number || undefined,
+        position: position !== undefined ? position : undefined, // Allow updating position for APPROVER
       },
       select: {
         id: true,
@@ -83,6 +84,7 @@ export async function PUT(request: NextRequest) {
         phone_number: true,
         profile_photo: true,
         role: true,
+        position: true,
         created_at: true,
         verified_at: true,
         verification_status: true,

@@ -79,10 +79,10 @@ interface SubmissionDetail {
   content: string;
   notes?: string;
   note_for_approver?: string;
-  reviewed_by_name?: string;
+  reviewed_by?: string;
   reviewed_by_email?: string;
   note_for_vendor?: string;
-  approved_by_name?: string;
+  approved_by?: string;
   approved_by_email?: string;
   qrcode?: string;
   created_at: string;
@@ -529,6 +529,23 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   </p>
                 )}
 
+                {/* Review and Approval Info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-2 pt-2 border-t border-gray-100">
+                  {submission.reviewed_by && submission.review_status !== 'PENDING_REVIEW' && (
+                    <p className="flex items-center">
+                      <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                      <span className="font-medium">Direview oleh:</span> 
+                      <span className="ml-1">{submission.reviewed_by}</span>
+                    </p>
+                  )}
+                  {submission.approved_by && submission.approval_status !== 'PENDING_APPROVAL' && (
+                    <p className="flex items-center">
+                      <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-green-500" />
+                      <span className="font-medium">Disetujui oleh:</span> 
+                      <span className="ml-1">{submission.approved_by}</span>
+                    </p>
+                  )}
+                </div>
                 
                 {/* Scan Status */}
                 <div className="mt-2 pt-2 border-t border-gray-100">
@@ -1011,10 +1028,10 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <NoteCard title="Catatan untuk Vendor" note={submission.note_for_vendor} />
                           </div>
                         )}
-                        {submission.approved_by_name && (
+                        {submission.approved_by && (
                           <InfoCard
                             label="Diproses oleh"
-                            value={`${submission.approved_by_name}${submission.approved_at ? ` pada ${formatDate(submission.approved_at)}` : ''}`}
+                            value={`${submission.approved_by}${submission.approved_at ? ` pada ${formatDate(submission.approved_at)}` : ''}`}
                             className="md:col-span-2"
                           />
                         )}
@@ -1136,9 +1153,9 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                   {submission.note_for_approver && (
                     <div className="md:col-span-1">
                       <NoteCard title="Catatan Review" note={submission.note_for_approver} />
-                      {submission.reviewed_by_name && (
+                      {submission.reviewed_by && (
                         <p className="text-sm text-gray-500 mt-2">
-                          Direview oleh: {submission.reviewed_by_name}
+                          Direview oleh: {submission.reviewed_by}
                           {submission.reviewed_at && (
                             <span> pada {new Date(submission.reviewed_at).toLocaleDateString('id-ID')}</span>
                           )}
@@ -1185,11 +1202,11 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                               {getStatusBadge(submission.approval_status)}
                             </div> */}
                            
-                            {submission.approved_by_name && (
+                            {submission.approved_by && (
                               <div className="pt-2 border-t border-gray-200">
                                 <span className="font-medium text-gray-700">Diproses oleh:</span>
                                 <p className="text-gray-600">
-                                  {submission.approved_by_name} pada{' '}
+                                  {submission.approved_by} pada{' '}
                                   {new Date(submission.approved_at!).toLocaleDateString('id-ID', {
                                     weekday: 'long',
                                     year: 'numeric',
