@@ -10,6 +10,7 @@ export interface SupportDoc {
   id: string;
   document_subtype?: string; // Subtype untuk SIMJA/SIKA (e.g., "Pekerjaan Panas", "Izin Masuk")
   document_number?: string;
+  document_type?: 'SIMJA' | 'SIKA' | 'WORK_ORDER' | 'KONTRAK_KERJA' | 'JSA';
   document_date?: string;
   document_upload: string;
 }
@@ -53,7 +54,7 @@ export default function SupportDocumentList({
       document_upload: '',
     };
     onDocumentsChange([...documents, newDoc]);
-    
+
     // Focus on newly added input
     setTimeout(() => {
       lastAddedRef.current?.focus();
@@ -98,13 +99,12 @@ export default function SupportDocumentList({
             {/* Header with number and delete button */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-700">
-                {documentType === 'JSA' 
-                  ? 'JSA' 
-                  : documentType === 'WORK_ORDER' 
-                  ? 'Work Order' 
+                {documentType === 'WORK_ORDER'
+                  ? 'Work Order'
                   : documentType === 'KONTRAK_KERJA'
-                  ? 'Kontrak Kerja'
-                  : documentType} #{index + 1}
+                    ? 'Kontrak Kerja'
+                    : documentType === 'SIKA' ? documentType + '#' + (index + 1) : documentType
+                }
               </span>
               {documents.length > 1 && (
                 <button
@@ -137,26 +137,58 @@ export default function SupportDocumentList({
                         }
                         disabled={disabled}
                         className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg shadow-sm
-                                   bg-white text-gray-900 
-                                   focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
-                                   disabled:bg-gray-50 disabled:cursor-not-allowed
-                                   appearance-none cursor-pointer
-                                   hover:border-gray-400 transition-colors duration-200"
+                   bg-white text-gray-900 
+                   focus:ring-2 focus:ring-blue-500 focus:border-blue-500 
+                   disabled:bg-gray-50 disabled:cursor-not-allowed
+                   appearance-none cursor-pointer
+                   hover:border-gray-400 transition-colors duration-200"
                       >
                         <option value="" className="text-gray-500">-- Pilih Jenis SIKA --</option>
-                        <option value="Pekerjaan Dingin" className="text-gray-900">Pekerjaan Dingin</option>
-                        <option value="Pekerjaan Panas" className="text-gray-900">Pekerjaan Panas</option>
-                        <option value="Confined Space" className="text-gray-900">Confined Space</option>
+
+                        {[
+                          "Pekerjaan Dingin",
+                          "Pekerjaan Panas",
+                          "Confined Space"
+                        ].map((option) => {
+                          // Ambil semua nilai yang sudah dipilih oleh dokumen lain
+                          const selectedTypes = documents
+                            .filter((d) => d.id !== doc.id)
+                            .map((d) => d.document_subtype);
+
+                          const isUsed = selectedTypes.includes(option);
+
+                          return (
+                            <option
+                              key={option}
+                              value={option}
+                              disabled={isUsed}
+                              className={`text-gray-900 ${isUsed ? 'text-gray-400' : ''}`}
+                            >
+                              {option} {isUsed ? '(Sudah dipilih)' : ''}
+                            </option>
+                          );
+                        })}
                       </select>
+
                       {/* Custom dropdown arrow */}
                       <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        <svg
+                          className="h-5 w-5 text-gray-400"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                     </div>
                   </div>
                 )}
+
 
                 {/* SIMJA info - auto set */}
                 {/* {documentType === 'SIMJA' && (
@@ -190,10 +222,10 @@ export default function SupportDocumentList({
                     {documentType === 'JSA'
                       ? 'Tanggal Dokumen JSA'
                       : documentType === 'WORK_ORDER'
-                      ? 'Tanggal Work Order'
-                      : documentType === 'KONTRAK_KERJA'
-                      ? 'Tanggal Kontrak Kerja'
-                      : 'Tanggal Dokumen'} <span className="text-red-500">*</span>
+                        ? 'Tanggal Work Order'
+                        : documentType === 'KONTRAK_KERJA'
+                          ? 'Tanggal Kontrak Kerja'
+                          : 'Tanggal Dokumen'} <span className="text-red-500">*</span>
                   </label>
                   <DatePicker
                     value={doc.document_date || ''}
@@ -204,10 +236,10 @@ export default function SupportDocumentList({
                       documentType === 'JSA'
                         ? 'Pilih tanggal JSA'
                         : documentType === 'WORK_ORDER'
-                        ? 'Pilih tanggal Work Order'
-                        : documentType === 'KONTRAK_KERJA'
-                        ? 'Pilih tanggal Kontrak Kerja'
-                        : 'Pilih tanggal dokumen'
+                          ? 'Pilih tanggal Work Order'
+                          : documentType === 'KONTRAK_KERJA'
+                            ? 'Pilih tanggal Kontrak Kerja'
+                            : 'Pilih tanggal dokumen'
                     }
                     disabled={disabled}
                   />
@@ -247,18 +279,22 @@ export default function SupportDocumentList({
       </div>
 
       {/* Add button at the bottom */}
-      <div className="flex justify-end pt-2">
-        <Button
-          type="button"
-          variant="info"
-          size="sm"
-          onClick={addDocument}
-          disabled={disabled}
-        >
-          <PlusIcon className="h-4 w-4 mr-1" />
-          Tambah {documentType === 'WORK_ORDER' ? 'Work Order' : documentType === 'KONTRAK_KERJA' ? 'Kontrak Kerja' : documentType}
-        </Button>
-      </div>
+      {documentType === 'SIKA' && documents.length < 3 && (
+  <div className="flex justify-end pt-2">
+    <Button
+      type="button"
+      variant="info"
+      size="sm"
+      onClick={addDocument}
+      
+    >
+      <PlusIcon className="h-4 w-4 mr-1" />
+      Tambah {documentType}
+    </Button>
+  </div>
+)}
+
+
     </div>
   );
 }

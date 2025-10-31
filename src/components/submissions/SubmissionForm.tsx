@@ -540,6 +540,7 @@ export default function SubmissionForm() {
       }]);
       setJsaDocuments([{
         id: `${Date.now()}_jsa`,
+        
         document_subtype: '',
         document_number: '',
         document_date: '',
@@ -1052,9 +1053,9 @@ export default function SubmissionForm() {
                     required
                     placeholder="Contoh: Area Produksi Unit 1, Kilang Cilacap"
                   />
-                  <Badge variant="warning">
-                    Jika lokasi kerja lebih dari satu, pisahkan dengan koma ( , ). Sesuaikan dengan lokasi kerja pada SIMJA.
-                  </Badge>
+                  {/* <Badge variant="warning">
+                    Jika lokasi kerja lebih dari satu, pisahkan dengan koma ( , )
+                  </Badge> */}
                 </div>
 
                 <div>

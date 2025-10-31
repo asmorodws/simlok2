@@ -132,7 +132,7 @@ export default function ExportFilterModal({
                   <div>
                     <div className="font-medium mb-1">Export dengan filter:</div>
                     <div>
-                      📅 Tanggal: {
+                      Tanggal: {
                         startDate && endDate 
                           ? `${new Date(startDate).toLocaleDateString('id-ID')} - ${new Date(endDate).toLocaleDateString('id-ID')}`
                           : startDate
