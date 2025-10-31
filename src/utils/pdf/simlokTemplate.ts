@@ -160,13 +160,13 @@ class PDFKit {
     this.pageCount = 1;
   }
 
-  async addPage(pageType?: 'documents' | 'workers') {
+  async addPage(pageType?: 'documents' | 'workers' | 'signature') {
     this.page = this.doc.addPage([A4.w, A4.h]);
     this.pageCount++;
     this.x = MARGIN;
     
-    // Add header to pages 2 and beyond
-    if (this.pageCount > 1 && this.submissionData) {
+    // Add header to pages 2 and beyond (except signature page)
+    if (this.pageCount > 1 && this.submissionData && pageType !== 'signature') {
       await this.addHeader(pageType);
       this.y = A4.h - 140; // Start content below header
     } else {
@@ -733,41 +733,57 @@ for (let idx = 0; idx < lines.length; idx++) {
   const dateFromPelaksanaan = extractDateFromPelaksanaan(s.implementation);
   const displayDate = dateFromPelaksanaan || toDate(s.simlok_date);
 
-  // Right side - Location and Date (above Head title)
-  k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
-  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
-
-  // Right side - Head title and name (below location/date)
-  const jabatanSigner = s.signer_position || "[Jabatan]";
-  const namaSigner = s.signer_name || "[Nama Penandatangan]";
-  
-  // Calculate precise positions for perfect centering - more compact
-  const jabatanY = signatureY - 40; // Reduced spacing
-  const namaY = signatureY - 145; // Reduced spacing
-  
-  // Draw jabatan
-  k.text(jabatanSigner, A4.w - 230, jabatanY, { size: 11 });
-  
-  // Add QR code if available - positioned with simple pixel values for easy maintenance
-  if (s.qrcode && s.approval_status === 'APPROVED') {
-    const qrImage = await generateQRImage(k.doc, s.qrcode);
-    if (qrImage) {
-      const qrSize = 80; // Reduced QR code size
-      const qrX = 395; // Adjusted position
-      const qrY = signatureY - 130; // Adjusted position for more compact layout
-      
-      // Draw QR code at fixed pixel position
-      page.drawImage(qrImage, {
-        x: qrX,
-        y: qrY,
-        width: qrSize,
-        height: qrSize,
-      });
-    }
+  // Count total documents to determine if signature should be on new page
+  let totalDocuments = 0;
+  if (s.support_documents && s.support_documents.length > 0) {
+    totalDocuments = s.support_documents.length;
+  } else {
+    // Count legacy documents
+    if (s.simja_document_upload) totalDocuments++;
+    if (s.sika_document_upload) totalDocuments++;
+    if (s.hsse_pass_document_upload) totalDocuments++;
   }
-  
-  // Draw nama
-  k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
+
+  const shouldMoveSignatureToNewPage = totalDocuments > 5;
+
+  if (!shouldMoveSignatureToNewPage) {
+    // Original behavior: Show signature on main page
+    // Right side - Location and Date (above Head title)
+    k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
+    k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
+
+    // Right side - Head title and name (below location/date)
+    const jabatanSigner = s.signer_position || "[Jabatan]";
+    const namaSigner = s.signer_name || "[Nama Penandatangan]";
+    
+    // Calculate precise positions for perfect centering - more compact
+    const jabatanY = signatureY - 40; // Reduced spacing
+    const namaY = signatureY - 145; // Reduced spacing
+    
+    // Draw jabatan
+    k.text(jabatanSigner, A4.w - 230, jabatanY, { size: 11 });
+    
+    // Add QR code if available - positioned with simple pixel values for easy maintenance
+    if (s.qrcode && s.approval_status === 'APPROVED') {
+      const qrImage = await generateQRImage(k.doc, s.qrcode);
+      if (qrImage) {
+        const qrSize = 80; // Reduced QR code size
+        const qrX = 395; // Adjusted position
+        const qrY = signatureY - 130; // Adjusted position for more compact layout
+        
+        // Draw QR code at fixed pixel position
+        page.drawImage(qrImage, {
+          x: qrX,
+          y: qrY,
+          width: qrSize,
+          height: qrSize,
+        });
+      }
+    }
+    
+    // Draw nama
+    k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
+  }
 
   // Add second page with supporting documents (SIMJA, SIKA, HSSE Pass) if available
   // Check both new support_documents structure and legacy fields
@@ -776,6 +792,11 @@ for (let idx = 0; idx < lines.length; idx++) {
                        s.sika_document_upload || 
                        s.hsse_pass_document_upload;
   
+  // Add signature on new page if more than 5 documents
+  if (shouldMoveSignatureToNewPage && hasDocuments) {
+    await addSignaturePage(k, s, displayDate);
+  }
+
   if (hasDocuments) {
     await addSupportingDocumentsPage(k, s);
   }
@@ -791,6 +812,80 @@ for (let idx = 0; idx < lines.length; idx++) {
 }
 
 import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos } from './imageLoader';
+
+/**
+ * Add a dedicated signature page (when there are more than 5 documents)
+ */
+async function addSignaturePage(
+  k: PDFKit,
+  s: SubmissionPDFData,
+  displayDate: Date | null
+) {
+  console.log('[AddSignaturePage] Creating signature page...');
+  
+  // Add new page for signature (without header)
+  await k.addPage('signature');
+  const page = k.page;
+  
+  // Add logo at top right
+  const logoImage = await loadLogo(k.doc);
+  if (logoImage) {
+    const logoWidth = 120;
+    const logoHeight = 40;
+    const logoX = A4.w - logoWidth - 40;
+    const logoY = A4.h - 60;
+    
+    page.drawImage(logoImage, {
+      x: logoX,
+      y: logoY,
+      width: logoWidth,
+      height: logoHeight,
+    });
+  }
+  
+  // Start position from top - no header text, just signature section
+  k.y = A4.h - MARGIN - 100;
+  
+  // Position signature on the right side (same as original position in main page)
+  const signatureY = k.y;
+  
+  // Right side - Location and Date (same position as original)
+  k.text("Dikeluarkan di : Jakarta", A4.w - 230, signatureY, { size: 11 });
+  k.text("Pada tanggal : " + fmtDateID(displayDate), A4.w - 230, signatureY - 15, { size: 11 });
+  
+  // Right side - Jabatan and nama
+  const jabatanSigner = s.signer_position || "[Jabatan]";
+  const namaSigner = s.signer_name || "[Nama Penandatangan]";
+  
+  // Calculate positions (same as original)
+  const jabatanY = signatureY - 40;
+  const namaY = signatureY - 145;
+  
+  // Draw jabatan
+  k.text(jabatanSigner, A4.w - 230, jabatanY, { size: 11 });
+  
+  // Add QR code if available (same position as original)
+  if (s.qrcode && s.approval_status === 'APPROVED') {
+    const qrImage = await generateQRImage(k.doc, s.qrcode);
+    if (qrImage) {
+      const qrSize = 80; // Same size as original
+      const qrX = 395; // Same position as original
+      const qrY = signatureY - 130;
+      
+      page.drawImage(qrImage, {
+        x: qrX,
+        y: qrY,
+        width: qrSize,
+        height: qrSize,
+      });
+    }
+  }
+  
+  // Draw nama
+  k.text(namaSigner, A4.w - 230, namaY, { bold: true, size: 11 });
+  
+  console.log('[AddSignaturePage] Signature page created successfully');
+}
 
 /**
  * Add pages with supporting documents (SIMJA, SIKA, HSSE Pass)
