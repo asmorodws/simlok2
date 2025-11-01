@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 // import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
 import { useSession } from 'next-auth/react';
-import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationModal';
+import UserVerificationModal from './UserVerificationModal';
 import EditUserModal from './EditUserModal';
 import DeleteUserModal from './DeleteUserModal';
 import CreateUserModal from './CreateUserModal';
@@ -242,13 +242,25 @@ export default function UserVerificationManagement({
     const s = user.verification_status || 'PENDING';
     switch (s) {
       case 'VERIFIED':
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Terverifikasi</span>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">Terverifikasi</span>;
       case 'REJECTED':
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Ditolak</span>;
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-rose-100 text-rose-800">Ditolak</span>;
       case 'PENDING':
       default:
         return <span className="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Menunggu Verifikasi</span>;
     }
+  }, []);
+
+  const getAccountStatus = useCallback((user: UserData) => {
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+        user.isActive 
+          ? 'bg-green-100 text-green-800' 
+          : 'bg-red-100 text-red-800'
+      }`}>
+        {user.isActive ? 'Aktif' : 'Nonaktif'}
+      </span>
+    );
   }, []);
 
   // === Modal wiring ===
@@ -419,7 +431,8 @@ export default function UserVerificationManagement({
                     {getSortIcon('created_at')}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Akun</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Verifikasi</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
               </tr>
             </thead>
@@ -446,6 +459,7 @@ export default function UserVerificationManagement({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getAccountStatus(user)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getVerificationStatus(user)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
@@ -493,7 +507,7 @@ export default function UserVerificationManagement({
         )}
       </div>
     );
-  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getVerificationStatus, isSuperAdmin]);
+  }, [users, loading, error, handleSort, getSortIcon, formatDate, getRoleBadge, getAccountStatus, getVerificationStatus, isSuperAdmin]);
 
   // Loading state for session
   if (sessionStatus === 'loading') {
@@ -711,7 +725,7 @@ export default function UserVerificationManagement({
       )}
 
       {/* Modal verifikasi */}
-      <ReviewerUserVerificationModal
+      <UserVerificationModal
         user={selectedUser}
         isOpen={showVerificationModal}
         onClose={closeVerificationModal}

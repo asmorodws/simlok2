@@ -16,4 +16,5 @@ export interface UserData {
   rejected_by?: string | null;
   rejection_reason?: string | null;
   profile_photo?: string | null;
+  isActive?: boolean;
 }

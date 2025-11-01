@@ -50,6 +50,7 @@ type DraftShape = {
   workOrderDocuments: SupportDoc[];
   kontrakKerjaDocuments: SupportDoc[];
   jsaDocuments: SupportDoc[];
+  visibleOptionalDocs: string[];
 };
 
 // ===============================
@@ -180,6 +181,12 @@ export default function SubmissionForm() {
     hsse_pass_document_upload: '',
   });
 
+  // -------------------------------
+  // Visible optional documents state
+  // -------------------------------
+  const [visibleOptionalDocs, setVisibleOptionalDocs] = useState<Set<string>>(new Set());
+  const [selectedOptionalDoc, setSelectedOptionalDoc] = useState<string>('');
+
   // ===============================
   // PERSISTENCE: LOAD DRAFT (on mount)
   // ===============================
@@ -207,6 +214,11 @@ export default function SubmissionForm() {
       if (parsed.workOrderDocuments?.length) setWorkOrderDocuments(parsed.workOrderDocuments);
       if (parsed.kontrakKerjaDocuments?.length) setKontrakKerjaDocuments(parsed.kontrakKerjaDocuments);
       if (parsed.jsaDocuments?.length) setJsaDocuments(parsed.jsaDocuments);
+
+      // Load visible optional documents
+      if (parsed.visibleOptionalDocs?.length) {
+        setVisibleOptionalDocs(new Set(parsed.visibleOptionalDocs));
+      }
 
       setHasDraft(true);
 
@@ -268,6 +280,7 @@ export default function SubmissionForm() {
         workOrderDocuments,
         kontrakKerjaDocuments,
         jsaDocuments,
+        visibleOptionalDocs: Array.from(visibleOptionalDocs),
       };
       saveDraft(draft);
     }, 500) as unknown as number;
@@ -276,7 +289,7 @@ export default function SubmissionForm() {
   useEffect(() => {
     scheduleSave();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments]);
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, visibleOptionalDocs]);
 
   useEffect(() => {
     return () => {
@@ -296,16 +309,31 @@ export default function SubmissionForm() {
 
   // Tampilkan tombol hapus draft hanya jika:
   // - ada draft
-  // - ada minimal satu pekerja dengan foto atau dokumen pendukung terisi
+  // - sudah ada interaksi user (upload foto, upload dokumen, tambah dokumen opsional, atau tambah pekerja)
   const canShowDelete = useMemo(() => {
+    if (!hasDraft) return false;
+    
+    // Cek apakah ada foto pekerja yang sudah diupload
     const hasAnyPhoto = workers.some((w) => (w.worker_photo || '').trim().length > 0);
+    
+    // Cek apakah ada dokumen HSSE yang sudah diupload
+    const hasAnyHsseDoc = workers.some((w) => (w.hsse_pass_document_upload || '').trim().length > 0);
+    
+    // Cek apakah ada dokumen pendukung yang sudah diupload
     const hasAnyDocument = simjaDocuments.some(d => d.document_upload) || 
                           sikaDocuments.some(d => d.document_upload) ||
                           workOrderDocuments.some(d => d.document_upload) ||
                           kontrakKerjaDocuments.some(d => d.document_upload) ||
                           jsaDocuments.some(d => d.document_upload);
-    return hasDraft && (hasAnyPhoto || hasAnyDocument);
-  }, [hasDraft, workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments]);
+    
+    // Cek apakah sudah ada dokumen opsional yang ditambahkan
+    const hasOptionalDocs = visibleOptionalDocs.size > 0;
+    
+    // Cek apakah sudah menambah lebih dari 1 pekerja (dari default)
+    const hasMultipleWorkers = workers.length > 1;
+    
+    return hasAnyPhoto || hasAnyHsseDoc || hasAnyDocument || hasOptionalDocs || hasMultipleWorkers;
+  }, [hasDraft, workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, visibleOptionalDocs]);
 
   // -------------------------------
   // Utilities
@@ -457,6 +485,51 @@ export default function SubmissionForm() {
   };
 
   // -------------------------------
+  // Optional Documents Handlers
+  // -------------------------------
+  const addOptionalDocument = () => {
+    if (!selectedOptionalDoc) return;
+    
+    setVisibleOptionalDocs(prev => new Set(prev).add(selectedOptionalDoc));
+    setSelectedOptionalDoc('');
+  };
+
+  const removeOptionalDocument = (documentType: string) => {
+    setVisibleOptionalDocs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(documentType);
+      return newSet;
+    });
+
+    // Reset document data when removed
+    if (documentType === 'WORK_ORDER') {
+      setWorkOrderDocuments([{
+        id: `${Date.now()}_work_order`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    } else if (documentType === 'KONTRAK_KERJA') {
+      setKontrakKerjaDocuments([{
+        id: `${Date.now()}_kontrak_kerja`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    } else if (documentType === 'JSA') {
+      setJsaDocuments([{
+        id: `${Date.now()}_jsa`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    }
+  };
+
+  // -------------------------------
   // Delete draft via modal
   // -------------------------------
   const openDeleteDraftModal = () => setIsDeleteModalOpen(true);
@@ -546,6 +619,10 @@ export default function SubmissionForm() {
         document_date: '',
         document_upload: '',
       }]);
+
+      // Reset visible optional documents
+      setVisibleOptionalDocs(new Set());
+      setSelectedOptionalDoc('');
 
       showSuccess('Draft Berhasil Dihapus', 'Semua data draft telah dihapus dan form dikembalikan ke kondisi awal.');
     } finally {
@@ -968,59 +1045,143 @@ export default function SubmissionForm() {
                 />
               </div>
 
-              {/* Work Order Documents */}
-              <div className="border border-gray-200 p-6 rounded-lg bg-white">
-                <div className="mb-4">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="warning">
-                      Dokumen Work Order bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
-                    </Badge>
+              {/* Add Optional Document Selector */}
+              <div className="border border-gray-200 p-6 rounded-lg bg-blue-50">
+                <h3 className="text-base font-semibold text-gray-900 mb-4">Tambah Dokumen Opsional</h3>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="optional_doc_select">Pilih Jenis Dokumen</Label>
+                    <select
+                      id="optional_doc_select"
+                      value={selectedOptionalDoc}
+                      onChange={(e) => setSelectedOptionalDoc(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      disabled={isLoading}
+                    >
+                      <option value="">-- Pilih Dokumen Opsional --</option>
+                      <option 
+                        value="WORK_ORDER" 
+                        disabled={visibleOptionalDocs.has('WORK_ORDER')}
+                      >
+                        Work Order {visibleOptionalDocs.has('WORK_ORDER') ? '(Sudah ditambahkan)' : ''}
+                      </option>
+                      <option 
+                        value="KONTRAK_KERJA" 
+                        disabled={visibleOptionalDocs.has('KONTRAK_KERJA')}
+                      >
+                        Kontrak Kerja {visibleOptionalDocs.has('KONTRAK_KERJA') ? '(Sudah ditambahkan)' : ''}
+                      </option>
+                      <option 
+                        value="JSA" 
+                        disabled={visibleOptionalDocs.has('JSA')}
+                      >
+                        Job Safety Analysis (JSA) {visibleOptionalDocs.has('JSA') ? '(Sudah ditambahkan)' : ''}
+                      </option>
+                    </select>
                   </div>
+                  <Button
+                    type="button"
+                    onClick={addOptionalDocument}
+                    disabled={!selectedOptionalDoc || isLoading}
+                    className="whitespace-nowrap"
+                  >
+                    + Tambah Dokumen
+                  </Button>
                 </div>
-                <SupportDocumentList
-                  title="Dokumen Work Order (Opsional)"
-                  documentType="WORK_ORDER"
-                  documents={workOrderDocuments}
-                  onDocumentsChange={setWorkOrderDocuments}
-                  disabled={isLoading}
-                />
+                <p className="text-xs text-gray-600 mt-2">
+                  Pilih jenis dokumen opsional yang ingin ditambahkan, kemudian klik tombol "Tambah Dokumen"
+                </p>
               </div>
 
-              {/* Kontrak Kerja Documents */}
-              <div className="border border-gray-200 p-6 rounded-lg bg-white">
-                <div className="mb-4">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="warning">
-                      Dokumen Kontrak Kerja bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
-                    </Badge>
+              {/* Work Order Documents - Conditional */}
+              {visibleOptionalDocs.has('WORK_ORDER') && (
+                <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="warning">
+                        Dokumen Work Order bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => removeOptionalDocument('WORK_ORDER')}
+                        disabled={isLoading}
+                      >
+                        Hapus
+                      </Button>
+                    </div>
                   </div>
+                  <SupportDocumentList
+                    title="Dokumen Work Order (Opsional)"
+                    documentType="WORK_ORDER"
+                    documents={workOrderDocuments}
+                    onDocumentsChange={setWorkOrderDocuments}
+                    disabled={isLoading}
+                  />
                 </div>
-                <SupportDocumentList
-                  title="Dokumen Kontrak Kerja (Opsional)"
-                  documentType="KONTRAK_KERJA"
-                  documents={kontrakKerjaDocuments}
-                  onDocumentsChange={setKontrakKerjaDocuments}
-                  disabled={isLoading}
-                />
-              </div>
+              )}
 
-              {/* JSA Documents */}
-              <div className="border border-gray-200 p-6 rounded-lg bg-white">
-                <div className="mb-4">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="warning">
-                      Dokumen JSA bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
-                    </Badge>
+              {/* Kontrak Kerja Documents - Conditional */}
+              {visibleOptionalDocs.has('KONTRAK_KERJA') && (
+                <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="warning">
+                        Dokumen Kontrak Kerja bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => removeOptionalDocument('KONTRAK_KERJA')}
+                        disabled={isLoading}
+                      >
+                        Hapus
+                      </Button>
+                    </div>
                   </div>
+                  <SupportDocumentList
+                    title="Dokumen Kontrak Kerja (Opsional)"
+                    documentType="KONTRAK_KERJA"
+                    documents={kontrakKerjaDocuments}
+                    onDocumentsChange={setKontrakKerjaDocuments}
+                    disabled={isLoading}
+                  />
                 </div>
-                <SupportDocumentList
-                  title="Dokumen Job Safety Analysis (Opsional)"
-                  documentType="JSA"
-                  documents={jsaDocuments}
-                  onDocumentsChange={setJsaDocuments}
-                  disabled={isLoading}
-                />
-              </div>
+              )}
+
+              {/* JSA Documents - Conditional */}
+              {visibleOptionalDocs.has('JSA') && (
+                <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="warning">
+                        Dokumen JSA bersifat opsional, tetapi jika ingin mengisi, semua field harus dilengkapi
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => removeOptionalDocument('JSA')}
+                        disabled={isLoading}
+                      >
+                        Hapus
+                      </Button>
+                    </div>
+                  </div>
+                  <SupportDocumentList
+                    title="Dokumen Job Safety Analysis (Opsional)"
+                    documentType="JSA"
+                    documents={jsaDocuments}
+                    onDocumentsChange={setJsaDocuments}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
             </div>
 
             {/* ================= Pekerjaan ================= */}

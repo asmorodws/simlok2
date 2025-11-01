@@ -1128,7 +1128,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              7. Lain-lain (Preview Template)
+                              7. Lain-lain 
                             </label>
                             <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm">
                               <div className="text-gray-700 whitespace-pre-line">

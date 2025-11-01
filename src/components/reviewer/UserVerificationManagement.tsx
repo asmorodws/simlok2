@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Button from '@/components/ui/button/Button';
 import ReviewerUserVerificationModal from '@/components/reviewer/ReviewerUserVerificationModal';
+import ReviewerEditUserModal from '@/components/reviewer/ReviewerEditUserModal';
 import {
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -12,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import type { UserData } from '@/types';
 import UserTable from '@/components/users/UserTable';
+import { useToast } from '@/hooks/useToast';
 
 // Debounce helper
 function useDebounce<T>(value: T, delay: number): T {
@@ -43,7 +45,7 @@ export default function UserVerificationManagement({
   className = '',
   refreshTrigger = 0,
 }: UserVerificationManagementProps) {
-  // Note: showSuccess removed as toast is handled by ReviewerUserVerificationModal
+  const { showSuccess } = useToast();
   const [users, setUsers] = useState<UserData[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalPending: 0,
@@ -70,9 +72,10 @@ export default function UserVerificationManagement({
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Modal
+  // Modals
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
 
   // Search focus retainer
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -196,6 +199,13 @@ export default function UserVerificationManagement({
     }
   }, []);
 
+  const getAccountStatus = useCallback((user: UserData) => {
+    const isActive = user.isActive ?? true;
+    return isActive
+      ? <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Aktif</span>
+      : <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Nonaktif</span>;
+  }, []);
+
   // Modal wiring
   const openModal = (user: UserData) => {
     setSelectedUser(user);
@@ -203,6 +213,15 @@ export default function UserVerificationManagement({
   };
   const closeModal = () => {
     setShowVerificationModal(false);
+    setSelectedUser(null);
+  };
+
+  const openEditModal = (user: UserData) => {
+    setSelectedUser(user);
+    setShowEditUserModal(true);
+  };
+  const closeEditModal = () => {
+    setShowEditUserModal(false);
     setSelectedUser(null);
   };
 
@@ -233,7 +252,14 @@ export default function UserVerificationManagement({
 
     // Refetch agar 100% konsisten
     fetchUsers().catch(() => {});
-    // Note: Toast already shown by ReviewerUserVerificationModal
+    showSuccess('Berhasil', 'Status verifikasi diperbarui');
+  };
+
+  // Handle user edit
+  const handleUserEdit = (updated: UserData) => {
+    setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
+    fetchUsers().catch(() => {});
+    // Toast sudah ditampilkan oleh modal, tidak perlu double
   };
 
   // Info paging (untuk teks ringkas bawah)
@@ -376,7 +402,9 @@ export default function UserVerificationManagement({
         formatDate={formatDate}
         getRoleBadge={getRoleBadge}
         getVerificationStatus={getVerificationStatus}
+        getAccountStatus={getAccountStatus}
         onOpenVerify={openModal}
+        onEdit={openEditModal}
         emptyTitle={error ? 'Gagal memuat data' : 'Tidak ada user yang ditemukan'}
         emptyDescription={error ? error : 'Coba ubah kata kunci atau filter.'}
       />
@@ -394,6 +422,14 @@ export default function UserVerificationManagement({
         isOpen={showVerificationModal}
         onClose={closeModal}
         onUserUpdate={handleUserUpdateFromModal}
+      />
+
+      {/* Modal Edit User */}
+      <ReviewerEditUserModal
+        user={selectedUser}
+        isOpen={showEditUserModal}
+        onClose={closeEditModal}
+        onUserUpdate={handleUserEdit}
       />
     </div>
   );

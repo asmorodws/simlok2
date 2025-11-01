@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     const whereClause: any = {
-      isActive: true // Only show active users
+      // Show all users (both active and inactive)
     };
 
     // Role-based filtering
@@ -96,7 +96,8 @@ export async function GET(request: NextRequest) {
           rejected_at: true,
           rejected_by: true,
           rejection_reason: true,
-          role: true
+          role: true,
+          isActive: true
         },
         orderBy: { [sortBy]: sortOrder },
         skip,
@@ -224,6 +225,7 @@ export async function POST(request: NextRequest) {
         role: true,
         verified_at: true,
         verification_status: true,
+        isActive: true,
         created_at: true
       }
     });

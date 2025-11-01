@@ -106,7 +106,8 @@ export async function GET() {
         verification_status: true,
         rejection_reason: true,
         rejected_at: true,
-        created_at: true
+        created_at: true,
+        isActive: true
       }
     });
 

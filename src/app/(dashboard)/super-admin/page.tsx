@@ -9,6 +9,7 @@ import { UserIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/re
 import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVerificationModal";
 import EditUserModal from "@/components/admin/EditUserModal";
 import DeleteUserModal from "@/components/admin/DeleteUserModal";
+import { DashboardLoadingSkeleton } from "@/components/ui/LoadingSpinner";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -109,98 +110,84 @@ export default function SuperAdminDashboard() {
 
           {/* Statistik Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Menunggu Verifikasi</h3>
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPending}</p>
+            {loading ? (
+              <DashboardLoadingSkeleton type="stats" count={5} />
+            ) : (
+              <>
+                <div className="bg-white rounded-xl border shadow-sm p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Menunggu Verifikasi</h3>
+                      <p className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPending}</p>
+                    </div>
+                    <div className="p-3 bg-amber-100 rounded-full">
+                      <ClockIcon className="w-6 h-6 text-amber-600" />
+                    </div>
+                  </div>
+                  {stats.totalPending > 0 && (
+                    <div className="mt-4">
+                      <Link
+                        href="/super-admin/users?tab=pending"
+                        className="text-sm text-amber-600 hover:text-amber-800 font-medium flex items-center"
+                      >
+                        Verifikasi sekarang
+                        <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
                   )}
                 </div>
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <ClockIcon className="w-6 h-6 text-amber-600" />
-                </div>
-              </div>
-              {stats.totalPending > 0 && !loading && (
-                <div className="mt-4">
-                  <Link
-                    href="/super-admin/users?tab=pending"
-                    className="text-sm text-amber-600 hover:text-amber-800 font-medium flex items-center"
-                  >
-                    Verifikasi sekarang
-                    <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                </div>
-              )}
-            </div>
 
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Terverifikasi</h3>
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-green-600 mt-1">{stats.totalVerified}</p>
-                  )}
+                <div className="bg-white rounded-xl border shadow-sm p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Terverifikasi</h3>
+                      <p className="text-2xl font-bold text-green-600 mt-1">{stats.totalVerified}</p>
+                    </div>
+                    <div className="p-3 bg-green-100 rounded-full">
+                      <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-red-600 mt-1">{stats.totalRejected}</p>
-                  )}
+                <div className="bg-white rounded-xl border shadow-sm p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
+                      <p className="text-2xl font-bold text-red-600 mt-1">{stats.totalRejected}</p>
+                    </div>
+                    <div className="p-3 bg-red-100 rounded-full">
+                      <XCircleIcon className="w-6 h-6 text-red-600" />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-red-100 rounded-full">
-                  <XCircleIcon className="w-6 h-6 text-red-600" />
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Total User</h3>
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalUsers}</p>
-                  )}
+                <div className="bg-white rounded-xl border shadow-sm p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Total User</h3>
+                      <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalUsers}</p>
+                    </div>
+                    <div className="p-3 bg-blue-100 rounded-full">
+                      <UserIcon className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-blue-100 rounded-full">
-                  <UserIcon className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-white rounded-xl border shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Registrasi Hari Ini</h3>
-                  {loading ? (
-                    <div className="h-8 w-16 bg-gray-200 animate-pulse rounded mt-1"></div>
-                  ) : (
-                    <p className="text-2xl font-bold text-purple-600 mt-1">{stats.todayRegistrations}</p>
-                  )}
+                <div className="bg-white rounded-xl border shadow-sm p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Registrasi Hari Ini</h3>
+                      <p className="text-2xl font-bold text-purple-600 mt-1">{stats.todayRegistrations}</p>
+                    </div>
+                    <div className="p-3 bg-purple-100 rounded-full">
+                      <UserIcon className="w-6 h-6 text-purple-600" />
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3 bg-purple-100 rounded-full">
-                  <UserIcon className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
+              </>
+            )}
           </div>
 
           {/* Tabel User Terbaru */}
@@ -211,17 +198,7 @@ export default function SuperAdminDashboard() {
             </div>
 
             {loading ? (
-              <div className="p-6 space-y-4">
-                {[...Array(5)].map((_, index) => (
-                  <div key={index} className="flex items-center space-x-4">
-                    <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/4"></div>
-                      <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <DashboardLoadingSkeleton type="table" count={5} />
             ) : error ? (
               <div className="p-6 text-center text-red-500">{error}</div>
             ) : stats.recentUsers.length === 0 ? (
@@ -235,7 +212,8 @@ export default function SuperAdminDashboard() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Daftar</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Akun</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Verifikasi</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                   </thead>
@@ -263,13 +241,24 @@ export default function SuperAdminDashboard() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(user.created_at)}
                         </td>
+                        {/* Status Akun Column */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            user.isActive 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {user.isActive ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </td>
+                        {/* Status Verifikasi Column */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           {user.verified_at || user.verification_status === 'VERIFIED' ? (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
                               Terverifikasi
                             </span>
                           ) : user.rejection_reason || user.verification_status === 'REJECTED' ? (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-rose-100 text-rose-800">
                               Ditolak
                             </span>
                           ) : (

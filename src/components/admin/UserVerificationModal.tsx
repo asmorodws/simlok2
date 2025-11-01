@@ -20,19 +20,19 @@ import {
   IdentificationIcon
 } from '@heroicons/react/24/outline';
 
-interface ReviewerUserVerificationModalProps {
+interface UserVerificationModalProps {
   user: UserData | null;
   isOpen: boolean;
   onClose: () => void;
   onUserUpdate?: (updatedUser: UserData) => void;
 }
 
-export default function ReviewerUserVerificationModal({
+export default function UserVerificationModal({
   user,
   isOpen,
   onClose,
   onUserUpdate
-}: ReviewerUserVerificationModalProps) {
+}: UserVerificationModalProps) {
   const [processing, setProcessing] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState<'approve' | 'reject' | 'activate' | 'deactivate' | null>(null);
   const [currentUser, setCurrentUser] = useState<UserData | null>(user);
@@ -214,48 +214,7 @@ export default function ReviewerUserVerificationModal({
             <div className="p-4 sm:p-6 max-h-[calc(100vh-200px)] sm:max-h-[calc(90vh-200px)] overflow-y-auto">
               <div className="space-y-8">
                 {/* Status Section */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {/* Account Status Badge */}
-                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${
-                      currentUser.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {currentUser.isActive ? 'Akun Aktif' : 'Akun Nonaktif'}
-                    </div>
-                    
-                    {/* Verification Status Badge */}
-                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${isVerified
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : isRejected
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-warning-100 text-warning-800'
-                      }`}>
-                      {isVerified ? (
-                        <CheckCircleIcon className="w-4 h-4" />
-                      ) : isRejected ? (
-                        <XCircleIcon className="w-4 h-4" />
-                      ) : (
-                        <ClockIcon className="w-4 h-4" />
-                      )}
-                      {isVerified ? 'Terverifikasi' : isRejected ? 'Ditolak' : 'Menunggu Verifikasi'}
-                    </div>
-                    
-                    {/* Role Badge */}
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${currentUser.role === 'VENDOR'
-                        ? 'bg-blue-100 text-blue-800'
-                        : currentUser.role === 'VERIFIER'
-                          ? 'bg-purple-100 text-purple-800'
-                          : currentUser.role === 'VISITOR'
-                            ? 'bg-cyan-100 text-cyan-800'
-                            : 'bg-gray-100 text-gray-800'
-                      }`}>
-                      <IdentificationIcon className="w-4 h-4 inline mr-1" />
-                      {currentUser.role}
-                    </div>
-                  </div>
-                </div>
+               
 
                 {/* User Info Grid */}
 
@@ -382,46 +341,7 @@ export default function ReviewerUserVerificationModal({
                   </div>
                 </Card>
 
-               
-
-                {/* Actions for Pending Users */}
-                {isPending && (
-                  <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                    <div className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <CheckCircleIcon className="w-5 h-5 mr-2 text-blue-600" />
-                        Tindakan Verifikasi
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Pilih tindakan yang sesuai untuk user ini. Persetujuan akan memberikan akses sistem,
-                        sedangkan penolakan akan mengubah status user menjadi ditolak.
-                      </p>
-
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        <Button
-                          onClick={() => setShowConfirmModal('approve')}
-                          disabled={processing === currentUser.id}
-                          variant="primary"
-                          size="md"
-                          className="flex-1"
-                        >
-                          <CheckCircleIcon className="w-5 h-5 mr-2" />
-                          Setujui User
-                        </Button>
-                        <Button
-                          onClick={() => setShowConfirmModal('reject')}
-                          disabled={processing === currentUser.id}
-                          variant="destructive"
-                          size="md"
-                          className="flex-1"
-                        >
-                          <XCircleIcon className="w-5 h-5 mr-2" />
-                          Tolak User
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                )}
+                
 
                 {/* Verification Status Info */}
                 {isVerified && (
@@ -490,7 +410,7 @@ export default function ReviewerUserVerificationModal({
           onConfirm={() => {
             if (showConfirmModal === 'approve' || showConfirmModal === 'reject') {
               handleVerifyUser(showConfirmModal);
-            } else {
+            } else if (showConfirmModal === 'activate' || showConfirmModal === 'deactivate') {
               handleAccountStatus(showConfirmModal);
             }
           }}
@@ -513,39 +433,34 @@ interface ConfirmationModalProps {
 function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConfirm }: ConfirmationModalProps) {
   if (!isOpen) return null;
 
+  const isApprove = action === 'approve';
+  const isReject = action === 'reject';
+  const isActivate = action === 'activate';
+  const isDeactivate = action === 'deactivate';
+
   const getTitle = () => {
-    switch (action) {
-      case 'approve': return 'Konfirmasi Persetujuan';
-      case 'reject': return 'Konfirmasi Penolakan';
-      case 'activate': return 'Konfirmasi Aktivasi Akun';
-      case 'deactivate': return 'Konfirmasi Nonaktifkan Akun';
-    }
+    if (isApprove) return 'Konfirmasi Persetujuan';
+    if (isReject) return 'Konfirmasi Penolakan';
+    if (isActivate) return 'Konfirmasi Aktivasi Akun';
+    if (isDeactivate) return 'Konfirmasi Nonaktifkan Akun';
+    return 'Konfirmasi';
   };
 
   const getMessage = () => {
-    switch (action) {
-      case 'approve': 
-        return `Apakah Anda yakin ingin menyetujui user ${user.officer_name}?`;
-      case 'reject': 
-        return `Apakah Anda yakin ingin menolak user ${user.officer_name}?`;
-      case 'activate': 
-        return `Apakah Anda yakin ingin mengaktifkan akun ${user.officer_name}? User akan dapat login kembali ke sistem.`;
-      case 'deactivate': 
-        return `Apakah Anda yakin ingin menonaktifkan akun ${user.officer_name}? User tidak akan dapat login ke sistem.`;
-    }
+    if (isApprove) return `Apakah Anda yakin ingin menyetujui user ${user.officer_name}?`;
+    if (isReject) return `Apakah Anda yakin ingin menolak user ${user.officer_name}?`;
+    if (isActivate) return `Apakah Anda yakin ingin mengaktifkan akun ${user.officer_name}? User akan dapat login kembali.`;
+    if (isDeactivate) return `Apakah Anda yakin ingin menonaktifkan akun ${user.officer_name}? User tidak akan dapat login.`;
+    return '';
   };
 
   const getButtonText = () => {
-    switch (action) {
-      case 'approve': return 'Ya, Setujui';
-      case 'reject': return 'Ya, Tolak';
-      case 'activate': return 'Ya, Aktifkan';
-      case 'deactivate': return 'Ya, Nonaktifkan';
-    }
+    if (isApprove) return 'Ya, Setujui';
+    if (isReject) return 'Ya, Tolak';
+    if (isActivate) return 'Ya, Aktifkan';
+    if (isDeactivate) return 'Ya, Nonaktifkan';
+    return 'Ya';
   };
-
-  const isDestructive = action === 'reject' || action === 'deactivate';
-  const isPositive = action === 'approve' || action === 'activate';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
@@ -553,9 +468,9 @@ function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConf
         <div className="p-6">
           <div className="flex items-center mb-4">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-              isPositive ? 'bg-green-100' : 'bg-red-100'
+              isApprove || isActivate ? 'bg-green-100' : 'bg-red-100'
             }`}>
-              {isPositive ? (
+              {isApprove || isActivate ? (
                 <CheckCircleIcon className="w-6 h-6 text-green-600" />
               ) : (
                 <XCircleIcon className="w-6 h-6 text-red-600" />
@@ -572,16 +487,16 @@ function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConf
             {getMessage()}
           </p>
 
-          {isDestructive && (
+          {(isReject || isDeactivate) && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
               <div className="flex items-start">
                 <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
                 <div className="text-sm">
                   <p className="font-medium text-red-800 mb-1">Peringatan!</p>
                   <p className="text-red-700">
-                    {action === 'reject' 
+                    {isReject 
                       ? 'Status user akan diubah menjadi ditolak dan tidak dapat login lagi.'
-                      : 'User tidak akan dapat login ke sistem setelah akun dinonaktifkan.'}
+                      : 'User tidak akan dapat login sampai akun diaktifkan kembali.'}
                   </p>
                 </div>
               </div>
@@ -600,7 +515,7 @@ function ConfirmationModal({ isOpen, onClose, user, action, isProcessing, onConf
             <Button
               onClick={onConfirm}
               disabled={isProcessing}
-              variant={isPositive ? "primary" : "destructive"}
+              variant={isApprove || isActivate ? "primary" : "destructive"}
               size="sm"
             >
               {isProcessing ? (

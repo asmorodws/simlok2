@@ -14,6 +14,8 @@ const updateUserSchema = z.object({
   address: z.string().optional().nullable(),
   role: z.enum(['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN']).optional(),
   password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+  isActive: z.boolean().optional(),
+  verification_status: z.enum(['PENDING', 'VERIFIED', 'REJECTED']).optional(),
 });
 
 // Schema for validating user verification data
@@ -44,8 +46,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
 
     const whereClause: any = { 
-      id,
-      isActive: true // Only show active users
+      id
     };
 
     // Role-based access control
@@ -75,7 +76,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         rejected_at: true,
         rejected_by: true,
         rejection_reason: true,
-        role: true
+        role: true,
+        isActive: true
       }
     });
 
@@ -90,7 +92,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT /api/users/[id] - Update user (SUPER_ADMIN only)
+// PUT /api/users/[id] - Update user (SUPER_ADMIN only, or REVIEWER for isActive field only)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -100,13 +102,36 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only SUPER_ADMIN can update users
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 });
-    }
-
     const body = await request.json();
     const validatedData = updateUserSchema.parse(body);
+
+    // Check if this is only an isActive update
+    const isOnlyActiveUpdate = Object.keys(body).length === 1 && body.hasOwnProperty('isActive');
+
+    // Permission check:
+    // - SUPER_ADMIN/ADMIN: Can update everything
+    // - REVIEWER: Can update VENDOR users (full data edit or isActive only)
+    if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'ADMIN') {
+      // SUPER_ADMIN and ADMIN can update everything
+    } else if (session.user.role === 'REVIEWER') {
+      // REVIEWER can update VENDOR users
+      const targetUser = await prisma.user.findUnique({
+        where: { id },
+        select: { role: true }
+      });
+      
+      if (!targetUser || targetUser.role !== 'VENDOR') {
+        return NextResponse.json({ error: 'Reviewers can only update vendor accounts' }, { status: 403 });
+      }
+      
+      // REVIEWER cannot change role
+      if (validatedData.role && validatedData.role !== 'VENDOR') {
+        return NextResponse.json({ error: 'Reviewers cannot change user role' }, { status: 403 });
+      }
+    } else {
+      // No permission for other roles
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    }
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -115,6 +140,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (!existingUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // If this is only an isActive update, handle it separately
+    if (isOnlyActiveUpdate && validatedData.isActive !== undefined) {
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { isActive: validatedData.isActive },
+        select: {
+          id: true,
+          email: true,
+          officer_name: true,
+          vendor_name: true,
+          phone_number: true,
+          address: true,
+          role: true,
+          verification_status: true,
+          isActive: true,
+          created_at: true,
+          verified_at: true,
+          rejected_at: true,
+          rejection_reason: true,
+        }
+      });
+
+      return NextResponse.json({
+        user: updatedUser,
+        message: 'Account status updated successfully'
+      });
     }
 
     // Check if email is being changed and already exists
@@ -136,6 +189,32 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       role: validatedData.role || existingUser.role,
     };
 
+    // Handle isActive field
+    if (validatedData.isActive !== undefined) {
+      updateData.isActive = validatedData.isActive;
+    }
+
+    // Handle verification_status field (SUPER_ADMIN and REVIEWER only)
+    if (validatedData.verification_status) {
+      if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'REVIEWER') {
+        updateData.verification_status = validatedData.verification_status;
+        
+        // Update timestamps based on status
+        if (validatedData.verification_status === 'VERIFIED') {
+          updateData.verified_at = new Date();
+          updateData.rejected_at = null;
+          updateData.rejection_reason = null;
+        } else if (validatedData.verification_status === 'REJECTED') {
+          updateData.rejected_at = new Date();
+          updateData.verified_at = null;
+        } else if (validatedData.verification_status === 'PENDING') {
+          updateData.verified_at = null;
+          updateData.rejected_at = null;
+          updateData.rejection_reason = null;
+        }
+      }
+    }
+
     // Handle password update if provided
     if (validatedData.password) {
       updateData.password = await bcrypt.hash(validatedData.password, 12);
@@ -144,7 +223,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Handle name fields based on role
     if (updateData.role === 'VENDOR') {
       updateData.vendor_name = validatedData.vendor_name ?? existingUser.vendor_name;
-      updateData.officer_name = validatedData.vendor_name ?? existingUser.officer_name;
+      updateData.officer_name = validatedData.officer_name ?? existingUser.officer_name;
     } else {
       updateData.officer_name = validatedData.officer_name ?? existingUser.officer_name;
       updateData.vendor_name = null;
@@ -163,8 +242,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         address: true,
         role: true,
         verification_status: true,
+        isActive: true,
         created_at: true
       }
+    });
+
+    console.log('PUT /api/users/[id] - Updated user:', {
+      id: updatedUser.id,
+      isActive: updatedUser.isActive
     });
 
     return NextResponse.json({
@@ -205,8 +290,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Check if user exists and is accessible by current role
     const whereClause: any = { 
-      id,
-      isActive: true // Only allow verification of active users
+      id
+      // Allow verification of both active and inactive users
     };
     if (session.user.role === 'REVIEWER') {
       // Reviewers can only verify vendor users

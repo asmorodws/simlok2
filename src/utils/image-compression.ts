@@ -208,12 +208,12 @@ export class ImageCompressor {
    */
   static validateHSSEWorkerDocument(file: File): { isValid: boolean; error?: string } {
     // Allow both images and PDF for HSSE worker documents
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     
     if (!allowedTypes.includes(file.type)) {
       return {
         isValid: false,
-        error: 'File harus berupa gambar (JPG, JPEG, PNG) atau PDF'
+        error: 'File harus berupa gambar (JPG, JPEG, PNG)'
       };
     }
 
@@ -226,12 +226,12 @@ export class ImageCompressor {
       };
     }
 
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf'];
+    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
     const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!allowedExtensions.includes(fileExt)) {
       return {
         isValid: false,
-        error: 'Ekstensi file harus .jpg, .jpeg, .png, atau .pdf'
+        error: 'Ekstensi file harus .jpg, .jpeg, atau .png'
       };
     }
 

@@ -61,7 +61,7 @@ export default function EnhancedFileUpload({
       case "document":
         return ".pdf"; // Only PDF for support documents
       case "hsse-worker":
-        return ".jpg,.jpeg,.png,.pdf"; // Image or PDF for HSSE worker
+        return ".jpg,.jpeg,.png"; // Only images for HSSE worker (wajib foto)
       default:
         return ".pdf";
     }
@@ -77,9 +77,9 @@ export default function EnhancedFileUpload({
     }
     if (uploadType === "hsse-worker") {
       return {
-        title: "Unggah Dokumen HSSE",
+        title: "Unggah HSSE Pass",
         subtitle: "Tarik & letakkan atau klik untuk memilih",
-        formats: "JPG, JPEG, PNG, PDF — maks 8MB",
+        formats: "JPG, JPEG, PNG — maks 8MB (Wajib Foto)",
       };
     }
     return {
@@ -494,8 +494,7 @@ export default function EnhancedFileUpload({
             ) : uploadType === "hsse-worker" ? (
               <div className="flex items-center gap-2">
                 <PhotoIcon className="h-10 w-10 text-blue-500" />
-                <span className="text-gray-400">/</span>
-                <DocumentIcon className="h-10 w-10 text-blue-500" />
+
               </div>
             ) : (
               <DocumentIcon className="h-10 w-10 text-blue-500" />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PlusIcon } from '@heroicons/react/24/outline';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import DatePicker from '@/components/form/DatePicker';
 import Button from '@/components/ui/button/Button';
@@ -111,10 +111,10 @@ export default function SupportDocumentList({
                   type="button"
                   onClick={() => removeDocument(doc.id)}
                   disabled={disabled}
-                  className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1.5 text-xs font-medium text-red-600 ring-1 ring-inset ring-red-600 shadow hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Hapus dokumen"
                 >
-                  <TrashIcon className="h-5 w-5" />
+                  Hapus
                 </button>
               )}
             </div>
@@ -188,16 +188,6 @@ export default function SupportDocumentList({
                     </div>
                   </div>
                 )}
-
-
-                {/* SIMJA info - auto set */}
-                {/* {documentType === 'SIMJA' && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                    <p className="text-sm text-blue-700">
-                      <span className="font-medium">Jenis SIMJA:</span> Ast. Man. Facility Management (default)
-                    </p>
-                  </div>
-                )} */}
 
                 {/* Document Number */}
                 <div>

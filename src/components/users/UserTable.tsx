@@ -20,8 +20,10 @@ export interface UserTableProps {
   formatDate: (date: string | Date | null | undefined) => string;
   getRoleBadge: (role: UserData['role'] | string) => React.ReactNode;
   getVerificationStatus: (user: UserData) => React.ReactNode;
+  getAccountStatus: (user: UserData) => React.ReactNode;
 
   onOpenVerify: (user: UserData) => void;
+  onEdit?: (user: UserData) => void;
 
   emptyTitle?: string;
   emptyDescription?: string;
@@ -40,7 +42,9 @@ export default function UserTable({
   formatDate,
   getRoleBadge,
   getVerificationStatus,
+  getAccountStatus,
   onOpenVerify,
+  onEdit,
   emptyTitle = 'Tidak ada user',
   emptyDescription = 'Coba ubah kata kunci pencarian atau filter.',
 }: UserTableProps) {
@@ -99,14 +103,25 @@ export default function UserTable({
         cell: (u) => <div className="text-sm text-gray-900">{formatDate(u.created_at)}</div>,
       },
       {
-        key: 'verification_status',
-        header: 'Status',
+        key: 'isActive',
+        header: 'Status Akun',
         sortable: true,
-        minWidth: 180,                          // ⬅️ ruang cukup untuk “Menunggu Verifikasi”
-        className: 'whitespace-nowrap',         // ⬅️ cegah wrap di sel
+        minWidth: 120,
+        className: 'whitespace-nowrap',
         cell: (u) => (
           <div className="inline-flex items-center whitespace-nowrap text-xs leading-none">
-            {/* wrapper kecil & nowrap supaya badge tidak pecah baris */}
+            {getAccountStatus(u)}
+          </div>
+        ),
+      },
+      {
+        key: 'verification_status',
+        header: 'Status Verifikasi',
+        sortable: true,
+        minWidth: 150,
+        className: 'whitespace-nowrap',
+        cell: (u) => (
+          <div className="inline-flex items-center whitespace-nowrap text-xs leading-none">
             {getVerificationStatus(u)}
           </div>
         ),
@@ -114,11 +129,11 @@ export default function UserTable({
       {
         key: 'actions',
         header: 'Aksi',
-        align: 'center',                         // header tengah
-        minWidth: 176,                           // ruang tombol cukup
+        align: 'center',
+        minWidth: onEdit ? 220 : 176,
         className: 'text-center',
         cell: (u) => (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-2">
             <Button
               onClick={() => onOpenVerify(u)}
               variant="info"
@@ -127,13 +142,22 @@ export default function UserTable({
             >
               Lihat
             </Button>
+            {onEdit && (
+              <Button
+                onClick={() => onEdit(u)}
+                variant="outline"
+                size="sm"
+                className="px-3 py-1.5 whitespace-nowrap"
+              >
+                Ubah
+              </Button>
+            )}
           </div>
         ),
       },
     ],
-    [formatDate, getRoleBadge, getVerificationStatus, onOpenVerify]
+    [formatDate, getRoleBadge, getVerificationStatus, getAccountStatus, onOpenVerify, onEdit]
   );
-
   const sortByString = typeof sortBy === 'string' ? sortBy : (sortBy as string | undefined);
   const sortByProp = sortByString ? { sortBy: sortByString } : {};
 
