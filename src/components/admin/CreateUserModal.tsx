@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/useToast";
 import Input from "@/components/form/Input";
 import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
-import { normalizePhoneNumber } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -61,6 +61,19 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
       newErrors.password = 'Password wajib diisi';
     } else if (formData.password.length < 6) {
       newErrors.password = 'Password harus minimal 6 karakter';
+    }
+
+    // Validasi nomor telepon jika diisi
+    if (formData.phone_number && formData.phone_number.trim()) {
+      const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
+        required: false,
+        minLength: 9,
+        maxLength: 13,
+      });
+      
+      if (!phoneValidation.isValid) {
+        newErrors.phone_number = phoneValidation.error || 'Nomor telepon tidak valid';
+      }
     }
 
     if (formData.role === 'VENDOR') {

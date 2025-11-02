@@ -8,7 +8,7 @@ import Input from "@/components/form/Input";
 import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
 import { Badge } from "../ui/Badge";
-import { normalizePhoneNumber } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 interface EditUserModalProps {
   user: UserData | null;
@@ -75,6 +75,19 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
       newErrors.email = 'Email wajib diisi';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Format email tidak valid';
+    }
+
+    // Validasi nomor telepon jika diisi
+    if (formData.phone_number && formData.phone_number.trim()) {
+      const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
+        required: false,
+        minLength: 9,
+        maxLength: 13,
+      });
+      
+      if (!phoneValidation.isValid) {
+        newErrors.phone_number = phoneValidation.error || 'Nomor telepon tidak valid';
+      }
     }
 
     if (formData.role === 'VENDOR') {

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignUpForm from "@/components/auth/SignUpForm";
-import { normalizePhoneNumber } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -32,10 +32,19 @@ export default function SignupPage() {
       setError("Email harus diisi");
       return false;
     }
-    if (!no_telp.trim()) {
-      setError("Nomor telepon harus diisi");
+    
+    // Validasi nomor telepon dengan pesan error yang detail
+    const phoneValidation = validatePhoneNumberWithMessage(no_telp.trim(), {
+      required: true,
+      minLength: 9,
+      maxLength: 13,
+    });
+    
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.error || "Nomor telepon tidak valid");
       return false;
     }
+    
     if (!alamat.trim()) {
       setError("Alamat harus diisi");
       return false;

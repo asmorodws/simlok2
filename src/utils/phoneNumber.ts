@@ -106,6 +106,88 @@ export function validatePhoneNumber(phoneNumber: string): boolean {
 }
 
 /**
+ * Interface untuk hasil validasi nomor telepon dengan pesan error
+ */
+export interface PhoneValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Validasi nomor telepon dengan pesan error yang detail
+ * @param phoneNumber - Nomor telepon untuk divalidasi
+ * @param options - Opsi validasi (minLength, maxLength, required)
+ * @returns Object dengan status validasi dan pesan error jika ada
+ */
+export function validatePhoneNumberWithMessage(
+  phoneNumber: string | null | undefined,
+  options: {
+    minLength?: number;
+    maxLength?: number;
+    required?: boolean;
+  } = {}
+): PhoneValidationResult {
+  const { minLength = 9, maxLength = 13, required = false } = options;
+
+  // Cek jika field kosong
+  if (!phoneNumber || phoneNumber.trim() === '') {
+    if (required) {
+      return {
+        isValid: false,
+        error: 'Nomor telepon wajib diisi',
+      };
+    }
+    return { isValid: true };
+  }
+
+  // Hapus semua karakter non-digit
+  const cleaned = phoneNumber.replace(/\D/g, '');
+
+  // Cek jika hanya berisi karakter non-digit
+  if (!cleaned) {
+    return {
+      isValid: false,
+      error: 'Nomor telepon harus berisi angka',
+    };
+  }
+
+  // Normalisasi untuk mendapatkan nomor tanpa prefix
+  let number = cleaned;
+  
+  if (number.startsWith('62')) {
+    number = number.substring(2);
+  } else if (number.startsWith('0')) {
+    number = number.substring(1);
+  }
+
+  // Cek panjang minimal
+  if (number.length < minLength) {
+    return {
+      isValid: false,
+      error: `Nomor telepon minimal ${minLength} digit`,
+    };
+  }
+
+  // Cek panjang maksimal
+  if (number.length > maxLength) {
+    return {
+      isValid: false,
+      error: `Nomor telepon maksimal ${maxLength} digit`,
+    };
+  }
+
+  // Cek apakah dimulai dengan 8 (nomor Indonesia)
+  if (!number.startsWith('8')) {
+    return {
+      isValid: false,
+      error: 'Nomor telepon Indonesia harus dimulai dengan 8',
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
  * Normalize nomor telepon untuk disimpan di database
  * Selalu simpan dengan format 62XXXXXXXXXX (tanpa +)
  * @param phoneNumber - Nomor telepon input

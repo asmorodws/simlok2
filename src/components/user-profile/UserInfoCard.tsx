@@ -7,7 +7,7 @@ import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
 import ConfirmationModal from "../common/ConfirmationModal";
-import { normalizePhoneNumber } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 interface UserInfoCardProps {
   user: {
@@ -100,6 +100,17 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       }
       if (!formData.phone_number.trim()) {
         newErrors.phone_number = "Nomor telepon wajib diisi";
+      } else {
+        // Validasi format nomor telepon
+        const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
+          required: true,
+          minLength: 9,
+          maxLength: 13,
+        });
+        
+        if (!phoneValidation.isValid) {
+          newErrors.phone_number = phoneValidation.error || "Nomor telepon tidak valid";
+        }
       }
       if (!formData.address.trim()) {
         newErrors.address = "Alamat wajib diisi";

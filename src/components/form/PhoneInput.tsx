@@ -10,6 +10,8 @@ interface PhoneInputProps {
   disabled?: boolean;
   error?: string;
   className?: string;
+  minLength?: number; // Minimum karakter (default: 9)
+  maxLength?: number; // Maximum karakter (default: 13)
 }
 
 /**
@@ -27,6 +29,8 @@ export default function PhoneInput({
   disabled = false,
   error = "",
   className = "",
+  minLength = 9,  // Minimal 9 digit (contoh: 812345678)
+  maxLength = 13, // Maksimal 13 digit (contoh: 8123456789012)
 }: PhoneInputProps) {
   // Parse value untuk display - hilangkan +62 atau 0 di depan
   const getDisplayValue = (phoneValue: string): string => {
@@ -56,9 +60,9 @@ export default function PhoneInput({
     // Hanya izinkan angka
     inputValue = inputValue.replace(/\D/g, '');
     
-    // Batasi panjang maksimal (13 digit tanpa 0 di depan)
-    if (inputValue.length > 13) {
-      inputValue = inputValue.substring(0, 13);
+    // Batasi panjang maksimal
+    if (inputValue.length > maxLength) {
+      inputValue = inputValue.substring(0, maxLength);
     }
     
     // Buat event baru dengan value yang sudah diformat
@@ -92,6 +96,8 @@ export default function PhoneInput({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
+          minLength={minLength}
+          maxLength={maxLength}
           className={`
             flex-1 h-11 px-4 text-sm w-full
             border border-gray-200 rounded-r-lg
@@ -108,8 +114,7 @@ export default function PhoneInput({
           {error}
         </p>
       )}
-      
-
+    
     </div>
   );
 }
