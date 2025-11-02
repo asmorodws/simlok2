@@ -1,9 +1,9 @@
 // src/app/api/v1/notifications/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { resolveAudience } from "@/lib/notificationAudience";
+import { authOptions } from "@/lib/security/auth";
+import { prisma } from "@/lib/database";
+import { resolveAudience } from "@/lib/notifications/audience";
 
 export async function GET(req: NextRequest) {
   try {
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       prisma.notification.count({ where }),
     ]);
 
-    const data = rows.map((n) => ({
+    const data = rows.map((n: any) => ({
       id: n.id,
       type: n.type,
       title: n.title,

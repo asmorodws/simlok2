@@ -21,7 +21,7 @@ import {
 import Button from '@/components/ui/button/Button';
 import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
-import { fetchJSON } from '@/lib/fetchJson';
+import { fetchJSON } from '@/lib/api/client/fetcher';
 
 // ---- Types ----
 interface Notification {

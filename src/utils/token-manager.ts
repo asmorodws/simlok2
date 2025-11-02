@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/singletons';
+import { prisma } from '@/lib/database';
 import { JWT_CONFIG } from './jwt-config';
 
 export class TokenManager {

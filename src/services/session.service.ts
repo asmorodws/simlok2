@@ -10,7 +10,7 @@
  * 5. Auto-cleanup of expired/orphaned sessions
  */
 
-import { prisma } from '@/lib/singletons';
+import { prisma } from '@/lib/database';
 import { User_role, VerificationStatus } from '@prisma/client';
 import crypto from 'crypto';
 

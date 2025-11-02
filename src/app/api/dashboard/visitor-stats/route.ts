@@ -1,8 +1,8 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/security/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import cache, { CacheKeys, CacheTTL } from "@/lib/cache";
+import { prisma } from "@/lib/database";
+import cache, { CacheKeys, CacheTTL } from "@/lib/utils/cache";
 
 export async function GET() {
   try {
@@ -106,14 +106,14 @@ export async function GET() {
     ]);
 
     // Process submission stats safely
-    const reviewStatusStats = submissionsByReviewStatus?.reduce((acc, item) => {
+    const reviewStatusStats = submissionsByReviewStatus?.reduce((acc: Record<string, number>, item: any) => {
       if (item?.review_status && item?._count?.id) {
         acc[item.review_status] = item._count.id;
       }
       return acc;
     }, {} as Record<string, number>) || {};
 
-    const approvalStatusStats = submissionsByApprovalStatus?.reduce((acc, item) => {
+    const approvalStatusStats = submissionsByApprovalStatus?.reduce((acc: Record<string, number>, item: any) => {
       if (item?.approval_status && item?._count?.id) {
         acc[item.approval_status] = item._count.id;
       }

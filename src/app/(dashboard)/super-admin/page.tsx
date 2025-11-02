@@ -10,6 +10,7 @@ import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVer
 import EditUserModal from "@/components/admin/EditUserModal";
 import DeleteUserModal from "@/components/admin/DeleteUserModal";
 import { DashboardLoadingSkeleton } from "@/components/ui/LoadingSpinner";
+import { cachedFetch, apiCache } from "@/lib/api/client";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -42,18 +43,24 @@ export default function SuperAdminDashboard() {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('/api/dashboard/stats', { cache: 'no-store' });
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard statistics');
-      }
-      const data = await response.json();
+      // Gunakan cachedFetch dengan TTL 30 detik
+      const data = await cachedFetch<{
+        totalUsers: number;
+        totalPending: number;
+        totalVerified: number;
+        totalRejected: number;
+        todayRegistrations: number;
+        pendingVerifications: number;
+        recentUsers: UserData[];
+      }>('/api/dashboard/stats', { cacheTTL: 30 * 1000 }); // Cache 30 detik
+      
       setStats({
         totalUsers: data.totalUsers,
         totalPending: data.totalPending,
         totalVerified: data.totalVerified,
         totalRejected: data.totalRejected,
         todayRegistrations: data.todayRegistrations,
-        pendingVerifications: data.pendingVerifications, // Legacy compatibility
+        pendingVerifications: data.pendingVerifications,
         recentUsers: data.recentUsers
       });
     } catch (err) {
@@ -84,6 +91,8 @@ export default function SuperAdminDashboard() {
         user.id === updatedUser.id ? updatedUser : user
       )
     }));
+    // Invalidate cache saat user diupdate
+    apiCache.delete('/api/dashboard/stats');
     fetchDashboardStats();
   };
 
@@ -92,6 +101,8 @@ export default function SuperAdminDashboard() {
       ...prev,
       recentUsers: prev.recentUsers.filter(user => user.id !== deletedUserId)
     }));
+    // Invalidate cache saat user dihapus
+    apiCache.delete('/api/dashboard/stats');
     fetchDashboardStats();
   };
 

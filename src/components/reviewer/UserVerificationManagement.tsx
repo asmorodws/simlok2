@@ -14,6 +14,7 @@ import {
 import type { UserData } from '@/types';
 import UserTable from '@/components/users/UserTable';
 import { useToast } from '@/hooks/useToast';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 // Debounce helper
 function useDebounce<T>(value: T, delay: number): T {
@@ -95,12 +96,11 @@ export default function UserVerificationManagement({
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
 
-      const res = await fetch(`/api/users?${params.toString()}`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Gagal mengambil data user');
-      }
-      const data = await res.json();
+      const data = await cachedFetch<{
+        users: UserData[];
+        stats: Stats;
+        pagination: { totalPages: number; total: number };
+      }>(`/api/users?${params.toString()}`, { cacheTTL: 30 * 1000 });
 
       // Expecting shape: { users: UserData[], stats: Stats, pagination: { totalPages, total } }
       setUsers(Array.isArray(data.users) ? data.users : []);
@@ -227,6 +227,9 @@ export default function UserVerificationManagement({
 
   // Saat modal update user (approve/reject), sinkronkan list & stats
   const handleUserUpdateFromModal = (updated: UserData) => {
+    // Invalidate cache saat user diupdate
+    apiCache.invalidatePattern('/api/users');
+    
     setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
 
     // Optimistic stats tweak:

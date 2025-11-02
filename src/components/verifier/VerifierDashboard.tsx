@@ -28,6 +28,7 @@ import { Skeleton, SkeletonDashboardCard, SkeletonCard } from '@/components/ui/s
 import CameraQRScanner from '../scanner/CameraQRScanner';
 import ScanDetailModal from '@/components/common/ScanDetailModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import { cachedFetch } from '@/lib/api/client';
 
 interface SubmissionData {
   id: string;
@@ -92,35 +93,37 @@ export default function VerifierDashboard() {
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const scanHistoryRef = useRef<{ closeDetailModal: () => void } | null>(null);
 
-  const fetchDashboardData = async (showLoading = true) => {
+  const fetchDashboardData = async (showLoading = true, silent = false) => {
     if (showLoading) {
       setLoading(true);
     }
     try {
-      // Fetch stats, recent submissions, and recent scans in parallel
-      const [submissionsRes, scansRes, statsRes] = await Promise.all([
-        fetch('/api/submissions?limit=5&page=1&status=APPROVED'),
-        fetch('/api/qr/verify?limit=5&offset=0&search='),
-        fetch('/api/verifier/stats')
+      // Fetch dengan cache 30 detik
+      const [, scanData, statsData] = await Promise.all([
+        cachedFetch<{ submissions: SubmissionData[] }>(
+          '/api/submissions?limit=5&page=1&status=APPROVED',
+          { cacheTTL: 30 * 1000 }
+        ),
+        cachedFetch<{ scans: QrScan[] }>(
+          '/api/qr/verify?limit=5&offset=0&search=',
+          { cacheTTL: 30 * 1000 }
+        ),
+        cachedFetch<{
+          totalScans: number;
+          todayScans: number;
+          totalSubmissions: number;
+          approvedSubmissions: number;
+        }>('/api/verifier/stats', { cacheTTL: 30 * 1000 })
       ]);
 
-      if (submissionsRes.ok) {
-        await submissionsRes.json();
-        // Data submissions tersimpan tapi tidak ditampilkan di dashboard
-      }
-
-      if (scansRes.ok) {
-        const scanData = await scansRes.json();
-        setRecentScans(scanData.scans || []);
-      }
-
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
+      setRecentScans(scanData.scans || []);
+      setStats(statsData);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      showError('Error', 'Gagal memuat data dashboard');
+      // Hanya tampilkan error toast jika bukan silent refresh
+      if (!silent) {
+        showError('Error', 'Gagal memuat data dashboard');
+      }
     } finally {
       if (showLoading) {
         setLoading(false);
@@ -147,7 +150,9 @@ export default function VerifierDashboard() {
       // Refresh data without loading state to avoid modal interference
       refreshTimeout = setTimeout(() => {
         console.log('Executing dashboard data refresh (silent)...');
-        fetchDashboardData(false); // false = no loading state, just update data
+        // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
+        // Silent refresh - tidak tampilkan loading dan error toast
+        fetchDashboardData(false, true); // false = no loading state, true = silent mode
       }, 150); // Reduced delay since no loading state
     };
 

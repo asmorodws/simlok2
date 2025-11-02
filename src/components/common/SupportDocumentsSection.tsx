@@ -3,7 +3,7 @@
 import { DocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import DetailSection from '@/components/common/DetailSection';
-import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import { fileUrlHelper } from '@/lib/storage/file-url-helper';
 import { SubmissionSupportDocument } from '@/types/submission';
 import { formatDocumentTypeLabel } from '@/utils/documentTypeFormatter';
 

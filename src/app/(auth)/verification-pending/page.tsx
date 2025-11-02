@@ -1,6 +1,6 @@
 // Server-side validation with redirect
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import { redirect } from 'next/navigation';
 import VerificationPendingClient from './VerificationPendingClient';
 

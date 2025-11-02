@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { TokenManager } from "@/utils/token-manager";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/security/auth";
 
 export async function POST(req: Request) {
   try {

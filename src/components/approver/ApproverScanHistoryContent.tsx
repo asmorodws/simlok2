@@ -10,6 +10,7 @@ import Alert from '@/components/ui/alert/Alert';
 import ScanHistoryTable, { QrScan } from '@/components/scanner/ScanHistoryTable';
 import ApproverScanDetailModal from '@/components/approver/ApproverScanDetailModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
+import { cachedFetch } from '@/lib/api/client';
 
 interface FilterState {
   dateFrom: string;
@@ -45,9 +46,12 @@ export default function ApproverScanHistoryContent() {
         ...(filters.submissionId && { submissionId: filters.submissionId }),
         ...(search && { search }),
       });
-      const res = await fetch(`/api/scan-history?${params}`);
-      if (!res.ok) throw new Error('Failed to fetch scan history');
-      const data = await res.json();
+      
+      const data = await cachedFetch<{ scans: QrScan[]; total: number }>(
+        `/api/scan-history?${params}`,
+        { cacheTTL: 30 * 1000 }
+      );
+      
       setScans(data.scans || []);
       setPages(Math.max(1, Math.ceil((data.total || 0) / pageSize)));
     } catch (e) {

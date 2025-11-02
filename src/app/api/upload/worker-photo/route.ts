@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { fileManager } from '@/lib/fileManager';
+import { authOptions } from '@/lib/security/auth';
+import { fileManager } from '@/lib/storage/file-manager';
 
 // Maksimum ukuran file (8MB)
 const MAX_FILE_SIZE = 8 * 1024 * 1024;

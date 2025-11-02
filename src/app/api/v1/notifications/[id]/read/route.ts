@@ -1,9 +1,9 @@
 // src/app/api/v1/notifications/[id]/read/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { resolveAudience } from "@/lib/notificationAudience";
+import { authOptions } from "@/lib/security/auth";
+import { prisma } from "@/lib/database";
+import { resolveAudience } from "@/lib/notifications/audience";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {

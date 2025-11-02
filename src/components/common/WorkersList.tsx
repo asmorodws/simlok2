@@ -10,7 +10,7 @@ import {
   XMarkIcon,
   DocumentIcon 
 } from '@heroicons/react/24/outline';
-import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import { fileUrlHelper } from '@/lib/storage/file-url-helper';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 
 interface Worker {

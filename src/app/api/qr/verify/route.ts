@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
-import { parseQrString, type QrPayload } from '@/lib/qr-security';
+import { authOptions } from '@/lib/security/auth';
+import { prisma } from '@/lib/database';
+import { parseQrString, type QrPayload } from '@/lib/security/qr';
 
 // POST /api/qr/verify - Verify QR code and return submission data
 export async function POST(request: NextRequest) {

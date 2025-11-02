@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ReviewerTable, { ReviewerSubmission } from '@/components/reviewer/ReviewerTable';
 import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import { useToast } from '@/hooks/useToast';
@@ -13,6 +13,7 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { useSocket } from '@/components/common/RealtimeUpdates';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface StatsData {
   pendingReview: number;
@@ -39,24 +40,29 @@ export default function ReviewerDashboard() {
 
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Ref untuk debouncing socket events
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (silent = false) => {
     try {
       setStatsLoading(true);
       setSubmissionsLoading(true);
       
-      // Fetch submissions and dashboard stats in parallel
-      const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
-        fetch('/api/submissions?page=1&limit=10&sortBy=created_at&sortOrder=desc'),
-        fetch('/api/dashboard/reviewer-stats')
+      // Fetch dengan cache 30 detik
+      const [submissionsData, dashboardStats] = await Promise.all([
+        cachedFetch<{ submissions: ReviewerSubmission[] }>(
+          '/api/submissions?page=1&limit=10&sortBy=created_at&sortOrder=desc',
+          { cacheTTL: 30 * 1000 }
+        ),
+        cachedFetch<{
+          submissions: {
+            byReviewStatus: { PENDING_REVIEW: number; MEETS_REQUIREMENTS: number; NOT_MEETS_REQUIREMENTS: number };
+            total: number;
+          };
+          users: { pendingVerifications: number; totalVerified: number };
+        }>('/api/dashboard/reviewer-stats', { cacheTTL: 30 * 1000 })
       ]);
-
-      if (!submissionsResponse.ok || !dashboardStatsResponse.ok) {
-        throw new Error('Gagal mengambil data dashboard');
-      }
-
-      const submissionsData = await submissionsResponse.json();
-      const dashboardStats = await dashboardStatsResponse.json();
 
       setSubmissions((submissionsData.submissions ?? []) as ReviewerSubmission[]);
       
@@ -70,13 +76,16 @@ export default function ReviewerDashboard() {
         totalVerifiedUsers: dashboardStats.users?.totalVerified || 0,
       });
     } catch (err) {
-      console.error(err);
-      showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
+      console.error('Error fetching dashboard data:', err);
+      // Hanya tampilkan error toast jika bukan silent refresh (background refresh)
+      if (!silent) {
+        showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
+      }
     } finally {
       setStatsLoading(false);
       setSubmissionsLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -86,13 +95,29 @@ export default function ReviewerDashboard() {
   useEffect(() => {
     if (!socket) return;
     socket.emit('join', { role: 'REVIEWER' });
+    
     const refreshData = () => {
-      fetchDashboardData();
+      // Debounce refresh untuk menghindari multiple simultaneous calls
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        console.log('🔄 Reviewer dashboard socket refresh triggered');
+        // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
+        // Silent refresh untuk background updates
+        fetchDashboardData(true);
+      }, 300); // Debounce 300ms
     };
+    
     socket.on('notification:new', refreshData);
     socket.on('stats:update', refreshData);
     socket.on('submission:created', refreshData);
+    
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       socket.off('notification:new', refreshData);
       socket.off('stats:update', refreshData);
       socket.off('submission:created', refreshData);
@@ -103,7 +128,10 @@ export default function ReviewerDashboard() {
   useEffect(() => {
     const handleDashboardRefresh = () => {
       console.log('🔄 Reviewer dashboard received refresh event');
-      fetchDashboardData();
+      // Invalidate cache hanya untuk specific keys yang perlu di-refresh
+      apiCache.invalidatePattern('/api/dashboard/reviewer-stats');
+      // Silent refresh untuk custom event
+      fetchDashboardData(true);
     };
 
     window.addEventListener('reviewer-dashboard-refresh', handleDashboardRefresh);

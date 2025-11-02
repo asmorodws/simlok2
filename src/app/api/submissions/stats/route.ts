@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/security/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database";
 
 export async function GET() {
   try {
@@ -43,7 +43,7 @@ export async function GET() {
     });
 
     // Convert to more readable format
-    const statusStats = submissionsByStatus.reduce((acc, item) => {
+    const statusStats = submissionsByStatus.reduce((acc: Record<string, number>, item: any) => {
       acc[item.approval_status] = item._count.id;
       return acc;
     }, {} as Record<string, number>);

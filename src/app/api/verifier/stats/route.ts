@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { withUserCache } from '@/lib/api-cache';
+import { authOptions } from '@/lib/security/auth';
+import { prisma } from '@/lib/database';
+import { withUserCache } from '@/lib/api/server';
 import { CacheTTL } from '@/lib/cache';
 
 export async function GET() {

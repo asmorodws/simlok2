@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import EditSubmissionForm from '../../../../../../components/vendor/EditSubmissionForm';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 

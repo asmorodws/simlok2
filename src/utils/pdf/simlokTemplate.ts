@@ -8,7 +8,7 @@ import {
   type PDFImage,
 } from "pdf-lib";
 import * as QRCode from 'qrcode';
-import { numberToBahasa } from "@/lib/parseNumber";
+import { numberToBahasa } from "@/lib/utils/parse";
 /**
  * Load logo image for PDF generation
  * Works both on client-side (fetch) and server-side (fs)

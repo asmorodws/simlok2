@@ -1,6 +1,6 @@
 // app/lib/auth.ts
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "./singletons";
+import { prisma } from "../database";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { TokenManager } from "@/utils/token-manager";

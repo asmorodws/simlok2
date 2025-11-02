@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import { redirect } from 'next/navigation';
 import RoleGate from '@/components/security/RoleGate';
 import SidebarLayout from '@/components/layout/SidebarLayout';

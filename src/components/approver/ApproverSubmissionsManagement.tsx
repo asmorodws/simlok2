@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -16,6 +16,7 @@ import { useSocket } from '@/components/common/RealtimeUpdates';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
 import PageSkeleton from '@/components/ui/skeleton/PageSkeleton';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface Submission {
   id: string;
@@ -171,9 +172,23 @@ export default function ApproverSubmissionsManagement() {
 
   // Socket connection
   const socket = useSocket();
+  
+  // Ref untuk debouncing socket events
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref untuk tracking mounting state
+  const isMountedRef = useRef(false);
+  // Ref untuk tracking ongoing fetch
+  const fetchingRef = useRef(false);
 
-  const fetchSubmissions = useCallback(async () => {
+  const fetchSubmissions = useCallback(async (silent = false) => {
+    // Prevent duplicate fetch calls
+    if (fetchingRef.current) {
+      console.log('⏭️ Skipping fetch - already in progress');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -186,24 +201,40 @@ export default function ApproverSubmissionsManagement() {
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
-      const response = await fetch(`/api/submissions?${params.toString()}`);
-      if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
-
-      const data: SubmissionsResponse = await response.json();
+      const data = await cachedFetch<SubmissionsResponse>(
+        `/api/submissions?${params.toString()}`,
+        { cacheTTL: 30 * 1000 }
+      );
+      
       // Kita tidak menggunakan field worker_list di tabel, jadi cast aman:
       setSubmissions((data.submissions as unknown) as ApproverSubmission[]);
       setPagination(data.pagination);
     } catch (err) {
       console.error('Error fetching submissions:', err);
-      showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
+      // Hanya tampilkan error toast jika bukan silent refresh
+      if (!silent) {
+        showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]);
+  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder, showError]);
 
+  // Initial fetch saat component mount
   useEffect(() => {
-    fetchSubmissions();
-  }, [fetchSubmissions]);
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      fetchSubmissions();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Fetch ulang saat dependencies berubah (kecuali saat initial mount)
+  useEffect(() => {
+    if (isMountedRef.current) {
+      fetchSubmissions();
+    }
+  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Socket listeners for real-time updates
   useEffect(() => {
@@ -212,7 +243,16 @@ export default function ApproverSubmissionsManagement() {
     socket.emit('join', { role: 'APPROVER' });
 
     const handleSubmissionUpdate = () => {
-      fetchSubmissions();
+      // Debounce refresh untuk menghindari multiple simultaneous calls
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        console.log('🔄 Approver submissions socket refresh triggered');
+        // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
+        fetchSubmissions(true);
+      }, 300); // Debounce 300ms
     };
 
     socket.on('submission:reviewed', handleSubmissionUpdate);
@@ -220,6 +260,9 @@ export default function ApproverSubmissionsManagement() {
     socket.on('submission:rejected', handleSubmissionUpdate);
 
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       socket.off('submission:reviewed', handleSubmissionUpdate);
       socket.off('submission:approved', handleSubmissionUpdate);
       socket.off('submission:rejected', handleSubmissionUpdate);
@@ -230,7 +273,9 @@ export default function ApproverSubmissionsManagement() {
   useEffect(() => {
     const handleSubmissionsRefresh = () => {
       console.log('🔄 Approver submissions list received refresh event');
-      fetchSubmissions();
+      // Invalidate cache hanya untuk specific pattern
+      apiCache.invalidatePattern('/api/submissions?page=');
+      fetchSubmissions(true);
     };
 
     window.addEventListener('approver-dashboard-refresh', handleSubmissionsRefresh);

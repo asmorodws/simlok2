@@ -3,8 +3,8 @@ import ChangePasswordCard from "@/components/user-profile/ChangePasswordCard";
 import { Metadata } from "next";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/security/auth";
+import { prisma } from "@/lib/database";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {

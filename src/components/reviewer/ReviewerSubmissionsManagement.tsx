@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   MagnifyingGlassIcon,
   ArrowDownTrayIcon,
@@ -11,6 +11,8 @@ import ReviewerSubmissionDetailModal from './ReviewerSubmissionDetailModal';
 import ExportFilterModal, { ExportFilters } from './ExportFilterModal';
 import { useSocket } from '@/components/common/RealtimeUpdates';
 import ReviewerTable, { ReviewerSubmission } from '@/components/reviewer/ReviewerTable';
+import { debounce } from '@/lib/api/client';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface SubmissionsResponse {
   submissions: ReviewerSubmission[];
@@ -33,6 +35,7 @@ export default function ReviewerSubmissionsManagement() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [reviewStatusFilter, setReviewStatusFilter] = useState<string>('');
   const [finalStatusFilter, setFinalStatusFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState('created_at');
@@ -41,9 +44,33 @@ export default function ReviewerSubmissionsManagement() {
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
 
   const socket = useSocket();
+  
+  // Ref untuk debouncing socket events
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref untuk tracking mounting state
+  const isMountedRef = useRef(false);
+  // Ref untuk tracking ongoing fetch
+  const fetchingRef = useRef(false);
 
-  const fetchSubmissions = useCallback(async () => {
+  // Debounce search input
+  useEffect(() => {
+    const debouncedUpdate = debounce((value: string) => {
+      setDebouncedSearchTerm(value);
+      setCurrentPage(1); // Reset ke halaman 1 saat search
+    }, 500);
+
+    debouncedUpdate(searchTerm);
+  }, [searchTerm]);
+
+  const fetchSubmissions = useCallback(async (silent = false) => {
+    // Prevent duplicate fetch calls
+    if (fetchingRef.current) {
+      console.log('⏭️ Skipping fetch - already in progress');
+      return;
+    }
+
     try {
+      fetchingRef.current = true;
       setLoading(true);
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -51,37 +78,70 @@ export default function ReviewerSubmissionsManagement() {
         sortBy,
         sortOrder,
       });
-      if (searchTerm) params.append('search', searchTerm);
+      if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (reviewStatusFilter) params.append('reviewStatus', reviewStatusFilter);
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
-      const response = await fetch(`/api/submissions?${params}`);
-      if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
-
-      const data: SubmissionsResponse = await response.json();
+      const data = await cachedFetch<SubmissionsResponse>(
+        `/api/submissions?${params}`,
+        { cacheTTL: 30 * 1000 }
+      );
+      
       setSubmissions(data.submissions ?? []);
       setPagination(data.pagination);
     } catch (err) {
-      console.error(err);
-      showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
+      console.error('Error fetching submissions:', err);
+      // Hanya tampilkan error toast jika bukan silent refresh
+      if (!silent) {
+        showError('Gagal Memuat Data', 'Tidak dapat mengambil data pengajuan. Silakan coba lagi.');
+      }
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
-  }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]);
+  }, [currentPage, debouncedSearchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder, showError]);
 
-  useEffect(() => { fetchSubmissions(); }, [fetchSubmissions]);
+  // Initial fetch saat component mount
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      fetchSubmissions();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  
+  // Fetch ulang saat dependencies berubah (kecuali saat initial mount)
+  useEffect(() => {
+    if (isMountedRef.current) {
+      fetchSubmissions();
+    }
+  }, [currentPage, debouncedSearchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!socket) return;
+    
     const refresh = () => {
-      fetchSubmissions();
+      // Debounce refresh untuk menghindari multiple simultaneous calls
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        console.log('🔄 Reviewer submissions socket refresh triggered');
+        // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
+        fetchSubmissions(true);
+      }, 300); // Debounce 300ms
     };
+    
     socket.emit('join', { role: 'REVIEWER' });
     socket.on('submission:created', refresh);
     socket.on('submission:reviewed', refresh);
     socket.on('submission:approved', refresh);
     socket.on('submission:rejected', refresh);
+    
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       socket.off('submission:created', refresh);
       socket.off('submission:reviewed', refresh);
       socket.off('submission:approved', refresh);
@@ -93,7 +153,9 @@ export default function ReviewerSubmissionsManagement() {
   useEffect(() => {
     const handleSubmissionsRefresh = () => {
       console.log('🔄 Reviewer submissions list received refresh event');
-      fetchSubmissions();
+      // Invalidate cache hanya untuk specific pattern
+      apiCache.invalidatePattern('/api/submissions?page=');
+      fetchSubmissions(true);
     };
 
     window.addEventListener('reviewer-dashboard-refresh', handleSubmissionsRefresh);

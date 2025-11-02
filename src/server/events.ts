@@ -1,4 +1,4 @@
-import { prisma, redisPub } from '@/lib/singletons';
+import { prisma, redisPub } from '@/lib/database';
 import { emitNotificationNew, emitNotificationUnreadCount } from './socket';
 
 export async function notifyAdminNewSubmission(submissionId: string) {

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/security/auth';
+import { prisma } from '@/lib/database';
 import { generateSIMLOKPDF } from '@/utils/pdf/simlokTemplate';
 import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
-import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
-import { generateQrString } from '@/lib/qr-security';
+import { cleanupSubmissionNotifications } from '@/lib/notifications/cleanup';
+import { generateQrString } from '@/lib/security/qr';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {

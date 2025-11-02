@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/security/auth';
+import { prisma } from '@/lib/database';
 import { z } from 'zod';
-import { generateQrString } from '@/lib/qr-security';
+import { generateQrString } from '@/lib/security/qr';
 
 // Schema for validating final approval data
 const finalApprovalSchema = z.object({

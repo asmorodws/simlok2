@@ -28,7 +28,7 @@ import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
-import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import { fileUrlHelper } from '@/lib/storage/file-url-helper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
 import { formatDocumentTypeLabel } from '@/utils/documentTypeFormatter';
 

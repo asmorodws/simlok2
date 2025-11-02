@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-import { config } from '@/lib/env';
+import { config } from '@/lib/utils/env';
 
 /**
  * Global variable for Prisma client to prevent multiple instances in development

@@ -1,9 +1,9 @@
 // src/app/api/v1/notifications/read-all/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { resolveAudience } from "@/lib/notificationAudience";
+import { authOptions } from "@/lib/security/auth";
+import { prisma } from "@/lib/database";
+import { resolveAudience } from "@/lib/notifications/audience";
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,12 +31,12 @@ export async function POST(req: NextRequest) {
     if (unread.length > 0) {
       if (audience.readerKey === "user") {
         await prisma.notificationRead.createMany({
-          data: unread.map((n) => ({ notification_id: n.id, user_id: audience.readerId })),
+          data: unread.map((n: any) => ({ notification_id: n.id, user_id: audience.readerId })),
           skipDuplicates: true,
         });
       } else {
         await prisma.notificationRead.createMany({
-          data: unread.map((n) => ({ notification_id: n.id, vendor_id: audience.readerId })),
+          data: unread.map((n: any) => ({ notification_id: n.id, vendor_id: audience.readerId })),
           skipDuplicates: true,
         });
       }

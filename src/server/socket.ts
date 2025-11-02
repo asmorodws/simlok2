@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import { pubClient, subClient } from '../lib/redis';
+import { pubClient, subClient } from '../lib/database/redis';
 import { EVENT_NAMES, ROOMS } from '../shared/events';
 import type { 
   AdminNewSubmissionEvent,

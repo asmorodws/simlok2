@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { fileManager } from '@/lib/fileManager';
+import { authOptions } from '@/lib/security/auth';
+import { fileManager } from '@/lib/storage/file-manager';
 import { PDFCompressor } from '@/utils/pdf-compressor-server';
 
 // Configure maximum file size (8MB)

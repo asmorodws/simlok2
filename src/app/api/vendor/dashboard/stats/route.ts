@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/singletons";
-import { withUserCache } from "@/lib/api-cache";
+import { authOptions } from "@/lib/security/auth";
+import { prisma } from "@/lib/database";
+import { withUserCache } from "@/lib/api/server";
 import { CacheTTL } from "@/lib/cache";
 
 export async function GET() {
@@ -59,12 +59,12 @@ async function fetchVendorStats(userId: string) {
   // Format statistics
   return {
     totalSubmissions: totalCount,
-    pendingSubmissions: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    approvedSubmissions: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    rejectedSubmissions: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
+    pendingSubmissions: stats.find((s: any) => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+    approvedSubmissions: stats.find((s: any) => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+    rejectedSubmissions: stats.find((s: any) => s.approval_status === 'REJECTED')?._count.approval_status || 0,
     draftSubmissions: 0, // Assuming no draft status in current schema
-    totalApproved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    totalPending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    totalRejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0
+    totalApproved: stats.find((s: any) => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+    totalPending: stats.find((s: any) => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+    totalRejected: stats.find((s: any) => s.approval_status === 'REJECTED')?._count.approval_status || 0
   };
 }

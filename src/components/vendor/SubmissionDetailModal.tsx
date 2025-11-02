@@ -13,7 +13,7 @@ import {
   XCircleIcon,
   ClockIcon as PendingIcon
 } from '@heroicons/react/24/outline';
-import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import { fileUrlHelper } from '@/lib/storage/file-url-helper';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import WorkersList from '@/components/common/WorkersList';

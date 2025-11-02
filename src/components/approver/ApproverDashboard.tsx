@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ClipboardDocumentListIcon,
   CheckCircleIcon,
@@ -14,6 +14,7 @@ import { SkeletonDashboardCard, SkeletonTable } from '@/components/ui/skeleton';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import Link from 'next/link';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface DashboardStats {
   total: number;
@@ -37,24 +38,29 @@ export default function ApproverDashboard() {
   const { showError } = useToast();
   const [selectedSubmission, setSelectedSubmission] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Ref untuk debouncing socket events
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (silent = false) => {
     try {
       setStatsLoading(true);
       setSubmissionsLoading(true);
       
-      // Fetch submissions and dashboard stats in parallel
-      const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
-        fetch('/api/submissions?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc'),
-        fetch('/api/dashboard/approver-stats')
+      // Fetch dengan cache 30 detik
+      const [submissionsData, dashboardStats] = await Promise.all([
+        cachedFetch<{ submissions: ApproverSubmission[] }>(
+          '/api/submissions?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc',
+          { cacheTTL: 30 * 1000 }
+        ),
+        cachedFetch<{
+          total: number;
+          pending_approval_meets: number;
+          pending_approval_not_meets: number;
+          approved: number;
+          rejected: number;
+        }>('/api/dashboard/approver-stats', { cacheTTL: 30 * 1000 })
       ]);
-
-      if (!submissionsResponse.ok || !dashboardStatsResponse.ok) {
-        throw new Error('Gagal mengambil data dashboard');
-      }
-
-      const submissionsData = await submissionsResponse.json();
-      const dashboardStats = await dashboardStatsResponse.json();
 
       setSubmissions((submissionsData.submissions ?? []) as ApproverSubmission[]);
       
@@ -68,12 +74,15 @@ export default function ApproverDashboard() {
       });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
+      // Hanya tampilkan error toast jika bukan silent refresh (background refresh)
+      if (!silent) {
+        showError('Gagal Memuat Dashboard', 'Tidak dapat mengambil data dashboard. Silakan refresh halaman.');
+      }
     } finally {
       setStatsLoading(false);
       setSubmissionsLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -85,7 +94,10 @@ export default function ApproverDashboard() {
   useEffect(() => {
     const handleDashboardRefresh = () => {
       console.log('🔄 Approver dashboard received refresh event');
-      fetchDashboardData();
+      // Invalidate cache hanya untuk specific keys
+      apiCache.invalidatePattern('/api/dashboard/approver-stats');
+      // Silent refresh untuk custom event
+      fetchDashboardData(true);
     };
 
     window.addEventListener('approver-dashboard-refresh', handleDashboardRefresh);
@@ -102,20 +114,33 @@ export default function ApproverDashboard() {
 
     socket.emit('join', { role: 'APPROVER' });
 
+    const debouncedRefresh = () => {
+      // Debounce refresh untuk menghindari multiple simultaneous calls
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      
+      refreshTimeoutRef.current = setTimeout(() => {
+        console.log('🔄 Approver dashboard socket refresh triggered');
+        // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
+        fetchDashboardData(true);
+      }, 300); // Debounce 300ms
+    };
+
     const handleNotificationNew = (notification: any) => {
       if (notification?.type === 'reviewed_submission_approval') {
-        fetchDashboardData();
+        debouncedRefresh();
       }
     };
 
     const handleStatsUpdate = (statsUpdate: any) => {
       if (statsUpdate?.scope === 'approver') {
-        fetchDashboardData();
+        debouncedRefresh();
       }
     };
 
     const handleSubmissionReviewed = () => {
-      fetchDashboardData();
+      debouncedRefresh();
     };
 
     socket.on('notification:new', handleNotificationNew);
@@ -123,6 +148,9 @@ export default function ApproverDashboard() {
     socket.on('submission:reviewed', handleSubmissionReviewed);
 
     return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
       socket.off('notification:new', handleNotificationNew);
       socket.off('stats:update', handleStatsUpdate);
       socket.off('submission:reviewed', handleSubmissionReviewed);

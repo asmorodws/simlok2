@@ -21,6 +21,7 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import type { UserData } from '@/types';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface Stats {
   totalPending: number;
@@ -120,12 +121,11 @@ export default function UserVerificationManagement({
       if (debouncedSearchTerm) params.append('search', debouncedSearchTerm);
       if (statusFilter !== 'all') params.append('status', statusFilter);
 
-      const res = await fetch(`/api/users?${params.toString()}`, { cache: 'no-store' });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Gagal mengambil data user');
-      }
-      const data = await res.json();
+      const data = await cachedFetch<{
+        users: UserData[];
+        stats: Stats;
+        pagination: { totalPages: number; total: number };
+      }>(`/api/users?${params.toString()}`, { cacheTTL: 30 * 1000 });
 
       // Expecting shape: { users: UserData[], stats: Stats, pagination: { totalPages, total } }
       setUsers(Array.isArray(data.users) ? data.users : []);
@@ -291,6 +291,9 @@ export default function UserVerificationManagement({
 
   // Saat modal update user (approve/reject), sinkronkan list & stats
   const handleUserUpdateFromModal = (updated: UserData) => {
+    // Invalidate cache saat user diupdate
+    apiCache.invalidatePattern('/api/users');
+    
     setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
 
     // Optimistic stats tweak:
@@ -321,6 +324,9 @@ export default function UserVerificationManagement({
 
   // Handle edit user update
   const handleUserEdit = (updated: UserData) => {
+    // Invalidate cache saat user diedit
+    apiCache.invalidatePattern('/api/users');
+    
     setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)));
     // Refetch to ensure consistency
     fetchUsers().catch(() => {});
@@ -329,6 +335,9 @@ export default function UserVerificationManagement({
 
   // Handle user delete
   const handleUserDelete = (deletedUserId: string) => {
+    // Invalidate cache saat user dihapus
+    apiCache.invalidatePattern('/api/users');
+    
     setUsers((prev) => prev.filter((u) => u.id !== deletedUserId));
     // Update stats
     setStats((prev) => ({

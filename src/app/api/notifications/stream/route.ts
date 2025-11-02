@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redisSub } from '@/lib/singletons';
+import { authOptions } from '@/lib/security/auth';
+import { redisSub } from '@/lib/database';
 
 export const runtime = 'nodejs';
 

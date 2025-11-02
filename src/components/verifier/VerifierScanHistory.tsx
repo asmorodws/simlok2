@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   CalendarDaysIcon,
   EyeIcon,
@@ -21,6 +21,7 @@ import Button from '../ui/button/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import ScanDetailModal from '@/components/common/ScanDetailModal';
+import { cachedFetch, apiCache } from '@/lib/api/client';
 
 interface QrScan {
   id: string;
@@ -72,9 +73,25 @@ export default function VerifierScanHistory() {
   const [selectedScan, setSelectedScan] = useState<QrScan | null>(null);
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
+  // Ref untuk tracking mounting state
+  const isMountedRef = useRef(false);
+  // Ref untuk tracking ongoing fetch
+  const fetchingRef = useRef(false);
+
+  // Initial fetch saat component mount
   useEffect(() => {
-    fetchScanHistory();
-  }, [pagination.offset, searchTerm, filters]);
+    if (!isMountedRef.current) {
+      isMountedRef.current = true;
+      fetchScanHistory();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch ulang saat dependencies berubah (kecuali saat initial mount)
+  useEffect(() => {
+    if (isMountedRef.current) {
+      fetchScanHistory();
+    }
+  }, [pagination.offset, searchTerm, filters.status, filters.dateFrom, filters.dateTo, filters.location]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Custom event listener for refreshing scan history after QR scan
   useEffect(() => {
@@ -91,7 +108,10 @@ export default function VerifierScanHistory() {
       // Refresh data without loading state to avoid modal interference
       refreshTimeout = setTimeout(() => {
         console.log('Executing scan history refresh (silent)...');
-        fetchScanHistory(false); // false = no loading state, just update data
+        // Invalidate cache untuk refresh
+        apiCache.invalidatePattern('/api/qr/verify');
+        // Silent refresh - tidak tampilkan loading dan error toast
+        fetchScanHistory(false, true); // false = no loading state, true = silent mode
       }, 150); // Reduced delay since no loading state
     };
 
@@ -105,11 +125,18 @@ export default function VerifierScanHistory() {
     };
   }, []);
 
-  const fetchScanHistory = async (showLoading = true) => {
+  const fetchScanHistory = async (showLoading = true, silent = false) => {
+    // Prevent duplicate fetch calls
+    if (fetchingRef.current) {
+      console.log('⏭️ Skipping fetch - already in progress');
+      return;
+    }
+
     if (showLoading) {
       setLoading(true);
     }
     try {
+      fetchingRef.current = true;
       const params = new URLSearchParams({
         limit: pagination.limit.toString(),
         offset: pagination.offset.toString(),
@@ -122,25 +149,31 @@ export default function VerifierScanHistory() {
       if (filters.dateTo) params.append('dateTo', filters.dateTo);
       if (filters.location) params.append('location', filters.location);
 
-      const response = await fetch(`/api/qr/verify?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setScans(data.scans || []);
-        setPagination(prev => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-          hasMore: data.pagination?.hasMore || false
-        }));
-      } else {
-        showError('Error', 'Gagal memuat riwayat scan');
-      }
+      const data = await cachedFetch<{
+        scans: QrScan[];
+        pagination?: {
+          total: number;
+          hasMore: boolean;
+        };
+      }>(`/api/qr/verify?${params}`, { cacheTTL: 30 * 1000 });
+      
+      setScans(data.scans || []);
+      setPagination(prev => ({
+        ...prev,
+        total: data.pagination?.total || 0,
+        hasMore: data.pagination?.hasMore || false
+      }));
     } catch (error) {
       console.error('Error fetching scan history:', error);
-      showError('Error', 'Gagal memuat riwayat scan');
+      // Hanya tampilkan error toast jika bukan silent refresh
+      if (!silent) {
+        showError('Error', 'Gagal memuat riwayat scan');
+      }
     } finally {
       if (showLoading) {
         setLoading(false);
       }
+      fetchingRef.current = false;
     }
   };
 

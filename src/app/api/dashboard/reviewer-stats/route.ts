@@ -1,9 +1,9 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/security/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { withCache } from "@/lib/api-cache";
-import { CacheKeys, CacheTTL } from "@/lib/cache";
+import { prisma } from "@/lib/database";
+import { withCache } from "@/lib/api/server";
+import { CacheKeys, CacheTTL } from "@/lib/utils/cache";
 
 export async function GET() {
   try {
@@ -108,12 +108,12 @@ async function fetchReviewerStats(userRole: string) {
     });
 
     // Process submission stats
-    const reviewStatusStats = submissionsByReviewStatus.reduce((acc, item) => {
+    const reviewStatusStats = submissionsByReviewStatus.reduce((acc: Record<string, number>, item: any) => {
       acc[item.review_status] = item._count.id;
       return acc;
     }, {} as Record<string, number>);
 
-    const approvalStatusStats = submissionsByApprovalStatus.reduce((acc, item) => {
+    const approvalStatusStats = submissionsByApprovalStatus.reduce((acc: Record<string, number>, item: any) => {
       acc[item.approval_status] = item._count.id;
       return acc;
     }, {} as Record<string, number>);

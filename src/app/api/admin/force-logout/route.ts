@@ -5,9 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import { SessionService } from '@/services/session.service';
-import { prisma } from '@/lib/singletons';
+import { prisma } from '@/lib/database';
 
 export async function POST(request: NextRequest) {
   try {

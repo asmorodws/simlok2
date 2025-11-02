@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import { FileValidationService } from '@/services/FileValidationService';
 import { FileCompressionService } from '@/services/FileCompressionService';
 

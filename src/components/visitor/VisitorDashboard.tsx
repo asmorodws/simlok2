@@ -15,6 +15,7 @@ import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
 import { SkeletonDashboardCard, SkeletonChart } from '@/components/ui/skeleton';
 import { Badge } from '../ui/Badge';
+import { cachedFetch } from '@/lib/api/client';
 
 interface StatsData {
   pendingReview: number;
@@ -59,16 +60,11 @@ export default function VisitorDashboard() {
   // Fetch chart data separately
   const fetchChartData = useCallback(async () => {
     try {
-      const response = await fetch('/api/dashboard/visitor-charts', {
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setChartData(data);
-      }
+      const data = await cachedFetch<ChartData>(
+        '/api/dashboard/visitor-charts',
+        { cacheTTL: 30 * 1000 }
+      );
+      setChartData(data);
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
         console.error('Chart Data Error:', err);
@@ -94,27 +90,11 @@ export default function VisitorDashboard() {
       }
       setError(null);
       setLastFetchTime(now);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-      const response = await fetch('/api/dashboard/visitor-stats', {
-        signal: controller.signal,
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gagal mengambil data: ${errorText || 'Server error'}`);
-      }
-
-      const data = await response.json();
+      const data = await cachedFetch<any>(
+        '/api/dashboard/visitor-stats',
+        { cacheTTL: 30 * 1000 }
+      );
 
       if (!data || typeof data !== 'object') {
         throw new Error('Format response tidak valid');

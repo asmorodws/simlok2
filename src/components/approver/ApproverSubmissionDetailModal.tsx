@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   XMarkIcon,
   CheckCircleIcon,
@@ -22,13 +22,14 @@ import Button from '@/components/ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/hooks/useToast';
 import { useRealTimeNotifications } from '@/hooks/useRealTimeNotifications';
-import { fileUrlHelper } from '@/lib/fileUrlHelper';
+import { fileUrlHelper } from '@/lib/storage/file-url-helper';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
 import InfoCard from '@/components/common/InfoCard';
 import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import NoteCard from '@/components/common/NoteCard';
 import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
+import { SmartPolling } from '@/lib/api/client';
 
 import DatePicker from '@/components/form/DatePicker';
 
@@ -373,32 +374,25 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     };
   }, [eventSource, submissionId]);
 
-  // Fallback polling when SSE is not available: poll submission detail every 5s while modal is open
+  // Fallback polling when SSE is not available: menggunakan SmartPolling dengan exponential backoff
+  const pollingRef = useRef<SmartPolling | null>(null);
+  
   useEffect(() => {
     if (isConnected) return; // SSE available, no polling needed
     if (!isOpen || !submissionId) return;
 
-    let cancelled = false;
-
-    const tick = async () => {
-      if (cancelled) return;
-      try {
-        await fetchSubmissionDetail();
-      } catch (e) {
-        // ignore polling errors
-      }
-    };
-
-    // Initial immediate fetch to reduce perceived latency
-    tick();
-
-    const intervalId = window.setInterval(tick, 5000);
+    // Setup SmartPolling dengan base interval 5 detik, max 60 detik
+    pollingRef.current = new SmartPolling(5000, 60000);
+    
+    pollingRef.current.start(async () => {
+      await fetchSubmissionDetail();
+    });
 
     return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
+      pollingRef.current?.stop();
+      pollingRef.current = null;
     };
-  }, [isConnected, isOpen, submissionId]);
+  }, [isConnected, isOpen, submissionId, fetchSubmissionDetail]);
 
   const handleViewPdf = () => {
     setIsPdfModalOpen(true);

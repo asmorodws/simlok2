@@ -1,6 +1,6 @@
 // app/api/auth/signup/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/singletons";
+import { prisma } from "@/lib/database";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { notifyAdminNewVendor } from "@/server/events";

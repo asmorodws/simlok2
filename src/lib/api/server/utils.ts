@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/security/auth';
 import { ZodError, ZodSchema } from 'zod';
 import type { ApiError, ApiSuccess } from '@/shared/dto';
 
