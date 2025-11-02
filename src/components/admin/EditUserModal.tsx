@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { XMarkIcon, UserIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, UserIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
 import Input from "@/components/form/Input";
@@ -28,6 +28,7 @@ const USER_ROLES = [
 export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: EditUserModalProps) {
   const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     officer_name: '',
     vendor_name: '',
@@ -283,14 +284,28 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Password Baru
                     </label>
-                    <Input
-                      name="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      placeholder="Kosongkan jika tidak ingin mengubah password"
-                      {...(errors.password && { error: errors.password })}
-                    />
+                    <div className="relative">
+                      <Input
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="Masukkan password"
+                        {...(errors.password && { error: errors.password })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <EyeSlashIcon className="w-5 h-5" />
+                        ) : (
+                          <EyeIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                     <Badge variant="warning">
                                                                 Kosongkan field ini jika tidak ingin mengubah password user
                                                             </Badge>
