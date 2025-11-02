@@ -744,7 +744,7 @@ for (let idx = 0; idx < lines.length; idx++) {
     if (s.hsse_pass_document_upload) totalDocuments++;
   }
 
-  const shouldMoveSignatureToNewPage = totalDocuments > 5;
+  const shouldMoveSignatureToNewPage = totalDocuments > 7;
 
   if (!shouldMoveSignatureToNewPage) {
     // Original behavior: Show signature on main page

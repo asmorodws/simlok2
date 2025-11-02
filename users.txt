@@ -1,0 +1,67 @@
+Running seed command `tsx prisma/seed.ts` ...
+🧹 Membersihkan database sebelum seeding...
+   ✓ Semua data notification reads dihapus
+   ✓ Semua data notifications dihapus
+   ✓ Semua data QR scans dihapus
+   ✓ Semua data support documents dihapus
+   ✓ Semua data worker list dihapus
+   ✓ Semua data submission dihapus
+   ✓ Semua data refresh tokens dihapus
+   ✓ Semua data sessions dihapus
+   ✓ Semua data user dihapus
+🧹 Database berhasil dibersihkan
+🌱 Memulai proses seeding...
+
+👥 Membuat default users...
+
+🔐 Kredensial Login:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SUPER_ADMIN:
+  Email    : default-super_admin@c2corpsec.com
+  Password : hoylHvM@I#!BlN
+
+REVIEWER:
+  Email    : default-reviewer@c2corpsec.com
+  Password : phmkyxdCjvz3tI
+
+APPROVER:
+  Email    : default-approver@c2corpsec.com
+  Password : 9PZaGzG0nx92N7
+
+VERIFIER:
+  Email    : default-verifier@c2corpsec.com
+  Password : uEh2sHrZ#z&YHw
+
+VENDOR:
+  Email    : default-vendor@c2corpsec.com
+  Password : uj8eiN@KuDpg6Z
+
+VISITOR:
+  Email    : default-visitor@c2corpsec.com
+  Password : DU!fJIAac%WP22
+
+REVIEWER:
+  Email    : thantri@c2corpsec.com
+  Password : Tpw2ZJ$SLlaw8@
+
+APPROVER:
+  Email    : julianto@c2corpsec.com
+  Password : &be02l^#r^AM*p
+
+SUPER_ADMIN:
+  Email    : eja@c2corpsec.com
+  Password : t^b6Q#w1Lsr1$N
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Seeding selesai dengan sukses!
+
+📊 Ringkasan:
+   👥 9 default users berhasil dibuat
+   🔑 Setiap user memiliki password acak 14 karakter
+   ✓ Semua user sudah terverifikasi dan aktif
+
+⚠️  PENTING: Simpan kredensial di atas dengan aman!
+
+
+🌱  The seed command has been executed.

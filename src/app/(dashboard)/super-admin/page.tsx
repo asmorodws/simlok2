@@ -30,7 +30,7 @@ export default function SuperAdminDashboard() {
 
   // === Simple in-file button styles (tanpa komponen terpisah) ===
   const btnBase =
-    "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs px-3 py-1.5";
+    "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs px-4 py-2";
   const btnDetail =
     `${btnBase} text-blue-700 hover:bg-blue-50 focus-visible:ring-blue-400`;
   const btnEdit =
@@ -208,40 +208,45 @@ export default function SuperAdminDashboard() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Petugas</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal Daftar</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vendor/Kontak</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Dibuat</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Akun</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Verifikasi</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {stats.recentUsers.filter(user => user.vendor_name !== "[DELETED VENDOR]").map((user) => (
-                             <tr key={user.id}>
+                      <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">{user.officer_name}</div>
-                          {user.vendor_name && (
-                            <div className="text-sm text-gray-500">{user.vendor_name}</div>
-                          )}
+                          {user.address && <div className="text-sm text-gray-500 truncate max-w-xs">{user.address}</div>}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.email}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{user.email}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             user.role === 'VENDOR' ? 'bg-blue-100 text-blue-800' :
                             user.role === 'VERIFIER' ? 'bg-green-100 text-green-800' :
+                            user.role === 'REVIEWER' ? 'bg-purple-100 text-purple-800' :
+                            user.role === 'APPROVER' ? 'bg-orange-100 text-orange-800' :
+                            user.role === 'SUPER_ADMIN' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {user.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(user.created_at)}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{user.vendor_name ?? '-'}</div>
+                          {user.phone_number && <div className="text-sm text-gray-500">{user.phone_number}</div>}
                         </td>
-                        {/* Status Akun Column */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{formatDate(user.created_at)}</div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             user.isActive 
@@ -251,7 +256,6 @@ export default function SuperAdminDashboard() {
                             {user.isActive ? 'Aktif' : 'Nonaktif'}
                           </span>
                         </td>
-                        {/* Status Verifikasi Column */}
                         <td className="px-6 py-4 whitespace-nowrap">
                           {user.verified_at || user.verification_status === 'VERIFIED' ? (
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
@@ -267,8 +271,8 @@ export default function SuperAdminDashboard() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => {
                                 setSelectedUser(user);
@@ -277,7 +281,7 @@ export default function SuperAdminDashboard() {
                               className={btnDetail}
                               title="Lihat Detail"
                             >
-                              Detail
+                              Lihat
                             </button>
                             <button
                               onClick={() => {
@@ -311,7 +315,7 @@ export default function SuperAdminDashboard() {
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
               <Link
                 href="/super-admin/users"
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                className="text-sm text-blue-60 hover:text-blue-800 font-medium flex items-center"
               >
                 Lihat semua user
                 <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

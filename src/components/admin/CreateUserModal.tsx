@@ -5,7 +5,9 @@ import { XMarkIcon, UserPlusIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
 import Input from "@/components/form/Input";
+import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
+import { normalizePhoneNumber } from "@/utils/phoneNumber";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -88,6 +90,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
       
       const dataToSend = {
         ...formData,
+        phone_number: formData.phone_number ? normalizePhoneNumber(formData.phone_number) : null,
         // Clean up data based on role
         vendor_name: formData.role === 'VENDOR' ? formData.vendor_name : null,
         officer_name: formData.role !== 'VENDOR' ? formData.officer_name : null
@@ -266,12 +269,11 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nomor Telepon
                 </label>
-                <Input
+                <PhoneInput
                   name="phone_number"
-                  type="tel"
                   value={formData.phone_number}
                   onChange={handleChange}
-                  placeholder="08123456789"
+                  placeholder="81234567890"
                   {...(errors.phone_number && { error: errors.phone_number })}
                 />
               </div>

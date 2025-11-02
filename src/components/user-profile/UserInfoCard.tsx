@@ -2,10 +2,12 @@
 
 import React, { useState } from "react";
 import Input from "../form/Input";
+import PhoneInput from "../form/PhoneInput";
 import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
 import ConfirmationModal from "../common/ConfirmationModal";
+import { normalizePhoneNumber } from "@/utils/phoneNumber";
 
 interface UserInfoCardProps {
   user: {
@@ -123,21 +125,21 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         user.role === "VENDOR"
           ? {
               officer_name: formData.officer_name.trim(),
-              phone_number: formData.phone_number.trim(),
+              phone_number: normalizePhoneNumber(formData.phone_number.trim()),
               address: formData.address.trim(),
               email: formData.email.trim(),
             }
           : user.role === "APPROVER"
           ? {
               officer_name: formData.officer_name.trim(),
-              phone_number: formData.phone_number.trim(),
+              phone_number: normalizePhoneNumber(formData.phone_number.trim()),
               address: formData.address.trim(),
               email: formData.email.trim(),
               position: formData.position.trim(),
             }
           : {
               officer_name: formData.officer_name.trim(),
-              phone_number: formData.phone_number.trim(),
+              phone_number: normalizePhoneNumber(formData.phone_number.trim()),
               address: formData.address.trim(),
               email: formData.email.trim(),
             };
@@ -330,14 +332,12 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
             <div>
               <p className="text-sm font-medium text-gray-500">Nomor Telepon</p>
               {isEditing ? (
-                <Input
+                <PhoneInput
                   id="phone_number"
                   name="phone_number"
-                  type="tel"
-                  validationMode="numbers"
                   value={formData.phone_number}
                   onChange={handleChange}
-                  placeholder="08123456789"
+                  placeholder="81234567890"
                   required
                   className="mt-1"
                 />

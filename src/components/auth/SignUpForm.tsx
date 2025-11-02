@@ -4,6 +4,7 @@ import Checkbox from "@/components/form/Checkbox";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import Input from "@/components/form/Input";
+import PhoneInput from "@/components/form/PhoneInput";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import TermsModal from "@/components/ui/modal/TermsModal";
 import Link from "next/link";
@@ -189,17 +190,15 @@ const SignUpForm: FC<Props> = ({
                     <Label className="text-gray-700 font-medium text-xs">
                       No. Telepon <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <PhoneInput
                       id="no_telp"
                       name="no_telp"
-                      type="tel"
-                      validationMode="numbers"
                       value={no_telp}
                       onChange={(e) => setNoTelp(e.target.value)}
-                      placeholder="08123456789"
+                      placeholder="81234567890"
                       required
                       disabled={isLoading}
-                      className="mt-1 h-11 px-4 text-sm w-full border border-gray-200 rounded-lg focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                      className="mt-3"
                     />
                   </div>
 

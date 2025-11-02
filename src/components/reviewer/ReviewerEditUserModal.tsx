@@ -5,8 +5,10 @@ import { XMarkIcon, UserIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
 import Input from "@/components/form/Input";
+import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
 import { Badge } from "../ui/Badge";
+import { normalizePhoneNumber } from "@/utils/phoneNumber";
 
 interface ReviewerEditUserModalProps {
     user: UserData | null;
@@ -101,7 +103,7 @@ export default function ReviewerEditUserModal({
 
             const dataToSend: any = {
                 email: formData.email,
-                phone_number: formData.phone_number,
+                phone_number: normalizePhoneNumber(formData.phone_number),
                 address: formData.address,
                 role: 'VENDOR', // Reviewer can only edit VENDOR users
                 vendor_name: formData.vendor_name,
@@ -243,12 +245,11 @@ export default function ReviewerEditUserModal({
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Nomor Telepon
                                         </label>
-                                        <Input
+                                        <PhoneInput
                                             name="phone_number"
-                                            type="tel"
                                             value={formData.phone_number}
                                             onChange={handleChange}
-                                            placeholder="08123456789"
+                                            placeholder="081234567890"
                                             disabled={loading}
                                         />
                                     </div>

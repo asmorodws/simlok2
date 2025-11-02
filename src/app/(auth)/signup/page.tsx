@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignUpForm from "@/components/auth/SignUpForm";
+import { normalizePhoneNumber } from "@/utils/phoneNumber";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -81,7 +82,7 @@ export default function SignupPage() {
           password,
           vendor_name: nama_vendor.trim(),
           address: alamat.trim(),
-          phone_number: no_telp.trim(),
+          phone_number: normalizePhoneNumber(no_telp.trim()),
           turnstile_token: turnstileToken,
         }),
       });

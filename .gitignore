@@ -54,3 +54,5 @@ next-env.d.ts
 # temp files
 *.tmp
 *.log
+
+/prisma/seed.ts
