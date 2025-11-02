@@ -107,7 +107,8 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
         phone_number: formData.phone_number ? normalizePhoneNumber(formData.phone_number) : null,
         // Clean up data based on role
         vendor_name: formData.role === 'VENDOR' ? formData.vendor_name : null,
-        officer_name: formData.role !== 'VENDOR' ? formData.officer_name : null
+        // officer_name is required for ALL roles (including VENDOR)
+        officer_name: formData.officer_name
       };
 
           const response = await fetch("/api/users", {
@@ -213,22 +214,38 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Conditional Name Fields */}
+              {/* Name Fields - Different for VENDOR */}
               {formData.role === 'VENDOR' ? (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nama Vendor <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    name="vendor_name"
-                    type="text"
-                    value={formData.vendor_name}
-                    onChange={handleChange}
-                    placeholder="PT. Nama Perusahaan"
-                    {...(errors.vendor_name && { error: errors.vendor_name })}
-                    required
-                  />
-                </div>
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nama Vendor (Perusahaan) <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="vendor_name"
+                      type="text"
+                      value={formData.vendor_name}
+                      onChange={handleChange}
+                      placeholder="PT. Nama Perusahaan"
+                      {...(errors.vendor_name && { error: errors.vendor_name })}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nama Petugas (PIC Vendor) <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      name="officer_name"
+                      type="text"
+                      value={formData.officer_name}
+                      onChange={handleChange}
+                      placeholder="Nama Lengkap Petugas"
+                      {...(errors.officer_name && { error: errors.officer_name })}
+                      required
+                    />
+                  </div>
+                </>
               ) : (
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">

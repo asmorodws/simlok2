@@ -14,6 +14,19 @@ const createUserSchema = z.object({
   address: z.string().optional().nullable(),
   role: z.enum(['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'SUPER_ADMIN']),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+}).refine((data) => {
+  // Validate officer_name is required for all roles
+  if (!data.officer_name || data.officer_name.trim() === '') {
+    return false;
+  }
+  // Validate vendor_name is required for VENDOR role
+  if (data.role === 'VENDOR' && (!data.vendor_name || data.vendor_name.trim() === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Officer name is required for all roles. Vendor name is required for VENDOR role.',
+  path: ['officer_name', 'vendor_name'],
 });
 
 // GET /api/users - Get users (role-based filtering)
@@ -177,6 +190,23 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    
+    // Custom validation based on role
+    if (body.role === 'VENDOR') {
+      // For VENDOR: both vendor_name and officer_name are required
+      if (!body.vendor_name || !body.vendor_name.trim()) {
+        return NextResponse.json({ error: 'Nama vendor wajib diisi untuk role VENDOR' }, { status: 400 });
+      }
+      if (!body.officer_name || !body.officer_name.trim()) {
+        return NextResponse.json({ error: 'Nama petugas wajib diisi untuk role VENDOR' }, { status: 400 });
+      }
+    } else {
+      // For all other roles (VERIFIER, REVIEWER, APPROVER, SUPER_ADMIN)
+      if (!body.officer_name || !body.officer_name.trim()) {
+        return NextResponse.json({ error: 'Nama petugas wajib diisi untuk role ini' }, { status: 400 });
+      }
+    }
+    
     const validatedData = createUserSchema.parse(body);
 
     // Check if email already exists
@@ -205,12 +235,21 @@ export async function POST(request: NextRequest) {
 
     // Handle name fields based on role
     if (validatedData.role === 'VENDOR') {
+      // For VENDOR: both vendor_name (company) and officer_name (PIC) are required
       userData.vendor_name = validatedData.vendor_name;
-      userData.officer_name = validatedData.vendor_name; // Keep officer_name as vendor_name for consistency
+      userData.officer_name = validatedData.officer_name;
     } else {
+      // For VERIFIER, REVIEWER, APPROVER, SUPER_ADMIN: only officer_name is needed
       userData.officer_name = validatedData.officer_name;
       userData.vendor_name = null;
     }
+
+    console.log('Creating user with data:', {
+      email: userData.email,
+      role: userData.role,
+      officer_name: userData.officer_name,
+      vendor_name: userData.vendor_name
+    });
 
     // Create user
     const newUser = await prisma.user.create({
