@@ -43,6 +43,8 @@ export default function ReviewerDashboard() {
   
   // Ref untuk debouncing socket events
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref untuk menyimpan fetchDashboardData function
+  const fetchDashboardDataRef = useRef<(silent?: boolean) => Promise<void>>(undefined as any);
 
   const fetchDashboardData = useCallback(async (silent = false) => {
     try {
@@ -87,6 +89,11 @@ export default function ReviewerDashboard() {
     }
   }, [showError]);
 
+  // Update ref setiap kali fetchDashboardData berubah
+  useEffect(() => {
+    fetchDashboardDataRef.current = fetchDashboardData;
+  }, [fetchDashboardData]);
+
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
@@ -106,7 +113,7 @@ export default function ReviewerDashboard() {
         console.log('🔄 Reviewer dashboard socket refresh triggered');
         // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
         // Silent refresh untuk background updates
-        fetchDashboardData(true);
+        fetchDashboardDataRef.current?.(true);
       }, 300); // Debounce 300ms
     };
     
@@ -122,7 +129,7 @@ export default function ReviewerDashboard() {
       socket.off('stats:update', refreshData);
       socket.off('submission:created', refreshData);
     };
-  }, [socket, fetchDashboardData]);
+  }, [socket]); // HANYA socket sebagai dependency
 
   // Listen to custom events untuk refresh data dashboard
   useEffect(() => {
@@ -131,7 +138,7 @@ export default function ReviewerDashboard() {
       // Invalidate cache hanya untuk specific keys yang perlu di-refresh
       apiCache.invalidatePattern('/api/dashboard/reviewer-stats');
       // Silent refresh untuk custom event
-      fetchDashboardData(true);
+      fetchDashboardDataRef.current?.(true);
     };
 
     window.addEventListener('reviewer-dashboard-refresh', handleDashboardRefresh);
@@ -139,7 +146,7 @@ export default function ReviewerDashboard() {
     return () => {
       window.removeEventListener('reviewer-dashboard-refresh', handleDashboardRefresh);
     };
-  }, [fetchDashboardData]);
+  }, []); // Empty dependency - hanya setup sekali
 
   const handleViewDetail = (submissionId: string) => {
     setSelectedSubmission(submissionId);

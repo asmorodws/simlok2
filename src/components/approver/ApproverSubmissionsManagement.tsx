@@ -179,6 +179,8 @@ export default function ApproverSubmissionsManagement() {
   const isMountedRef = useRef(false);
   // Ref untuk tracking ongoing fetch
   const fetchingRef = useRef(false);
+  // Ref untuk menyimpan fetchSubmissions function untuk socket events
+  const fetchSubmissionsRef = useRef<(silent?: boolean) => Promise<void>>(undefined as any);
 
   const fetchSubmissions = useCallback(async (silent = false) => {
     // Prevent duplicate fetch calls
@@ -221,6 +223,11 @@ export default function ApproverSubmissionsManagement() {
     }
   }, [currentPage, searchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder, showError]);
 
+  // Update ref setiap kali fetchSubmissions berubah
+  useEffect(() => {
+    fetchSubmissionsRef.current = fetchSubmissions;
+  }, [fetchSubmissions]);
+
   // Initial fetch saat component mount
   useEffect(() => {
     if (!isMountedRef.current) {
@@ -251,7 +258,7 @@ export default function ApproverSubmissionsManagement() {
       refreshTimeoutRef.current = setTimeout(() => {
         console.log('🔄 Approver submissions socket refresh triggered');
         // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
-        fetchSubmissions(true);
+        fetchSubmissionsRef.current?.(true);
       }, 300); // Debounce 300ms
     };
 
@@ -267,7 +274,7 @@ export default function ApproverSubmissionsManagement() {
       socket.off('submission:approved', handleSubmissionUpdate);
       socket.off('submission:rejected', handleSubmissionUpdate);
     };
-  }, [socket, fetchSubmissions]);
+  }, [socket]); // HANYA socket sebagai dependency
 
   // Listen to custom events untuk refresh data submissions list dari notification panel
   useEffect(() => {
@@ -275,7 +282,7 @@ export default function ApproverSubmissionsManagement() {
       console.log('🔄 Approver submissions list received refresh event');
       // Invalidate cache hanya untuk specific pattern
       apiCache.invalidatePattern('/api/submissions?page=');
-      fetchSubmissions(true);
+      fetchSubmissionsRef.current?.(true);
     };
 
     window.addEventListener('approver-dashboard-refresh', handleSubmissionsRefresh);
@@ -283,7 +290,7 @@ export default function ApproverSubmissionsManagement() {
     return () => {
       window.removeEventListener('approver-dashboard-refresh', handleSubmissionsRefresh);
     };
-  }, [fetchSubmissions]);
+  }, []); // Empty dependency - hanya setup sekali
 
 
 

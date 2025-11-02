@@ -51,6 +51,8 @@ export default function ReviewerSubmissionsManagement() {
   const isMountedRef = useRef(false);
   // Ref untuk tracking ongoing fetch
   const fetchingRef = useRef(false);
+  // Ref untuk menyimpan fetchSubmissions function untuk socket events
+  const fetchSubmissionsRef = useRef<(silent?: boolean) => Promise<void>>(undefined as any);
 
   // Debounce search input
   useEffect(() => {
@@ -101,6 +103,11 @@ export default function ReviewerSubmissionsManagement() {
     }
   }, [currentPage, debouncedSearchTerm, reviewStatusFilter, finalStatusFilter, sortBy, sortOrder, showError]);
 
+  // Update ref setiap kali fetchSubmissions berubah
+  useEffect(() => {
+    fetchSubmissionsRef.current = fetchSubmissions;
+  }, [fetchSubmissions]);
+
   // Initial fetch saat component mount
   useEffect(() => {
     if (!isMountedRef.current) {
@@ -128,7 +135,7 @@ export default function ReviewerSubmissionsManagement() {
       refreshTimeoutRef.current = setTimeout(() => {
         console.log('🔄 Reviewer submissions socket refresh triggered');
         // TIDAK invalidate cache - biarkan cachedFetch handle deduplication
-        fetchSubmissions(true);
+        fetchSubmissionsRef.current?.(true);
       }, 300); // Debounce 300ms
     };
     
@@ -147,7 +154,7 @@ export default function ReviewerSubmissionsManagement() {
       socket.off('submission:approved', refresh);
       socket.off('submission:rejected', refresh);
     };
-  }, [socket, fetchSubmissions]);
+  }, [socket]); // HANYA socket sebagai dependency
 
   // Listen to custom events untuk refresh data submissions list dari notification panel
   useEffect(() => {
@@ -155,7 +162,7 @@ export default function ReviewerSubmissionsManagement() {
       console.log('🔄 Reviewer submissions list received refresh event');
       // Invalidate cache hanya untuk specific pattern
       apiCache.invalidatePattern('/api/submissions?page=');
-      fetchSubmissions(true);
+      fetchSubmissionsRef.current?.(true);
     };
 
     window.addEventListener('reviewer-dashboard-refresh', handleSubmissionsRefresh);
@@ -163,7 +170,7 @@ export default function ReviewerSubmissionsManagement() {
     return () => {
       window.removeEventListener('reviewer-dashboard-refresh', handleSubmissionsRefresh);
     };
-  }, [fetchSubmissions]);
+  }, []); // Empty dependency - hanya setup sekali
 
   const handleExportToExcel = async (filters: ExportFilters) => {
     try {
