@@ -339,6 +339,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               data: validWorkers.map((w: any) => ({
                 worker_name: w.worker_name.trim(),
                 worker_photo: w.worker_photo || null,
+                // 🔧 FIX: Include HSSE fields to preserve data after delete
+                hsse_pass_number: w.hsse_pass_number || null,
+                hsse_pass_valid_thru: w.hsse_pass_valid_thru ? new Date(w.hsse_pass_valid_thru) : null,
+                hsse_pass_document_upload: w.hsse_pass_document_upload || null,
                 submission_id: id
               }))
             });
@@ -513,6 +517,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           data: validWorkers.map((worker: any) => ({
             worker_name: worker.worker_name.trim(),
             worker_photo: worker.worker_photo || null,
+            // 🔧 FIX: Include HSSE fields to preserve data after delete/edit
+            hsse_pass_number: worker.hsse_pass_number || null,
+            hsse_pass_valid_thru: worker.hsse_pass_valid_thru ? new Date(worker.hsse_pass_valid_thru) : null,
+            hsse_pass_document_upload: worker.hsse_pass_document_upload || null,
             submission_id: id
           }))
         });
