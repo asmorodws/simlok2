@@ -370,46 +370,65 @@ export async function loadWorkerPhoto(
 
 /**
  * Load worker photos in batches with improved error handling and parallel processing
+ * FIXED: Also preload HSSE documents for workers
  */
 export async function preloadWorkerPhotos(
   pdfDoc: PDFDocument,
-  workerList: Array<{ worker_photo?: string | null }>
+  workerList: Array<{ 
+    worker_photo?: string | null;
+    hsse_pass_document_upload?: string | null;
+  }>
 ): Promise<void> {
   // Filter out cached and null photos
   const photosToLoad = workerList
     .filter(w => w.worker_photo && !imageCache.has(w.worker_photo))
     .map(w => w.worker_photo as string);
 
-  if (photosToLoad.length === 0) {
-    console.log('PreloadWorkerPhotos: All photos already cached or empty');
+  // 🔧 FIX: Also preload HSSE documents
+  const documentsToLoad = workerList
+    .filter(w => w.hsse_pass_document_upload && !imageCache.has(w.hsse_pass_document_upload))
+    .map(w => w.hsse_pass_document_upload as string);
+
+  const totalItems = photosToLoad.length + documentsToLoad.length;
+
+  if (totalItems === 0) {
+    console.log('PreloadWorkerPhotos: All photos and documents already cached or empty');
     return;
   }
 
-  console.log(`PreloadWorkerPhotos: Loading ${photosToLoad.length} worker photos in batches of ${MAX_BATCH_SIZE}...`);
+  console.log(`PreloadWorkerPhotos: Loading ${photosToLoad.length} worker photos and ${documentsToLoad.length} HSSE documents in batches of ${MAX_BATCH_SIZE}...`);
   const startTime = Date.now();
 
+  // 🎯 PERFORMANCE FIX: Process photos and documents together
+  const allItemsToLoad = [...photosToLoad, ...documentsToLoad];
+
   // 🎯 PERFORMANCE FIX: Process in larger batches with Promise.allSettled
-  for (let i = 0; i < photosToLoad.length; i += MAX_BATCH_SIZE) {
-    const batch = photosToLoad.slice(i, i + MAX_BATCH_SIZE);
+  for (let i = 0; i < allItemsToLoad.length; i += MAX_BATCH_SIZE) {
+    const batch = allItemsToLoad.slice(i, i + MAX_BATCH_SIZE);
     const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(photosToLoad.length / MAX_BATCH_SIZE);
+    const totalBatches = Math.ceil(allItemsToLoad.length / MAX_BATCH_SIZE);
     
-    console.log(`PreloadWorkerPhotos: Processing batch ${batchNumber}/${totalBatches} (${batch.length} photos)`);
+    console.log(`PreloadWorkerPhotos: Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
     
     try {
       // Use Promise.allSettled to continue even if some images fail
       const results = await Promise.allSettled(
-        batch.map(async (photo) => {
+        batch.map(async (item) => {
           try {
-            const loadPromise = loadWorkerPhoto(pdfDoc, photo);
+            // Check if this is a photo or document and load accordingly
+            const isDocument = documentsToLoad.includes(item);
+            const loadPromise = isDocument 
+              ? loadWorkerDocument(pdfDoc, item) 
+              : loadWorkerPhoto(pdfDoc, item);
+            
             // Add timeout to prevent hanging on slow images
             const timeoutPromise = new Promise((_, reject) => 
               setTimeout(() => reject(new Error('Load timeout')), LOAD_TIMEOUT)
             );
             await Promise.race([loadPromise, timeoutPromise]);
           } catch (error) {
-            console.warn(`PreloadWorkerPhotos: Failed to load photo: ${photo}`, error);
-            // Don't throw - continue with other photos
+            console.warn(`PreloadWorkerPhotos: Failed to load item: ${item}`, error);
+            // Don't throw - continue with other items
           }
         })
       );
@@ -419,7 +438,7 @@ export async function preloadWorkerPhotos(
       console.log(`PreloadWorkerPhotos: Batch ${batchNumber} complete - ${successful} successful, ${failed} failed`);
       
       // Reduced delay between batches for better performance
-      if (i + MAX_BATCH_SIZE < photosToLoad.length) {
+      if (i + MAX_BATCH_SIZE < allItemsToLoad.length) {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     } catch (error) {
@@ -429,7 +448,7 @@ export async function preloadWorkerPhotos(
   }
 
   const elapsed = Date.now() - startTime;
-  console.log(`PreloadWorkerPhotos: Completed loading ${photosToLoad.length} photos in ${elapsed}ms (avg ${Math.round(elapsed / photosToLoad.length)}ms per photo)`);
+  console.log(`PreloadWorkerPhotos: Completed loading ${allItemsToLoad.length} items in ${elapsed}ms (avg ${Math.round(elapsed / allItemsToLoad.length)}ms per item)`);
   console.log(`PreloadWorkerPhotos: Cache size: ${imageCache.size} images`);
 }
 

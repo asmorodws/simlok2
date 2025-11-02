@@ -159,7 +159,14 @@ async function generatePDF(submission: any) {
       submissionId: submission.id,
       approval_status: submission.approval_status,
       simlok_number: submission.simlok_number,
-      has_simlok_number: !!submission.simlok_number
+      has_simlok_number: !!submission.simlok_number,
+      worker_list_count: submission.worker_list?.length || 0,
+      worker_list_data: submission.worker_list?.map((w: any) => ({
+        id: w.id,
+        name: w.worker_name,
+        has_photo: !!w.worker_photo,
+        has_hsse_doc: !!w.hsse_pass_document_upload
+      }))
     });
 
     // Allow PDF generation for any submission
