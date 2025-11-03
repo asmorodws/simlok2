@@ -13,7 +13,10 @@ import {
   BriefcaseIcon,
   MapPinIcon,
   CalendarDaysIcon,
-  UsersIcon
+  UsersIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  HomeIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -44,6 +47,10 @@ interface ScanData {
     implementation_end_date?: string;
     created_at?: string;
     review_status?: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+    // Vendor contact information
+    vendor_email?: string;
+    vendor_phone?: string;
+    vendor_address?: string;
   };
 }
 
@@ -315,6 +322,59 @@ export default function ScanDetailModal({
                 </div>
               )}
             </div>
+
+            {/* Vendor Contact Information */}
+            {(scan.submission.vendor_email || scan.submission.vendor_phone || scan.submission.vendor_address) && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                <div className="flex items-center mb-6">
+                  <div className="p-3 bg-purple-100 rounded-xl mr-4">
+                    <BuildingOfficeIcon className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold text-gray-800">Informasi Kontak Vendor</h4>
+                    <p className="text-sm text-gray-500">Detail kontak perusahaan vendor</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {scan.submission.vendor_email && (
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <EnvelopeIcon className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-600">Email</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 break-all">
+                        {scan.submission.vendor_email}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {scan.submission.vendor_phone && (
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <PhoneIcon className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-600">Nomor Telepon</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {scan.submission.vendor_phone}
+                      </p>
+                    </div>
+                  )}
+
+                  {scan.submission.vendor_address && (
+                    <div className="bg-white rounded-lg p-4 border border-purple-200 md:col-span-2 lg:col-span-3">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <HomeIcon className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-gray-600">Alamat</span>
+                      </div>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {scan.submission.vendor_address}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Scan Information */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">

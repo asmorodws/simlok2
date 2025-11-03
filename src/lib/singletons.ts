@@ -13,6 +13,7 @@ declare global {
   var __redis_pub: Redis | undefined;
   var __redis_sub: Redis | undefined;
   var __socket_io: SocketIOServer | undefined;
+  var __shutdown_setup: boolean | undefined;
 }
 
 /**
@@ -36,6 +37,13 @@ function createRedisClient(prefix = ''): Redis {
     lazyConnect: true,
     enableReadyCheck: false,
     maxRetriesPerRequest: null,
+    retryStrategy: (times) => {
+      // Stop retrying after 3 attempts to allow graceful shutdown
+      if (times > 3) {
+        return null;
+      }
+      return Math.min(times * 100, 2000);
+    },
     ...(prefix && { keyPrefix: `${prefix}:` }),
   });
 
@@ -47,6 +55,11 @@ function createRedisClient(prefix = ''): Redis {
     console.log(`Redis client connected (${prefix || 'default'})`);
   });
 
+  // Handle connection close
+  client.on('close', () => {
+    console.log(`Redis client closed (${prefix || 'default'})`);
+  });
+
   return client;
 }
 
@@ -56,6 +69,15 @@ export const redisSub = globalThis.__redis_sub ?? createRedisClient('sub');
 if (process.env.NODE_ENV !== 'production') {
   globalThis.__redis_pub = redisPub;
   globalThis.__redis_sub = redisSub;
+}
+
+/**
+ * Setup graceful shutdown handlers immediately on module load
+ * This ensures cleanup happens even without custom server
+ */
+if (!globalThis.__shutdown_setup) {
+  setupGracefulShutdownHandlers();
+  globalThis.__shutdown_setup = true;
 }
 
 /**
@@ -97,5 +119,79 @@ export function initializeSocketIO(httpServer: any): SocketIOServer {
   }
 
   setSocketIO(io);
+  
   return io;
 }
+
+/**
+ * Setup graceful shutdown handlers
+ */
+function setupGracefulShutdownHandlers() {
+  let isShuttingDown = false;
+
+  const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) {
+      return; // Silent return if already shutting down
+    }
+
+    isShuttingDown = true;
+    console.log(`\n🛑 ${signal} received. Starting graceful shutdown...`);
+
+    const shutdownTimeout = setTimeout(() => {
+      console.error('❌ Graceful shutdown timeout! Forcing exit...');
+      process.exit(1);
+    }, 5000); // Reduced to 5 seconds for faster shutdown
+
+    try {
+      // 1. Close Socket.IO
+      const io = getSocketIO();
+      if (io) {
+        console.log('📡 Closing Socket.IO...');
+        await new Promise<void>((resolve) => {
+          io.close(() => {
+            console.log('✅ Socket.IO closed');
+            resolve();
+          });
+        });
+      }
+
+      // 2. Disconnect Redis clients
+      console.log('🔴 Disconnecting Redis...');
+      const redisClosePromises = [];
+      
+      if (redisPub && redisPub.status !== 'end' && redisPub.status !== 'close') {
+        redisClosePromises.push(
+          redisPub.quit().then(() => console.log('✅ Redis Pub disconnected'))
+        );
+      }
+      
+      if (redisSub && redisSub.status !== 'end' && redisSub.status !== 'close') {
+        redisClosePromises.push(
+          redisSub.quit().then(() => console.log('✅ Redis Sub disconnected'))
+        );
+      }
+
+      await Promise.all(redisClosePromises);
+
+      // 3. Disconnect Prisma
+      console.log('🗄️  Disconnecting Prisma...');
+      await prisma.$disconnect();
+      console.log('✅ Prisma disconnected');
+
+      clearTimeout(shutdownTimeout);
+      console.log('✨ Graceful shutdown completed');
+      process.exit(0);
+    } catch (error) {
+      console.error('❌ Shutdown error:', error);
+      clearTimeout(shutdownTimeout);
+      process.exit(1);
+    }
+  };
+
+  // Register signal handlers
+  process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+  process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  
+  console.log('🛡️  Graceful shutdown handlers registered');
+}
+

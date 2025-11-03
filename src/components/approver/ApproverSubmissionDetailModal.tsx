@@ -168,18 +168,21 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     const year = now.getFullYear();
 
     try {
-      // Server akan handle logic yang sebenarnya saat approve
-      // Ini hanya placeholder untuk UI preview
+      // Fetch last SIMLOK number from server untuk preview
+      const response = await fetch(`/api/submissions/simlok/next-number?year=${year}`, { cache: 'no-store' });
       
-      // Fallback format client-side: auto-increment/S00330/tahun
-      // Format: sequential_number/S00330/YYYY (contoh: 1/S00330/2025, 2/S00330/2025)
-      const timestamp = Date.now();
-      const fallbackNumber = timestamp % 1000; // Simple fallback untuk preview
-      return `${fallbackNumber}/S00330/${year}-S0`;
+      if (response.ok) {
+        const data = await response.json();
+        return data.nextSimlokNumber; // Server will return format: "1/S00330/2025-S0"
+      }
+      
+      // Fallback jika API error: gunakan nomor 1
+      console.warn('Failed to fetch next SIMLOK number, using fallback');
+      return `1/S00330/${year}-S0`;
     } catch (error) {
-      // Fallback jika error
-      const fallbackNumber = Math.floor(Math.random() * 1000) + 1;
-      return `${fallbackNumber}/S00330/${year}-S0`;
+      // Fallback jika error: gunakan nomor 1
+      console.error('Error generating SIMLOK number:', error);
+      return `1/S00330/${year}-S0`;
     }
   };
 

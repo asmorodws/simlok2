@@ -79,19 +79,45 @@ export async function GET(request: NextRequest) {
 
       // Keep connection alive with heartbeat
       const heartbeat = setInterval(() => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
-          type: 'heartbeat', 
-          timestamp: new Date().toISOString() 
-        })}\n\n`));
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            type: 'heartbeat', 
+            timestamp: new Date().toISOString() 
+          })}\n\n`));
+        } catch (error) {
+          console.error('❌ SSE Heartbeat error:', error);
+          clearInterval(heartbeat);
+        }
       }, 30000); // Every 30 seconds
 
       // Cleanup on connection close
-      request.signal.addEventListener('abort', () => {
+      const cleanup = async () => {
         console.log('🔌 SSE connection closed for:', { scope, vendorId });
         clearInterval(heartbeat);
-        subscriber.unsubscribe();
-        subscriber.disconnect();
-        controller.close();
+        
+        try {
+          await subscriber.unsubscribe();
+          await subscriber.quit();
+          console.log('✅ SSE Redis subscriber cleaned up');
+        } catch (error) {
+          console.error('❌ SSE cleanup error:', error);
+          // Force disconnect if quit fails
+          subscriber.disconnect();
+        }
+        
+        try {
+          controller.close();
+        } catch (error) {
+          // Controller might already be closed
+        }
+      };
+
+      request.signal.addEventListener('abort', cleanup);
+      
+      // Also cleanup on errors
+      subscriber.on('error', (err) => {
+        console.error('❌ SSE subscriber error:', err);
+        cleanup();
       });
     }
   });

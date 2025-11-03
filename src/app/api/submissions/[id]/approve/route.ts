@@ -18,34 +18,37 @@ async function generateSimlokNumber(): Promise<string> {
   const now = new Date();
   const year = now.getFullYear();
 
-  // Get the last approved submission for CURRENT YEAR to determine next auto-increment number
-  // Nomor akan direset ke 1 setiap tahun baru
+  // Get the last approved submission (semua tahun, tidak direset)
+  // Nomor SIMLOK terus bertambah secara berurutan tanpa peduli tahun
   const lastSubmission = await prisma.submission.findFirst({
     where: {
       simlok_number: {
         not: null,
-        // Filter untuk tahun yang sama: format nomor/S00330/YYYY
-        contains: `/S00330/${year}-S0`
       }
     },
-    orderBy: [
-      { simlok_date: 'desc' },
-      { simlok_number: 'desc' }
-    ]
+    orderBy: {
+      created_at: 'desc'
+    }
   });
 
   let nextNumber = 1;
   
   if (lastSubmission?.simlok_number) {
-    // Extract auto-increment number from format: number/S00330/YYYY
-    const match = lastSubmission.simlok_number.match(/^(\d+)\/S00330\/\d{4}$/);
-    if (match && match[1]) {
-      nextNumber = parseInt(match[1]) + 1;
+    // Extract auto-increment number from format: number/S00330/YYYY-S0
+    // Ambil substring pertama sebelum karakter '/'
+    const firstPart = lastSubmission.simlok_number.split('/')[0];
+    const currentNumber = parseInt(firstPart, 10);
+    
+    // Pastikan parsing berhasil dan hasilnya adalah angka valid
+    if (!isNaN(currentNumber) && currentNumber > 0) {
+      nextNumber = currentNumber + 1;
     }
+    // Jika parsing gagal atau hasil invalid, tetap gunakan 1 sebagai default
   }
 
-  // Format: autoincrement/S00330/tahun
-  // Nomor akan mulai dari 1 lagi setiap tahun baru
+  // Format: autoincrement/S00330/tahun-S0
+  // Contoh: 1/S00330/2025-S0, 2/S00330/2025-S0, 3/S00330/2026-S0 (tetap lanjut increment)
+  // Nomor TIDAK direset per tahun, hanya tahun di format yang berubah
   return `${nextNumber}/S00330/${year}-S0`;
 }
 

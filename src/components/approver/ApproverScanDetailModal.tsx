@@ -30,6 +30,10 @@ interface ScanData {
     implementation_end_date?: string;
     created_at?: string;
     review_status?: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+    // Vendor contact information
+    vendor_email?: string;
+    vendor_phone?: string;
+    vendor_address?: string;
   };
 }
 
@@ -48,16 +52,21 @@ const convertQrScanToScanData = (qrScan: QrScan): ScanData => {
     vendor_name: qrScan.submission.vendor_name,
     officer_name: qrScan.user.officer_name, // Map from user
     job_description: qrScan.submission.job_description,
-    work_location: qrScan.scan_location || '', // Use scan location as fallback
+    work_location: (qrScan.submission as any).work_location || qrScan.scan_location || '', // Use submission work_location or scan location as fallback
     approval_status: qrScan.submission.approval_status as 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED',
-    working_hours: '',
-    implementation: '',
+    working_hours: (qrScan.submission as any).working_hours || '',
+    implementation: (qrScan.submission as any).implementation || '',
     simja_number: '',
     sika_number: '',
-    implementation_start_date: '',
-    implementation_end_date: '',
-    created_at: '',
-    review_status: qrScan.submission.review_status as 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS'
+    worker_count: (qrScan.submission as any).worker_count,
+    implementation_start_date: (qrScan.submission as any).implementation_start_date,
+    implementation_end_date: (qrScan.submission as any).implementation_end_date,
+    created_at: (qrScan.submission as any).created_at,
+    review_status: qrScan.submission.review_status as 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS',
+    // Vendor contact information
+    vendor_email: (qrScan.submission as any).user_email,
+    vendor_phone: (qrScan.submission as any).user_phone_number,
+    vendor_address: (qrScan.submission as any).user_address,
   };
 
   const result: ScanData = {

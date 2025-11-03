@@ -2,11 +2,41 @@
 'use client';
 
 import React from 'react';
-import Button from '@/components/ui/button/Button';
-import { Badge } from '@/components/ui/Badge';
-import { id as localeID } from 'date-fns/locale';
-import { format } from 'date-fns';
+import ScanDetailModal from '@/components/common/ScanDetailModal';
 import type { QrScan } from '@/components/scanner/ScanHistoryTable';
+
+// Import ScanData type from ScanDetailModal
+interface ScanData {
+  id: string;
+  submission_id: string;
+  scanned_by: string;
+  scanned_at: string;
+  scanner_name: string;
+  scan_location?: string;
+  notes?: string;
+  submission: {
+    id: string;
+    simlok_number?: string;
+    vendor_name: string;
+    officer_name: string;
+    job_description: string;
+    work_location: string;
+    approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+    working_hours?: string;
+    implementation?: string;
+    simja_number?: string;
+    sika_number?: string;
+    worker_count?: number;
+    implementation_start_date?: string;
+    implementation_end_date?: string;
+    created_at?: string;
+    review_status?: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+    // Vendor contact information
+    vendor_email?: string;
+    vendor_phone?: string;
+    vendor_address?: string;
+  };
+}
 
 interface Props {
   open: boolean;
@@ -16,123 +46,66 @@ interface Props {
   onOpenPdf?: (scan: QrScan) => void;
 }
 
-function getReviewStatusBadge(status: string) {
-  switch (status) {
-    case 'PENDING_REVIEW':
-      return <Badge variant="warning">Menunggu Review</Badge>;
-    case 'MEETS_REQUIREMENTS':
-      return <Badge variant="success">Memenuhi Syarat</Badge>;
-    case 'NOT_MEETS_REQUIREMENTS':
-      return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
-    default:
-      return <Badge variant="default">{status}</Badge>;
-  }
-}
+// Adapter function to convert QrScan to ScanData format
+const convertQrScanToScanData = (qrScan: QrScan): ScanData => {
+  const baseSubmission = {
+    id: qrScan.submission.id,
+    simlok_number: qrScan.submission.simlok_number,
+    vendor_name: qrScan.submission.vendor_name,
+    officer_name: qrScan.user.officer_name, // Map from user
+    job_description: qrScan.submission.job_description,
+    work_location: (qrScan.submission as any).work_location || qrScan.scan_location || '', // Use submission work_location or scan location as fallback
+    approval_status: qrScan.submission.approval_status as 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED',
+    working_hours: (qrScan.submission as any).working_hours || '',
+    implementation: (qrScan.submission as any).implementation || '',
+    simja_number: '',
+    sika_number: '',
+    worker_count: (qrScan.submission as any).worker_count,
+    implementation_start_date: (qrScan.submission as any).implementation_start_date,
+    implementation_end_date: (qrScan.submission as any).implementation_end_date,
+    created_at: (qrScan.submission as any).created_at,
+    review_status: qrScan.submission.review_status as 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS',
+    // Vendor contact information
+    vendor_email: (qrScan.submission as any).user_email,
+    vendor_phone: (qrScan.submission as any).user_phone_number,
+    vendor_address: (qrScan.submission as any).user_address,
+  };
 
-function getApprovalStatusBadge(status: string) {
-  switch (status) {
-    case 'PENDING_APPROVAL':
-      return <Badge variant="warning">Menunggu Persetujuan</Badge>;
-    case 'APPROVED':
-      return <Badge variant="success">Disetujui</Badge>;
-    case 'REJECTED':
-      return <Badge variant="destructive">Ditolak</Badge>;
-    default:
-      return <Badge variant="default">{status}</Badge>;
+  const result: ScanData = {
+    id: qrScan.id,
+    submission_id: qrScan.submission_id,
+    scanned_by: qrScan.scanned_by,
+    scanned_at: qrScan.scanned_at,
+    scanner_name: qrScan.user.officer_name, // Map from user.officer_name
+    submission: baseSubmission
+  };
+
+  // Only add optional properties if they exist
+  if (qrScan.scan_location) {
+    result.scan_location = qrScan.scan_location;
   }
-}
+  if (qrScan.notes) {
+    result.notes = qrScan.notes;
+  }
+
+  return result;
+};
 
 export default function ReviewerScanDetailModal({ open, onClose, scan, onOpenPdf }: Props) {
-  if (!open || !scan) return null;
+  const convertedScan = scan ? convertQrScanToScanData(scan) : null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white rounded-none sm:rounded-lg w-full h-full sm:max-w-3xl sm:w-full sm:max-h-[90vh] sm:h-auto overflow-y-auto">
-        <div className="p-4 sm:p-6 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Informasi Detail Scan</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
-        </div>
+  const modalProps: any = {
+    isOpen: open,
+    onClose: onClose,
+    scan: convertedScan,
+    showPdfButton: !!onOpenPdf,
+    title: "Detail Scan QR Code",
+    subtitle: "Informasi scan dari perspektif reviewer"
+  };
 
-        <div className="p-4 sm:p-6 space-y-6 text-xs sm:text-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <section>
-              <h4 className="font-semibold text-gray-700 mb-2">Informasi Pengajuan</h4>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Nomor Simlok:</span>
-                  <span className="font-medium">{scan.submission.simlok_number}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Perusahaan:</span>
-                  <span className="font-medium">{scan.submission.vendor_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Deskripsi Pekerjaan:</span>
-                  <span className="font-medium">{scan.submission.job_description}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status Review:</span>
-                  <div>{getReviewStatusBadge(scan.submission.review_status)}</div>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Status Persetujuan:</span>
-                  <div>{getApprovalStatusBadge(scan.submission.approval_status)}</div>
-                </div>
-              </div>
-            </section>
+  if (onOpenPdf && scan) {
+    modalProps.onViewPdf = (_: ScanData) => onOpenPdf(scan);
+  }
 
-            <section>
-              <h4 className="font-semibold text-gray-700 mb-2">Informasi Verifikator</h4>
-              <div className="space-y-1">
-                {scan.scanner_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Scanner Name:</span>
-                    <span className="font-medium">{scan.scanner_name}</span>
-                  </div>
-                )}
-                {scan.scan_location && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Lokasi Scan:</span>
-                    <span className="font-medium">{scan.scan_location}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Email:</span>
-                  <span className="font-medium">{scan.user.email}</span>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <section>
-            <h4 className="font-semibold text-gray-700 mb-2">Detail Waktu</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Waktu Scan:</span>
-                <span className="font-medium">
-                  {format(new Date(scan.scanned_at), 'dd/MM/yyyy HH:mm:ss', { locale: localeID })}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          {/* {scan.notes && (
-            <section>
-              <h4 className="font-semibold text-gray-700 mb-2">Catatan</h4>
-              <p className="text-gray-800">{scan.notes}</p>
-            </section>
-          )} */}
-
-          <div className="pt-4 border-t flex justify-between items-center gap-2">
-            {onOpenPdf && (
-              <Button onClick={() => onOpenPdf(scan)} className="bg-blue-600 hover:bg-blue-700 text-white">
-                {scan.submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF'}
-              </Button>
-            )}
-            <Button onClick={onClose} variant="destructive">Tutup</Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <ScanDetailModal {...modalProps} />;
 }

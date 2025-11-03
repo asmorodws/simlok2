@@ -105,9 +105,23 @@ export async function GET(request: NextRequest) {
             id: true,
             simlok_number: true,
             vendor_name: true,
+            officer_name: true,
             job_description: true,
+            work_location: true,
+            working_hours: true,
+            implementation: true,
+            worker_count: true,
+            implementation_start_date: true,
+            implementation_end_date: true,
             review_status: true,
             approval_status: true,
+            created_at: true,
+            // Vendor contact information (denormalized from user)
+            user_email: true,
+            user_phone_number: true,
+            user_address: true,
+            user_vendor_name: true,
+            user_officer_name: true,
           }
         },
         user: {
