@@ -305,17 +305,18 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       setApprovalData({
         approval_status: data.submission.approval_status === 'PENDING_APPROVAL' ? '' : data.submission.approval_status,
         simlok_number: data.submission.simlok_number || '',
-        simlok_date: parseSimlokDate(data.submission.simlok_date) as string,
+        // Jika sudah ada simlok_date, gunakan itu. Jika belum, default ke tanggal Jakarta hari ini
+        simlok_date: parseSimlokDate(data.submission.simlok_date) || getCurrentDate() as string,
         note_for_vendor: data.submission.note_for_vendor || ''
       });
       
-      // Auto-fill SIMLOK data jika status APPROVED dan belum ada nomor SIMLOK
+      // Auto-fill SIMLOK number jika status APPROVED dan belum ada nomor SIMLOK
       if (data.submission.approval_status === 'APPROVED' && !data.submission.simlok_number) {
         const simlokNumber = await generateSimlokNumber();
         setApprovalData(prev => ({
           ...prev,
-          simlok_number: simlokNumber,
-          simlok_date: getCurrentDate() as string
+          simlok_number: simlokNumber
+          // simlok_date sudah di-set di atas dengan getCurrentDate() sebagai default
         }));
       }
       
