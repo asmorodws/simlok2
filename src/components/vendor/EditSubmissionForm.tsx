@@ -13,6 +13,7 @@ import FileUpload from '@/components/form/FileUpload';
 import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
+import { hasWeekendInRange } from '@/utils/dateHelpers';
 
 // Define Worker interface for dynamic inputs
 interface Worker {
@@ -39,6 +40,7 @@ interface Submission {
   work_location: string;
   implementation: string | null;
   working_hours: string;
+  holiday_working_hours?: string | null;
   other_notes?: string | null;
   work_facilities: string;
   worker_count?: number | null;
@@ -50,6 +52,8 @@ interface Submission {
   content: string | null;
   sika_document_upload?: string | null;
   simja_document_upload?: string | null;
+  implementation_start_date?: Date | null;
+  implementation_end_date?: Date | null;
 }
 
 interface EditSubmissionFormProps {
@@ -64,6 +68,13 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [alert, setAlert] = useState<{ variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string } | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
+  
+  // State for implementation dates and weekend detection
+  const [implementationDates, setImplementationDates] = useState({
+    startDate: '',
+    endDate: ''
+  });
+  const [hasWeekend, setHasWeekend] = useState(false);
   
   // State for dynamic workers
   const [workers, setWorkers] = useState<Worker[]>([
@@ -124,6 +135,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     lokasi_kerja: '',
     pelaksanaan: '',
     jam_kerja: '',
+    jam_kerja_libur: '',
     lain_lain: '',
     sarana_kerja: '',
     jumlah_pekerja: 0,
@@ -140,6 +152,25 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
   // Update form data when submission is loaded
   useEffect(() => {
     if (submission) {
+      // Format dates for implementation
+      const startDate = submission.implementation_start_date ? (() => {
+        const date = new Date(submission.implementation_start_date);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })() : '';
+      
+      const endDate = submission.implementation_end_date ? (() => {
+        const date = new Date(submission.implementation_end_date);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })() : '';
+      
+      setImplementationDates({ startDate, endDate });
+      
       setFormData({
         nama_vendor: submission.vendor_name || '',
         berdasarkan: submission.based_on || '',
@@ -148,6 +179,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         lokasi_kerja: submission.work_location || '',
         pelaksanaan: submission.implementation || '',
         jam_kerja: submission.working_hours || '',
+        jam_kerja_libur: submission.holiday_working_hours || '',
         lain_lain: submission.other_notes || '',
         sarana_kerja: submission.work_facilities || '',
         jumlah_pekerja: submission.worker_count || 0,
@@ -185,6 +217,19 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       }));
     }
   }, [session, submission]);
+
+  // Detect weekend when implementation dates change
+  useEffect(() => {
+    if (implementationDates.startDate && implementationDates.endDate) {
+      const hasWeekendDays = hasWeekendInRange(
+        implementationDates.startDate,
+        implementationDates.endDate
+      );
+      setHasWeekend(hasWeekendDays);
+    } else {
+      setHasWeekend(false);
+    }
+  }, [implementationDates]);
 
   // Handle file upload from FileUpload component
   const handleFileUpload = (fieldName: string) => (url: string) => {
@@ -324,6 +369,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         work_location: formData.lokasi_kerja,
         implementation: formData.pelaksanaan,
         working_hours: formData.jam_kerja,
+        holiday_working_hours: formData.jam_kerja_libur || null,
         other_notes: formData.lain_lain,
         work_facilities: formData.sarana_kerja,
         worker_count: formData.jumlah_pekerja,
@@ -618,6 +664,24 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                     placeholder="Pilih jam kerja"
                   />
                 </div>
+
+                {/* Conditional field for holiday working hours */}
+                {hasWeekend && (
+                  <div>
+                    <Label htmlFor="jam_kerja_libur">
+                      Jam kerja hari libur (Sabtu/Minggu)
+                      <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
+                    </Label>
+                    <TimePicker
+                      id="jam_kerja_libur"
+                      name="jam_kerja_libur"
+                      value={formData.jam_kerja_libur}
+                      onChange={handleTimeChange}
+                      placeholder="Pilih jam kerja untuk hari libur"
+                    />
+
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="sarana_kerja">Sarana kerja</Label>

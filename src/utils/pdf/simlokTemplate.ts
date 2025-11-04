@@ -106,29 +106,7 @@ function fmtDateID(d?: string | Date | null) {
  * Contoh: "Terhitung mulai tanggal 01 Agustus 2025 sampai 15 Agustus 2025"
  * Akan mengambil tanggal pertama: "01 Agustus 2025"
  */
-function extractDateFromPelaksanaan(pelaksanaan?: string | null): Date | null {
-  if (!pelaksanaan) return null;
-  
-  // Pattern untuk menangkap tanggal dalam format: DD Bulan YYYY
-  const datePattern = /(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i;
-  const match = pelaksanaan.match(datePattern);
-  
-  if (!match) return null;
-  
-  const [, day, month, year] = match;
-  
-  // Mapping bulan Indonesia ke nomor bulan
-  const monthMap: { [key: string]: number } = {
-    'januari': 0, 'februari': 1, 'maret': 2, 'april': 3,
-    'mei': 4, 'juni': 5, 'juli': 6, 'agustus': 7,
-    'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
-  };
-  
-  const monthIndex = month ? monthMap[month.toLowerCase()] : undefined;
-  if (monthIndex === undefined || !year || !day) return null;
-  
-  return new Date(parseInt(year), monthIndex, parseInt(day));
-}
+
 
 /** Hapus newline ganda & spasi berlebih agar wrap presisi */
 function normalizeInline(s?: string | null) {
@@ -370,7 +348,9 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   // Set PDF metadata with SIMLOK information
   const simlokNumber = s.simlok_number ? `${s.simlok_number}` : "SIMLOK";
   const simlokTitle = `SIMLOK NO-${simlokNumber}`;
-  const currentDate = new Date();
+  // Use Jakarta timezone for PDF metadata timestamps
+  const jakartaNowStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+  const currentDate = new Date(jakartaNowStr);
   
   k.doc.setTitle(simlokTitle);
   k.doc.setSubject("Surat Izin Masuk Lokasi PT PERTAMINA (PERSERO)");
@@ -454,7 +434,24 @@ export async function generateSIMLOKPDF(submissionData: SubmissionPDFData): Prom
   }
   
   await k.numberedRow(5, "Pelaksanaan", normalizeInline(pelaksanaanText));
-  await k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
+  
+  // Jam Kerja - tampilkan terpisah jika ada holiday_working_hours
+  if (s.holiday_working_hours && s.holiday_working_hours.trim().length > 0) {
+    // Jika ada jam kerja hari libur, tampilkan dalam 2 baris
+    await k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours} (Hari kerja)`);
+    
+    // Baris kedua untuk hari libur - sejajar dengan waktu hari kerja
+    const rightX = k.x + k.leftLabelWidth + 4;
+    const rightW = A4.w - MARGIN - rightX;
+    
+    // Hitung offset untuk mensejajarkan dengan waktu (skip "Mulai pukul ")
+    const prefixWidth = k.measure("Mulai pukul ", { size: k.fs });
+    
+    await k.wrap(`${s.holiday_working_hours} (Hari libur)`, rightX + prefixWidth, rightW - prefixWidth, { bold: false });
+  } else {
+    // Jika tidak ada jam kerja hari libur, tampilkan normal
+    await k.numberedRow(6, "Jam Kerja", `Mulai pukul ${s.working_hours}`);
+  }
   
   // Special handling for "Lain-lain" to show as bulleted list or template preview
   if (s.other_notes && s.other_notes.trim().length > 0) {
@@ -694,7 +691,8 @@ for (let idx = 0; idx < lines.length; idx++) {
     await k.wrap(`  Diterima oleh ${s.signer_position || '[Jabatan]'} ${s.signer_name || '[Nama]'}:`, rightX, rightW, { bold: false });
     
     await k.pageBreak();
-    const simlokDate = s.simlok_date ? fmtDateID(s.simlok_date) : fmtDateID(new Date());
+    // Use placeholder if simlok_date is not set
+    const simlokDate = s.simlok_date ? fmtDateID(s.simlok_date) : '[Tanggal Disetujui]';
     await k.wrap(`  Tanggal ${simlokDate}`, rightX, rightW, { bold: true });
   }
   
@@ -730,8 +728,8 @@ for (let idx = 0; idx < lines.length; idx++) {
   const signatureY = k.y;
 
   // Extract date from pelaksanaan or use tanggal_simlok as fallback
-  const dateFromPelaksanaan = extractDateFromPelaksanaan(s.implementation);
-  const displayDate = dateFromPelaksanaan || toDate(s.simlok_date);
+  // const dateFromPelaksanaan = extractDateFromPelaksanaan(s.implementation);
+  const displayDate = toDate(s.simlok_date);
 
   // Count total documents to determine if signature should be on new page
   let totalDocuments = 0;

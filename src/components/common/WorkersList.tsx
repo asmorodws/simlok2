@@ -81,12 +81,41 @@ export default function WorkersList({
         
         // Fallback: parse fallback workers string
         if (fallbackWorkers) {
+          // Use Jakarta timezone for created_at fallback
+          const jakartaNow = (() => {
+            try {
+              const date = new Date();
+              const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              }).formatToParts(date);
+              const map: Record<string, string> = {};
+              for (const p of parts) {
+                if (p.type && p.value) map[p.type] = p.value;
+              }
+              const y = map.year;
+              const m = map.month;
+              const d = map.day;
+              const hh = map.hour;
+              const mm = map.minute;
+              const ss = map.second;
+              return `${y}-${m}-${d}T${hh}:${mm}:${ss}+07:00`;
+            } catch {
+              return new Date().toISOString();
+            }
+          })();
           const fallbackWorkersList = fallbackWorkers.split(',').map((name, index) => ({
             id: `fallback-${index}`,
             worker_name: name.trim(),
             worker_photo: null,
             submission_id: submissionId,
-            created_at: new Date().toISOString(),
+            created_at: jakartaNow,
           }));
           setWorkers(fallbackWorkersList);
         }

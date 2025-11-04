@@ -87,6 +87,7 @@ model Submission {
   work_location             String
   implementation            String?      @db.Text
   working_hours             String
+  holiday_working_hours     String?
   work_facilities           String
   
   // simja_number              String?

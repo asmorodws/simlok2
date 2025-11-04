@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
+import { toJakartaISOString } from '@/lib/timezone';
 import bcrypt from 'bcryptjs';
 
 // Schema for validating user creation data
@@ -159,8 +160,16 @@ export async function GET(request: NextRequest) {
       })
     };
 
+    // Convert user date fields to Asia/Jakarta
+    const formattedUsers = users.map(u => ({
+      ...u,
+      created_at: toJakartaISOString(u.created_at) || u.created_at,
+      verified_at: toJakartaISOString(u.verified_at) || u.verified_at,
+      rejected_at: toJakartaISOString(u.rejected_at) || u.rejected_at,
+    }));
+
     return NextResponse.json({
-      users,
+      users: formattedUsers,
       pagination: {
         page,
         limit,
@@ -269,8 +278,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    const formattedNewUser = {
+      ...newUser,
+      created_at: toJakartaISOString(newUser.created_at) || newUser.created_at,
+      verified_at: toJakartaISOString(newUser.verified_at) || newUser.verified_at,
+    };
+
     return NextResponse.json({
-      user: newUser,
+      user: formattedNewUser,
       message: 'User created successfully'
     }, { status: 201 });
 

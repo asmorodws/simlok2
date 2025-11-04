@@ -1,5 +1,6 @@
 import { prisma, redisPub } from '@/lib/singletons';
 import { emitNotificationNew, emitNotificationUnreadCount } from './socket';
+import { toJakartaISOString } from '@/lib/timezone';
 
 export async function notifyAdminNewSubmission(submissionId: string) {
   try {
@@ -42,7 +43,7 @@ export async function notifyAdminNewSubmission(submissionId: string) {
           data: notification.data,
           scope: notification.scope,
           vendorId: notification.vendor_id,
-          createdAt: notification.created_at?.toISOString?.() || new Date().toISOString(),
+          createdAt: notification.created_at?.toISOString?.() || toJakartaISOString(new Date()) || new Date().toISOString(),
         }
       };
 
@@ -101,7 +102,7 @@ export async function notifyAdminNewVendor(vendorId: string) {
           data: _notification.data,
           scope: _notification.scope,
           vendorId: _notification.vendor_id,
-          createdAt: _notification.created_at?.toISOString?.() || new Date().toISOString(),
+          createdAt: _notification.created_at?.toISOString?.() || toJakartaISOString(new Date()) || new Date().toISOString(),
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
@@ -178,7 +179,7 @@ export async function notifyVendorStatusChange(
           data: _notification.data,
           scope: _notification.scope,
           vendorId: _notification.vendor_id,
-          createdAt: _notification.created_at?.toISOString?.() || new Date().toISOString(),
+          createdAt: _notification.created_at?.toISOString?.() || toJakartaISOString(new Date()) || new Date().toISOString(),
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
@@ -232,7 +233,7 @@ export async function notifyReviewerNewUser(userId: string) {
           officerName: user.officer_name,
           email: user.email,
           phoneNumber: user.phone_number,
-          registrationDate: user.created_at.toISOString()
+          registrationDate: user.created_at ? (toJakartaISOString(user.created_at) || user.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString())
         })
       }
     });
@@ -252,7 +253,7 @@ export async function notifyReviewerNewUser(userId: string) {
             data: lastCreated.data,
             scope: lastCreated.scope,
             vendorId: lastCreated.vendor_id,
-            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+            createdAt: lastCreated.created_at ? (toJakartaISOString(lastCreated.created_at) || lastCreated.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
@@ -318,7 +319,7 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
             data: lastCreated.data,
             scope: lastCreated.scope,
             vendorId: lastCreated.vendor_id,
-            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+            createdAt: lastCreated.created_at ? (toJakartaISOString(lastCreated.created_at) || lastCreated.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
@@ -404,7 +405,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
             data: lastCreated.data,
             scope: lastCreated.scope,
             vendorId: lastCreated.vendor_id,
-            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+            createdAt: lastCreated.created_at ? (toJakartaISOString(lastCreated.created_at) || lastCreated.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
@@ -511,7 +512,7 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
             data: lastCreated.data,
             scope: lastCreated.scope,
             vendorId: lastCreated.vendor_id,
-            createdAt: lastCreated.created_at?.toISOString?.() || new Date().toISOString(),
+            createdAt: lastCreated.created_at ? (toJakartaISOString(lastCreated.created_at) || lastCreated.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));

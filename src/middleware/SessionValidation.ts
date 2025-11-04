@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
+import { toJakartaISOString } from '@/lib/timezone';
 
 interface SessionValidationResult {
   isValid: boolean;
@@ -214,7 +215,7 @@ export class SessionValidationService {
         },
       });
 
-      console.log(`Session extended for user ${userId} until ${newExpiry.toISOString()}`);
+  console.log(`Session extended for user ${userId} until ${toJakartaISOString(newExpiry) || newExpiry.toISOString()}`);
     } catch (error) {
       console.error('Session extension error:', error);
       throw error;

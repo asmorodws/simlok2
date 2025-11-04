@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
+import { formatSubmissionDates } from '@/lib/timezone';
 
 // Helper function to normalize document number
 // - Convert to uppercase
@@ -242,8 +243,11 @@ export async function GET(request: NextRequest) {
       prisma.submission.count({ where: whereClause }),
     ]);
 
+    // Format dates on each submission to Asia/Jakarta
+    const formattedSubmissions = submissions.map((s: any) => formatSubmissionDates(s));
+
     const response: any = {
-      submissions,
+      submissions: formattedSubmissions,
       pagination: {
         page,
         limit,
@@ -418,6 +422,7 @@ export async function POST(request: NextRequest) {
             ? new Date(submissionData.implementation_end_date) 
             : null,
           working_hours: submissionData.working_hours,
+          holiday_working_hours: submissionData.holiday_working_hours || null,
           work_facilities: submissionData.work_facilities,
           worker_names: submissionData.worker_names,
           worker_count: submissionData.worker_count && !isNaN(Number(submissionData.worker_count)) 
@@ -577,7 +582,16 @@ export async function POST(request: NextRequest) {
       await notifyAdminNewSubmission(submission.id);
 
       console.log('POST /api/submissions - Submission created successfully:', submission.id);
-      return NextResponse.json(submission, { status: 201 });
+      // Convert date fields to Asia/Jakarta before returning
+      try {
+        const { formatSubmissionDates } = await import('@/lib/timezone');
+        const formatted = formatSubmissionDates(submission);
+        return NextResponse.json(formatted, { status: 201 });
+      } catch (err) {
+        // If formatting fails, return original submission
+        console.warn('Failed to format submission dates for response:', err);
+        return NextResponse.json(submission, { status: 201 });
+      }
     } catch (dbError) {
       console.error('POST /api/submissions - Database error:', dbError);
       return NextResponse.json({

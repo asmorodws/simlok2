@@ -55,6 +55,7 @@ interface SubmissionDetail {
   work_location: string;
   implementation: string;
   working_hours: string;
+  holiday_working_hours?: string | null;
   other_notes: string;
   work_facilities: string;
   worker_count: number | null;
@@ -781,9 +782,20 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   // Initialize dates when submission data is loaded
   useEffect(() => {
     if (submission?.implementation_start_date && submission?.implementation_end_date) {
+      // Parse dates in Jakarta timezone to avoid device timezone issues
+      const parseJakartaDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const jakartaStr = date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+        const jakartaDate = new Date(jakartaStr);
+        const year = jakartaDate.getFullYear();
+        const month = String(jakartaDate.getMonth() + 1).padStart(2, '0');
+        const day = String(jakartaDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       implementationDatesHook.updateDates({
-        startDate: new Date(submission.implementation_start_date).toISOString().split('T')[0] || '',
-        endDate: new Date(submission.implementation_end_date).toISOString().split('T')[0] || ''
+        startDate: parseJakartaDate(submission.implementation_start_date) || '',
+        endDate: parseJakartaDate(submission.implementation_end_date) || ''
       });
     }
   }, [submission?.implementation_start_date, submission?.implementation_end_date]);
@@ -1725,20 +1737,23 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                         value={formatWorkLocation(submission.work_location)}
                       />
                       <InfoCard
-                        label="Tanggal Mulai Pelaksanaan"
-                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
-                      />
-                      <InfoCard
-                        label="Tanggal Selesai Pelaksanaan"
-                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
-                      />
-                      <InfoCard
                         label="Pelaksanaan"
-                        value={submission.implementation || 'Belum diisi'}
+                        value={
+                          submission.implementation_start_date && submission.implementation_end_date
+                            ? `${formatDate(submission.implementation_start_date)} s/d ${formatDate(submission.implementation_end_date)}`
+                            : submission.implementation || 'Belum diisi'
+                        }
                       />
                       <InfoCard
                         label="Jam Kerja"
-                        value={submission.working_hours}
+                        value={
+                          <div className="space-y-0.5">
+                            <div>{submission.working_hours} (Hari kerja)</div>
+                            {submission.holiday_working_hours && (
+                              <div>{submission.holiday_working_hours} (Hari libur)</div>
+                            )}
+                          </div>
+                        }
                       />
                       <InfoCard
                         label="Jumlah Pekerja"

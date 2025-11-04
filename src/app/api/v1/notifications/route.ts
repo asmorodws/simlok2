@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { toJakartaISOString } from '@/lib/timezone';
 import { resolveAudience } from "@/lib/notificationAudience";
 
 export async function GET(req: NextRequest) {
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
       title: n.title,
       message: n.message,
       data: n.data ?? null,
-      createdAt: n.created_at.toISOString(),
+      createdAt: toJakartaISOString(n.created_at) || n.created_at?.toISOString?.() || null,
       isRead: n.reads.length > 0,
       scope: n.scope,
       vendorId: n.vendor_id ?? null,

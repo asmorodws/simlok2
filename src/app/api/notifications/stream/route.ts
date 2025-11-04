@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redisSub } from '@/lib/singletons';
+import { toJakartaISOString } from '@/lib/timezone';
 
 export const runtime = 'nodejs';
 
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
             type: 'heartbeat', 
-            timestamp: new Date().toISOString() 
+            timestamp: toJakartaISOString(new Date()) || new Date().toISOString()
           })}\n\n`));
         } catch (error) {
           console.error('❌ SSE Heartbeat error:', error);

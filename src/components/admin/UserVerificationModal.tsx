@@ -16,8 +16,7 @@ import {
   PhoneIcon,
   MapPinIcon,
   ClockIcon,
-  ShieldCheckIcon,
-  IdentificationIcon
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
 interface UserVerificationModalProps {
@@ -178,7 +177,6 @@ export default function UserVerificationModal({
 
   const isVerified = currentUser.verification_status === 'VERIFIED';
   const isRejected = currentUser.verification_status === 'REJECTED';
-  const isPending = currentUser.verification_status === 'PENDING' || !currentUser.verification_status;
 
   return (
     <>

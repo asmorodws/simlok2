@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ReactDatePicker from 'react-datepicker';
+import { toJakartaISOString } from '@/lib/timezone';
 
 export interface DatePickerProps {
   id?: string;
@@ -24,23 +25,29 @@ export default function DatePicker({
   className = '',
   autoFocus = false
 }: DatePickerProps) {
-  // Convert string value to Date object
-  const selectedDate = value ? new Date(value) : null;
+  // Convert string value to Date object anchored at Jakarta timezone
+  const selectedDate = value ? new Date(`${value}T00:00:00+07:00`) : null;
 
-const currentYear = new Date().getFullYear();
-const minDate = new Date(2020, 0, 1); // mulai 1 Januari 2020
-const maxDate = new Date(currentYear, 11, 31); // sampai 31 Desember tahun ini
+  // Get real Jakarta time (not device time) for calculating min/max dates
+  const jakartaNow: string = toJakartaISOString(new Date()) || new Date().toISOString();
+  const datePart = (jakartaNow.split('T')[0] ?? '');
+  const yearPart = (datePart.split('-')[0] ?? '');
+  const currentYear = parseInt(yearPart, 10) || new Date().getFullYear();
+  
+  // MinDate: 1 Jan 2020 Jakarta time
+  const minDate = new Date('2020-01-01T00:00:00+07:00');
+  
+  // MaxDate: 31 Des tahun sekarang (Jakarta) - dihitung dari waktu real Jakarta
+  const maxDate = new Date(`${currentYear + 5}-12-31T23:59:59+07:00`);
 
 
   // Handle date change
   const handleChange = (date: Date | null) => {
     if (date && onChange) {
-      // Format date to YYYY-MM-DD
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const formattedDate = `${year}-${month}-${day}`;
-      onChange(formattedDate);
+      // Ensure we use Jakarta date when converting selected Date to YYYY-MM-DD
+      const jakartaIso = (toJakartaISOString(date) || date.toISOString()) as string;
+  const formattedDate: string = (jakartaIso.split('T')[0] || '');
+  onChange(formattedDate);
     } else if (!date && onChange) {
       onChange('');
     }
@@ -65,8 +72,10 @@ const maxDate = new Date(currentYear, 11, 31); // sampai 31 Desember tahun ini
         showMonthDropdown
         showYearDropdown
         dropdownMode="select"
-        minDate={minDate}
-        maxDate={maxDate}
+  minDate={minDate}
+  maxDate={maxDate}
+  // When user clicks today button, react-datepicker will pass a Date (client time).
+  // We normalize any incoming date in handleChange using Jakarta timezone so "Hari ini" respects Jakarta.
         onKeyDown={(e) => {
           // Mencegah pengetikan manual kecuali untuk navigasi
           if (

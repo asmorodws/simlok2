@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
+import { toJakartaISOString } from '@/lib/timezone';
 import bcrypt from 'bcryptjs';
 
 // Schema for validating user update data
@@ -85,7 +86,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    const formattedUser = {
+      ...user,
+      created_at: toJakartaISOString(user.created_at) || user.created_at,
+      verified_at: toJakartaISOString(user.verified_at) || user.verified_at,
+      rejected_at: toJakartaISOString(user.rejected_at) || user.rejected_at,
+    };
+
+    return NextResponse.json({ user: formattedUser });
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -164,8 +172,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
       });
 
+      const formattedUpdatedUser = {
+        ...updatedUser,
+        created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
+        verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
+        rejected_at: toJakartaISOString(updatedUser.rejected_at) || updatedUser.rejected_at,
+      };
+
       return NextResponse.json({
-        user: updatedUser,
+        user: formattedUpdatedUser,
         message: 'Account status updated successfully'
       });
     }
@@ -252,8 +267,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       isActive: updatedUser.isActive
     });
 
+    const formattedUpdatedUser2 = {
+      ...updatedUser,
+      created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
+    };
+
     return NextResponse.json({
-      user: updatedUser,
+      user: formattedUpdatedUser2,
       message: 'User updated successfully'
     });
 
@@ -348,8 +368,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       notifyUserVerificationResult(id, validatedData.action, validatedData.rejection_reason)
     );
 
+    const formattedUpdatedUser3 = {
+      ...updatedUser,
+      verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
+      rejected_at: toJakartaISOString(updatedUser.rejected_at) || updatedUser.rejected_at,
+    };
+
     return NextResponse.json({
-      user: updatedUser,
+      user: formattedUpdatedUser3,
       message: validatedData.action === 'VERIFY' 
         ? 'User verified successfully' 
         : 'User rejected successfully'

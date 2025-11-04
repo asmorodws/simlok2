@@ -321,25 +321,31 @@ export default function SubmissionDetailModal({
                     value={formatWorkLocation(submission.work_location || '')}
                   />
                   <InfoCard
-                    label="Tanggal Mulai Pelaksanaan"
-                    value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
-                  />
-                  <InfoCard
-                    label="Tanggal Selesai Pelaksanaan"
-                    value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
-                  />
-                  <InfoCard
                     label="Pelaksanaan"
-                    value={submission.implementation || 'Akan diisi otomatis ketika sudah di setujui'}
+                    value={
+                      submission.implementation_start_date && submission.implementation_end_date
+                        ? `${formatDate(submission.implementation_start_date)} s/d ${formatDate(submission.implementation_end_date)}`
+                        : submission.implementation || 'Akan diisi otomatis ketika sudah di setujui'
+                    }
                   />
                   <InfoCard
                     label="Jam Kerja"
-                    value={submission.working_hours || '-'}
+                    value={
+                      <div className="space-y-0.5">
+                        <div>{submission.working_hours || '-'} (Hari kerja)</div>
+                        {submission.holiday_working_hours && (
+                          <div>{submission.holiday_working_hours} (Hari libur)</div>
+                        )}
+                      </div>
+                    }
+                  />
+                  <InfoCard
+                    label="Jumlah Pekerja"
+                    value={`${submission.worker_count || 0} orang`}
                   />
                   <InfoCard
                     label="Sarana Kerja"
                     value={submission.work_facilities || '-'}
-                    className="md:col-span-2"
                   />
                 </div>
               </DetailSection>

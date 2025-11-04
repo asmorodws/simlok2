@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { parseQrString, type QrPayload } from '@/lib/qr-security';
+import { toJakartaISOString } from '@/lib/timezone';
 
 // POST /api/qr/verify - Verify QR code and return submission data
 export async function POST(request: NextRequest) {
@@ -132,8 +133,9 @@ export async function POST(request: NextRequest) {
     console.log('submission_id:', qrPayload.id);
     console.log('scanned_by:', session.user.id);
     
-    // Get today's date range (start and end of day)
-    const today = new Date();
+    // Get today's date range (start and end of day) using Jakarta timezone
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const today = new Date(jakartaNow);
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
     
@@ -216,8 +218,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: 'QR code/barcode verified successfully',
-        scan_id: scanRecord.id,
-        scanned_at: scanRecord.scanned_at,
+  scan_id: scanRecord.id,
+  scanned_at: toJakartaISOString(scanRecord.scanned_at) || scanRecord.scanned_at,
         scanned_by: scanRecord.user?.officer_name || session.user.officer_name,
         data: {
           submission: {
@@ -228,8 +230,8 @@ export async function POST(request: NextRequest) {
             workers: submission.worker_names.split('\n').filter(name => name.trim()).map(name => ({ name: name.trim() })),
             vendor: submission.vendor_name ? { name: submission.vendor_name } : undefined,
             location: submission.work_location || undefined,
-            implementation_start_date: submission.implementation_start_date?.toISOString(),
-            implementation_end_date: submission.implementation_end_date?.toISOString(),
+            implementation_start_date: toJakartaISOString(submission.implementation_start_date) || submission.implementation_start_date,
+            implementation_end_date: toJakartaISOString(submission.implementation_end_date) || submission.implementation_end_date,
             status: submission.approval_status.toLowerCase(),
           }
         }
@@ -242,8 +244,9 @@ export async function POST(request: NextRequest) {
       if (createError?.code === 'P2002') {
         console.log('=== UNIQUE CONSTRAINT VIOLATION DETECTED (RACE CONDITION) ===');
         
-        // Check again for today's scans by same user only (race condition handling)
-        const today = new Date();
+        // Check again for today's scans by same user only (race condition handling) - use Jakarta time
+        const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+        const today = new Date(jakartaNow);
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
         
@@ -428,8 +431,16 @@ export async function GET(request: NextRequest) {
       where: whereClause,
     });
 
+    // Format timestamps and nested submission dates to Jakarta
+    const { formatScansDates, formatSubmissionDates } = await import('@/lib/timezone');
+    const formattedScans = scans.map(s => ({
+      ...s,
+      scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0].scanned_at : s.scanned_at,
+      submission: s.submission ? formatSubmissionDates(s.submission) : s.submission
+    }));
+
     return NextResponse.json({
-      scans,
+      scans: formattedScans,
       pagination: {
         total: totalCount,
         limit,

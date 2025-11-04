@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const yearParam = searchParams.get('year');
-    const now = new Date();
+    // Use Jakarta timezone for current year
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const now = new Date(jakartaNow);
     const year = yearParam ? parseInt(yearParam, 10) : now.getFullYear();
 
     // Validate year

@@ -43,8 +43,9 @@ export async function GET() {
 }
 
 async function fetchVerifierStats(userId: string) {
-  // Get today's date range
-  const today = new Date();
+  // Get today's date range (Jakarta timezone)
+  const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+  const today = new Date(jakartaNow);
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 

@@ -13,7 +13,6 @@ import {
   BuildingOfficeIcon,
   BriefcaseIcon,
   DocumentIcon,
-  CalendarIcon,
   EyeIcon,
   MapPinIcon,
   DocumentArrowUpIcon
@@ -46,6 +45,7 @@ interface SubmissionDetail {
   work_location: string;
   implementation: string | null;
   working_hours: string;
+  holiday_working_hours?: string | null;
   other_notes?: string;
   work_facilities: string;
   worker_count: number | null;
@@ -164,7 +164,9 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
 
   // Function to generate auto SIMLOK number - format: nomor/S00330/tahun
   const generateSimlokNumber = async () => {
-    const now = new Date();
+    // Use Jakarta timezone for year
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const now = new Date(jakartaNow);
     const year = now.getFullYear();
 
     try {
@@ -186,10 +188,15 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
     }
   };
 
-  // Function to get current date in YYYY-MM-DD format
+  // Function to get current date in YYYY-MM-DD format (Jakarta timezone)
   const getCurrentDate = () => {
-    const now = new Date();
-    return now.toISOString().split('T')[0];
+    // Use Jakarta timezone to get current date
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const now = new Date(jakartaNow);
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Format date for display
@@ -283,13 +290,22 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       
       setSubmission(data.submission);
       
-      // Initialize approval data
+      // Initialize approval data with Jakarta timezone for date parsing
+      const parseSimlokDate = (dateStr: string | null) => {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const jakartaStr = date.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+        const jakartaDate = new Date(jakartaStr);
+        const year = jakartaDate.getFullYear();
+        const month = String(jakartaDate.getMonth() + 1).padStart(2, '0');
+        const day = String(jakartaDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
       setApprovalData({
         approval_status: data.submission.approval_status === 'PENDING_APPROVAL' ? '' : data.submission.approval_status,
         simlok_number: data.submission.simlok_number || '',
-        simlok_date: (data.submission.simlok_date 
-          ? new Date(data.submission.simlok_date).toISOString().split('T')[0] 
-          : '') as string,
+        simlok_date: parseSimlokDate(data.submission.simlok_date) as string,
         note_for_vendor: data.submission.note_for_vendor || ''
       });
       
@@ -951,8 +967,23 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         value={formatWorkLocation(submission.work_location)}
                       />
                       <InfoCard
+                        label="Pelaksanaan"
+                        value={
+                          submission.implementation_start_date && submission.implementation_end_date
+                            ? `${formatDate(submission.implementation_start_date)} s/d ${formatDate(submission.implementation_end_date)}`
+                            : submission.implementation || '-'
+                        }
+                      />
+                      <InfoCard
                         label="Jam Kerja"
-                        value={submission.working_hours}
+                        value={
+                          <div className="space-y-0.5">
+                            <div>{submission.working_hours} (Hari kerja)</div>
+                            {submission.holiday_working_hours && (
+                              <div>{submission.holiday_working_hours} (Hari libur)</div>
+                            )}
+                          </div>
+                        }
                       />
                       <InfoCard
                         label="Jumlah Pekerja"
@@ -986,22 +1017,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       />
                     </div>
                   </DetailSection> */}
-
-                  {/* Jadwal Pelaksanaan */}
-                  <DetailSection title="Jadwal Pelaksanaan" icon={<CalendarIcon className="h-5 w-5 text-blue-600" />}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <InfoCard
-                        label="Tanggal Mulai Pelaksanaan"
-                        value={submission.implementation_start_date ? formatDate(submission.implementation_start_date) : '-'}
-                        
-                      />
-                      <InfoCard
-                        label="Tanggal Selesai Pelaksanaan"
-                        value={submission.implementation_end_date ? formatDate(submission.implementation_end_date) : '-'}
-                        
-                      />
-                    </div>
-                  </DetailSection>
 
                   {/* Dokumen Upload */}
                   

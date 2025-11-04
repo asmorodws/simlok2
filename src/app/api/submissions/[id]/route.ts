@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { generateSIMLOKPDF } from '@/utils/pdf/simlokTemplate';
+import { formatSubmissionDates } from '@/lib/timezone';
 import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
 import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
@@ -10,7 +11,9 @@ import { generateQrString } from '@/lib/qr-security';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
-  const now = new Date();
+  // Use Jakarta timezone for year
+  const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+  const now = new Date(jakartaNow);
   const year = now.getFullYear();
 
   // Get the last approved submission for CURRENT YEAR to determine next auto-increment number
@@ -139,13 +142,18 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return generatePDF(submission);
     }
 
-    // Return regular JSON response wrapped in submission object for consistency
-    const response = NextResponse.json({ submission });
-    
-    // Add cache control for better performance
-    response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
-    
-    return response;
+    // Format submission dates to Asia/Jakarta before returning
+    try {
+      const formatted = formatSubmissionDates(submission);
+      const response = NextResponse.json({ submission: formatted });
+      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+      return response;
+    } catch (err) {
+      console.warn('Failed to format submission dates for response:', err);
+      const response = NextResponse.json({ submission });
+      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+      return response;
+    }
   } catch (error) {
     console.error('Error fetching submission:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -175,8 +183,9 @@ async function generatePDF(submission: any) {
     
     if (!submission.simlok_number) {
       console.log('PDF Generation: Using placeholder simlok_number');
-      // Create a temporary/placeholder SIMLOK number for PDF preview
-      const now = new Date();
+      // Create a temporary/placeholder SIMLOK number for PDF preview - use Jakarta time
+      const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+      const now = new Date(jakartaNow);
       const year = now.getFullYear();
       // const month = String(now.getMonth() + 1).padStart(2, '0');
       pdfData.simlok_number = `[DRAFT]/S00330/${year}-S0`;
@@ -461,7 +470,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Only allow vendor to update certain fields and only if submission is PENDING
       const allowedFields = [
         'vendor_name', 'based_on', 'officer_name', 'job_description', 
-        'work_location', 'working_hours', 'work_facilities', 'worker_count',
+        'work_location', 'working_hours', 'holiday_working_hours', 'work_facilities', 'worker_count',
         'simja_number', 'simja_date', 'sika_number', 'sika_date', 'worker_names',
         'sika_document_upload', 'simja_document_upload'
       ];

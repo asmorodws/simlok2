@@ -2,6 +2,8 @@
  * File URL utilities for handling legacy and new file URL formats
  */
 
+import { toJakartaISOString } from '@/lib/timezone';
+
 export class FileUrlHelper {
   /**
    * Convert legacy file URL to new categorized format
@@ -157,7 +159,8 @@ export class FileUrlHelper {
     };
 
     const prefix = categoryNames[category as keyof typeof categoryNames] || 'Dokumen';
-    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const jakartaNow = toJakartaISOString(new Date());
+  const timestamp = jakartaNow ? jakartaNow.split('T')[0] : new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     return `${prefix}_${timestamp}.${extension}`;
   }

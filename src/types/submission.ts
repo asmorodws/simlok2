@@ -25,6 +25,7 @@ export interface SubmissionData {
   implementation_start_date?: string; // tanggal mulai pelaksanaan
   implementation_end_date?: string; // tanggal selesai pelaksanaan
   working_hours: string;
+  holiday_working_hours?: string; // jam kerja untuk hari libur (Sabtu/Minggu)
   work_facilities: string;
   worker_count?: number; // jumlah pekerja
   
@@ -102,6 +103,7 @@ export interface Submission {
   officer_name: string;
   based_on: string;
   working_hours: string;
+  holiday_working_hours?: string | null;
   implementation?: string | null;
   work_facilities: string;
   worker_names: string;
@@ -185,6 +187,7 @@ export interface SubmissionPDFData {
   work_location: string;
   implementation: string | null;
   working_hours: string;
+  holiday_working_hours?: string | null;
   work_facilities: string;
   worker_names?: string | null;
   worker_count?: number | null;

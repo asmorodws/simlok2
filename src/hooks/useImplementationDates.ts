@@ -241,9 +241,30 @@ export function useImplementationDates({
       );
     }
     
-    // Security approval section
-    const todayStr = new Date().toISOString().split('T')[0] || '';
-    const today = formatDateIndonesian(todayStr);
+    // Security approval section - use real Jakarta date
+    const jakartaNow = (() => {
+      try {
+        const date = new Date();
+        const parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Asia/Jakarta',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour12: false
+        }).formatToParts(date);
+        const map: Record<string, string> = {};
+        for (const p of parts) {
+          if (p.type && p.value) map[p.type] = p.value;
+        }
+        const y = map.year || String(date.getFullYear());
+        const m = map.month || String(date.getMonth() + 1).padStart(2, '0');
+        const d = map.day || String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      } catch {
+        return new Date().toISOString().split('T')[0] || '';
+      }
+    })();
+    const today = formatDateIndonesian(jakartaNow);
     templateParts.push(
       '',
       `Diterima ${signerPosition}`,

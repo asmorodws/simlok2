@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import cache, { CacheKeys, CacheTTL } from "@/lib/cache";
+import { toJakartaISOString } from '@/lib/timezone';
 
 export async function GET() {
   try {
@@ -66,9 +67,10 @@ export async function GET() {
       // Get QR scan statistics
       prisma.qrScan.count(),
 
-      // Get today's QR scans
+      // Get today's QR scans (Jakarta timezone)
       (() => {
-        const today = new Date();
+        const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+        const today = new Date(jakartaNow);
         const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
         
@@ -123,7 +125,7 @@ export async function GET() {
     // Return dashboard stats similar to reviewer but for visitor viewing
     const dashboardStats = {
       success: true,
-      timestamp: new Date().toISOString(),
+      timestamp: toJakartaISOString(new Date()) || new Date().toISOString(),
       submissions: {
         total: totalSubmissions || 0,
         byReviewStatus: {
@@ -169,7 +171,7 @@ export async function GET() {
         success: false,
         error: "Internal Server Error", 
         message: errorMessage,
-        timestamp: new Date().toISOString()
+        timestamp: toJakartaISOString(new Date()) || new Date().toISOString()
       }, 
       { status: 500 }
     );

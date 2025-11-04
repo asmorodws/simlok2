@@ -15,6 +15,7 @@ import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types';
+import { hasWeekendInRange } from '@/utils/dateHelpers';
 
 // import modal konfirmasi
 import ConfirmModal from '@/components/ui/modal/ConfirmModal'; // sesuaikan path dengan struktur proyekmu
@@ -72,6 +73,9 @@ export default function SubmissionForm() {
 
   // Prevent double toast for draft restoration
   const draftToastShownRef = useRef(false);
+
+  // State for weekend detection in implementation dates
+  const [hasWeekend, setHasWeekend] = useState(false);
 
   // -------------------------------
   // Workers state + helpers
@@ -161,6 +165,7 @@ export default function SubmissionForm() {
     implementation_start_date: '',
     implementation_end_date: '',
     working_hours: '',
+    holiday_working_hours: '',
     work_facilities: '',
     worker_count: 1,
     worker_names: '',
@@ -241,6 +246,19 @@ export default function SubmissionForm() {
       }));
     }
   }, [session]);
+
+  // Detect weekend when implementation dates change
+  useEffect(() => {
+    if (formData.implementation_start_date && formData.implementation_end_date) {
+      const hasWeekendDays = hasWeekendInRange(
+        formData.implementation_start_date,
+        formData.implementation_end_date
+      );
+      setHasWeekend(hasWeekendDays);
+    } else {
+      setHasWeekend(false);
+    }
+  }, [formData.implementation_start_date, formData.implementation_end_date]);
 
   // Sync awal jika tidak ada draft
   useEffect(() => {
@@ -377,6 +395,10 @@ export default function SubmissionForm() {
 
   const handleTimeChange = (value: string) => {
     setFormData((prev) => ({ ...prev, working_hours: value }));
+  };
+
+  const handleHolidayTimeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, holiday_working_hours: value }));
   };
 
   // -------------------------------
@@ -1258,6 +1280,24 @@ export default function SubmissionForm() {
                     placeholder="Pilih jam kerja"
                   />
                 </div>
+
+                {/* Conditional field for holiday working hours */}
+                {hasWeekend && (
+                  <div>
+                    <Label htmlFor="holiday_working_hours">
+                      Jam Kerja Hari Libur (Sabtu/Minggu)
+                      <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
+                    </Label>
+                    <TimePicker
+                      id="holiday_working_hours"
+                      name="holiday_working_hours"
+                      value={formData.holiday_working_hours || ''}
+                      onChange={handleHolidayTimeChange}
+                      placeholder="Pilih jam kerja untuk hari libur"
+                    />
+
+                  </div>
+                )}
 
                 <div>
                   <Label htmlFor="work_facilities">Sarana Kerja <span className="ml-1 text-red-500">*</span></Label>

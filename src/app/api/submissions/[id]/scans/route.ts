@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { formatScansDates } from '@/lib/timezone';
 
 const prisma = new PrismaClient();
 
@@ -44,12 +45,13 @@ export async function GET(
       }
     });
 
-    // Get total scan count
-    const totalScans = scans.length;
-    const lastScan = scans[0] || null;
+    // Convert scan timestamps to Asia/Jakarta for API consumers
+    const formattedScans = formatScansDates(scans);
+    const totalScans = formattedScans.length;
+    const lastScan = formattedScans[0] || null;
 
     return NextResponse.json({
-      scans,
+      scans: formattedScans,
       totalScans,
       lastScan,
       hasBeenScanned: totalScans > 0

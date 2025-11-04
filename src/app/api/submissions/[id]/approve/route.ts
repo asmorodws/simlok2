@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
+import { toJakartaISOString } from '@/lib/timezone';
 import { z } from 'zod';
 import { generateQrString } from '@/lib/qr-security';
 
@@ -15,7 +16,9 @@ const finalApprovalSchema = z.object({
 
 // Function to generate simlok number
 async function generateSimlokNumber(): Promise<string> {
-  const now = new Date();
+  // Use Jakarta timezone for year
+  const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+  const now = new Date(jakartaNow);
   const year = now.getFullYear();
 
   // Get the last approved submission (semua tahun, tidak direset)
@@ -36,12 +39,17 @@ async function generateSimlokNumber(): Promise<string> {
   if (lastSubmission?.simlok_number) {
     // Extract auto-increment number from format: number/S00330/YYYY-S0
     // Ambil substring pertama sebelum karakter '/'
-    const firstPart = lastSubmission.simlok_number.split('/')[0];
-    const currentNumber = parseInt(firstPart, 10);
-    
-    // Pastikan parsing berhasil dan hasilnya adalah angka valid
-    if (!isNaN(currentNumber) && currentNumber > 0) {
-      nextNumber = currentNumber + 1;
+    const parts = lastSubmission.simlok_number.split('/');
+    const firstPart = parts[0];
+    if (firstPart) {
+      const currentNumber = parseInt(String(firstPart), 10);
+      // Pastikan parsing berhasil dan hasilnya adalah angka valid
+      if (!isNaN(currentNumber) && currentNumber > 0) {
+        nextNumber = currentNumber + 1;
+      }
+    } else {
+      // fallback
+      console.warn('Invalid SIMLOK format (empty first part):', lastSubmission.simlok_number);
     }
     // Jika parsing gagal atau hasil invalid, tetap gunakan 1 sebagai default
   }
@@ -74,7 +82,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const validatedData = finalApprovalSchema.parse(body);
 
     // Check if submission exists
-    const existingSubmission = await prisma.submission.findUnique({
+      const existingSubmission = await prisma.submission.findUnique({
       where: { id },
       include: {
         user: true
@@ -130,7 +138,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // If approved, generate SIMLOK number and QR code
     if (validatedData.approval_status === 'APPROVED') {
       const simlokNumber = validatedData.simlok_number || await generateSimlokNumber();
-      const simlokDate = validatedData.simlok_date || new Date().toISOString().split('T')[0];
+        const jakartaNow = toJakartaISOString(new Date());
+        const simlokDate = validatedData.simlok_date || (jakartaNow ? jakartaNow.split('T')[0] : new Date().toISOString().split('T')[0]);
       
       // Generate QR string for the submission
       const qrString = generateQrString({
@@ -176,12 +185,25 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         .catch(err => console.error('notifyReviewerSubmissionApproved error (async):', err));
     }
 
-    return NextResponse.json({
-      message: validatedData.approval_status === 'APPROVED' 
-        ? 'Submission berhasil disetujui' 
-        : 'Submission berhasil ditolak',
-      submission: updatedSubmission
-    });
+    // Format dates to Asia/Jakarta before returning
+    try {
+      const { formatSubmissionDates } = await import('@/lib/timezone');
+      const formatted = formatSubmissionDates(updatedSubmission);
+      return NextResponse.json({
+        message: validatedData.approval_status === 'APPROVED' 
+          ? 'Submission berhasil disetujui' 
+          : 'Submission berhasil ditolak',
+        submission: formatted
+      });
+    } catch (err) {
+      console.warn('Failed to format submission dates in approve response:', err);
+      return NextResponse.json({
+        message: validatedData.approval_status === 'APPROVED' 
+          ? 'Submission berhasil disetujui' 
+          : 'Submission berhasil ditolak',
+        submission: updatedSubmission
+      });
+    }
 
   } catch (error) {
     if (error instanceof z.ZodError) {

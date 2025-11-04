@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import * as XLSX from 'xlsx';
+import { toJakartaISOString } from '@/lib/timezone';
 
 // Fungsi util aman untuk tanggal
 const safeDate = (d?: Date | string | null): string =>
@@ -233,8 +234,9 @@ export async function GET(request: NextRequest) {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Submissions');
     const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
-    const today = new Date().toISOString().split('T')[0];
-    const filename = `simlok_export_${today}.xlsx`;
+  const jakartaNow = toJakartaISOString(new Date());
+  const today = jakartaNow ? jakartaNow.split('T')[0] : new Date().toISOString().split('T')[0];
+  const filename = `simlok_export_${today}.xlsx`;
 
     return new NextResponse(excelBuffer, {
       headers: {

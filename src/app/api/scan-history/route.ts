@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import { formatScansDates, formatSubmissionDates } from '@/lib/timezone';
 
 const prisma = new PrismaClient();
 
@@ -140,8 +141,15 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
+    // Format scanned timestamps and nested submission dates to Jakarta timezone
+    const formattedScans = scans.map(s => ({
+      ...s,
+      scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0].scanned_at : s.scanned_at,
+      submission: s.submission ? formatSubmissionDates(s.submission) : s.submission
+    }));
+
     return NextResponse.json({
-      scans,
+      scans: formattedScans,
       total,
       page,
       limit,

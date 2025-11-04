@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/singletons";
+import { toJakartaISOString } from '@/lib/timezone';
 
 // GET /api/user/profile - Get current user profile
 export async function GET() {
@@ -34,7 +35,13 @@ export async function GET() {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    const formatted = {
+      ...user,
+      created_at: toJakartaISOString(user.created_at) || user.created_at,
+      verified_at: toJakartaISOString(user.verified_at) || user.verified_at,
+    };
+
+    return NextResponse.json(formatted);
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -91,7 +98,13 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(updatedUser);
+    const formattedUpdated = {
+      ...updatedUser,
+      created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
+      verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
+    };
+
+    return NextResponse.json(formattedUpdated);
   } catch (error) {
     console.error('Error updating user profile:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

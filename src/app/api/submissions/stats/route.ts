@@ -48,8 +48,9 @@ export async function GET() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get recent activity (submissions from last 30 days)
-    const thirtyDaysAgo = new Date();
+    // Get recent activity (submissions from last 30 days) - use Jakarta timezone
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const thirtyDaysAgo = new Date(jakartaNow);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const recentActivity = await prisma.submission.count({
@@ -61,8 +62,8 @@ export async function GET() {
       }
     });
 
-    // Get today's submissions
-    const today = new Date();
+    // Get today's submissions (Jakarta timezone)
+    const today = new Date(jakartaNow);
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);

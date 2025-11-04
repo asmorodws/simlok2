@@ -1,6 +1,7 @@
 // app/api/auth/signup/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/singletons";
+import { toJakartaISOString } from '@/lib/timezone';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { notifyAdminNewVendor } from "@/server/events";
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
     await notifyReviewerNewUser(newUser.id);
 
     // Log successful registration (for audit purposes)
-    console.log(`✅ New vendor registered: ${email} (${vendor_name}) at ${new Date().toISOString()}`);
+  console.log(`✅ New vendor registered: ${email} (${vendor_name}) at ${toJakartaISOString(new Date()) || new Date().toISOString()}`);
 
     // Return response - let NextAuth handle session creation
     return NextResponse.json(
