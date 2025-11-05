@@ -5,6 +5,7 @@ import { prisma } from '@/lib/singletons';
 import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
 import { formatSubmissionDates } from '@/lib/timezone';
+import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
 
 // Helper function to normalize document number
 // - Convert to uppercase
@@ -299,6 +300,25 @@ export async function POST(request: NextRequest) {
     // Only VENDOR can create submissions
     if (session.user.role !== 'VENDOR') {
       return NextResponse.json({ error: 'Only vendors can create submissions' }, { status: 403 });
+    }
+
+    // ========== RATE LIMITING ==========
+    // Prevent spam: 5 submissions per 5 minutes per vendor
+    const rateLimitResult = rateLimiter.check(
+      `submission:${session.user.id}`,
+      RateLimitPresets.submission
+    );
+
+    if (!rateLimitResult.allowed) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      console.warn(`⚠️ Rate limit exceeded for user ${session.user.id} (${session.user.email})`);
+      return NextResponse.json(
+        { 
+          error: RateLimitPresets.submission.message,
+          retryAfter: rateLimitResult.retryAfter 
+        },
+        { status: 429, headers }
+      );
     }
 
     const body: SubmissionData = await request.json();

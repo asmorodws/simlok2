@@ -64,6 +64,9 @@ export default function SubmissionForm() {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Prevent double submission with ref flag
+  const isSubmittingRef = useRef(false);
+
   // menandai adanya draft
   const [hasDraft, setHasDraft] = useState(false);
 
@@ -658,19 +661,34 @@ export default function SubmissionForm() {
   // -------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ========== PREVENT DOUBLE SUBMISSION ==========
+    if (isSubmittingRef.current) {
+      console.warn('⚠️ Submission already in progress, ignoring duplicate submit');
+      return;
+    }
+    
+    // Set flag IMMEDIATELY to prevent race condition
+    isSubmittingRef.current = true;
     setIsLoading(true);
+    
+    // Helper to reset submission state (for early returns)
+    const resetSubmission = () => {
+      isSubmittingRef.current = false;
+      setIsLoading(false);
+    };
 
     try {
       // ========== VALIDASI TANGGAL PELAKSANAAN ==========
       if (!formData.implementation_start_date?.trim()) {
         showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Mulai Pelaksanaan wajib diisi.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
       if (!formData.implementation_end_date?.trim()) {
         showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Selesai Pelaksanaan wajib diisi.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -683,7 +701,7 @@ export default function SubmissionForm() {
           'Tanggal Pelaksanaan Tidak Valid', 
           'Tanggal Selesai Pelaksanaan tidak boleh lebih awal dari Tanggal Mulai Pelaksanaan.'
         );
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -694,7 +712,7 @@ export default function SubmissionForm() {
           'Jam Kerja Hari Libur Wajib Diisi',
           'Rentang tanggal pelaksanaan mencakup hari Sabtu/Minggu. Silakan isi Jam Kerja Hari Libur.'
         );
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -706,7 +724,7 @@ export default function SubmissionForm() {
 
       if (filledSimjaDocs.length === 0) {
         showError('Dokumen SIMJA Wajib', 'Minimal harus ada 1 dokumen SIMJA yang lengkap.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -732,7 +750,7 @@ export default function SubmissionForm() {
               'Dokumen SIMJA Tidak Lengkap',
               `SIMJA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
-            setIsLoading(false);
+            resetSubmission();
             return;
           }
         }
@@ -747,7 +765,7 @@ export default function SubmissionForm() {
 
       if (filledSikaDocs.length === 0) {
         showError('Dokumen SIKA Wajib', 'Minimal harus ada 1 dokumen SIKA yang lengkap.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -774,7 +792,7 @@ export default function SubmissionForm() {
               'Dokumen SIKA Tidak Lengkap',
               `SIKA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
-            setIsLoading(false);
+            resetSubmission();
             return;
           }
         }
@@ -802,7 +820,7 @@ export default function SubmissionForm() {
               'Dokumen Work Order Tidak Lengkap',
               `Work Order #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
-            setIsLoading(false);
+            resetSubmission();
             return;
           }
         }
@@ -830,7 +848,7 @@ export default function SubmissionForm() {
               'Dokumen Kontrak Kerja Tidak Lengkap',
               `Kontrak Kerja #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
-            setIsLoading(false);
+            resetSubmission();
             return;
           }
         }
@@ -858,7 +876,7 @@ export default function SubmissionForm() {
               'Dokumen JSA Tidak Lengkap',
               `JSA #${i + 1}: ${missingFields.join(', ')} belum diisi. Lengkapi atau hapus card ini.`
             );
-            setIsLoading(false);
+            resetSubmission();
             return;
           }
         }
@@ -866,19 +884,19 @@ export default function SubmissionForm() {
 
       if (workers.length === 0) {
         showError('Data Pekerja Tidak Lengkap', 'Minimal harus ada satu pekerja dalam pengajuan.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
       if (workerCountInput === '') {
         showError('Jumlah Pekerja Kosong', 'Silakan isi jumlah pekerja atau klik tombol "Sesuaikan" untuk menyesuaikan dengan jumlah baris.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
       if (workers.length !== desiredCount) {
         showError('Jumlah Pekerja Tidak Sesuai', 'Jumlah baris pekerja tidak sama dengan input "Jumlah Pekerja". Klik "Sesuaikan" untuk menyamakan jumlahnya.');
-        setIsLoading(false);
+        resetSubmission();
         return;
       }
 
@@ -900,7 +918,7 @@ export default function SubmissionForm() {
             'Data Pekerja Tidak Lengkap',
             `Pekerja ${i + 1} (${worker.worker_name || 'Tanpa Nama'}): Field yang belum diisi: ${missingFields.join(', ')}. Semua field wajib diisi.`
           );
-          setIsLoading(false);
+          resetSubmission();
           return;
         }
       }
@@ -973,8 +991,14 @@ export default function SubmissionForm() {
       localStorage.removeItem(STORAGE_KEY);
       setHasDraft(false);
 
-      showSuccess('Pengajuan Berhasil Dibuat', 'Pengajuan SIMLOK Anda telah berhasil disimpan dan akan segera diproses.');
-      router.push('/vendor/submissions');
+      showSuccess('Pengajuan Berhasil Dibuat', 'Pengajuan SIMLOK Anda telah berhasil disimpan dan akan segera diproses.', 2000);
+      
+      // Redirect ke dashboard - reset flag dan loading state di dalam timeout
+      setTimeout(() => {
+        router.push('/vendor');
+        resetSubmission(); // Reset flag dan loading state
+      }, 500);
+      
     } catch (error) {
       console.error('Error creating submission:', error);
       const errorMessage = error instanceof Error 
@@ -984,8 +1008,7 @@ export default function SubmissionForm() {
         : 'Terjadi kesalahan saat menyimpan pengajuan. Silakan coba lagi.';
       
       showError('Gagal Membuat Pengajuan', errorMessage);
-    } finally {
-      setIsLoading(false);
+      resetSubmission(); // Reset flag dan loading untuk error case
     }
   };
 

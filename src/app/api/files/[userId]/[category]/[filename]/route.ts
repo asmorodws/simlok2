@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { readFile } from 'fs/promises';
+import { createReadStream, statSync, existsSync } from 'fs';
 import { join } from 'path';
-import { existsSync } from 'fs';
+import { Readable } from 'stream';
+
+/**
+ * Convert Node.js Readable stream to Web ReadableStream
+ */
+function nodeStreamToWebStream(nodeStream: Readable): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      nodeStream.on('data', (chunk: Buffer) => {
+        controller.enqueue(new Uint8Array(chunk));
+      });
+      nodeStream.on('end', () => {
+        controller.close();
+      });
+      nodeStream.on('error', (err) => {
+        controller.error(err);
+      });
+    },
+    cancel() {
+      nodeStream.destroy();
+    },
+  });
+}
 
 export async function GET(
   _request: NextRequest,
@@ -67,8 +89,9 @@ export async function GET(
       return NextResponse.json({ error: 'File not found' }, { status: 404 });
     }
 
-    // Read file
-    const fileBuffer = await readFile(filePath);
+    // Get file stats for size and range support
+    const fileStats = statSync(filePath);
+    const fileSize = fileStats.size;
 
     // Determine content type based on file extension
     const extension = filename.split('.').pop()?.toLowerCase();
@@ -96,27 +119,73 @@ export async function GET(
         break;
     }
 
+    // ========== RANGE REQUEST SUPPORT (for partial content) ==========
+    // This allows browsers to request only part of the file (great for PDF preview)
+    const range = _request.headers.get('range');
+    
+    if (range) {
+      // Parse range header: "bytes=start-end"
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0] || '0', 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      // Create read stream for the requested range
+      const stream = createReadStream(filePath, { start, end });
+      const webStream = nodeStreamToWebStream(stream);
+
+      console.log('📄 Serving partial content (range request):', {
+        filename,
+        fileSize,
+        range: `${start}-${end}`,
+        chunkSize,
+        contentType
+      });
+
+      // Return partial content (206)
+      return new NextResponse(webStream, {
+        status: 206, // Partial Content
+        headers: {
+          'Content-Type': contentType,
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize.toString(),
+          'Content-Disposition': `inline; filename="${filename}"`,
+          'Cache-Control': 'public, max-age=31536000, immutable', // Cache for 1 year (files are immutable)
+        },
+      });
+    }
+
+    // ========== FULL FILE STREAMING (for complete download) ==========
+    // Use streaming instead of loading entire file to memory
+    const stream = createReadStream(filePath);
+    const webStream = nodeStreamToWebStream(stream);
+
     // Debug logging for PDF generation context
     const isFromPdf = _request.headers.get('x-pdf-generation') === 'true';
     const cacheControl = isFromPdf 
       ? 'no-cache, no-store, must-revalidate' 
-      : 'private, max-age=3600'; // Cache for 1 hour for regular requests
+      : 'public, max-age=31536000, immutable'; // Cache for 1 year (files are immutable)
 
-    console.log('File serving response:', {
+    console.log('📄 File serving (streaming):', {
       filePath,
-      fileSize: fileBuffer.length,
+      fileSize,
       contentType,
       isFromPdf,
-      cacheControl
+      cacheControl,
+      supportsRangeRequests: true
     });
 
-    // Return file with proper headers
-    return new NextResponse(new Uint8Array(fileBuffer), {
+    // Return file with streaming and proper headers
+    return new NextResponse(webStream, {
       headers: {
         'Content-Type': contentType,
+        'Content-Length': fileSize.toString(),
         'Content-Disposition': `inline; filename="${filename}"`,
+        'Accept-Ranges': 'bytes', // Advertise range support
         'Cache-Control': cacheControl,
         'Pragma': isFromPdf ? 'no-cache' : 'public',
+        'ETag': `"${fileStats.mtime.getTime()}-${fileSize}"`, // ETag for cache validation
       },
     });
 

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { DocumentIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
+import { compressFile, shouldCompressFile, formatFileSize, calculateSavings } from '@/utils/client-file-compressor';
 
 interface FileUploadProps {
   id?: string;
@@ -37,7 +38,9 @@ export default function FileUpload({
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFileInput = (file: File): string | null => {
@@ -90,10 +93,11 @@ export default function FileUpload({
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const file = files[0];
+    let file = files[0];
     if (!file) return;
     
     setError(null);
+    setCompressionInfo(null);
 
     // Validate file
     const validationError = validateFileInput(file);
@@ -103,12 +107,36 @@ export default function FileUpload({
     }
 
     try {
+      const originalSize = file.size;
+      
+      // ========== CLIENT-SIDE COMPRESSION ==========
+      // Compress file before upload if needed
+      if (shouldCompressFile(file)) {
+        setCompressing(true);
+        setUploadProgress(0);
+        
+        console.log(`🔄 Compressing ${file.name} (${formatFileSize(originalSize)})...`);
+        
+        file = await compressFile(file, (progress) => {
+          setUploadProgress(progress * 0.5); // 0-50% for compression
+        });
+        
+        const savings = calculateSavings(originalSize, file.size);
+        if (savings.percentage > 0) {
+          const info = `✅ Compressed: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)} (saved ${savings.percentage.toFixed(1)}%)`;
+          setCompressionInfo(info);
+          console.log(info);
+        }
+        
+        setCompressing(false);
+      }
+      
+      // ========== UPLOAD TO SERVER ==========
       setUploading(true);
-      setUploadProgress(0);
 
-      // Simulate progress for better UX
+      // Simulate progress for better UX (50-90% for upload)
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90));
+        setUploadProgress(prev => Math.min(prev + 5, 90));
       }, 100);
 
       const fileUrl = await uploadFile(file);
@@ -132,6 +160,7 @@ export default function FileUpload({
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Upload failed');
       setUploading(false);
+      setCompressing(false);
       setUploadProgress(0);
     }
   };
@@ -206,6 +235,11 @@ export default function FileUpload({
         <p className="text-sm text-gray-500">{description}</p>
       )}
 
+      {/* Compression help text */}
+      <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-md p-2">
+        💡 <strong>Tip:</strong> Gambar akan otomatis dikompresi saat upload untuk menghemat ruang penyimpanan dan mempercepat upload.
+      </div>
+
       <div
         className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
           dragActive 
@@ -239,7 +273,9 @@ export default function FileUpload({
           <div className="text-center">
             <CloudArrowUpIcon className="mx-auto h-12 w-12 text-blue-500 animate-pulse" />
             <div className="mt-4">
-              <div className="text-sm font-medium text-gray-900">Uploading...</div>
+              <div className="text-sm font-medium text-gray-900">
+                {compressing ? 'Compressing file...' : 'Uploading...'}
+              </div>
               <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -247,6 +283,11 @@ export default function FileUpload({
                 />
               </div>
               <div className="text-xs text-gray-500 mt-1">{uploadProgress}%</div>
+              {compressionInfo && (
+                <div className="text-xs text-green-600 mt-2 bg-green-50 rounded px-2 py-1">
+                  {compressionInfo}
+                </div>
+              )}
             </div>
           </div>
         ) : value ? (

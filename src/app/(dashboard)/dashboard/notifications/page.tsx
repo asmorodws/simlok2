@@ -15,7 +15,7 @@ import {
   ShieldCheckIcon,
   MagnifyingGlassIcon,
   InboxIcon,
-  XMarkIcon,
+  XCircleIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
@@ -193,19 +193,55 @@ export default function NotificationsPage() {
   const getNotificationIcon = (type: string) => {
     const iconClass = 'w-5 h-5';
     switch (type) {
-      case 'submission_approved': return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
-      case 'submission_rejected': return <XMarkIcon className={`${iconClass} text-red-600`} />;
-      case 'submission_pending': return <ClockIcon className={`${iconClass} text-amber-600`} />;
-      case 'status_change': return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
-      case 'new_submission': return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
-      case 'new_vendor': return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
-      case 'vendor_verified': return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
-      case 'user_registered': return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
-      default: return <BellIcon className={`${iconClass} text-gray-600`} />;
+      // ✅ Approved - Green
+      case 'submission_approved':
+        return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
+      
+      // ❌ Rejected - Red
+      case 'submission_rejected':
+      case 'reviewed_submission_rejection':
+        return <XCircleIcon className={`${iconClass} text-red-600`} />;
+      
+      // ⏱️ Pending/Review - Amber
+      case 'submission_pending':
+      case 'new_submission_review':
+        return <ClockIcon className={`${iconClass} text-amber-600`} />;
+      
+      // ✓ Needs Approval - Blue Shield
+      case 'reviewed_submission_approval':
+        return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 📄 New Submission - Blue Document
+      case 'new_submission':
+        return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 🔄 Status Change - Blue Shield
+      case 'status_change':
+        return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 👤 User/Vendor - Blue User
+      case 'new_vendor':
+      case 'vendor_verified':
+      case 'user_registered':
+      case 'new_user_verification':
+        return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 🔔 Default - Gray Bell
+      default:
+        return <BellIcon className={`${iconClass} text-gray-600`} />;
     }
   };
 
-  const submissionTypes = ['submission_approved','submission_rejected','submission_pending','new_submission','status_change'];
+  const submissionTypes = [
+    'submission_approved',
+    'submission_rejected',
+    'submission_pending',
+    'new_submission',
+    'new_submission_review',
+    'reviewed_submission_approval',
+    'reviewed_submission_rejection',
+    'status_change'
+  ];
   const vendorTypes = ['user_registered', 'new_vendor', 'new_user_verification', 'vendor_verified', 'vendor_registered'];
 
   const hasSubmissionData = (n: Notification) => {

@@ -526,3 +526,72 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
     console.error('Error notifying reviewers about approved submission:', error);
   }
 }
+
+export async function notifyVendorSubmissionRejected(
+  submission: { id: string; vendor_name: string; officer_name: string; job_description: string; user_id: string | null; note_for_vendor?: string | null },
+  rejectedBy: string
+) {
+  try {
+    // Check if user_id exists
+    if (!submission.user_id) {
+      console.warn(`Cannot notify vendor: user_id is null for submission ${submission.id}`);
+      return;
+    }
+
+    const notificationTitle = 'Pengajuan Simlok Ditolak';
+    const notificationMessage = `Pengajuan Simlok Anda ditolak oleh ${rejectedBy}. Silakan periksa catatan untuk informasi lebih lanjut.`;
+
+    // Create notification record for vendor
+    const notification = await prisma.notification.create({
+      data: {
+        scope: 'vendor',
+        vendor_id: submission.user_id,
+        type: 'submission_rejected',
+        title: notificationTitle,
+        message: notificationMessage,
+        data: JSON.stringify({
+          submissionId: submission.id,
+          vendorName: submission.vendor_name,
+          officerName: submission.officer_name,
+          jobDescription: submission.job_description,
+          rejectedBy: rejectedBy,
+          note: submission.note_for_vendor || 'Tidak ada catatan khusus'
+        })
+      }
+    });
+
+    console.log(`✅ Notified vendor about rejected submission: ${submission.id}`);
+    
+    try {
+      const channel = `notifications:vendor:${submission.user_id}`;
+      const payload = {
+        type: 'notification:new',
+        data: {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          data: notification.data,
+          scope: notification.scope,
+          vendorId: notification.vendor_id,
+          createdAt: notification.created_at ? (toJakartaISOString(notification.created_at) || notification.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
+        }
+      };
+      await redisPub.publish(channel, JSON.stringify(payload));
+      emitNotificationNew('vendor', submission.user_id, payload.data as any);
+
+      // Publish unread count for vendor
+      const total = await prisma.notification.count({ where: { scope: 'vendor', vendor_id: submission.user_id } });
+      const read = await prisma.notificationRead.count({ where: { vendor_id: submission.user_id } });
+      const unread = Math.max(0, total - read);
+      const unreadPayload = { type: 'notification:unread_count', data: { vendorId: submission.user_id, scope: 'vendor', unreadCount: unread, count: unread } };
+      await redisPub.publish(channel, JSON.stringify(unreadPayload));
+      emitNotificationUnreadCount('vendor', submission.user_id, { vendorId: submission.user_id, scope: 'vendor', unreadCount: unread, count: unread });
+    } catch (err) {
+      console.warn('Failed to publish vendor rejection notification to Redis/socket:', err);
+    }
+
+  } catch (error) {
+    console.error('Error notifying vendor about rejected submission:', error);
+  }
+}

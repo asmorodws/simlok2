@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface ServerTimeData {
   serverTime: Date;
@@ -107,26 +107,28 @@ export function useServerTime() {
 
   /**
    * Get current time adjusted with server offset
+   * Memoized to prevent infinite loops in useEffect dependencies
    */
-  const getCurrentServerTime = () => {
+  const getCurrentServerTime = useCallback(() => {
     if (serverTimeData.isLoaded) {
       return new Date(Date.now() + serverTimeData.offset);
     }
     // Fallback to Jakarta timezone from client
     const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
     return new Date(jakartaNow);
-  };
+  }, [serverTimeData.isLoaded, serverTimeData.offset]);
 
   /**
    * Get current date in YYYY-MM-DD format (Jakarta/Server time)
+   * Memoized to prevent infinite loops in useEffect dependencies
    */
-  const getCurrentDate = () => {
+  const getCurrentDate = useCallback(() => {
     const serverTime = getCurrentServerTime();
     const year = serverTime.getFullYear();
     const month = String(serverTime.getMonth() + 1).padStart(2, '0');
     const day = String(serverTime.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  };
+  }, [getCurrentServerTime]);
 
   return {
     ...serverTimeData,

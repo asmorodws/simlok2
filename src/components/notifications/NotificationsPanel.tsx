@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import {
   BellIcon,
   XMarkIcon,
+  XCircleIcon,
   CheckIcon,
   CheckCircleIcon,
   ClockIcon,
@@ -224,20 +225,39 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
   const getNotificationIcon = (type: string) => {
     const iconClass = 'w-5 h-5';
     switch (type) {
+      // ✅ Approved - Green
       case 'submission_approved':
         return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
+      
+      // ❌ Rejected - Red
       case 'submission_rejected':
-        return <XMarkIcon className={`${iconClass} text-red-500`} />;
+      case 'reviewed_submission_rejection':
+        return <XCircleIcon className={`${iconClass} text-red-600`} />;
+      
+      // ⏱️ Pending/Review - Amber
       case 'submission_pending':
-        return <ClockIcon className={`${iconClass} text-amber-500`} />;
-      case 'status_change':
+      case 'new_submission_review':
+        return <ClockIcon className={`${iconClass} text-amber-600`} />;
+      
+      // ✓ Needs Approval - Blue Shield
+      case 'reviewed_submission_approval':
         return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 📄 New Submission - Blue Document
       case 'new_submission':
         return <DocumentPlusIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 🔄 Status Change - Blue Shield
+      case 'status_change':
+        return <ShieldCheckIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 👤 User/Vendor - Blue User
       case 'user_registered':
       case 'new_vendor':
       case 'new_user_verification':
         return <UserPlusIcon className={`${iconClass} text-blue-600`} />;
+      
+      // 🔔 Default - Gray Bell
       default:
         return <BellIcon className={`${iconClass} text-gray-500`} />;
     }
@@ -255,18 +275,30 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           message: truncateText('Selamat! Pengajuan Simlok Anda telah disetujui dan dapat digunakan.'),
           action: 'Lihat detail'
         };
+      
       case 'submission_rejected':
+      case 'reviewed_submission_rejection':
         return {
           title: 'Pengajuan Ditolak',
           message: truncateText('Pengajuan Simlok Anda ditolak. Silakan periksa catatan dan lakukan perbaikan.'),
           action: 'Lihat detail'
         };
+      
       case 'submission_pending':
+      case 'new_submission_review':
         return {
-          title: 'Status Pending',
-          message: truncateText('Pengajuan Simlok Anda sedang dalam proses review lebih lanjut.'),
+          title: 'Pengajuan Perlu Review',
+          message: truncateText('Pengajuan Simlok sedang dalam proses review.'),
           action: 'Lihat detail'
         };
+      
+      case 'reviewed_submission_approval':
+        return {
+          title: 'Pengajuan Perlu Persetujuan',
+          message: truncateText('Pengajuan Simlok sudah direview dan perlu persetujuan final.'),
+          action: 'Lihat detail'
+        };
+      
       case 'status_change': {
         let enhancedTitle = title;
         let enhancedMessage = message;
@@ -283,12 +315,14 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           action: 'Lihat detail'
         };
       }
+      
       case 'new_submission':
         return {
           title: 'Pengajuan Baru Masuk',
           message: truncateText(message.replace('Pengajuan baru dari', 'Pengajuan Simlok baru dari')),
           action: 'Lihat detail'
         };
+      
       case 'user_registered':
       case 'new_vendor':
       case 'new_user_verification':
@@ -297,6 +331,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           message: truncateText(message.replace('User baru terdaftar', 'User baru mendaftar dan perlu verifikasi')),
           action: 'Lihat detail'
         };
+      
       default:
         return {
           title: truncateText(title, 50),

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
-import { notifyApproverReviewedSubmission } from '@/server/events';
+import { notifyApproverReviewedSubmission, notifyVendorSubmissionRejected } from '@/server/events';
 
 // Schema for validating review data
 const reviewSchema = z.object({
@@ -61,16 +61,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       reviewed_by: session.user.officer_name,
     };
 
-
-    if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
-      // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
-      // reset approval status back to PENDING_APPROVAL so approver can review again
+    // ========== AUTO-REJECT LOGIC ==========
+    // If reviewer marks as NOT_MEETS_REQUIREMENTS, automatically set approval_status to REJECTED
+    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+      updateData.approval_status = 'REJECTED';
+      updateData.approved_at = new Date();
+      updateData.approved_by = session.user.officer_name;
+      updateData.approved_by_final_id = session.user.id;
+      
+      console.log(`🚫 Auto-rejecting submission ${id} - Reviewer marked as NOT_MEETS_REQUIREMENTS`);
+      
+      // Notify vendor about rejection
+      await notifyVendorSubmissionRejected(existingSubmission, session.user.officer_name || 'Reviewer');
+    }
+    // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
+    // reset approval status back to PENDING_APPROVAL so approver can review again
+    else if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
       if (existingSubmission.review_status === 'NOT_MEETS_REQUIREMENTS' && 
           existingSubmission.approval_status === 'REJECTED') {
         updateData.approval_status = 'PENDING_APPROVAL';
         updateData.approved_at = null;
         updateData.approved_by = null;
         updateData.approved_by_final_id = null;
+        
+        console.log(`✅ Resetting submission ${id} to PENDING_APPROVAL - Reviewer changed to MEETS_REQUIREMENTS`);
       }
     }
 

@@ -137,10 +137,14 @@ model Submission {
   worker_list               WorkerList[]
   support_documents         SupportDocument[]
 
+  // Performance indexes
   @@index([review_status])
   @@index([approval_status])
   @@index([created_at])
   @@index([approved_by_final_id])
+  @@index([user_id], map: "Submission_user_id_perf_idx")              // For vendor filtering
+  @@index([vendor_name], map: "Submission_vendor_name_search_idx")    // For vendor search
+  @@index([review_status, approval_status], map: "Submission_review_approval_compound_idx") // Compound index for approver queries
 }
 
 /// ----------  WORKER LIST  ----------

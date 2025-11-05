@@ -3,8 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { fileManager } from '@/lib/fileManager';
 import { PDFCompressor } from '@/utils/pdf-compressor-server';
+import { DocumentCompressor } from '@/utils/document-compressor-server';
+import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
 
-// Configure maximum file size (8MB)
+// Configure maximum file size (8MB before compression)
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 
 // Allowed file types
@@ -27,6 +29,24 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // ========== RATE LIMITING ==========
+    // Prevent abuse: 20 uploads per minute per user
+    const rateLimitResult = rateLimiter.check(
+      `upload:${session.user.id}`,
+      RateLimitPresets.upload
+    );
+
+    if (!rateLimitResult.allowed) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      return NextResponse.json(
+        { 
+          error: RateLimitPresets.upload.message,
+          retryAfter: rateLimitResult.retryAfter 
+        },
+        { status: 429, headers }
+      );
     }
 
     // Parse form data
@@ -63,28 +83,64 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer
     const bytes = await file.arrayBuffer();
     let buffer = Buffer.from(bytes);
+    let compressionInfo = '';
 
-    // Compress PDF files before saving
+    // ========== COMPRESS FILES BASED ON TYPE ==========
+    
+    // 1. Compress PDF files
     if (file.type === 'application/pdf' || fileExtension === '.pdf') {
       try {
         const compressionResult = await PDFCompressor.compressPDF(buffer, {
           skipIfSmall: true,
-          skipThresholdKB: 100, // Skip compression for files < 100KB
+          skipThresholdKB: 50, // Compress even small PDFs for consistency
+          aggressiveCompression: true,
         });
 
         if (compressionResult.compressionApplied) {
           buffer = Buffer.from(compressionResult.buffer);
-          console.log(
-            `PDF compressed: ${file.name} - ` +
-            `Original: ${(compressionResult.originalSize / 1024).toFixed(2)}KB, ` +
-            `Compressed: ${(compressionResult.compressedSize / 1024).toFixed(2)}KB, ` +
-            `Saved: ${compressionResult.compressionRatio.toFixed(1)}%`
-          );
+          compressionInfo = `PDF compressed: ${(compressionResult.originalSize / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (saved ${compressionResult.compressionRatio.toFixed(1)}%)`;
+          console.log(`✅ ${compressionInfo} - ${file.name}`);
+        } else {
+          compressionInfo = `PDF kept original: ${(compressionResult.originalSize / 1024).toFixed(1)}KB (already optimized)`;
+          console.log(`ℹ️ ${compressionInfo} - ${file.name}`);
         }
       } catch (error) {
-        console.error('PDF compression failed, using original file:', error);
-        // Continue with original buffer if compression fails
+        console.error('⚠️ PDF compression failed, using original file:', error);
+        compressionInfo = 'PDF compression failed, using original';
       }
+    }
+    
+    // 2. Compress Office documents (DOC, DOCX)
+    else if (
+      file.type === 'application/msword' ||
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      ['.doc', '.docx'].includes(fileExtension)
+    ) {
+      try {
+        const compressionResult = await DocumentCompressor.compressDocument(buffer, {
+          skipIfSmall: true,
+          skipThresholdKB: 50,
+          compressionLevel: 9, // Maximum compression
+        });
+
+        if (compressionResult.compressionApplied) {
+          buffer = Buffer.from(compressionResult.buffer);
+          compressionInfo = `Office doc compressed (${compressionResult.compressionMethod}): ${(compressionResult.originalSize / 1024).toFixed(1)}KB → ${(compressionResult.compressedSize / 1024).toFixed(1)}KB (saved ${compressionResult.compressionRatio.toFixed(1)}%)`;
+          console.log(`✅ ${compressionInfo} - ${file.name}`);
+        } else {
+          compressionInfo = `Office doc kept original: ${(compressionResult.originalSize / 1024).toFixed(1)}KB (already optimized)`;
+          console.log(`ℹ️ ${compressionInfo} - ${file.name}`);
+        }
+      } catch (error) {
+        console.error('⚠️ Office document compression failed, using original file:', error);
+        compressionInfo = 'Office document compression failed, using original';
+      }
+    }
+    
+    // 3. For images, just log (no compression for now, can add Sharp later)
+    else if (file.type.startsWith('image/')) {
+      compressionInfo = `Image uploaded: ${(buffer.length / 1024).toFixed(1)}KB (no compression)`;
+      console.log(`📷 ${compressionInfo} - ${file.name}`);
     }
 
     // Save file using FileManager

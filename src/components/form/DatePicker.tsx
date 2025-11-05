@@ -29,12 +29,14 @@ export default function DatePicker({
   const { getCurrentServerTime, getCurrentDate, isLoaded } = useServerTime();
   const [todayDate, setTodayDate] = useState<Date | null>(null);
 
-  // Update today date when server time is loaded
+  // Update today date when server time is loaded (once only)
   useEffect(() => {
     if (isLoaded) {
       setTodayDate(getCurrentServerTime());
     }
-  }, [isLoaded, getCurrentServerTime]);
+    // getCurrentServerTime is stable via useCallback, but we only need to run this once when isLoaded changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
 
   // Convert string value to Date object anchored at Jakarta timezone
   const selectedDate = value ? new Date(`${value}T00:00:00+07:00`) : null;
