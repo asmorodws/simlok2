@@ -29,7 +29,8 @@ export async function GET() {
 
     return NextResponse.json(dashboardStats, {
       headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
+        'X-Cache': cached ? 'HIT' : 'MISS',
+        'Cache-Control': 'private, max-age=60',
       }
     });
 
@@ -81,31 +82,20 @@ async function fetchReviewerStats(userRole: string) {
       }
     });
 
-    // Get user verification statistics
-    const pendingUserVerifications = await prisma.user.count({
-      where: {
-        AND: [
-          { verified_at: null },
-          { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
-          { rejection_reason: null },
-          userWhereClause
-        ]
-      }
+    // Get user verification statistics - OPTIMIZED with groupBy
+    const userVerificationStats = await prisma.user.groupBy({
+      by: ['verification_status'],
+      where: userWhereClause,
+      _count: { id: true },
     });
 
-    const totalVerifiedUsers = await prisma.user.count({
-      where: {
-        AND: [
-          {
-            OR: [
-              { verified_at: { not: null } },
-              { verification_status: 'VERIFIED' }
-            ]
-          },
-          userWhereClause
-        ]
-      }
-    });
+    const userStatsByStatus = userVerificationStats.reduce((acc, curr) => {
+      acc[curr.verification_status] = curr._count.id;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const pendingUserVerifications = userStatsByStatus.PENDING || 0;
+    const totalVerifiedUsers = userStatsByStatus.VERIFIED || 0;
 
     // Process submission stats
     const reviewStatusStats = submissionsByReviewStatus.reduce((acc, item) => {

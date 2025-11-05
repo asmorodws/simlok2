@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* Performance Optimizations */
+  compress: true,  // Enable gzip compression
+  swcMinify: true,  // Use faster SWC minification
+  
+  /* Image Optimization */
   images: {
+    formats: ['image/avif', 'image/webp'],  // Modern image formats
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     remotePatterns: [
       {
         protocol: 'https',
@@ -11,14 +17,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  
+  /* TypeScript Configuration */
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // !! WARN !!
-    ignoreBuildErrors: true,
+    // ✅ FIXED: Enforce type safety in production
+    ignoreBuildErrors: false,
   },
-  // Optional: Add bundle analyzer support
+  
+  /* Bundle Optimization */
+  experimental: {
+    optimizeCss: true,  // Optimize CSS
+    optimizePackageImports: ['@heroicons/react', 'date-fns', 'react-hot-toast'],  // Tree-shake large packages
+  },
+  
+  /* Optional: Bundle Analyzer Support */
   ...(process.env.ANALYZE === 'true' && {
     webpack: (config: any) => {
       if (typeof require !== 'undefined') {

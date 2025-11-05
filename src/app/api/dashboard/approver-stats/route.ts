@@ -29,7 +29,8 @@ export async function GET() {
 
     return NextResponse.json(dashboardStats, {
       headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
+        'X-Cache': cached ? 'HIT' : 'MISS',
+        'Cache-Control': 'private, max-age=60',
       }
     });
 

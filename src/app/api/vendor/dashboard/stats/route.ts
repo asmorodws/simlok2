@@ -27,7 +27,8 @@ export async function GET() {
 
     return NextResponse.json(vendorStats, {
       headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
+        'X-Cache': cached ? 'HIT' : 'MISS',
+        'Cache-Control': 'private, max-age=60',
       }
     });
 

@@ -21,71 +21,48 @@ export async function GET() {
       ? { role: { not: 'SUPER_ADMIN' as const } }
       : {};
 
-    const totalUsers = await prisma.user.count({
-      where: userWhereClause
-    });
-
-    // Get pending verifications count (users not verified and not rejected)
-    const totalPending = await prisma.user.count({
-      where: {
-        AND: [
-          { verified_at: null },
-          { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
-          { rejection_reason: null },
-          userWhereClause
-        ]
-      }
-    });
-
-    // Get verified users count
-    const totalVerified = await prisma.user.count({
-      where: {
-        AND: [
-          {
-            OR: [
-              { verified_at: { not: null } },
-              { verification_status: 'VERIFIED' }
-            ]
-          },
-          userWhereClause
-        ]
-      }
-    });
-
-    // Get rejected users count
-    const totalRejected = await prisma.user.count({
-      where: {
-        AND: [
-          {
-            OR: [
-              { rejection_reason: { not: null } },
-              { verification_status: 'REJECTED' }
-            ]
-          },
-          userWhereClause
-        ]
-      }
-    });
-
-    // Get today's registrations
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const todayRegistrations = await prisma.user.count({
-      where: {
-        AND: [
-          {
+    // OPTIMIZED: Use single groupBy query instead of 4 separate counts
+    const [verificationStats, totalUsers, todayRegistrations] = await Promise.all([
+      // Get verification status breakdown in one query
+      prisma.user.groupBy({
+        by: ['verification_status'],
+        where: userWhereClause,
+        _count: { id: true },
+      }),
+      
+      // Total users count
+      prisma.user.count({
+        where: userWhereClause
+      }),
+      
+      // Today's registrations
+      (() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        return prisma.user.count({
+          where: {
+            ...userWhereClause,
             created_at: {
               gte: today,
               lt: tomorrow
             }
-          },
-          userWhereClause
-        ]
-      }
-    });
+          }
+        });
+      })()
+    ]);
+
+    // Convert groupBy results to object for easy access
+    const statsByStatus = verificationStats.reduce((acc, curr) => {
+      acc[curr.verification_status] = curr._count.id;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalPending = statsByStatus.PENDING || 0;
+    const totalVerified = statsByStatus.VERIFIED || 0;
+    const totalRejected = statsByStatus.REJECTED || 0;
 
     // Get recent users (latest 5)
     const recentUsers = await prisma.user.findMany({
@@ -120,6 +97,11 @@ export async function GET() {
       recentUsers,
       // Legacy compatibility
       pendingVerifications: totalPending
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60',
+        'X-Cache-TTL': '60'
+      }
     });
 
   } catch (error) {

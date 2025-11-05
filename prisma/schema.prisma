@@ -35,6 +35,10 @@ model User {
   sessions                 Session[]
   finalApprovedSubmissions Submission[]       @relation("FinalApprovedSubmissions")
   submissions              Submission[]
+
+  @@index([verification_status])
+  @@index([isActive, role])
+  @@index([role, verification_status])
 }
 
 /// ----------  REFRESH TOKEN  ----------
@@ -131,6 +135,7 @@ model Submission {
   reviewed_at               DateTime?
   worker_count              Int?
   vendor_phone              String?
+  version                   Int          @default(0)  // For optimistic locking - prevents race conditions
   qrScans                   QrScan[]     @relation("SubmissionQrScans")
   approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id], onDelete: SetNull)
   user                      User?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
@@ -141,6 +146,11 @@ model Submission {
   @@index([approval_status])
   @@index([created_at])
   @@index([approved_by_final_id])
+  @@index([user_id])
+  @@index([vendor_name])
+  @@index([simlok_number])
+  @@index([user_id, approval_status])
+  @@index([created_at, approval_status])
 }
 
 /// ----------  WORKER LIST  ----------
@@ -253,3 +263,11 @@ enum User_role {
   APPROVER
   VISITOR
 }
+
+/// ----------  SIMLOK SEQUENCE FOR ATOMIC NUMBER GENERATION  ----------
+model SimlokSequence {
+  year        Int      @id
+  last_number Int      @default(0)
+  updated_at  DateTime @updatedAt
+}
+

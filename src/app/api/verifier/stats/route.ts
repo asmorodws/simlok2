@@ -29,7 +29,8 @@ export async function GET() {
 
     return NextResponse.json(stats, {
       headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
+        'X-Cache': cached ? 'HIT' : 'MISS',
+        'Cache-Control': 'private, max-age=120',  // 2 minutes cache for verifier stats
       }
     });
 
@@ -53,10 +54,8 @@ async function fetchVerifierStats(userId: string) {
   const [
     totalScans,
     todayScans,
-    totalSubmissions,
-    approvedSubmissions,
-    pendingSubmissions,
-    rejectedSubmissions
+    submissionStats,
+    totalSubmissions
   ] = await Promise.all([
     // Total scans by this verifier
     prisma.qrScan.count({
@@ -75,31 +74,26 @@ async function fetchVerifierStats(userId: string) {
         }
       }
     }),
-      
-      // Total submissions
-      prisma.submission.count(),
-      
-      // Approved submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'APPROVED'
-        }
-      }),
-      
-      // Pending submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'PENDING_APPROVAL'
-        }
-      }),
-      
-      // Rejected submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'REJECTED'
-        }
-      })
-    ]);
+    
+    // OPTIMIZED: Use groupBy for submission stats
+    prisma.submission.groupBy({
+      by: ['approval_status'],
+      _count: { id: true }
+    }),
+    
+    // Total submissions count
+    prisma.submission.count()
+  ]);
+
+  // Convert groupBy results to object
+  const statsByStatus = submissionStats.reduce((acc, curr) => {
+    acc[curr.approval_status] = curr._count.id;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const approvedSubmissions = statsByStatus.APPROVED || 0;
+  const pendingSubmissions = statsByStatus.PENDING_APPROVAL || 0;
+  const rejectedSubmissions = statsByStatus.REJECTED || 0;
 
   return {
     totalScans,
