@@ -162,7 +162,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   });
   const { showSuccess, showError } = useToast();
   const { eventSource, isConnected } = useRealTimeNotifications();
-  const { getCurrentDate } = useServerTime();
+  const { getCurrentDate, isLoaded: serverTimeLoaded } = useServerTime();
 
   // Function to generate auto SIMLOK number - format: nomor/S00330/tahun
   const generateSimlokNumber = async () => {
@@ -296,8 +296,8 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       setApprovalData({
         approval_status: data.submission.approval_status === 'PENDING_APPROVAL' ? '' : data.submission.approval_status,
         simlok_number: data.submission.simlok_number || '',
-        // Jika sudah ada simlok_date, gunakan itu. Jika belum, default ke tanggal Jakarta hari ini
-        simlok_date: parseSimlokDate(data.submission.simlok_date) || getCurrentDate() as string,
+        // Jika sudah ada simlok_date, gunakan itu. Jika belum DAN server time sudah loaded, gunakan server date
+        simlok_date: parseSimlokDate(data.submission.simlok_date) || (serverTimeLoaded ? getCurrentDate() : ''),
         note_for_vendor: data.submission.note_for_vendor || ''
       });
       
@@ -346,6 +346,16 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       fetchScanHistory();
     }
   }, [isOpen, submissionId]);
+
+  // Update simlok_date with server time once it's loaded (untuk initial state)
+  useEffect(() => {
+    if (serverTimeLoaded && approvalData.simlok_date === '' && submission?.approval_status === 'PENDING_APPROVAL') {
+      setApprovalData(prev => ({
+        ...prev,
+        simlok_date: getCurrentDate()
+      }));
+    }
+  }, [serverTimeLoaded, getCurrentDate]);
 
   // Listen to SSE notifications and refetch submission detail when related notifications arrive
   useEffect(() => {
@@ -485,7 +495,8 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
         ...prev,
         approval_status: status,
         simlok_number: prev.simlok_number || simlokNumber,
-        simlok_date: prev.simlok_date || getCurrentDate() as string
+        // Hanya set tanggal jika server time sudah loaded
+        simlok_date: prev.simlok_date || (serverTimeLoaded ? getCurrentDate() : '')
       }));
     } else {
       // Reset SIMLOK fields jika status REJECTED
