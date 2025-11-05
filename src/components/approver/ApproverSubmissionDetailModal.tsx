@@ -30,6 +30,7 @@ import NoteCard from '@/components/common/NoteCard';
 import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 
 import DatePicker from '@/components/form/DatePicker';
+import { useServerTime } from '@/hooks/useServerTime';
 
 interface SubmissionDetail {
   id: string;
@@ -161,6 +162,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
   });
   const { showSuccess, showError } = useToast();
   const { eventSource, isConnected } = useRealTimeNotifications();
+  const { getCurrentDate } = useServerTime();
 
   // Function to generate auto SIMLOK number - format: nomor/S00330/tahun
   const generateSimlokNumber = async () => {
@@ -186,17 +188,6 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
       console.error('Error generating SIMLOK number:', error);
       return `1/S00330/${year}-S0`;
     }
-  };
-
-  // Function to get current date in YYYY-MM-DD format (Jakarta timezone)
-  const getCurrentDate = () => {
-    // Use Jakarta timezone to get current date
-    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
-    const now = new Date(jakartaNow);
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   };
 
   // Format date for display
