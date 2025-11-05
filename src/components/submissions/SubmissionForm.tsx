@@ -687,6 +687,17 @@ export default function SubmissionForm() {
         return;
       }
 
+      // ========== VALIDASI JAM KERJA HARI LIBUR (CONDITIONAL) ==========
+      // Jika ada weekend dalam rentang tanggal pelaksanaan, jam kerja hari libur WAJIB diisi
+      if (hasWeekend && !formData.holiday_working_hours?.trim()) {
+        showError(
+          'Jam Kerja Hari Libur Wajib Diisi',
+          'Rentang tanggal pelaksanaan mencakup hari Sabtu/Minggu. Silakan isi Jam Kerja Hari Libur.'
+        );
+        setIsLoading(false);
+        return;
+      }
+
       // ========== VALIDASI DOKUMEN SIMJA ==========
       // Filter dokumen yang memiliki data (tidak kosong semua field)
       const filledSimjaDocs = simjaDocuments.filter(doc => 
@@ -1286,7 +1297,7 @@ export default function SubmissionForm() {
                   <div>
                     <Label htmlFor="holiday_working_hours">
                       Jam Kerja Hari Libur (Sabtu/Minggu)
-                      <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
+                      <span className="ml-1 text-red-500">*</span>
                     </Label>
                     <TimePicker
                       id="holiday_working_hours"
@@ -1294,6 +1305,7 @@ export default function SubmissionForm() {
                       value={formData.holiday_working_hours || ''}
                       onChange={handleHolidayTimeChange}
                       placeholder="Pilih jam kerja untuk hari libur"
+                      required
                     />
 
                   </div>

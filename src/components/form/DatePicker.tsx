@@ -26,7 +26,7 @@ export default function DatePicker({
   className = '',
   autoFocus = false
 }: DatePickerProps) {
-  const { getCurrentServerTime, getCurrentDate, isLoaded } = useServerTime();
+  const { getCurrentServerTime, isLoaded } = useServerTime();
   const [todayDate, setTodayDate] = useState<Date | null>(null);
 
   // Update today date when server time is loaded
@@ -61,27 +61,8 @@ export default function DatePicker({
     }
   };
 
-  // Handle "Hari ini" button click - uses server date instead of browser date
-  const handleTodayClick = () => {
-    const today = getCurrentDate(); // YYYY-MM-DD from server
-    if (onChange) {
-      onChange(today);
-    }
-  };
-
   return (
     <div className="relative">
-      {/* Custom "Hari ini" button that uses server time */}
-      {!disabled && (
-        <button
-          type="button"
-          onClick={handleTodayClick}
-          className="absolute right-10 top-1/2 -translate-y-1/2 z-10 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-          title="Set ke tanggal hari ini (waktu server Jakarta)"
-        >
-          Hari ini
-        </button>
-      )}
       <ReactDatePicker
         selected={selectedDate}
         onChange={handleChange}
@@ -96,13 +77,12 @@ export default function DatePicker({
         showPopperArrow={false}
         isClearable={true}
         {...(todayDate ? { openToDate: todayDate } : {})}
+        todayButton="Hari ini"
         showMonthDropdown
         showYearDropdown
         dropdownMode="select"
         minDate={minDate}
         maxDate={maxDate}
-        // When user clicks today button, react-datepicker will pass a Date (client time).
-        // We normalize any incoming date in handleChange using Jakarta timezone so "Hari ini" respects Jakarta.
         onKeyDown={(e) => {
           // Mencegah pengetikan manual kecuali untuk navigasi
           if (
