@@ -147,14 +147,19 @@ export function withPerformanceTracking(
       const cacheStatus = response.headers.get('X-Cache') as 'HIT' | 'MISS' | null;
       
       // Log metrics
-      logPerformanceMetrics({
+      const metrics: PerformanceMetrics = {
         route,
         method,
         duration,
         timestamp: new Date(),
-        cacheStatus: cacheStatus || undefined,
         statusCode: response.status,
-      });
+      };
+      
+      if (cacheStatus) {
+        metrics.cacheStatus = cacheStatus;
+      }
+      
+      logPerformanceMetrics(metrics);
       
       // Add performance headers
       return addPerformanceHeaders(response, duration, cacheStatus || undefined);

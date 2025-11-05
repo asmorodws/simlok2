@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* Performance Optimizations */
   compress: true,  // Enable gzip compression
-  swcMinify: true,  // Use faster SWC minification
   
   /* Image Optimization */
   images: {
