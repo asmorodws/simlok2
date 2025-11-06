@@ -423,7 +423,7 @@ export default function SubmissionDetailModal({
                         <div>
                           <h4 className="text-sm font-medium text-red-800">Pengajuan Ditolak</h4>
                           <p className="text-sm text-red-700 mt-1">
-                            Pengajuan SIMLOK Anda tidak dapat disetujui. Silakan hubungi admin untuk informasi lebih lanjut.
+                            Pengajuan SIMLOK Anda tidak dapat disetujui. Silahkan buat pengajuan ulang dengan data yang sesuai.
                           </p>
                         </div>
                       </div>

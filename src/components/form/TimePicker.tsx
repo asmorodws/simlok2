@@ -42,20 +42,45 @@ export default function TimePicker({
 
   // Parse existing value if any
   useEffect(() => {
-    if (value) {
-      if (value.includes(' - ')) {
-        const parts = value.split(' - ');
+    if (value && value.trim()) {
+      // Reset first
+      setStartTime('');
+      setEndTime('');
+      
+      // Handle format: "08:00 WIB - 17:00 WIB" or "08:00 - 17:00 WIB" or "08:00 s/d 17:00 WIB"
+      const cleanValue = value.trim();
+      
+      if (cleanValue.includes(' - ')) {
+        const parts = cleanValue.split(' - ');
         if (parts.length >= 2 && parts[0] && parts[1]) {
-          setStartTime(parts[0].trim());
-          setEndTime(parts[1].replace(' WIB', '').trim());
+          // Extract start time (remove WIB if present)
+          const start = parts[0].replace(/\s*WIB\s*/gi, '').trim();
+          // Extract end time (remove WIB if present)
+          const end = parts[1].replace(/\s*WIB\s*/gi, '').trim();
+          
+          if (start && end) {
+            setStartTime(start);
+            setEndTime(end);
+          }
         }
-      } else if (value.includes(' s/d ')) {
-        const parts = value.split(' s/d ');
+      } else if (cleanValue.includes(' s/d ')) {
+        const parts = cleanValue.split(' s/d ');
         if (parts.length >= 2 && parts[0] && parts[1]) {
-          setStartTime(parts[0].trim());
-          setEndTime(parts[1].replace(' WIB', '').trim());
+          // Extract start time (remove WIB if present)
+          const start = parts[0].replace(/\s*WIB\s*/gi, '').trim();
+          // Extract end time (remove WIB if present)
+          const end = parts[1].replace(/\s*WIB\s*/gi, '').trim();
+          
+          if (start && end) {
+            setStartTime(start);
+            setEndTime(end);
+          }
         }
       }
+    } else {
+      // Reset if value is empty
+      setStartTime('');
+      setEndTime('');
     }
   }, [value]);
 
@@ -65,6 +90,15 @@ export default function TimePicker({
 
   const handleEndTimeChange = (time: string) => {
     setEndTime(time);
+    // Auto-save: langsung apply setelah memilih waktu selesai
+    if (time && startTime) {
+      const timeRange = `${startTime} WIB - ${time} WIB`;
+      if (onChange) {
+        onChange(timeRange);
+      }
+      // Auto close after selection
+      setTimeout(() => setIsOpen(false), 300);
+    }
   };
 
   const handleApply = () => {
@@ -109,14 +143,15 @@ export default function TimePicker({
 
       {isOpen && !disabled && (
         <>
-          {/* Overlay to close dropdown when clicking outside */}
+          {/* Overlay to close dropdown when clicking outside - tidak block scroll */}
           <div 
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
+            style={{ background: 'transparent' }}
           />
           
-          {/* Dropdown content */}
-          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-xl min-w-[350px]">
+          {/* Dropdown content - scrollable dan tidak block halaman */}
+          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-xl min-w-[350px] max-h-[500px] overflow-y-auto">
             <div className="p-4 space-y-4">
               <div className="text-sm font-medium text-gray-900 mb-3">
                 Pilih Rentang Waktu Kerja

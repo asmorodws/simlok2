@@ -11,6 +11,13 @@ const reviewSchema = z.object({
   review_status: z.enum(['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS']),
   note_for_approver: z.string().optional(),
   note_for_vendor: z.string().optional(),
+  // Editable fields by reviewer
+  working_hours: z.string().optional().nullable(),
+  holiday_working_hours: z.string().optional().nullable(),
+  implementation: z.string().optional().nullable(),  // correct field name from schema
+  content: z.string().optional().nullable(),
+  implementation_start_date: z.string().optional().nullable(),
+  implementation_end_date: z.string().optional().nullable(),
 });
 
 import { RouteParams } from '@/types';
@@ -62,6 +69,35 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       reviewed_by: session.user.officer_name,
     };
 
+    // Update editable fields if provided by reviewer
+    if (validatedData.working_hours !== undefined) {
+      updateData.working_hours = validatedData.working_hours;
+    }
+    if (validatedData.holiday_working_hours !== undefined) {
+      updateData.holiday_working_hours = validatedData.holiday_working_hours;
+    }
+    if (validatedData.implementation !== undefined) {
+      updateData.implementation = validatedData.implementation;
+    }
+    if (validatedData.content !== undefined) {
+      updateData.content = validatedData.content;
+    }
+    if (validatedData.implementation_start_date !== undefined) {
+      updateData.implementation_start_date = validatedData.implementation_start_date ? new Date(validatedData.implementation_start_date) : null;
+    }
+    if (validatedData.implementation_end_date !== undefined) {
+      updateData.implementation_end_date = validatedData.implementation_end_date ? new Date(validatedData.implementation_end_date) : null;
+    }
+
+    console.log('📝 Review update data:', {
+      id,
+      review_status: updateData.review_status,
+      working_hours: updateData.working_hours,
+      holiday_working_hours: updateData.holiday_working_hours,
+      implementation: updateData.implementation?.substring(0, 50),
+      content: updateData.content?.substring(0, 50),
+    });
+
     // ========== AUTO-REJECT LOGIC ==========
     // If reviewer marks as NOT_MEETS_REQUIREMENTS, automatically set approval_status to REJECTED
     if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
@@ -94,7 +130,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: updateData,
       include: {
-        user: true
+        user: true,
+        worker_list: {
+          orderBy: { created_at: 'asc' }
+        },
+        support_documents: {
+          orderBy: { uploaded_at: 'asc' }
+        }
       }
     });
 

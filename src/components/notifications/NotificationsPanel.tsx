@@ -437,14 +437,14 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {Array.isArray(notifications) && notifications.slice(0, 10).map((notification) => {
+              {Array.isArray(notifications) && notifications.slice(0, 10).map((notification, index) => {
                 const enhancedInfo = getEnhancedMessage(notification);
                 const isUnread = !notification.isRead;
                 const fullTimestamp = new Date(notification.createdAt).toLocaleString('id-ID');
 
                 return (
                   <div
-                    key={`notification-${notification.id}-${notification.createdAt}`}
+                    key={`notification-${notification.id}-${index}`}
                     role="listitem"
                     className={`group relative transition-all duration-200 hover:bg-gray-50
   border-l-4

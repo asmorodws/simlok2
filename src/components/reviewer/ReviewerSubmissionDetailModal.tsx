@@ -30,7 +30,7 @@ import DocumentPreviewModal from '@/components/common/DocumentPreviewModal';
 import SupportDocumentsSection from '@/components/common/SupportDocumentsSection';
 import { fileUrlHelper } from '@/lib/fileUrlHelper';
 import { useImplementationDates } from '@/hooks/useImplementationDates';
-import { formatDocumentTypeLabel } from '@/utils/documentTypeFormatter';
+
 
 // Types
 interface WorkerPhoto {
@@ -288,7 +288,7 @@ const getReviewStatusBadge = (status: string) => {
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
           <XCircleIcon className="w-3 h-3 mr-1" />
-          Tidak Sesuai
+          Tidak Memenuhi Syarat
         </span>
       );
     default:
@@ -385,11 +385,13 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   const [approvalForm, setApprovalForm] = useState({
     content: '',
     pelaksanaan: '',
-  
+
   });
 
   // Working hours state - editable by reviewer
   const [workingHours, setWorkingHours] = useState('08:00 WIB - 17:00 WIB');
+  const [holidayWorkingHours, setHolidayWorkingHours] = useState('');
+  const [showHolidayWorkingHours, setShowHolidayWorkingHours] = useState(false);
 
   // Implementation dates state - editable by reviewer
   const [implementationStartDate, setImplementationStartDate] = useState('');
@@ -400,6 +402,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   // Handle working hours change
   const handleWorkingHoursChange = useCallback((value: string) => {
     setWorkingHours(value);
+  }, []);
+
+  // Handle holiday working hours change
+  const handleHolidayWorkingHoursChange = useCallback((value: string) => {
+    setHolidayWorkingHours(value);
   }, []);
 
 
@@ -422,7 +429,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
   // Format work location - split by comma and display in separate lines with bullet points
   const formatWorkLocation = useCallback((location: string) => {
     if (!location) return '-';
-    
+
     // Check if location contains comma
     if (location.includes(',')) {
       const locations = location.split(',').map(loc => loc.trim()).filter(loc => loc);
@@ -437,7 +444,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         </div>
       );
     }
-    
+
     return location;
   }, []);
 
@@ -463,6 +470,30 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     });
   }, []);
 
+  // Check if date range includes weekend (Saturday or Sunday)
+  const hasWeekendInRange = useCallback((startDate: string, endDate: string): boolean => {
+    if (!startDate || !endDate) return false;
+    
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Iterate through each day in the range
+      const currentDate = new Date(start);
+      while (currentDate <= end) {
+        const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 6 = Saturday
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          return true; // Found a weekend day
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      return false; // No weekend days found
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Use the improved implementation dates hook with stable dependencies
   const implementationDatesHook = useImplementationDates({
     supportingDoc1Type: submission?.supporting_doc1_type ?? '',
@@ -483,8 +514,21 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         ...prev,
         pelaksanaan: pelaksanaanTemplate
       }));
+
+      // Check if there's weekend in the date range
+      const hasWeekend = hasWeekendInRange(
+        implementationDatesHook.dates.startDate,
+        implementationDatesHook.dates.endDate
+      );
+      
+      setShowHolidayWorkingHours(hasWeekend);
+      
+      // Clear holiday working hours if no weekend
+      if (!hasWeekend) {
+        setHolidayWorkingHours('');
+      }
     }
-  }, [implementationDatesHook.dates.startDate, implementationDatesHook.dates.endDate, formatDate]);
+  }, [implementationDatesHook.dates.startDate, implementationDatesHook.dates.endDate, formatDate, hasWeekendInRange]);
 
 
 
@@ -548,11 +592,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
       const data = await response.json();
       const sub = data.submission;
-      
+
       if (!sub) {
         throw new Error('Data submission tidak ditemukan dalam response');
       }
-      
+
       setSubmission(sub);
 
       setReviewData({
@@ -568,11 +612,23 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       });
 
       // Initialize working hours from submission data
-      setWorkingHours(sub.working_hours || '08:00 WIB - 17:00 WIB');
+      console.log('[Modal] Working hours from DB:', {
+        working_hours: sub.working_hours,
+        holiday_working_hours: sub.holiday_working_hours
+      });
+      
+      setWorkingHours(sub.working_hours || '');
+      setHolidayWorkingHours(sub.holiday_working_hours || '');
 
       // Initialize implementation dates from submission data
       setImplementationStartDate(sub.implementation_start_date || '');
       setImplementationEndDate(sub.implementation_end_date || '');
+
+      // Check if there's weekend in existing date range to show/hide holiday working hours field
+      if (sub.implementation_start_date && sub.implementation_end_date) {
+        const hasWeekend = hasWeekendInRange(sub.implementation_start_date, sub.implementation_end_date);
+        setShowHolidayWorkingHours(hasWeekend);
+      }
 
     } catch (err: any) {
       console.error('Error fetching submission:', err);
@@ -645,7 +701,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     // Validasi bahwa tanggal selesai tidak boleh lebih awal dari tanggal mulai
     const startDate = new Date(finalStartDate);
     const endDate = new Date(finalEndDate);
-    
+
     if (endDate < startDate) {
       showError('Tanggal Tidak Valid', 'Tanggal selesai pelaksanaan tidak boleh lebih awal dari tanggal mulai.');
       return;
@@ -661,9 +717,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         implementation: approvalForm.pelaksanaan,
         content: approvalForm.content,
         working_hours: workingHours,  // kirim jam kerja yang diedit
+        holiday_working_hours: holidayWorkingHours || null,  // kirim jam kerja hari libur
         // Preserve SIMJA and SIKA dates to prevent them from being lost
         supporting_doc1_type: submission?.supporting_doc1_type,
-        supporting_doc1_number: submission?.supporting_doc1_number, 
+        supporting_doc1_number: submission?.supporting_doc1_number,
         supporting_doc1_date: submission?.supporting_doc1_date,
         supporting_doc2_type: submission?.supporting_doc2_type,
         supporting_doc2_number: submission?.supporting_doc2_number,
@@ -702,6 +759,13 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         review_status: reviewData.review_status,
         note_for_approver: reviewData.review_note,
         note_for_vendor: reviewData.final_note,
+        // Include editable fields in review payload
+        working_hours: workingHours,
+        holiday_working_hours: holidayWorkingHours || null,
+        implementation: approvalForm.pelaksanaan,  // map pelaksanaan to implementation (DB field name)
+        content: approvalForm.content,
+        implementation_start_date: finalStartDate,
+        implementation_end_date: finalEndDate,
       };
 
       console.log('Sending review payload:', reviewPayload);
@@ -746,6 +810,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     implementationEndDate,
     approvalForm,
     workingHours,
+    holidayWorkingHours,
     editableWorkerCount,
     submission?.supporting_doc1_type,
     submission?.supporting_doc1_number,
@@ -792,13 +857,21 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         const day = String(jakartaDate.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
-      
+
       implementationDatesHook.updateDates({
         startDate: parseJakartaDate(submission.implementation_start_date) || '',
         endDate: parseJakartaDate(submission.implementation_end_date) || ''
       });
     }
   }, [submission?.implementation_start_date, submission?.implementation_end_date]);
+
+  // Sync implementation dates from hook to local state for display in Details tab
+  useEffect(() => {
+    if (implementationDatesHook.dates.startDate && implementationDatesHook.dates.endDate) {
+      setImplementationStartDate(implementationDatesHook.dates.startDate);
+      setImplementationEndDate(implementationDatesHook.dates.endDate);
+    }
+  }, [implementationDatesHook.dates.startDate, implementationDatesHook.dates.endDate]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -819,6 +892,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
           pelaksanaan: '',
         });
         setWorkingHours('08:00 WIB - 17:00 WIB');
+        setHolidayWorkingHours('');
         setImplementationStartDate('');
         setImplementationEndDate('');
         implementationDatesHook.reset();
@@ -861,7 +935,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   };
 
- 
+
 
   const saveWorkerChanges = async () => {
     // Validate worker count before saving
@@ -925,15 +999,15 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   };
 
-    const handleSaveClick = () => {
-      // Show confirmation modal before actually saving
-      setShowConfirmSaveWorkers(true);
-    };
+  const handleSaveClick = () => {
+    // Show confirmation modal before actually saving
+    setShowConfirmSaveWorkers(true);
+  };
 
-    const handleConfirmSave = async () => {
-      setShowConfirmSaveWorkers(false);
-      await saveWorkerChanges();
-    };
+  const handleConfirmSave = async () => {
+    setShowConfirmSaveWorkers(false);
+    await saveWorkerChanges();
+  };
 
   const cancelWorkerEditing = () => {
     if (submission?.worker_list) {
@@ -982,20 +1056,20 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     <span className="font-medium">No. SIMLOK:</span> {submission.simlok_number}
                   </p>
                 )}
-                
+
                 {/* Review and Approval Info */}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs mt-2 pt-2 border-t border-gray-100">
                   {submission.reviewed_by && submission.review_status !== 'PENDING_REVIEW' && (
                     <p className="flex items-center">
                       <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-blue-500" />
-                      <span className="font-medium">Direview oleh:</span> 
+                      <span className="font-medium">Direview oleh:</span>
                       <span className="ml-1">{submission.reviewed_by}</span>
                     </p>
                   )}
                   {submission.approved_by && submission.approval_status !== 'PENDING_APPROVAL' && (
                     <p className="flex items-center">
                       <CheckCircleIcon className="h-3.5 w-3.5 mr-1 text-green-500" />
-                      <span className="font-medium">Disetujui oleh:</span> 
+                      <span className="font-medium">Disetujui oleh:</span>
                       <span className="ml-1">{submission.approved_by}</span>
                     </p>
                   )}
@@ -1084,176 +1158,53 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                         />
                       </div>
 
-                      {/* Generated Templates Preview */}
-                      {/* {implementationDatesHook.template.pelaksanaan && (
-                        <div className="mt-6">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Template Pelaksanaan (Auto-generated)
-                            </label>
-                            <div className="p-3 bg-gray-50 border rounded-lg text-sm">
-                              {implementationDatesHook.template.pelaksanaan}
-                            </div>
-                          </div>
+
+
+                      <div className="mt-6 space-y-4">
+                        {/* Tanggal Pelaksanaan Input - Editable */}
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jam Kerja (Hari Kerja)
+                          </label>
+                          <TimePicker
+                            value={workingHours}
+                            onChange={handleWorkingHoursChange}
+                            disabled={submission.approval_status !== 'PENDING_APPROVAL'}
+                            placeholder="Pilih jam kerja"
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {submission.approval_status === 'PENDING_APPROVAL'
+                              ? 'Jam kerja dapat diubah oleh reviewer pada tahap review'
+                              : 'Jam kerja sudah ditetapkan dan tidak dapat diubah'
+                            }
+                          </p>
                         </div>
-                      )} */}
-
-                      {/* Pelaksanaan Input Fields */}
-                      {implementationDatesHook.template.pelaksanaan && (
-                        <div className="mt-6 space-y-4">
-                          {/* Tanggal Pelaksanaan Input - Editable */}
-                          
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              5. Pelaksanaan
-                            </label>
-                            <textarea
-                              value={approvalForm.pelaksanaan}
-                              onChange={(e) => setApprovalForm(prev => ({ ...prev, pelaksanaan: e.target.value }))}
-                              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                                }`}
-                              rows={3}
-                              placeholder="Terhitung mulai tanggal..."
-                              readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              6. Jam Kerja
-                            </label>
-                            <TimePicker
-                              value={workingHours}
-                              onChange={handleWorkingHoursChange}
-                              disabled={submission.approval_status !== 'PENDING_APPROVAL'}
-                              placeholder="Pilih jam kerja"
-                              className="w-full"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              {submission.approval_status === 'PENDING_APPROVAL' 
-                                ? 'Jam kerja dapat diubah oleh reviewer pada tahap review'
-                                : 'Jam kerja sudah ditetapkan dan tidak dapat diubah'
-                              }
-                            </p>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              7. Lain-lain 
-                            </label>
-                            <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-sm">
-                              <div className="text-gray-700 whitespace-pre-line">
-                                {(() => {
-                                  let template = "Izin diberikan berdasarkan:";
-
-                                  // Use new support_documents if available
-                                  if (submission.support_documents && submission.support_documents.length > 0) {
-                                    // Group documents by type
-                                    const simjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIMJA');
-                                    const sikaDocuments = submission.support_documents.filter(doc => doc.document_type === 'SIKA');
-                                    const workOrderDocuments = submission.support_documents.filter(doc => doc.document_type === 'WORK_ORDER');
-                                    const kontrakKerjaDocuments = submission.support_documents.filter(doc => doc.document_type === 'KONTRAK_KERJA');
-                                    const jsaDocuments = submission.support_documents.filter(doc => doc.document_type === 'JSA');
-
-                                    // SIMJA documents
-                                    simjaDocuments.forEach(doc => {
-                                      const docLabel = doc.document_subtype 
-                                        ? `• ${formatDocumentTypeLabel('SIMJA')} ${doc.document_subtype}` 
-                                        : `• ${formatDocumentTypeLabel('SIMJA')}`;
-                                      template += `\n${docLabel}`;
-                                      if (doc.document_number && doc.document_date) {
-                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
-                                      }
-                                    });
-
-                                    // SIKA documents
-                                    sikaDocuments.forEach(doc => {
-                                      const docLabel = doc.document_subtype 
-                                        ? `• ${formatDocumentTypeLabel('SIKA')} ${doc.document_subtype}` 
-                                        : `• ${formatDocumentTypeLabel('SIKA')}`;
-                                      template += `\n${docLabel}`;
-                                      if (doc.document_number && doc.document_date) {
-                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
-                                      }
-                                    });
-
-                                    // Work Order documents
-                                    workOrderDocuments.forEach(doc => {
-                                      const docLabel = doc.document_subtype 
-                                        ? `• ${formatDocumentTypeLabel('WORK_ORDER')} ${doc.document_subtype}` 
-                                        : `• ${formatDocumentTypeLabel('WORK_ORDER')}`;
-                                      template += `\n${docLabel}`;
-                                      if (doc.document_number && doc.document_date) {
-                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
-                                      }
-                                    });
-
-                                    // Kontrak Kerja documents
-                                    kontrakKerjaDocuments.forEach(doc => {
-                                      const docLabel = doc.document_subtype 
-                                        ? `• ${formatDocumentTypeLabel('KONTRAK_KERJA')} ${doc.document_subtype}` 
-                                        : `• ${formatDocumentTypeLabel('KONTRAK_KERJA')}`;
-                                      template += `\n${docLabel}`;
-                                      if (doc.document_number && doc.document_date) {
-                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
-                                      }
-                                    });
-
-                                    // JSA documents
-                                    jsaDocuments.forEach(doc => {
-                                      template += `\n• ${formatDocumentTypeLabel('JSA')}`;
-                                      if (doc.document_number && doc.document_date) {
-                                        template += `\n  ${doc.document_number} Tgl. ${formatDate(doc.document_date)}`;
-                                      }
-                                    });
-                                  } else {
-                                    // Fallback to legacy fields if no support_documents
-                                    // SIMJA
-                                    if (submission.simja_number && submission.simja_date) {
-                                      const simjaText = submission.simja_type 
-                                        ? `\n• SIMJA ${submission.simja_type}` 
-                                        : `\n• SIMJA`;
-                                      template += `${simjaText}\n  ${submission.simja_number} Tgl. ${formatDate(submission.simja_date)}`;
-                                    }
-
-                                    // SIKA
-                                    if (submission.sika_number && submission.sika_date) {
-                                      const sikaText = submission.sika_type 
-                                        ? `\n• SIKA ${submission.sika_type}` 
-                                        : `\n• SIKA`;
-                                      template += `${sikaText}\n  ${submission.sika_number} Tgl. ${formatDate(submission.sika_date)}`;
-                                    }
-
-                                    // HSSE Pass (submission level - optional)
-                                    if (submission.hsse_pass_number && submission.hsse_pass_valid_thru) {
-                                      template += `\n• HSSE Pass\n  ${submission.hsse_pass_number} Tgl. ${formatDate(submission.hsse_pass_valid_thru)}`;
-                                    }
-
-                                    // Dokumen Pendukung 1
-                                    if (submission.supporting_doc1_type && submission.supporting_doc1_number && submission.supporting_doc1_date) {
-                                      template += `\n• ${submission.supporting_doc1_type}\n  ${submission.supporting_doc1_number} Tgl. ${formatDate(submission.supporting_doc1_date)}`;
-                                    }
-
-                                    // Dokumen Pendukung 2
-                                    if (submission.supporting_doc2_type && submission.supporting_doc2_number && submission.supporting_doc2_date) {
-                                      template += `\n• ${submission.supporting_doc2_type}\n  ${submission.supporting_doc2_number} Tgl. ${formatDate(submission.supporting_doc2_date)}`;
-                                    }
-                                  }
-
-                                  // Head of Security section - akan diisi saat approval dengan tanggal SIMLOK
-                                  template += `\n  Diterima Sr Officer Security III\n  [Tanggal SIMLOK - akan diisi saat approval]`;
-
-                                  return template;
-                                })()}
-                              </div>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                              ℹ️ Template ini akan di-generate otomatis oleh approver saat approval berdasarkan data dokumen pendukung (SIMJA, SIKA, HSSE, JSA) dan tanggal SIMLOK. Reviewer tidak perlu mengisi field ini.
-                            </p>
-                          </div>
+                        {showHolidayWorkingHours && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jam Kerja (Hari Libur) 
+                            <span className="text-xs text-blue-600 ml-2">
+                              (Range tanggal termasuk Sabtu/Minggu)
+                            </span>
+                          </label>
+                          <TimePicker
+                            value={holidayWorkingHours}
+                            onChange={handleHolidayWorkingHoursChange}
+                            disabled={submission.approval_status !== 'PENDING_APPROVAL'}
+                            placeholder="Kosongkan jika tidak ada jam kerja hari libur"
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {submission.approval_status === 'PENDING_APPROVAL'
+                              ? 'Isi jika ada jam kerja khusus untuk hari libur (Sabtu, Minggu, tanggal merah)'
+                              : 'Jam kerja hari libur sudah ditetapkan'
+                            }
+                          </p>
                         </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     {/* Content Field - Isi Surat Izin Masuk Lokasi */}
@@ -1448,7 +1399,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-medium text-gray-900">Detail SIMLOK</h3>
                     </div>
-                    
+
                     {/* Info Cards - Responsive */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       {/* Tanggal Pengajuan */}
@@ -1458,7 +1409,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           <span className="text-sm font-semibold text-gray-900">{formatDate(submission.created_at)}</span>
                         </div>
                       </div>
-                      
+
                       {/* Status Review */}
                       <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
                         <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
@@ -1468,7 +1419,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Status Approval */}
                       <div className="bg-gray-50 rounded-lg px-4 py-3 border border-gray-200">
                         <div className="flex items-center justify-between sm:flex-col sm:items-start sm:space-y-1">
@@ -1543,7 +1494,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             />
                           )}
                         </div>
-                        
+
                         {/* Dokumen Pendukung 2 */}
                         <div className="space-y-4">
                           <h4 className="font-medium text-gray-900 border-b pb-2">Dokumen Pendukung 2</h4>
@@ -1567,7 +1518,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Upload Documents Preview - bersebelahan */}
                       {(submission.supporting_doc1_upload || submission.supporting_doc2_upload) && (
                         <div className="mt-6">
@@ -1640,11 +1591,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       title="File Dokumen SIMJA/SIKA/HSSE (Legacy)"
                       icon={<DocumentArrowUpIcon className="h-5 w-5 text-gray-500" />}
                     >
-                      <div className={`grid grid-cols-1 gap-4 ${
-                        submission.hsse_pass_document_upload 
-                          ? 'md:grid-cols-3' 
+                      <div className={`grid grid-cols-1 gap-4 ${submission.hsse_pass_document_upload
+                          ? 'md:grid-cols-3'
                           : 'md:grid-cols-2'
-                      }`}>
+                        }`}>
                         {submission.simja_document_upload && (
                           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-gray-50">
                             <div className="flex items-center space-x-3">
@@ -1712,15 +1662,15 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                   )}
 
                   {/* Message if no documents */}
-                  {!submission.support_documents?.length && !submission.supporting_doc1_upload && !submission.supporting_doc2_upload && 
-                   !submission.simja_document_upload && !submission.sika_document_upload && 
-                   !submission.hsse_pass_document_upload && (
-                    <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                      <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
-                      <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
-                    </div>
-                  )}
+                  {!submission.support_documents?.length && !submission.supporting_doc1_upload && !submission.supporting_doc2_upload &&
+                    !submission.simja_document_upload && !submission.sika_document_upload &&
+                    !submission.hsse_pass_document_upload && (
+                      <div className="col-span-2 text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                        <DocumentIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <h3 className="text-sm font-medium text-gray-900 mb-1">Tidak ada dokumen</h3>
+                        <p className="text-sm text-gray-500">Belum ada dokumen yang diupload</p>
+                      </div>
+                    )}
 
                   {/* Detail Pekerjaan - sama seperti admin */}
                   <DetailSection
@@ -1739,7 +1689,10 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       <InfoCard
                         label="Pelaksanaan"
                         value={
-                          submission.implementation_start_date && submission.implementation_end_date
+                          // Prioritize local state (edited dates) over submission data
+                          implementationStartDate && implementationEndDate
+                            ? `${formatDate(implementationStartDate)} s/d ${formatDate(implementationEndDate)}`
+                            : submission.implementation_start_date && submission.implementation_end_date
                             ? `${formatDate(submission.implementation_start_date)} s/d ${formatDate(submission.implementation_end_date)}`
                             : submission.implementation || 'Belum diisi'
                         }
@@ -1748,9 +1701,9 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                         label="Jam Kerja"
                         value={
                           <div className="space-y-0.5">
-                            <div>{submission.working_hours} (Hari kerja)</div>
-                            {submission.holiday_working_hours && (
-                              <div>{submission.holiday_working_hours} (Hari libur)</div>
+                            <div>{workingHours || submission.working_hours} (Hari kerja)</div>
+                            {(holidayWorkingHours || submission.holiday_working_hours) && (
+                              <div>{holidayWorkingHours || submission.holiday_working_hours} (Hari libur)</div>
                             )}
                           </div>
                         }
@@ -1916,7 +1869,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     </div>
                   )}
 
-                  {submission.worker_list.length === 0 ? (
+                  {!submission.worker_list || submission.worker_list.length === 0 ? (
                     <div className="text-center py-16">
                       <UserGroupIcon className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">Belum ada foto pekerja</h3>
@@ -1971,7 +1924,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
 
                           {/* Info Section - Always Read-Only */}
                           <div className="px-4 pb-4">
-                           
+
                             <h4 className="font-semibold text-gray-900 text-sm mb-2 truncate">
                               {worker.worker_name}
                             </h4>
@@ -2016,15 +1969,15 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         {/* Footer */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-t border-gray-200 bg-white">
           <div>
-              <Button onClick={() => setIsPdfModalOpen(true)} variant="primary" size="sm" className="text-xs sm:text-sm">
-                <DocumentTextIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">
-                  {submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF SIMLOK'}
-                </span>
-                <span className="sm:hidden">
-                  {submission?.approval_status === 'APPROVED' ? 'PDF' : 'Preview PDF'}
-                </span>
-              </Button>
+            <Button onClick={() => setIsPdfModalOpen(true)} variant="primary" size="sm" className="text-xs sm:text-sm">
+              <DocumentTextIcon className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">
+                {submission?.approval_status === 'APPROVED' ? 'Lihat PDF' : 'Lihat Preview PDF SIMLOK'}
+              </span>
+              <span className="sm:hidden">
+                {submission?.approval_status === 'APPROVED' ? 'PDF' : 'Preview PDF'}
+              </span>
+            </Button>
           </div>
           <Button onClick={onClose} variant="outline" className="text-xs sm:text-sm">
             Tutup
