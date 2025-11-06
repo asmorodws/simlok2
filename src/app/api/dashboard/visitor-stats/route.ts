@@ -2,7 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import cache, { CacheKeys, CacheTTL } from "@/lib/cache";
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 import { toJakartaISOString } from '@/lib/timezone';
 
 export async function GET() {
@@ -18,21 +19,22 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    // Generate cache key
+    const cacheKey = generateCacheKey('visitor-stats', {});
+    
     // Check cache first
-    const cachedData = cache.get(CacheKeys.VISITOR_STATS);
-    if (cachedData) {
-      return NextResponse.json(cachedData, {
-        headers: {
-          'X-Cache': 'HIT',
-          'Cache-Control': 'private, max-age=60',
-        }
-      });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
-    // Get submissions stats (visitors can view all submissions but read-only)
-    const submissionWhereClause = {};
-    
-    // Execute all database queries in parallel for better performance
+    // Calculate today's range (Jakarta timezone)
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const today = new Date(jakartaNow);
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+    // Execute all queries in parallel
     const [
       totalSubmissions,
       submissionsByApprovalStatus,
@@ -42,52 +44,33 @@ export async function GET() {
       totalUsers,
       totalVerifiedUsers,
       pendingUserVerifications
-    ] = await Promise.all([
-      // Get submission statistics
-      prisma.submission.count({
-        where: submissionWhereClause
-      }),
-
-      prisma.submission.groupBy({
+    ] = await parallelQueries([
+      () => prisma.submission.count(),
+      
+      () => prisma.submission.groupBy({
         by: ['approval_status'],
-        where: submissionWhereClause,
-        _count: {
-          id: true
-        }
+        _count: { id: true }
       }),
-
-      prisma.submission.groupBy({
+      
+      () => prisma.submission.groupBy({
         by: ['review_status'],
-        where: submissionWhereClause,
-        _count: {
-          id: true
+        _count: { id: true }
+      }),
+      
+      () => prisma.qrScan.count(),
+      
+      () => prisma.qrScan.count({
+        where: {
+          scanned_at: {
+            gte: todayStart,
+            lt: todayEnd
+          }
         }
       }),
-
-      // Get QR scan statistics
-      prisma.qrScan.count(),
-
-      // Get today's QR scans (Jakarta timezone)
-      (() => {
-        const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
-        const today = new Date(jakartaNow);
-        const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        
-        return prisma.qrScan.count({
-          where: {
-            scanned_at: {
-              gte: todayStart,
-              lt: todayEnd
-            }
-          }
-        });
-      })(),
-
-      // Get user statistics
-      prisma.user.count(),
-
-      prisma.user.count({
+      
+      () => prisma.user.count(),
+      
+      () => prisma.user.count({
         where: {
           OR: [
             { verified_at: { not: null } },
@@ -95,8 +78,8 @@ export async function GET() {
           ]
         }
       }),
-
-      prisma.user.count({
+      
+      () => prisma.user.count({
         where: {
           AND: [
             { verified_at: null },
@@ -108,21 +91,21 @@ export async function GET() {
     ]);
 
     // Process submission stats safely
-    const reviewStatusStats = submissionsByReviewStatus?.reduce((acc, item) => {
+    const reviewStatusStats = submissionsByReviewStatus?.reduce((acc: Record<string, number>, item: any) => {
       if (item?.review_status && item?._count?.id) {
         acc[item.review_status] = item._count.id;
       }
       return acc;
     }, {} as Record<string, number>) || {};
 
-    const approvalStatusStats = submissionsByApprovalStatus?.reduce((acc, item) => {
+    const approvalStatusStats = submissionsByApprovalStatus?.reduce((acc: Record<string, number>, item: any) => {
       if (item?.approval_status && item?._count?.id) {
         acc[item.approval_status] = item._count.id;
       }
       return acc;
     }, {} as Record<string, number>) || {};
 
-    // Return dashboard stats similar to reviewer but for visitor viewing
+    // Build response data
     const dashboardStats = {
       success: true,
       timestamp: toJakartaISOString(new Date()) || new Date().toISOString(),
@@ -150,15 +133,17 @@ export async function GET() {
       }
     };
 
-    // Cache the response for 1 minute
-    cache.set(CacheKeys.VISITOR_STATS, dashboardStats, CacheTTL.ONE_MINUTE);
+    const response = NextResponse.json(dashboardStats);
+    
+    // Cache for 1 minute with tags
+    responseCache.set(
+      cacheKey, 
+      response, 
+      CacheTTL.MEDIUM,
+      [CacheTags.VISITOR_STATS, CacheTags.DASHBOARD]
+    );
 
-    return NextResponse.json(dashboardStats, {
-      headers: {
-        'X-Cache': 'MISS',
-        'Cache-Control': 'private, max-age=60',
-      }
-    });
+    return response;
 
   } catch (error) {
     console.error("[VISITOR_DASHBOARD_STATS] Error:", error);

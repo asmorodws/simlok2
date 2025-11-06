@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveAudience } from "@/lib/notificationAudience";
+import { responseCache, CacheTags } from '@/lib/response-cache';
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,8 +43,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Don't invalidate cache since we disabled caching in the main route
-    // await Cache.invalidateByPrefix(notifCacheKey(audience), CacheNamespaces.NOTIFICATIONS);
+    // Invalidate notification cache for this user
+    responseCache.invalidateByTags([CacheTags.NOTIFICATIONS, `notifications-${userId}`]);
 
     const res = NextResponse.json({ success: true, data: { unreadCount: 0 } });
     res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");

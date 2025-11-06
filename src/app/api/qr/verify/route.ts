@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { parseQrString, type QrPayload } from '@/lib/qr-security';
 import { toJakartaISOString } from '@/lib/timezone';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 // POST /api/qr/verify - Verify QR code and return submission data
 export async function POST(request: NextRequest) {
@@ -395,51 +397,73 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Fetch scan history
-    const scans = await prisma.qrScan.findMany({
-      where: whereClause,
-      include: {
-        user: {
-          select: {
-            id: true,
-            officer_name: true,
-            email: true,
-            role: true,
-          }
-        },
-        submission: {
-          select: {
-            id: true,
-            simlok_number: true,
-            vendor_name: true,
-            officer_name: true,
-            job_description: true,
-            work_location: true,
-            approval_status: true,
-          }
-        }
-      },
-      orderBy: {
-        scanned_at: 'desc'
-      },
-      take: limit,
-      skip: offset,
+    // Generate cache key
+    const cacheKey = generateCacheKey('qr-scan-history', {
+      role: session.user.role,
+      userId: session.user.role === 'VERIFIER' ? session.user.id : 'all',
+      limit,
+      offset,
+      submissionId,
+      search,
+      status,
+      dateFrom,
+      dateTo,
+      location
     });
 
-    // Get total count
-    const totalCount = await prisma.qrScan.count({
-      where: whereClause,
-    });
+    // Check cache first (30 seconds TTL for recent scans)
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch scan history and total count in parallel
+    const [scans, totalCount] = await parallelQueries([
+      () => prisma.qrScan.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              officer_name: true,
+              email: true,
+              role: true,
+            }
+          },
+          submission: {
+            select: {
+              id: true,
+              simlok_number: true,
+              vendor_name: true,
+              officer_name: true,
+              job_description: true,
+              work_location: true,
+              approval_status: true,
+            }
+          }
+        },
+        orderBy: {
+          scanned_at: 'desc'
+        },
+        take: limit,
+        skip: offset,
+      }),
+      
+      // Get total count in parallel
+      () => prisma.qrScan.count({
+        where: whereClause,
+      })
+    ]);
 
     // Format timestamps and nested submission dates to Jakarta
     const { formatScansDates, formatSubmissionDates } = await import('@/lib/timezone');
-    const formattedScans = scans.map(s => ({
+    const formattedScans = scans.map((s: any) => ({
       ...s,
-      scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0].scanned_at : s.scanned_at,
+      scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0]!.scanned_at : s.scanned_at,
       submission: s.submission ? formatSubmissionDates(s.submission) : s.submission
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       scans: formattedScans,
       pagination: {
         total: totalCount,
@@ -448,6 +472,12 @@ export async function GET(request: NextRequest) {
         hasMore: offset + limit < totalCount,
       }
     });
+
+    // Cache the response
+    const userIdTag = session.user.role === 'VERIFIER' ? `verifier-${session.user.id}` : 'all-verifiers';
+    responseCache.set(cacheKey, response, CacheTTL.SHORT, [CacheTags.QR_SCANS, userIdTag]);
+    
+    return response;
 
   } catch (error) {
     console.error('Scan history fetch error:', error);

@@ -8,7 +8,7 @@ export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
@@ -22,13 +22,13 @@ export async function PUT(req: Request) {
     });
 
     if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
-      return new NextResponse("Kata sandi saat ini tidak valid", { status: 400 });
+      return NextResponse.json({ error: "Kata sandi saat ini tidak valid" }, { status: 400 });
     }
 
     // Hash new password
@@ -44,9 +44,9 @@ export async function PUT(req: Request) {
       },
     });
 
-    return new NextResponse("Password updated successfully", { status: 200 });
+    return NextResponse.json({ message: "Password updated successfully" }, { status: 200 });
   } catch (error) {
     console.error("[PASSWORD_CHANGE_ERROR]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

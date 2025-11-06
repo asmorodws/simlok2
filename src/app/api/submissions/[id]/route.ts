@@ -8,6 +8,15 @@ import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
 import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
 import { generateQrString } from '@/lib/qr-security';
+import { 
+  submissionSelectDetail,
+} from '@/lib/db-optimizer';
+import { 
+  responseCache, 
+  CacheTTL, 
+  CacheTags, 
+  generateCacheKey,
+} from '@/lib/response-cache';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
@@ -94,9 +103,72 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
     }
     
+    // For PDF requests, skip cache and fetch full data
+    if (isPdfRequest) {
+      const submission = await prisma.submission.findFirst({
+        where: whereClause,
+        include: {
+          user: {
+            select: {
+              id: true,
+              officer_name: true,
+              email: true,
+              vendor_name: true,
+            }
+          },
+          worker_list: {
+            orderBy: {
+              created_at: 'asc'
+            }
+          },
+          support_documents: {
+            select: {
+              id: true,
+              document_subtype: true,
+              document_type: true,
+              document_number: true,
+              document_date: true,
+              document_upload: true,
+              uploaded_at: true,
+              uploaded_by: true,
+            },
+            orderBy: {
+              uploaded_at: 'desc'
+            }
+          }
+        }
+      });
+
+      if (!submission) {
+        return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
+      }
+
+      // Check permissions
+      if (session.user.role === 'VENDOR' && submission.user_id !== session.user.id) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      }
+
+      return generatePDF(submission);
+    }
+
+    // For regular requests, try cache first
+    const cacheKey = generateCacheKey('submission-detail', {
+      id,
+      role: session.user.role,
+      userId: session.user.id,
+    });
+
+    // Check cache
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch with optimized select
     const submission = await prisma.submission.findFirst({
       where: whereClause,
-      include: {
+      select: {
+        ...submissionSelectDetail,
         user: {
           select: {
             id: true,
@@ -137,21 +209,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // If PDF is requested, generate and return PDF
-    if (isPdfRequest) {
-      return generatePDF(submission);
-    }
-
     // Format submission dates to Asia/Jakarta before returning
     try {
       const formatted = formatSubmissionDates(submission);
       const response = NextResponse.json({ submission: formatted });
-      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+      response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+      
+      // Cache the response for 5 minutes
+      responseCache.set(
+        cacheKey,
+        response,
+        CacheTTL.LONG, // 5 minutes
+        [
+          CacheTags.SUBMISSION_DETAIL,
+          `submission:${id}`,
+          `user:${session.user.id}`,
+        ]
+      );
+      
       return response;
     } catch (err) {
       console.warn('Failed to format submission dates for response:', err);
       const response = NextResponse.json({ submission });
-      response.headers.set('Cache-Control', 'private, max-age=60, stale-while-revalidate=300');
+      response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=600');
+      
+      // Cache even if formatting fails
+      responseCache.set(
+        cacheKey,
+        response,
+        CacheTTL.LONG,
+        [
+          CacheTags.SUBMISSION_DETAIL,
+          `submission:${id}`,
+          `user:${session.user.id}`,
+        ]
+      );
+      
       return response;
     }
   } catch (error) {

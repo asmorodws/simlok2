@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/singletons';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
 
 /**
  * GET /api/submissions/simlok/next-number
@@ -25,6 +26,13 @@ export async function GET(request: NextRequest) {
         { error: 'Invalid year parameter' },
         { status: 400 }
       );
+    }
+
+    // Try cache first (short TTL because number changes frequently)
+    const cacheKey = generateCacheKey('simlok-next-number', { year });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     // Query last SIMLOK number (semua tahun, tidak direset per tahun)
@@ -70,11 +78,21 @@ export async function GET(request: NextRequest) {
 
     const nextSimlokNumber = `${nextNumber}/S00330/${year}-S0`;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       nextSimlokNumber,
       year,
       lastNumber: lastSubmission?.simlok_number || null,
     });
+
+    // Cache for 30 seconds (short because it changes with each submission)
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.SHORT,
+      [CacheTags.SUBMISSIONS]
+    );
+
+    return response;
   } catch (error) {
     console.error('Error generating next SIMLOK number:', error);
     return NextResponse.json(

@@ -1,6 +1,7 @@
 // src/components/notifications/NotificationsPanel.tsx
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 import {
   BellIcon,
   XMarkIcon,
@@ -174,7 +175,10 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           showWarning('Data Vendor Tidak Ditemukan', 'Data vendor pada notifikasi ini sudah tidak tersedia.');
           return;
         }
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          const errorData = await safeJsonParse<{ error?: string }>(response, { error: `HTTP ${response.status}` });
+          throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
         const data = await response.json();
         setSelectedVendorUser(data.user);
       } else {

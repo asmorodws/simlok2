@@ -5,6 +5,8 @@ import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
 import { toJakartaISOString } from '@/lib/timezone';
 import bcrypt from 'bcryptjs';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 // Schema for validating user creation data
 const createUserSchema = z.object({
@@ -91,9 +93,27 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Get users with pagination
-    const [users, totalCount] = await Promise.all([
-      prisma.user.findMany({
+    // Try cache first (1 min TTL for user lists)
+    const cacheKey = generateCacheKey('users-list', {
+      role: session.user.role,
+      page,
+      limit,
+      search,
+      status,
+      roleFilter: role,
+      sortBy,
+      sortOrder,
+    });
+
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Get users and stats in parallel
+    const [users, totalCount, totalPending, totalVerified, totalRejected, totalUsers] = await parallelQueries([
+      // Get users with pagination
+      () => prisma.user.findMany({
         where: whereClause,
         select: {
           id: true,
@@ -117,39 +137,47 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
       }),
-      prisma.user.count({ where: whereClause })
-    ]);
-
-    // Get verification stats (useful for both reviewers and admins)
-    const stats = {
-      totalPending: await prisma.user.count({
+      
+      // Total count
+      () => prisma.user.count({ where: whereClause }),
+      
+      // Pending count
+      () => prisma.user.count({
         where: {
           isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'PENDING'
         }
       }),
-      totalVerified: await prisma.user.count({
+      
+      // Verified count
+      () => prisma.user.count({
         where: {
           isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'VERIFIED'
         }
       }),
-      totalRejected: await prisma.user.count({
+      
+      // Rejected count
+      () => prisma.user.count({
         where: {
           isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
           verification_status: 'REJECTED'
         }
       }),
-      totalUsers: await prisma.user.count({
+      
+      // Total users
+      () => prisma.user.count({
         where: {
           isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {})
         }
       }),
-      todayRegistrations: await prisma.user.count({
+      
+      // Today's registrations
+      () => prisma.user.count({
         where: {
           isActive: true,
           ...(session.user.role === 'REVIEWER' ? { role: 'VENDOR' } : {}),
@@ -158,17 +186,25 @@ export async function GET(request: NextRequest) {
           }
         }
       })
+    ]);
+
+    const stats = {
+      totalPending,
+      totalVerified,
+      totalRejected,
+      totalUsers,
+      todayRegistrations: totalUsers, // Use the last query result
     };
 
     // Convert user date fields to Asia/Jakarta
-    const formattedUsers = users.map(u => ({
+    const formattedUsers = users.map((u: any) => ({
       ...u,
       created_at: toJakartaISOString(u.created_at) || u.created_at,
       verified_at: toJakartaISOString(u.verified_at) || u.verified_at,
       rejected_at: toJakartaISOString(u.rejected_at) || u.rejected_at,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       users: formattedUsers,
       pagination: {
         page,
@@ -178,6 +214,16 @@ export async function GET(request: NextRequest) {
       },
       stats
     });
+
+    // Cache the response for 1 minute
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.MEDIUM, // 1 minute
+      [CacheTags.USER, CacheTags.DASHBOARD]
+    );
+
+    return response;
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 import { useNotificationsStore } from '../../store/notifications';
 import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
 import NotificationsPanel from './NotificationsPanel';
@@ -108,7 +109,7 @@ export default function NotificationsBell() {
         setHasMore(result.data?.pagination?.hasMore || false);
       } else {
         console.error('Failed to load notifications:', response.status, response.statusText);
-        const errorData = await response.json();
+        const errorData = await safeJsonParse(response, {});
         console.error('Error details:', errorData);
       }
     } catch (error) {

@@ -2,13 +2,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get statistics based on user role
@@ -25,58 +27,72 @@ export async function GET() {
     } else if (session.user.role === 'VERIFIER') {
       whereClause = {}; // Verifiers can see all submissions
     } else {
-      return new NextResponse("Forbidden", { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get total submissions count
-    const totalSubmissions = await prisma.submission.count({
-      where: whereClause
+    // Try cache first (5 min TTL for stats)
+    const cacheKey = generateCacheKey('submission-stats', {
+      role: session.user.role,
+      userId: session.user.role === 'VENDOR' ? session.user.id : 'all',
     });
 
-    // Get submissions by status
-    const submissionsByStatus = await prisma.submission.groupBy({
-      by: ['approval_status'],
-      where: whereClause,
-      _count: {
-        id: true
-      }
-    });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    // Convert to more readable format
-    const statusStats = submissionsByStatus.reduce((acc, item) => {
-      acc[item.approval_status] = item._count.id;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Get recent activity (submissions from last 30 days) - use Jakarta timezone
+    // Get recent activity timestamps (Jakarta timezone)
     const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
     const thirtyDaysAgo = new Date(jakartaNow);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentActivity = await prisma.submission.count({
-      where: {
-        ...whereClause,
-        created_at: {
-          gte: thirtyDaysAgo
-        }
-      }
-    });
-
-    // Get today's submissions (Jakarta timezone)
     const today = new Date(jakartaNow);
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const todaySubmissions = await prisma.submission.count({
-      where: {
-        ...whereClause,
-        created_at: {
-          gte: today,
-          lt: tomorrow
+    // Execute all queries in parallel for better performance
+    const [
+      totalSubmissions,
+      submissionsByStatus,
+      recentActivity,
+      todaySubmissions
+    ] = await parallelQueries([
+      // Total submissions count
+      () => prisma.submission.count({ where: whereClause }),
+      
+      // Submissions by status
+      () => prisma.submission.groupBy({
+        by: ['approval_status'],
+        where: whereClause,
+        _count: { id: true }
+      }),
+      
+      // Recent activity (last 30 days)
+      () => prisma.submission.count({
+        where: {
+          ...whereClause,
+          created_at: { gte: thirtyDaysAgo }
         }
-      }
-    });
+      }),
+      
+      // Today's submissions
+      () => prisma.submission.count({
+        where: {
+          ...whereClause,
+          created_at: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      })
+    ]);
+
+    // Convert to more readable format
+    const statusStats = submissionsByStatus.reduce((acc: Record<string, number>, item: any) => {
+      acc[item.approval_status] = item._count.id;
+      return acc;
+    }, {});
 
     const statistics = {
       total: totalSubmissions,
@@ -91,10 +107,23 @@ export async function GET() {
       todaySubmissions
     };
 
-    return NextResponse.json({ statistics });
+    const response = NextResponse.json({ statistics });
+
+    // Cache the response for 5 minutes
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.LONG, // 5 minutes
+      [
+        CacheTags.SUBMISSION_STATS,
+        session.user.role === 'VENDOR' ? `user:${session.user.id}` : CacheTags.DASHBOARD,
+      ]
+    );
+
+    return response;
 
   } catch (error) {
     console.error("[SUBMISSIONS_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { XMarkIcon, UserPlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
+import { safeJsonParse } from "@/utils/fetch-helpers";
 import Input from "@/components/form/Input";
 import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
@@ -120,7 +121,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeJsonParse<{ error?: string; message?: string }>(response, { error: 'Gagal membuat user' });
         throw new Error(errorData.error || errorData.message || 'Gagal membuat user');
       }
 

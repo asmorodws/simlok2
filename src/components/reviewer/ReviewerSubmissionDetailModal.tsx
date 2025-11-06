@@ -19,6 +19,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import DatePicker from '@/components/form/DatePicker';
 import TimePicker from '@/components/form/TimePicker';
@@ -786,7 +787,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
           }, 2000);
           return;
         }
-        const errorData = await reviewResponse.json();
+        const errorData = await safeJsonParse<{ error?: string; message?: string }>(reviewResponse, { error: 'Gagal mengirim review' });
         throw new Error(errorData.error || 'Gagal mengirim review');
       }
 

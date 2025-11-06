@@ -6,6 +6,7 @@ import { toJakartaISOString } from '@/lib/timezone';
 import { z } from 'zod';
 import { generateQrString } from '@/lib/qr-security';
 import cache, { CacheKeys } from '@/lib/cache';
+import { responseCache, CacheTags } from '@/lib/response-cache';
 
 // Schema for validating final approval data
 const finalApprovalSchema = z.object({
@@ -166,6 +167,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Invalidate cache for approver stats
     cache.delete(CacheKeys.APPROVER_STATS);
     console.log('🗑️ Cache invalidated: APPROVER_STATS after approval');
+
+    // Invalidate related response caches
+    responseCache.invalidateByTags([
+      CacheTags.SUBMISSIONS,
+      CacheTags.SUBMISSION_DETAIL,
+      `submission:${id}`,
+      `user:${existingSubmission.user_id}`,
+      CacheTags.DASHBOARD,
+      CacheTags.APPROVER_STATS,
+      CacheTags.VENDOR_STATS,
+      CacheTags.SUBMISSION_STATS,
+    ]);
+    console.log('🗑️ Response cache invalidated after approval');
 
     // Notify vendor of status change (only if user still exists)
     // Fire-and-forget so notifications don't delay the HTTP response.

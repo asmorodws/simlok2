@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 import {
   XMarkIcon,
   CheckCircleIcon,
@@ -467,7 +468,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
           }, 2000);
           return;
         }
-        const errorData = await response.json();
+        const errorData = await safeJsonParse(response, { error: 'Gagal mengirim persetujuan' });
         throw new Error(errorData.error || 'Gagal mengirim persetujuan');
       }
 

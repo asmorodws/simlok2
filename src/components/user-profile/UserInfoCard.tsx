@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
 import ConfirmationModal from "../common/ConfirmationModal";
 import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
+import { safeJsonParse } from "@/utils/fetch-helpers";
 
 interface UserInfoCardProps {
   user: {
@@ -162,7 +163,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeJsonParse<{ error?: string; message?: string }>(response, { error: "Gagal memperbarui profil" });
         throw new Error(errorData.error || errorData.message || "Gagal memperbarui profil");
       }
 

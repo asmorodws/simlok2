@@ -6,6 +6,18 @@ import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
 import { formatSubmissionDates } from '@/lib/timezone';
 import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
+import { 
+  submissionSelectList,
+  getPaginationParams,
+  buildRoleBasedWhereClause,
+} from '@/lib/db-optimizer';
+import { 
+  responseCache, 
+  CacheTTL, 
+  CacheTags, 
+  generateCacheKey,
+  withCache,
+} from '@/lib/response-cache';
 
 // Helper function to normalize document number
 // - Convert to uppercase
@@ -112,8 +124,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    
+    // Parse dan validate pagination params
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const { skip, take, page: safePage, limit: safeLimit } = getPaginationParams(page, limit);
+    
     const status = searchParams.get('status');
     const reviewStatus = searchParams.get('reviewStatus');
     const finalStatus = searchParams.get('finalStatus');
@@ -122,72 +138,58 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get('sortOrder') || 'desc';
     const vendorName = searchParams.get('vendor');
     const includeStats = searchParams.get('stats') === 'true';
-    const skip = (page - 1) * limit;
 
-    const whereClause: any = {};
+    // Generate cache key
+    const cacheKey = generateCacheKey('submissions', {
+      role: session.user.role,
+      userId: session.user.id,
+      page: safePage,
+      limit: safeLimit,
+      status,
+      reviewStatus,
+      finalStatus,
+      search,
+      sortBy,
+      sortOrder,
+      vendor: vendorName,
+      stats: includeStats,
+    });
 
-    // Filter by role with appropriate permissions
-    switch (session.user.role) {
-      case 'VENDOR':
-        // Vendors can only see their own submissions
-        whereClause.user_id = session.user.id;
-        break;
-      
-      case 'REVIEWER':
-        // Reviewers see submissions that need review or are being reviewed
-        if (!status) {
-          whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
-        }
-        break;
-        
-      case 'APPROVER':
-        // Approvers see all reviewed submissions (both MEETS and NOT_MEETS requirements)
-        // They need to see NOT_MEETS to make final rejection decision
-        if (!status) {
-          whereClause.review_status = { in: ['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
-          whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
-        }
-        break;
-        
-      case 'VERIFIER':
-        // Verifiers see approved submissions for scanning/verification
-        if (!status) {
-          whereClause.approval_status = 'APPROVED';
-        }
-        break;
-        
-      case 'ADMIN':
-      case 'SUPER_ADMIN':
-        // Admins can see all submissions (no additional filter)
-        break;
-        
-      default:
-        return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
+    // Try cache first (5 menit TTL untuk list)
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      console.log('✨ Cache HIT:', cacheKey);
+      return NextResponse.json(cached);
     }
 
-    // Filter by status if provided (overrides role-based defaults)
+    console.log('🔍 Cache MISS:', cacheKey);
+
+    // Build filters
+    const additionalFilters: any = {};
+
+    // Filter by status if provided
     if (status) {
       if (status.includes('APPROVAL')) {
-        whereClause.approval_status = status;
+        additionalFilters.approval_status = status;
       } else if (status.includes('REVIEW')) {
-        whereClause.review_status = status;
+        additionalFilters.review_status = status;
       } else {
-        whereClause.approval_status = status;
+        additionalFilters.approval_status = status;
       }
     }
 
-    // Handle separate reviewStatus and finalStatus filters (used by Approver UI)
+    // Handle separate reviewStatus and finalStatus filters
     if (reviewStatus) {
-      whereClause.review_status = reviewStatus;
+      additionalFilters.review_status = reviewStatus;
     }
     
     if (finalStatus) {
-      whereClause.approval_status = finalStatus;
+      additionalFilters.approval_status = finalStatus;
     }
 
     // Filter by vendor name if provided (admin/verifier only)
     if (vendorName && session.user.role !== 'VENDOR') {
-      whereClause.vendor_name = {
+      additionalFilters.vendor_name = {
         contains: vendorName
       };
     }
@@ -202,17 +204,26 @@ export async function GET(request: NextRequest) {
         { worker_names: { contains: search } }
       ];
 
-      whereClause.OR = searchConditions;
+      additionalFilters.OR = searchConditions;
     }
+
+    // Build role-based where clause
+    const whereClause = buildRoleBasedWhereClause(
+      session.user.role,
+      session.user.id,
+      additionalFilters
+    );
 
     // Prepare orderBy
     const orderBy: any = {};
     orderBy[sortBy] = sortOrder;
 
+    // Optimized query dengan select hanya field yang dibutuhkan
     const [submissions, total] = await Promise.all([
       prisma.submission.findMany({
         where: whereClause,
-        include: {
+        select: {
+          ...submissionSelectList,
           user: {
             select: {
               id: true,
@@ -221,25 +232,10 @@ export async function GET(request: NextRequest) {
               vendor_name: true,
             }
           },
-          support_documents: {
-            select: {
-              id: true,
-              document_subtype: true,
-              document_type: true,
-              document_number: true,
-              document_date: true,
-              document_upload: true,
-              uploaded_at: true,
-              uploaded_by: true,
-            },
-            orderBy: {
-              uploaded_at: 'desc'
-            }
-          }
         },
         orderBy: orderBy,
         skip,
-        take: limit,
+        take,
       }),
       prisma.submission.count({ where: whereClause }),
     ]);
@@ -250,29 +246,50 @@ export async function GET(request: NextRequest) {
     const response: any = {
       submissions: formattedSubmissions,
       pagination: {
-        page,
-        limit,
+        page: safePage,
+        limit: safeLimit,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / safeLimit),
       }
     };
 
-    // Include statistics for admin requests
+    // Include statistics untuk admin (dengan caching terpisah)
     if (includeStats && session.user.role === 'SUPER_ADMIN') {
-      const statistics = await prisma.submission.groupBy({
-        by: ['approval_status'],
-        _count: {
-          approval_status: true
-        }
+      const statsKey = generateCacheKey('submission-stats', {
+        role: session.user.role,
       });
 
-      response.statistics = {
-        total: total,
-        pending: statistics.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-        approved: statistics.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-        rejected: statistics.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
-      };
+      const statistics = await withCache(
+        async () => {
+          const stats = await prisma.submission.groupBy({
+            by: ['approval_status'],
+            _count: {
+              approval_status: true
+            }
+          });
+
+          return {
+            total: total,
+            pending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+            approved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+            rejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
+          };
+        },
+        statsKey,
+        CacheTTL.LONG, // 5 menit
+        [CacheTags.SUBMISSION_STATS]
+      );
+
+      response.statistics = statistics;
     }
+
+    // Cache response
+    responseCache.set(
+      cacheKey, 
+      response, 
+      CacheTTL.MEDIUM, // 1 menit untuk list submissions
+      [CacheTags.SUBMISSIONS, `user:${session.user.id}`]
+    );
 
     return NextResponse.json(response);
   } catch (error) {
@@ -582,10 +599,12 @@ export async function POST(request: NextRequest) {
         allDocuments.push(...jsaDocs);
       }
 
-      // Save all documents at once
+      // Save all documents at once dengan batch operation
       if (allDocuments.length > 0) {
+        // Batch create untuk menghindari overhead multiple queries
         await prisma.supportDocument.createMany({
           data: allDocuments,
+          skipDuplicates: true, // Skip jika ada duplicate
         });
 
         console.log('POST /api/submissions - Support documents created:', {
@@ -598,8 +617,20 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Notify admin about new submission
-      await notifyAdminNewSubmission(submission.id);
+      // Invalidate cache setelah create submission
+      responseCache.invalidateByTags([
+        CacheTags.SUBMISSIONS,
+        CacheTags.SUBMISSION_STATS,
+        CacheTags.DASHBOARD,
+        CacheTags.VENDOR_STATS,
+        `user:${session.user.id}`,
+      ]);
+      console.log('🗑️ Cache invalidated after submission creation');
+
+      // Notify admin about new submission (async, don't block response)
+      notifyAdminNewSubmission(submission.id).catch(err => {
+        console.error('Failed to notify admin:', err);
+      });
 
       console.log('POST /api/submissions - Submission created successfully:', submission.id);
       // Convert date fields to Asia/Jakarta before returning

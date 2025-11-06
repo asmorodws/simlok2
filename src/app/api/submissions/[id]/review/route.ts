@@ -5,6 +5,7 @@ import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
 import { notifyApproverReviewedSubmission, notifyVendorSubmissionRejected } from '@/server/events';
 import cache, { CacheKeys } from '@/lib/cache';
+import { responseCache, CacheTags } from '@/lib/response-cache';
 
 // Schema for validating review data
 const reviewSchema = z.object({
@@ -144,9 +145,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     cache.delete(CacheKeys.APPROVER_STATS);
     console.log('🗑️ Cache invalidated: APPROVER_STATS after review');
 
+    // Invalidate related response caches
+    responseCache.invalidateByTags([
+      CacheTags.SUBMISSIONS,
+      CacheTags.SUBMISSION_DETAIL,
+      `submission:${id}`,
+      `user:${existingSubmission.user_id}`,
+      CacheTags.DASHBOARD,
+      CacheTags.APPROVER_STATS,
+      CacheTags.SUBMISSION_STATS,
+    ]);
+    console.log('🗑️ Response cache invalidated after review');
+
     // Always notify approver that reviewer has saved a review (both MEETS and NOT_MEETS)
     // This ensures approver sees the review even when reviewer marks NOT_MEETS_REQUIREMENTS.
-    await notifyApproverReviewedSubmission(id);
+    // Make notification async to avoid blocking
+    notifyApproverReviewedSubmission(id).catch(err => 
+      console.error('Failed to notify approver:', err)
+    );
 
     // Do NOT notify vendor on reviewer NOT_MEETS_REQUIREMENTS. Vendor will only be notified
     // when approver changes the final approval_status to REJECTED.

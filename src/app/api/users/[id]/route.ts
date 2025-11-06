@@ -5,6 +5,7 @@ import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
 import { toJakartaISOString } from '@/lib/timezone';
 import bcrypt from 'bcryptjs';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
 
 // Schema for validating user update data
 const updateUserSchema = z.object({
@@ -60,6 +61,18 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
     // SUPER_ADMIN can see all users (no additional filter)
 
+    // Generate cache key
+    const cacheKey = generateCacheKey('user-detail', {
+      userId: id,
+      requestorRole: session.user.role
+    });
+
+    // Check cache first
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const user = await prisma.user.findFirst({
       where: whereClause,
       select: {
@@ -93,7 +106,17 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       rejected_at: toJakartaISOString(user.rejected_at) || user.rejected_at,
     };
 
-    return NextResponse.json({ user: formattedUser });
+    const response = NextResponse.json({ user: formattedUser });
+
+    // Cache for 2 minutes with tags
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.LONG,
+      [CacheTags.USER, `user-${id}`]
+    );
+
+    return response;
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -178,6 +201,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
         rejected_at: toJakartaISOString(updatedUser.rejected_at) || updatedUser.rejected_at,
       };
+
+      // Invalidate cache
+      responseCache.invalidateByTags([CacheTags.USER, `user-${id}`]);
 
       return NextResponse.json({
         user: formattedUpdatedUser,
@@ -271,6 +297,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       ...updatedUser,
       created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
     };
+
+    // Invalidate cache
+    responseCache.invalidateByTags([CacheTags.USER, `user-${id}`]);
 
     return NextResponse.json({
       user: formattedUpdatedUser2,
@@ -368,6 +397,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       notifyUserVerificationResult(id, validatedData.action, validatedData.rejection_reason)
     );
 
+    // Invalidate cache
+    responseCache.invalidateByTags([CacheTags.USER, `user-${id}`]);
+
     const formattedUpdatedUser3 = {
       ...updatedUser,
       verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
@@ -426,11 +458,12 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     // Hard delete user - submissions will remain with denormalized data
     await prisma.user.delete({ where: { id } });
 
-    return NextResponse.json({
-      message: 'User deleted successfully'
-    });
+    // Invalidate cache
+    responseCache.invalidateByTags([CacheTags.USER, `user-${id}`]);
 
-  } catch (error) {
+    return NextResponse.json({ 
+      message: 'User deleted successfully' 
+    });  } catch (error) {
     console.error('Error deleting user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

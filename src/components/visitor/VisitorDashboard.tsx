@@ -68,6 +68,9 @@ export default function VisitorDashboard() {
       if (response.ok) {
         const data = await response.json();
         setChartData(data);
+      } else {
+        const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Chart API error:', error);
       }
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
@@ -110,8 +113,8 @@ export default function VisitorDashboard() {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Gagal mengambil data: ${errorText || 'Server error'}`);
+        const error = await response.json().catch(() => ({ error: 'Server error' }));
+        throw new Error(`Gagal mengambil data: ${error.error || 'Unknown error'}`);
       }
 
       const data = await response.json();

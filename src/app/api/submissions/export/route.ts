@@ -60,11 +60,54 @@ export async function GET(request: NextRequest) {
       if (endDate) whereClause.created_at.lte = new Date(endDate);
     }
 
+    // Optimized: Only select needed fields for export
     const submissions = await prisma.submission.findMany({
       where: whereClause,
-      include: {
-        support_documents: true,
-        worker_list: true,
+      select: {
+        id: true,
+        vendor_name: true,
+        officer_name: true,
+        job_description: true,
+        work_location: true,
+        implementation: true,
+        working_hours: true,
+        holiday_working_hours: true,
+        work_facilities: true,
+        simlok_number: true,
+        simlok_date: true,
+        content: true,
+        created_at: true,
+        approved_at: true,
+        reviewed_at: true,
+        review_status: true,
+        approval_status: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
+        worker_count: true,
+        vendor_phone: true,
+        // Additional fields needed for export
+        user_email: true,
+        reviewed_by: true,
+        approved_by: true,
+        signer_position: true,
+        note_for_approver: true,
+        note_for_vendor: true,
+        // Only needed fields from relations
+        support_documents: {
+          select: {
+            document_type: true,
+            document_subtype: true,
+            document_number: true,
+            document_date: true,
+          }
+        },
+        worker_list: {
+          select: {
+            worker_name: true,
+            hsse_pass_number: true,
+            hsse_pass_valid_thru: true,
+          }
+        },
       },
       orderBy: { created_at: 'desc' },
     });

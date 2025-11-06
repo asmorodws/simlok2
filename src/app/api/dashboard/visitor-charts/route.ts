@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import cache, { CacheKeys, CacheTTL } from '@/lib/cache';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function GET() {
   try {
@@ -12,15 +13,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Generate cache key
+    const cacheKey = generateCacheKey('visitor-charts', {});
+    
     // Check cache first
-    const cachedData = cache.get(CacheKeys.VISITOR_CHARTS);
-    if (cachedData) {
-      return NextResponse.json(cachedData, {
-        headers: {
-          'X-Cache': 'HIT',
-          'Cache-Control': 'private, max-age=300', // 5 minutes
-        }
-      });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     // Get current date and date one year ago
@@ -28,45 +27,58 @@ export async function GET() {
     const oneYearAgo = new Date(now);
     oneYearAgo.setFullYear(now.getFullYear() - 1);
 
-    // Get submissions data for the last 12 months (Line Chart)
-    const submissionsData = await prisma.submission.groupBy({
-      by: ['created_at'],
-      where: {
-        created_at: {
-          gte: oneYearAgo,
+    // Execute all queries in parallel
+    const [
+      submissionsData,
+      approvedData,
+      usersData,
+      baselineUsers
+    ] = await parallelQueries([
+      () => prisma.submission.groupBy({
+        by: ['created_at'],
+        where: {
+          created_at: {
+            gte: oneYearAgo,
+          },
         },
-      },
-      _count: {
-        id: true,
-      },
-    });
-
-    // Get approved submissions data for the last 12 months
-    const approvedData = await prisma.submission.groupBy({
-      by: ['created_at'],
-      where: {
-        created_at: {
-          gte: oneYearAgo,
+        _count: {
+          id: true,
         },
-        approval_status: 'APPROVED',
-      },
-      _count: {
-        id: true,
-      },
-    });
-
-    // Get users data for the last 12 months (Bar Chart)
-    const usersData = await prisma.user.groupBy({
-      by: ['created_at'],
-      where: {
-        created_at: {
-          gte: oneYearAgo,
+      }),
+      
+      () => prisma.submission.groupBy({
+        by: ['created_at'],
+        where: {
+          created_at: {
+            gte: oneYearAgo,
+          },
+          approval_status: 'APPROVED',
         },
-      },
-      _count: {
-        id: true,
-      },
-    });
+        _count: {
+          id: true,
+        },
+      }),
+      
+      () => prisma.user.groupBy({
+        by: ['created_at'],
+        where: {
+          created_at: {
+            gte: oneYearAgo,
+          },
+        },
+        _count: {
+          id: true,
+        },
+      }),
+      
+      () => prisma.user.count({
+        where: {
+          created_at: {
+            lt: oneYearAgo,
+          },
+        },
+      })
+    ]);
 
     // Group data by month
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -115,15 +127,6 @@ export async function GET() {
       }
     });
 
-    // Get total users created before the 12-month period (baseline)
-    const baselineUsers = await prisma.user.count({
-      where: {
-        created_at: {
-          lt: oneYearAgo,
-        },
-      },
-    });
-
     // Calculate cumulative user count (akumulasi total user)
     let cumulativeCount = baselineUsers;
     for (let i = 0; i < 12; i++) {
@@ -156,15 +159,18 @@ export async function GET() {
       },
     };
 
-    // Cache the response for 5 minutes
-    cache.set(CacheKeys.VISITOR_CHARTS, chartData, CacheTTL.FIVE_MINUTES);
+    const response = NextResponse.json(chartData);
+    
+    // Cache for 5 minutes with tags
+    responseCache.set(
+      cacheKey, 
+      response, 
+      CacheTTL.LONG,
+      [CacheTags.VISITOR_STATS, CacheTags.DASHBOARD]
+    );
 
-    return NextResponse.json(chartData, {
-      headers: {
-        'X-Cache': 'MISS',
-        'Cache-Control': 'private, max-age=300', // 5 minutes
-      }
-    });
+    return response;
+    
   } catch (error) {
     console.error('Error fetching visitor charts data:', error);
     return NextResponse.json(

@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { DocumentIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
 import { compressFile, shouldCompressFile, formatFileSize, calculateSavings } from '@/utils/client-file-compressor';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 
 interface FileUploadProps {
   id?: string;
@@ -82,7 +83,7 @@ export default function FileUpload({
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await safeJsonParse(response, { error: 'Upload failed' });
       throw new Error(errorData.error || 'Upload failed');
     }
 

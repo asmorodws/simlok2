@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/singletons";
-import { withUserCache } from "@/lib/api-cache";
-import { CacheTTL } from "@/lib/cache";
+import { responseCache, CacheTTL as ResponseCacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function GET() {
   try {
@@ -15,21 +15,54 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Use user-specific cache
-    const { data: vendorStats, cached } = await withUserCache(
-      'vendor:stats',
-      userId,
-      CacheTTL.ONE_MINUTE,
-      async () => {
-        return await fetchVendorStats(userId);
-      }
-    );
+    // Try response cache first (5 min TTL for vendor stats)
+    const cacheKey = generateCacheKey('vendor-stats', { userId });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-    return NextResponse.json(vendorStats, {
+    // Fetch stats with parallel queries for better performance
+    const [stats, totalCount] = await parallelQueries([
+      () => prisma.submission.groupBy({
+        by: ['approval_status'],
+        where: { user_id: userId },
+        _count: {
+          approval_status: true
+        }
+      }),
+      () => prisma.submission.count({
+        where: { user_id: userId }
+      })
+    ]);
+
+    // Format statistics
+    const vendorStats = {
+      totalSubmissions: totalCount,
+      pendingSubmissions: stats.find((s: any) => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+      approvedSubmissions: stats.find((s: any) => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+      rejectedSubmissions: stats.find((s: any) => s.approval_status === 'REJECTED')?._count.approval_status || 0,
+      draftSubmissions: 0, // Assuming no draft status in current schema
+      totalApproved: stats.find((s: any) => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+      totalPending: stats.find((s: any) => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+      totalRejected: stats.find((s: any) => s.approval_status === 'REJECTED')?._count.approval_status || 0
+    };
+
+    const response = NextResponse.json(vendorStats, {
       headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
+        'X-Cache': 'MISS'
       }
     });
+
+    // Cache the response for 5 minutes
+    responseCache.set(
+      cacheKey,
+      response,
+      ResponseCacheTTL.LONG, // 5 minutes
+      [CacheTags.VENDOR_STATS, `user:${userId}`]
+    );
+
+    return response;
 
   } catch (error) {
     console.error("Vendor dashboard stats error:", error);
@@ -38,33 +71,4 @@ export async function GET() {
       { status: 500 }
     );
   }
-}
-
-async function fetchVendorStats(userId: string) {
-
-    // Get submission statistics for current vendor
-    const stats = await prisma.submission.groupBy({
-      by: ['approval_status'],
-      where: { user_id: userId },
-      _count: {
-        approval_status: true
-      }
-    });
-
-    // Get total count
-    const totalCount = await prisma.submission.count({
-      where: { user_id: userId }
-    });
-
-  // Format statistics
-  return {
-    totalSubmissions: totalCount,
-    pendingSubmissions: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    approvedSubmissions: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    rejectedSubmissions: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
-    draftSubmissions: 0, // Assuming no draft status in current schema
-    totalApproved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    totalPending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    totalRejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0
-  };
 }

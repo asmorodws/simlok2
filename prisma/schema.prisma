@@ -35,6 +35,10 @@ model User {
   sessions                 Session[]
   finalApprovedSubmissions Submission[]       @relation("FinalApprovedSubmissions")
   submissions              Submission[]
+  
+  // Performance indexes for dashboard stats
+  @@index([verification_status, created_at])
+  @@index([role, verified_at])
 }
 
 /// ----------  REFRESH TOKEN  ----------
@@ -145,6 +149,20 @@ model Submission {
   @@index([user_id], map: "Submission_user_id_perf_idx")              // For vendor filtering
   @@index([vendor_name], map: "Submission_vendor_name_search_idx")    // For vendor search
   @@index([review_status, approval_status], map: "Submission_review_approval_compound_idx") // Compound index for approver queries
+  
+  // Additional performance indexes for common queries
+  @@index([user_id, created_at], map: "Submission_user_created_idx")  // For vendor submission history with sorting
+  @@index([user_id, approval_status], map: "Submission_user_status_idx") // For vendor filtering by status
+  @@index([approval_status, created_at], map: "Submission_status_created_idx") // For admin/reviewer list with sorting
+  @@index([review_status, created_at], map: "Submission_review_created_idx") // For reviewer workflow
+  @@index([simlok_number], map: "Submission_simlok_number_idx")       // For SIMLOK number lookup
+  @@index([approved_at], map: "Submission_approved_at_idx")           // For approval date filtering
+  @@index([reviewed_at], map: "Submission_reviewed_at_idx")           // For review date filtering
+  @@index([implementation_start_date], map: "Submission_impl_start_idx") // For implementation date range queries
+  @@index([implementation_end_date], map: "Submission_impl_end_idx")   // For implementation date range queries
+  @@index([vendor_name, created_at], map: "Submission_vendor_created_idx") // For vendor search with sorting
+  @@index([officer_name], map: "Submission_officer_name_idx")         // For officer name search
+  @@index([job_description], map: "Submission_job_desc_idx")          // For job description search
 }
 
 /// ----------  WORKER LIST  ----------
@@ -160,6 +178,9 @@ model WorkerList {
   submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
 
   @@index([submission_id])
+  @@index([worker_name], map: "WorkerList_worker_name_idx") // For worker name search
+  @@index([hsse_pass_number], map: "WorkerList_hsse_number_idx") // For HSSE pass lookup
+  @@index([submission_id, created_at], map: "WorkerList_submission_created_idx") // For ordered worker list
 }
 
 //// ------------ Support Document ---------
@@ -174,7 +195,13 @@ model SupportDocument {
   uploaded_at     DateTime   @default(now())
   uploaded_by     String
   submission      Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  
+  @@index([submission_id]) // For fetching all documents for a submission
   @@index([uploaded_by])
+  @@index([document_type], map: "SupportDocument_type_idx") // For filtering by document type
+  @@index([document_subtype], map: "SupportDocument_subtype_idx") // For filtering by document subtype
+  @@index([submission_id, uploaded_at], map: "SupportDocument_submission_uploaded_idx") // For ordered document list
+  @@index([document_number], map: "SupportDocument_number_idx") // For document number lookup
 } 
 
 /// ----------  NOTIFICATION  ----------
@@ -190,6 +217,9 @@ model Notification {
   reads      NotificationRead[]
 
   @@index([scope, vendor_id, created_at])
+  @@index([type], map: "Notification_type_idx") // For filtering by notification type
+  @@index([created_at], map: "Notification_created_at_idx") // For sorting by date
+  @@index([vendor_id, created_at], map: "Notification_vendor_created_idx") // For vendor notification list
 }
 
 model NotificationRead {
@@ -204,6 +234,8 @@ model NotificationRead {
   @@unique([notification_id, vendor_id])
   @@index([user_id])
   @@index([vendor_id])
+  @@index([user_id, read_at], map: "NotificationRead_user_read_idx") // For user notification history
+  @@index([notification_id, user_id], map: "NotificationRead_notif_user_idx") // For checking read status
 }
 
 
@@ -222,6 +254,9 @@ model QrScan {
   @@index([submission_id])
   @@index([scanned_by])
   @@index([scanned_at])
+  @@index([submission_id, scanned_at], map: "QrScan_submission_scanned_idx") // For submission scan history
+  @@index([scanned_by, scanned_at], map: "QrScan_user_scanned_idx") // For user scan activity
+  @@index([scan_location], map: "QrScan_location_idx") // For scan location filtering
 }
 
 enum VerificationStatus {

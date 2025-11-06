@@ -5,6 +5,7 @@ import Button from '@/components/ui/button/Button';
 import Card from '@/components/ui/Card';
 import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
+import { safeJsonParse } from '@/utils/fetch-helpers';
 import {
   XMarkIcon,
   CheckCircleIcon,
@@ -101,7 +102,7 @@ export default function ReviewerUserVerificationModal({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeJsonParse(response, { error: 'Failed to update user verification' });
         throw new Error(errorData.error || 'Failed to update user verification');
       }
 
@@ -146,7 +147,7 @@ export default function ReviewerUserVerificationModal({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeJsonParse(response, { error: 'Gagal mengubah status akun' });
         throw new Error(errorData.error || 'Gagal mengubah status akun');
       }
 

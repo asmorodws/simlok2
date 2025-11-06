@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/singletons";
 import { toJakartaISOString } from '@/lib/timezone';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
 
 // GET /api/user/profile - Get current user profile
 export async function GET() {
@@ -11,6 +12,13 @@ export async function GET() {
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Try cache first (1 min TTL for profile)
+    const cacheKey = generateCacheKey('user-profile', { userId: session.user.id });
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
     // Get user profile
@@ -41,7 +49,17 @@ export async function GET() {
       verified_at: toJakartaISOString(user.verified_at) || user.verified_at,
     };
 
-    return NextResponse.json(formatted);
+    const response = NextResponse.json(formatted);
+    
+    // Cache for 1 minute
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.MEDIUM,
+      [CacheTags.USER, `user-${session.user.id}`]
+    );
+
+    return response;
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -97,6 +115,9 @@ export async function PUT(request: NextRequest) {
         verification_status: true,
       }
     });
+
+    // Invalidate user profile cache
+    responseCache.invalidateByTags([CacheTags.USER, `user-${session.user.id}`]);
 
     const formattedUpdated = {
       ...updatedUser,

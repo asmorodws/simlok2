@@ -17,9 +17,6 @@
     "seed:local": "npx prisma migrate reset && tsx prisma/localseed.ts",
     "analyze": "cross-env ANALYZE=true next build"
   },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",

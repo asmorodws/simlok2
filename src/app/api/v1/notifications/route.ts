@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toJakartaISOString } from '@/lib/timezone';
 import { resolveAudience } from "@/lib/notificationAudience";
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,18 +26,21 @@ export async function GET(req: NextRequest) {
     const search   = sp.get("search") || undefined;
     const filter   = (sp.get("filter") as "all" | "unread" | "read") || "all";
 
-    // Disable caching completely to prevent stale data after mark as read
-    // const cacheKey = `${notifCacheKey(audience)}:scope=${audience.scope}:p=${page}:s=${pageSize}:f=${filter}:q=${search || ""}`;
-    // const cached = await Cache.getJSON<{ data: any[]; pagination: any }>(cacheKey, {
-    //   namespace: CacheNamespaces.NOTIFICATIONS,
-    // });
-    // if (cached) {
-    //   const res = NextResponse.json({ success: true, data: cached });
-    //   res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    //   res.headers.set("Pragma", "no-cache");
-    //   res.headers.set("Expires", "0");
-    //   return res;
-    // }
+    // Try cache first (30 seconds TTL for notifications - short because they update frequently)
+    const cacheKey = generateCacheKey('notifications', {
+      userId,
+      role,
+      scope: audience.scope,
+      page,
+      pageSize,
+      filter,
+      search,
+    });
+
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     // WHERE dasar: scope sesuai audience
     const where: any = { scope: audience.scope };
@@ -60,8 +65,8 @@ export async function GET(req: NextRequest) {
         : { some:  { vendor_id: audience.readerId } };
     }
 
-    const [rows, total] = await Promise.all([
-      prisma.notification.findMany({
+    const [rows, total] = await parallelQueries([
+      () => prisma.notification.findMany({
         where,
         orderBy: { created_at: "desc" },
         skip: (page - 1) * pageSize,
@@ -83,10 +88,10 @@ export async function GET(req: NextRequest) {
           },
         },
       }),
-      prisma.notification.count({ where }),
+      () => prisma.notification.count({ where }),
     ]);
 
-    const data = rows.map((n) => ({
+    const data = rows.map((n: any) => ({
       id: n.id,
       type: n.type,
       title: n.title,
@@ -108,16 +113,17 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    // Disable caching to prevent stale data
-    // await Cache.setJSON(cacheKey, result, {
-    //   namespace: CacheNamespaces.NOTIFICATIONS,
-    //   ttl: NOTIF_LIST_TTL_SECONDS,
-    // });
-
     const res = NextResponse.json({ success: true, data: result });
-    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.headers.set("Pragma", "no-cache");
-    res.headers.set("Expires", "0");
+    res.headers.set("Cache-Control", "private, max-age=30");
+    
+    // Cache for 30 seconds (notifications update frequently)
+    responseCache.set(
+      cacheKey,
+      res,
+      CacheTTL.SHORT, // 30 seconds
+      [CacheTags.NOTIFICATIONS, `user:${userId}`]
+    );
+    
     return res;
   } catch (e: any) {
     console.error("GET /api/v1/notifications error:", e);

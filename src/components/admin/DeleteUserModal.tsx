@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { XMarkIcon, ExclamationTriangleIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
 import { useToast } from "@/hooks/useToast";
+import { safeJsonParse } from "@/utils/fetch-helpers";
 
 interface DeleteUserModalProps {
   user: UserData | null;
@@ -27,7 +28,7 @@ export default function DeleteUserModal({ user, isOpen, onClose, onUserDelete }:
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await safeJsonParse<{ error?: string; message?: string }>(response, { error: 'Gagal menonaktifkan user' });
         throw new Error(errorData.error || errorData.message || 'Gagal menonaktifkan user');
       }
 

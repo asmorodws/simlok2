@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { SessionService } from '@/services/session.service';
 import { prisma } from '@/lib/singletons';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function GET() {
   try {
@@ -34,39 +36,48 @@ export async function GET() {
       );
     }
 
+    // Try cache first (30 seconds TTL - sessions change frequently)
+    const cacheKey = generateCacheKey('admin-active-sessions', {});
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     // Get all active sessions with user info
     const now = new Date();
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
-    const activeSessions = await prisma.session.findMany({
-      where: {
-        expires: { gt: now },
-        lastActivityAt: { gt: fiveMinutesAgo },
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            officer_name: true,
-            vendor_name: true,
-            role: true,
-            lastActiveAt: true,
+    // Execute queries in parallel
+    const [activeSessions, totalCount] = await parallelQueries([
+      () => prisma.session.findMany({
+        where: {
+          expires: { gt: now },
+          lastActivityAt: { gt: fiveMinutesAgo },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              officer_name: true,
+              vendor_name: true,
+              role: true,
+              lastActiveAt: true,
+            },
           },
         },
-      },
-      orderBy: {
-        lastActivityAt: 'desc',
-      },
-    });
+        orderBy: {
+          lastActivityAt: 'desc',
+        },
+      }),
+      
+      () => SessionService.getActiveSessionsCount()
+    ]);
 
-    // Get total active sessions count
-    const totalCount = await SessionService.getActiveSessionsCount();
-
-    return NextResponse.json({
+    const data = {
       success: true,
       totalActiveSessions: totalCount,
-      sessions: activeSessions.map((s) => ({
+      sessions: activeSessions.map((s: any) => ({
         id: s.id,
         sessionToken: s.sessionToken.substring(0, 10) + '...', // Partial token for security
         userId: s.userId,
@@ -82,7 +93,19 @@ export async function GET() {
           role: s.user.role,
         },
       })),
-    });
+    };
+
+    const response = NextResponse.json(data);
+
+    // Cache for 30 seconds
+    responseCache.set(
+      cacheKey,
+      response,
+      CacheTTL.SHORT,
+      [CacheTags.DASHBOARD]
+    );
+
+    return response;
   } catch (error) {
     console.error('Get active sessions error:', error);
     return NextResponse.json(

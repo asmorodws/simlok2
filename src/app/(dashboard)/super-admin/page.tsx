@@ -43,9 +43,12 @@ export default function SuperAdminDashboard() {
       setLoading(true);
       setError('');
       const response = await fetch('/api/dashboard/stats', { cache: 'no-store' });
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch dashboard statistics');
+        const error = await response.json().catch(() => ({ error: 'Failed to fetch dashboard statistics' }));
+        throw new Error(error.error || 'Failed to fetch dashboard statistics');
       }
+      
       const data = await response.json();
       setStats({
         totalUsers: data.totalUsers,

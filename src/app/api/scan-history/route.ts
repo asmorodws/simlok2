@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
 import { formatScansDates, formatSubmissionDates } from '@/lib/timezone';
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 const prisma = new PrismaClient();
 
@@ -27,6 +29,17 @@ export async function GET(request: NextRequest) {
     const verifier = searchParams.get('verifier');
     const submissionId = searchParams.get('submissionId');
     const search = searchParams.get('search');
+
+    // Generate cache key based on all query parameters
+    const cacheKey = generateCacheKey('scan-history', {
+      page, limit, dateFrom, dateTo, verifier, submissionId, search
+    });
+    
+    // Check cache first
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const skip = (page - 1) * limit;
 
@@ -94,67 +107,79 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    // Get total count for pagination
-    const total = await prisma.qrScan.count({ where });
-
-    // Get scan history with related data
-    const scans = await prisma.qrScan.findMany({
-      where,
-      include: {
-        submission: {
-          select: {
-            id: true,
-            simlok_number: true,
-            vendor_name: true,
-            officer_name: true,
-            job_description: true,
-            work_location: true,
-            working_hours: true,
-            implementation: true,
-            worker_count: true,
-            implementation_start_date: true,
-            implementation_end_date: true,
-            review_status: true,
-            approval_status: true,
-            created_at: true,
-            // Vendor contact information (denormalized from user)
-            user_email: true,
-            user_phone_number: true,
-            user_address: true,
-            user_vendor_name: true,
-            user_officer_name: true,
+    // Execute count and find queries in parallel
+    const [total, scans] = await parallelQueries([
+      () => prisma.qrScan.count({ where }),
+      
+      () => prisma.qrScan.findMany({
+        where,
+        include: {
+          submission: {
+            select: {
+              id: true,
+              simlok_number: true,
+              vendor_name: true,
+              officer_name: true,
+              job_description: true,
+              work_location: true,
+              working_hours: true,
+              implementation: true,
+              worker_count: true,
+              implementation_start_date: true,
+              implementation_end_date: true,
+              review_status: true,
+              approval_status: true,
+              created_at: true,
+              user_email: true,
+              user_phone_number: true,
+              user_address: true,
+              user_vendor_name: true,
+              user_officer_name: true,
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              officer_name: true,
+              email: true,
+              role: true,
+            }
           }
         },
-        user: {
-          select: {
-            id: true,
-            officer_name: true,
-            email: true,
-            role: true,
-          }
-        }
-      },
-      orderBy: {
-        scanned_at: 'desc'
-      },
-      skip,
-      take: limit,
-    });
+        orderBy: {
+          scanned_at: 'desc'
+        },
+        skip,
+        take: limit,
+      })
+    ]);
 
     // Format scanned timestamps and nested submission dates to Jakarta timezone
-    const formattedScans = scans.map(s => ({
+    const formattedScans = scans.map((s: any) => ({
       ...s,
       scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0].scanned_at : s.scanned_at,
       submission: s.submission ? formatSubmissionDates(s.submission) : s.submission
     }));
 
-    return NextResponse.json({
+    const data = {
       scans: formattedScans,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit)
-    });
+    };
+
+    const response = NextResponse.json(data);
+    
+    // Cache for 30 seconds (frequently changing data)
+    responseCache.set(
+      cacheKey, 
+      response, 
+      CacheTTL.SHORT,
+      [CacheTags.QR_SCANS]
+    );
+
+    return response;
 
   } catch (error) {
     console.error('Error fetching scan history:', error);

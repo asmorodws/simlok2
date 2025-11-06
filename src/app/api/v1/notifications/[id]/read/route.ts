@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveAudience } from "@/lib/notificationAudience";
+import { responseCache, CacheTags } from '@/lib/response-cache';
+import { parallelQueries } from '@/lib/db-optimizer';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,15 +20,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const audience = resolveAudience(req, role, userId);
 
-    // Validasi notifikasi sesuai audience (optional tapi bagus)
-    const notif = await prisma.notification.findFirst({
-      where: {
-        id,
-        scope: audience.scope,
-        ...(audience.readerKey === "vendor" ? { vendor_id: audience.readerId } : {}),
-      },
-      select: { id: true },
-    });
+    // Execute validation and read marker operations in parallel
+    const [notif] = await parallelQueries([
+      () => prisma.notification.findFirst({
+        where: {
+          id,
+          scope: audience.scope,
+          ...(audience.readerKey === "vendor" ? { vendor_id: audience.readerId } : {}),
+        },
+        select: { id: true },
+      })
+    ]);
+
     if (!notif) {
       return NextResponse.json({ success: false, error: "Notification not found" }, { status: 404 });
     }
@@ -46,8 +51,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       });
     }
 
-    // Don't invalidate cache since we disabled caching in the main route
-    // await Cache.invalidateByPrefix(notifCacheKey(audience), CacheNamespaces.NOTIFICATIONS);
+    // Invalidate notification cache for this user
+    responseCache.invalidateByTags([CacheTags.NOTIFICATIONS, `notifications-${userId}`]);
 
     // Hitung ulang unread
     const unreadCount = await prisma.notification.count({

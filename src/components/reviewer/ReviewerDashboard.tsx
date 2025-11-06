@@ -51,12 +51,25 @@ export default function ReviewerDashboard() {
         fetch('/api/dashboard/reviewer-stats')
       ]);
 
-      if (!submissionsResponse.ok || !dashboardStatsResponse.ok) {
-        throw new Error('Gagal mengambil data dashboard');
+      // Check responses and parse JSON with error handling
+      let submissionsData: any = { submissions: [] };
+      let dashboardStats: any = { submissions: {}, users: {} };
+
+      if (submissionsResponse.ok) {
+        submissionsData = await submissionsResponse.json();
+      } else {
+        const error = await submissionsResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Submissions API error:', error);
+        throw new Error(error.error || 'Gagal mengambil data submissions');
       }
 
-      const submissionsData = await submissionsResponse.json();
-      const dashboardStats = await dashboardStatsResponse.json();
+      if (dashboardStatsResponse.ok) {
+        dashboardStats = await dashboardStatsResponse.json();
+      } else {
+        const error = await dashboardStatsResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Dashboard stats API error:', error);
+        throw new Error(error.error || 'Gagal mengambil data statistik');
+      }
 
       setSubmissions((submissionsData.submissions ?? []) as ReviewerSubmission[]);
       

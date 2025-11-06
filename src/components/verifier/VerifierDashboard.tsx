@@ -107,16 +107,25 @@ export default function VerifierDashboard() {
       if (submissionsRes.ok) {
         await submissionsRes.json();
         // Data submissions tersimpan tapi tidak ditampilkan di dashboard
+      } else {
+        const error = await submissionsRes.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Submissions API error:', error);
       }
 
       if (scansRes.ok) {
         const scanData = await scansRes.json();
         setRecentScans(scanData.scans || []);
+      } else {
+        const error = await scansRes.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Scans API error:', error);
       }
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
+      } else {
+        const error = await statsRes.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Stats API error:', error);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

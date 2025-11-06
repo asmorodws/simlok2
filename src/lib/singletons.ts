@@ -128,6 +128,7 @@ export function initializeSocketIO(httpServer: any): SocketIOServer {
  */
 function setupGracefulShutdownHandlers() {
   let isShuttingDown = false;
+  let shutdownHandlersRegistered = false;
 
   const gracefulShutdown = async (signal: string) => {
     if (isShuttingDown) {
@@ -145,14 +146,32 @@ function setupGracefulShutdownHandlers() {
     try {
       // 1. Close Socket.IO
       const io = getSocketIO();
-      if (io) {
+      if (io && typeof io.close === 'function') {
         console.log('📡 Closing Socket.IO...');
-        await new Promise<void>((resolve) => {
-          io.close(() => {
-            console.log('✅ Socket.IO closed');
-            resolve();
+        try {
+          await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+              console.warn('⚠️  Socket.IO close timeout, continuing shutdown...');
+              resolve();
+            }, 2000);
+
+            io.close((err?: Error) => {
+              clearTimeout(timeout);
+              if (err) {
+                console.warn('⚠️  Socket.IO close error:', err.message);
+              } else {
+                console.log('✅ Socket.IO closed');
+              }
+              resolve();
+            });
           });
-        });
+        } catch (error: any) {
+          console.warn('⚠️  Socket.IO close failed:', error?.message || error);
+        }
+      } else if (io) {
+        console.log('⚠️  Socket.IO exists but close method not available');
+      } else {
+        console.log('ℹ️  Socket.IO not initialized, skipping close');
       }
 
       // 2. Disconnect Redis clients
@@ -161,22 +180,38 @@ function setupGracefulShutdownHandlers() {
       
       if (redisPub && redisPub.status !== 'end' && redisPub.status !== 'close') {
         redisClosePromises.push(
-          redisPub.quit().then(() => console.log('✅ Redis Pub disconnected'))
+          redisPub.quit()
+            .then(() => console.log('✅ Redis Pub disconnected'))
+            .catch((err: Error) => {
+              console.warn('⚠️  Redis Pub disconnect error:', err.message);
+            })
         );
+      } else {
+        console.log('ℹ️  Redis Pub already closed or not connected');
       }
       
       if (redisSub && redisSub.status !== 'end' && redisSub.status !== 'close') {
         redisClosePromises.push(
-          redisSub.quit().then(() => console.log('✅ Redis Sub disconnected'))
+          redisSub.quit()
+            .then(() => console.log('✅ Redis Sub disconnected'))
+            .catch((err: Error) => {
+              console.warn('⚠️  Redis Sub disconnect error:', err.message);
+            })
         );
+      } else {
+        console.log('ℹ️  Redis Sub already closed or not connected');
       }
 
-      await Promise.all(redisClosePromises);
+      await Promise.allSettled(redisClosePromises); // Use allSettled to continue even if one fails
 
       // 3. Disconnect Prisma
       console.log('🗄️  Disconnecting Prisma...');
-      await prisma.$disconnect();
-      console.log('✅ Prisma disconnected');
+      try {
+        await prisma.$disconnect();
+        console.log('✅ Prisma disconnected');
+      } catch (error: any) {
+        console.warn('⚠️  Prisma disconnect error:', error?.message || error);
+      }
 
       clearTimeout(shutdownTimeout);
       console.log('✨ Graceful shutdown completed');
@@ -188,10 +223,30 @@ function setupGracefulShutdownHandlers() {
     }
   };
 
-  // Register signal handlers
-  process.once('SIGINT', () => gracefulShutdown('SIGINT'));
-  process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  
-  console.log('🛡️  Graceful shutdown handlers registered');
+  // Register signal handlers (only once)
+  if (!shutdownHandlersRegistered) {
+    process.once('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.once('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+      // Only log if not during shutdown
+      if (!isShuttingDown) {
+        console.error('❌ Unhandled Rejection at:', promise);
+        console.error('❌ Reason:', reason);
+      }
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error: Error) => {
+      // Only log if not during shutdown
+      if (!isShuttingDown) {
+        console.error('❌ Uncaught Exception:', error);
+      }
+    });
+    
+    shutdownHandlersRegistered = true;
+    console.log('🛡️  Graceful shutdown handlers registered');
+  }
 }
 

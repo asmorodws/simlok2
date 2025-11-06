@@ -232,7 +232,7 @@ export function SubmissionsTable({
     if (reviewStatus === 'NEEDS_REVISION') {
       return <Badge variant="warning">Perlu Revisi</Badge>;
     }
-    return <Badge variant="default">Sedang Diproses</Badge>;
+    return <Badge variant="warning">Menunggu Review</Badge>;
   };
 
   const columns: Column<SubmissionRow>[] = [

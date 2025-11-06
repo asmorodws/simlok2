@@ -2,57 +2,55 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { responseCache, CacheTTL, CacheTags, generateCacheKey } from '@/lib/response-cache';
+import { submissionSelectList } from '@/lib/db-optimizer';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user has appropriate privileges
     if (!['SUPER_ADMIN', 'ADMIN'].includes(session.user.role)) {
-      return new NextResponse("Forbidden", { status: 403 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Get recent submissions based on user role
-    let whereClause = {};
+    // Generate cache key
+    const cacheKey = generateCacheKey('recent-submissions', { role: session.user.role });
     
-    if (session.user.role === 'ADMIN') {
-      // ADMIN can see all submissions
-      whereClause = {};
-    } else if (session.user.role === 'SUPER_ADMIN') {
-      // SUPER_ADMIN can see all submissions
-      whereClause = {};
+    // Check cache first
+    const cached = responseCache.get(cacheKey);
+    if (cached) {
+      return cached;
     }
 
+    // Get recent submissions using optimized field selection
     const recentSubmissions = await prisma.submission.findMany({
-      where: whereClause,
+      where: {},
       orderBy: {
         created_at: 'desc'
       },
       take: 10,
-      select: {
-        id: true,
-        simlok_number: true,
-        vendor_name: true,
-        officer_name: true,
-        approval_status: true,
-        created_at: true,
-        user: {
-          select: {
-            officer_name: true,
-            vendor_name: true
-          }
-        }
-      }
+      select: submissionSelectList
     });
 
-    return NextResponse.json(recentSubmissions);
+    const response = NextResponse.json(recentSubmissions);
+    
+    // Cache for 1 minute with tags
+    responseCache.set(
+      cacheKey, 
+      response, 
+      CacheTTL.MEDIUM,
+      [CacheTags.SUBMISSIONS, CacheTags.DASHBOARD]
+    );
+
+    return response;
 
   } catch (error) {
     console.error("[DASHBOARD_RECENT_SUBMISSIONS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

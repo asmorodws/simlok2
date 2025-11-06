@@ -56,7 +56,11 @@ export default function ReviewerSubmissionsManagement() {
       if (finalStatusFilter) params.append('finalStatus', finalStatusFilter);
 
       const response = await fetch(`/api/submissions?${params}`);
-      if (!response.ok) throw new Error('Gagal mengambil data pengajuan');
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Gagal mengambil data pengajuan' }));
+        throw new Error(error.error || 'Gagal mengambil data pengajuan');
+      }
 
       const data: SubmissionsResponse = await response.json();
       setSubmissions(data.submissions ?? []);
