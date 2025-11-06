@@ -5,6 +5,7 @@ import { prisma } from '@/lib/singletons';
 import { toJakartaISOString } from '@/lib/timezone';
 import { z } from 'zod';
 import { generateQrString } from '@/lib/qr-security';
+import cache, { CacheKeys } from '@/lib/cache';
 
 // Schema for validating final approval data
 const finalApprovalSchema = z.object({
@@ -161,6 +162,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: updateData,
     });
+
+    // Invalidate cache for approver stats
+    cache.delete(CacheKeys.APPROVER_STATS);
+    console.log('🗑️ Cache invalidated: APPROVER_STATS after approval');
 
     // Notify vendor of status change (only if user still exists)
     // Fire-and-forget so notifications don't delay the HTTP response.

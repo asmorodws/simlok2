@@ -75,15 +75,29 @@ async function fetchApproverStats() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Count submissions that meet and don't meet requirements (based on review status)
-    const pendingApprovalMeets = reviewStatusStats.MEETS_REQUIREMENTS || 0;
-    const pendingApprovalNotMeets = reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0;
+    // Count pending approvals - ONLY submissions with PENDING_APPROVAL status
+    // Split by review status for detailed tracking
+    const pendingApprovalMeetsCount = await prisma.submission.count({
+      where: {
+        ...submissionWhereClause,
+        approval_status: 'PENDING_APPROVAL',
+        review_status: 'MEETS_REQUIREMENTS'
+      }
+    });
+
+    const pendingApprovalNotMeetsCount = await prisma.submission.count({
+      where: {
+        ...submissionWhereClause,
+        approval_status: 'PENDING_APPROVAL',
+        review_status: 'NOT_MEETS_REQUIREMENTS'
+      }
+    });
 
   // Return dashboard stats
   return {
     total: totalSubmissions,
-    pending_approval_meets: pendingApprovalMeets,
-    pending_approval_not_meets: pendingApprovalNotMeets,
+    pending_approval_meets: pendingApprovalMeetsCount,
+    pending_approval_not_meets: pendingApprovalNotMeetsCount,
     approved: approvalStatusStats.APPROVED || 0,
     rejected: approvalStatusStats.REJECTED || 0,
     // Additional detailed stats

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
 import { notifyApproverReviewedSubmission, notifyVendorSubmissionRejected } from '@/server/events';
+import cache, { CacheKeys } from '@/lib/cache';
 
 // Schema for validating review data
 const reviewSchema = z.object({
@@ -96,6 +97,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         user: true
       }
     });
+
+    // Invalidate cache for approver stats (review status affects pending counts)
+    cache.delete(CacheKeys.APPROVER_STATS);
+    console.log('🗑️ Cache invalidated: APPROVER_STATS after review');
 
     // Always notify approver that reviewer has saved a review (both MEETS and NOT_MEETS)
     // This ensures approver sees the review even when reviewer marks NOT_MEETS_REQUIREMENTS.
