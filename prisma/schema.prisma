@@ -84,11 +84,11 @@ model Submission {
   based_on                  String
   officer_name              String
   job_description           String
-  work_location             String
+  work_location             String       @db.Text
   implementation            String?      @db.Text
   working_hours             String
   holiday_working_hours     String?
-  work_facilities           String
+  work_facilities           String       @db.Text
   
   // simja_number              String?
   // simja_date                DateTime?

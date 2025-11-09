@@ -6,6 +6,8 @@ import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
 import { formatSubmissionDates } from '@/lib/timezone';
 import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
+import { logger, getRequestMetadata } from '@/lib/logger';
+import { Session } from 'next-auth';
 
 // Helper function to normalize document number
 // - Convert to uppercase
@@ -104,8 +106,9 @@ function generateBasedOnText(simjaDocuments: any[]): string {
 
 // GET /api/submissions - Get all submissions
 export async function GET(request: NextRequest) {
+  let session;
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -276,29 +279,40 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching submissions:', error);
+    logger.error('API:Submissions:GET', 'Error fetching submissions', error, {
+      userId: session?.user?.id,
+      role: session?.user?.role,
+    });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 // POST /api/submissions - Create new submission
 export async function POST(request: NextRequest) {
+  const { ip, userAgent } = getRequestMetadata(request);
+  let session: Session | null = null;
+  
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
 
     if (!session?.user) {
+      logger.warn('API:Submissions:POST', 'Unauthorized submission attempt', { ip, userAgent });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Debug logging
-    console.log('POST /api/submissions - Session user:', {
-      id: session.user.id,
+    logger.info('API:Submissions:POST', 'Submission request started', {
+      userId: session.user.id,
       email: session.user.email,
-      role: session.user.role
+      role: session.user.role,
+      ip,
     });
 
     // Only VENDOR can create submissions
     if (session.user.role !== 'VENDOR') {
+      logger.warn('API:Submissions:POST', 'Non-vendor attempted to create submission', {
+        userId: session.user.id,
+        role: session.user.role,
+      });
       return NextResponse.json({ error: 'Only vendors can create submissions' }, { status: 403 });
     }
 
@@ -311,7 +325,11 @@ export async function POST(request: NextRequest) {
 
     if (!rateLimitResult.allowed) {
       const headers = getRateLimitHeaders(rateLimitResult);
-      console.warn(`⚠️ Rate limit exceeded for user ${session.user.id} (${session.user.email})`);
+      logger.warn('API:Submissions:POST', 'Rate limit exceeded', {
+        userId: session.user.id,
+        email: session.user.email,
+        retryAfter: rateLimitResult.retryAfter,
+      });
       return NextResponse.json(
         { 
           error: RateLimitPresets.submission.message,
@@ -335,29 +353,11 @@ export async function POST(request: NextRequest) {
       ...submissionData 
     } = bodyWithDocs;
 
-    // Log SIMJA documents untuk debugging
-    console.log('POST /api/submissions - SIMJA Documents received:', JSON.stringify(simjaDocuments, null, 2));
-
-    // Debug logging for received data
-    console.log('POST /api/submissions - Received data:', {
-      ...submissionData,
-      // Don't log sensitive data, just check if required fields exist
-      hasRequiredFields: {
-        vendor_name: !!submissionData.vendor_name,
-        officer_name: !!submissionData.officer_name,
-        job_description: !!submissionData.job_description,
-        work_location: !!submissionData.work_location,
-        working_hours: !!submissionData.working_hours,
-        work_facilities: !!submissionData.work_facilities,
-        worker_names: !!submissionData.worker_names
-      },
-      // Log implementation dates
-      implementationDates: {
-        implementation_start_date: submissionData.implementation_start_date,
-        implementation_end_date: submissionData.implementation_end_date
-      },
-      // Log SIMJA documents count for based_on generation
-      simjaDocumentsCount: simjaDocuments?.length || 0
+    logger.debug('API:Submissions:POST', 'Processing submission data', {
+      userId: session.user.id,
+      simjaDocumentsCount: simjaDocuments?.length || 0,
+      workersCount: workers?.length || 0,
+      hasImplementationDates: !!(submissionData.implementation_start_date && submissionData.implementation_end_date),
     });
 
     // Validate required fields (use Indonesian error messages and friendly labels)
@@ -379,7 +379,11 @@ export async function POST(request: NextRequest) {
     for (const field of requiredFields) {
       if (!body[field as keyof SubmissionData]) {
         const label = fieldLabels[field] || field;
-        console.log(`POST /api/submissions - Field wajib tidak diisi: ${field}`);
+        logger.warn('API:Submissions:POST', 'Required field missing', {
+          userId: session.user.id,
+          missingField: field,
+          label,
+        });
         return NextResponse.json({
           error: `Field wajib: ${label} harus diisi`,
           field: field
@@ -389,7 +393,9 @@ export async function POST(request: NextRequest) {
 
     // Validate session user ID
     if (!session.user.id) {
-      console.log('POST /api/submissions - Session user ID is missing');
+      logger.error('API:Submissions:POST', 'Session user ID is missing', null, {
+        sessionData: session.user,
+      });
       return NextResponse.json({
         error: 'User ID not found in session'
       }, { status: 400 });
@@ -401,13 +407,18 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userExists) {
-      console.log('POST /api/submissions - User not found in database:', session.user.id);
+      logger.error('API:Submissions:POST', 'User not found in database', null, {
+        userId: session.user.id,
+      });
       return NextResponse.json({
         error: 'User not found in database'
       }, { status: 400 });
     }
 
-    console.log('POST /api/submissions - User verified:', userExists.email);
+    logger.info('API:Submissions:POST', 'User verified', {
+      userId: userExists.id,
+      email: userExists.email,
+    });
 
     // Normalize document numbers in simjaDocuments BEFORE generating "Berdasarkan" text
     const normalizedSimjaDocuments = (simjaDocuments || []).map((doc: any) => ({
@@ -508,7 +519,7 @@ export async function POST(request: NextRequest) {
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
-            uploaded_by: session.user.id,
+            uploaded_by: session!.user.id,
             uploaded_at: new Date(),
           }));
         allDocuments.push(...simjaDocs);
@@ -525,7 +536,7 @@ export async function POST(request: NextRequest) {
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
-            uploaded_by: session.user.id,
+            uploaded_by: session!.user.id,
             uploaded_at: new Date(),
           }));
         allDocuments.push(...sikaDocs);
@@ -542,7 +553,7 @@ export async function POST(request: NextRequest) {
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
-            uploaded_by: session.user.id,
+            uploaded_by: session!.user.id,
             uploaded_at: new Date(),
           }));
         allDocuments.push(...workOrderDocs);
@@ -559,7 +570,7 @@ export async function POST(request: NextRequest) {
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
-            uploaded_by: session.user.id,
+            uploaded_by: session!.user.id,
             uploaded_at: new Date(),
           }));
         allDocuments.push(...kontrakDocs);
@@ -576,7 +587,7 @@ export async function POST(request: NextRequest) {
             document_date: doc.document_date ? new Date(doc.document_date) : null,
             document_upload: doc.document_upload,
             submission_id: submission.id,
-            uploaded_by: session.user.id,
+            uploaded_by: session!.user.id,
             uploaded_at: new Date(),
           }));
         allDocuments.push(...jsaDocs);
@@ -601,7 +612,13 @@ export async function POST(request: NextRequest) {
       // Notify admin about new submission
       await notifyAdminNewSubmission(submission.id);
 
-      console.log('POST /api/submissions - Submission created successfully:', submission.id);
+      logger.info('API:Submissions:POST', 'Submission created successfully', {
+        userId: session.user.id,
+        submissionId: submission.id,
+        workersCount: workers?.length || 0,
+        documentsCount: allDocuments?.length || 0,
+      });
+
       // Convert date fields to Asia/Jakarta before returning
       try {
         const { formatSubmissionDates } = await import('@/lib/timezone');
@@ -609,17 +626,41 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(formatted, { status: 201 });
       } catch (err) {
         // If formatting fails, return original submission
-        console.warn('Failed to format submission dates for response:', err);
+        logger.warn('API:Submissions:POST', 'Failed to format submission dates', {
+          submissionId: submission.id,
+          error: err,
+        });
         return NextResponse.json(submission, { status: 201 });
       }
     } catch (dbError) {
-      console.error('POST /api/submissions - Database error:', dbError);
+      logger.apiError(
+        'API:Submissions:POST',
+        'Database error while creating submission',
+        dbError,
+        {
+          userId: session.user.id,
+          requestBody: {
+            vendor_name: submissionData.vendor_name,
+            workersCount: workers?.length || 0,
+            documentsCount: (simjaDocuments?.length || 0) + (sikaDocuments?.length || 0),
+          },
+        }
+      );
       return NextResponse.json({
         error: 'Failed to create submission in database'
       }, { status: 500 });
     }
   } catch (error) {
-    console.error('POST /api/submissions - General error:', error);
+    logger.apiError(
+      'API:Submissions:POST',
+      'Unexpected error while creating submission',
+      error,
+      {
+        userId: session?.user?.id,
+        ip,
+        userAgent,
+      }
+    );
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

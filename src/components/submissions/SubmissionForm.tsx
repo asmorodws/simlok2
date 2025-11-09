@@ -7,10 +7,11 @@ import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
-import {Badge} from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import Label from '@/components/form/Label';
+import DateRangePicker from '../form/DateRangePicker';
 import DatePicker from '@/components/form/DatePicker';
-import TimePicker from '@/components/form/TimePicker';
+import TimeRangePicker from '@/components/form/TimeRangePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
@@ -84,9 +85,9 @@ export default function SubmissionForm() {
   // Workers state + helpers
   // -------------------------------
   const [workers, setWorkers] = useState<Worker[]>([
-    { 
-      id: `${Date.now()}`, 
-      worker_name: '', 
+    {
+      id: `${Date.now()}`,
+      worker_name: '',
       worker_photo: '',
       hsse_pass_number: '',
       hsse_pass_valid_thru: '',
@@ -333,26 +334,26 @@ export default function SubmissionForm() {
   // - sudah ada interaksi user (upload foto, upload dokumen, tambah dokumen opsional, atau tambah pekerja)
   const canShowDelete = useMemo(() => {
     if (!hasDraft) return false;
-    
+
     // Cek apakah ada foto pekerja yang sudah diupload
     const hasAnyPhoto = workers.some((w) => (w.worker_photo || '').trim().length > 0);
-    
+
     // Cek apakah ada dokumen HSSE yang sudah diupload
     const hasAnyHsseDoc = workers.some((w) => (w.hsse_pass_document_upload || '').trim().length > 0);
-    
+
     // Cek apakah ada dokumen pendukung yang sudah diupload
-    const hasAnyDocument = simjaDocuments.some(d => d.document_upload) || 
-                          sikaDocuments.some(d => d.document_upload) ||
-                          workOrderDocuments.some(d => d.document_upload) ||
-                          kontrakKerjaDocuments.some(d => d.document_upload) ||
-                          jsaDocuments.some(d => d.document_upload);
-    
+    const hasAnyDocument = simjaDocuments.some(d => d.document_upload) ||
+      sikaDocuments.some(d => d.document_upload) ||
+      workOrderDocuments.some(d => d.document_upload) ||
+      kontrakKerjaDocuments.some(d => d.document_upload) ||
+      jsaDocuments.some(d => d.document_upload);
+
     // Cek apakah sudah ada dokumen opsional yang ditambahkan
     const hasOptionalDocs = visibleOptionalDocs.size > 0;
-    
+
     // Cek apakah sudah menambah lebih dari 1 pekerja (dari default)
     const hasMultipleWorkers = workers.length > 1;
-    
+
     return hasAnyPhoto || hasAnyHsseDoc || hasAnyDocument || hasOptionalDocs || hasMultipleWorkers;
   }, [hasDraft, workers, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, visibleOptionalDocs]);
 
@@ -514,7 +515,7 @@ export default function SubmissionForm() {
   // -------------------------------
   const addOptionalDocument = () => {
     if (!selectedOptionalDoc) return;
-    
+
     setVisibleOptionalDocs(prev => new Set(prev).add(selectedOptionalDoc));
     setSelectedOptionalDoc('');
   };
@@ -584,7 +585,7 @@ export default function SubmissionForm() {
         simja_date: '',
         sika_number: '',
         sika_date: '',
-    
+
         worker_names: '',
         sika_document_upload: '',
         simja_document_upload: '',
@@ -594,9 +595,9 @@ export default function SubmissionForm() {
         hsse_pass_valid_thru: null,
         hsse_pass_document_upload: '',
       });
-      setWorkers([{ 
-        id: `${Date.now()}`, 
-        worker_name: '', 
+      setWorkers([{
+        id: `${Date.now()}`,
+        worker_name: '',
         worker_photo: '',
         hsse_pass_number: '',
         hsse_pass_valid_thru: '',
@@ -638,7 +639,7 @@ export default function SubmissionForm() {
       }]);
       setJsaDocuments([{
         id: `${Date.now()}_jsa`,
-        
+
         document_subtype: '',
         document_number: '',
         document_date: '',
@@ -661,17 +662,17 @@ export default function SubmissionForm() {
   // -------------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // ========== PREVENT DOUBLE SUBMISSION ==========
     if (isSubmittingRef.current) {
       console.warn('⚠️ Submission already in progress, ignoring duplicate submit');
       return;
     }
-    
+
     // Set flag IMMEDIATELY to prevent race condition
     isSubmittingRef.current = true;
     setIsLoading(true);
-    
+
     // Helper to reset submission state (for early returns)
     const resetSubmission = () => {
       isSubmittingRef.current = false;
@@ -698,7 +699,7 @@ export default function SubmissionForm() {
 
       if (endDate < startDate) {
         showError(
-          'Tanggal Pelaksanaan Tidak Valid', 
+          'Tanggal Pelaksanaan Tidak Valid',
           'Tanggal Selesai Pelaksanaan tidak boleh lebih awal dari Tanggal Mulai Pelaksanaan.'
         );
         resetSubmission();
@@ -718,7 +719,7 @@ export default function SubmissionForm() {
 
       // ========== VALIDASI DOKUMEN SIMJA ==========
       // Filter dokumen yang memiliki data (tidak kosong semua field)
-      const filledSimjaDocs = simjaDocuments.filter(doc => 
+      const filledSimjaDocs = simjaDocuments.filter(doc =>
         doc && (doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim())
       );
 
@@ -732,14 +733,14 @@ export default function SubmissionForm() {
       for (let i = 0; i < simjaDocuments.length; i++) {
         const doc = simjaDocuments[i];
         if (!doc) continue;
-        
+
         // Cek apakah ada field yang terisi
         const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
-        
+
         // Jika ada data, semua field harus lengkap
         if (hasData) {
           const missingFields = [];
-          
+
           // SIMJA subtype otomatis terisi 'Ast. Man. Facility Management'
           if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
           if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
@@ -758,9 +759,9 @@ export default function SubmissionForm() {
 
       // ========== VALIDASI DOKUMEN SIKA ==========
       // Filter dokumen yang memiliki data
-      const filledSikaDocs = sikaDocuments.filter(doc => 
-        doc && (doc.document_subtype?.trim() || doc.document_number?.trim() || 
-                doc.document_date?.trim() || doc.document_upload?.trim())
+      const filledSikaDocs = sikaDocuments.filter(doc =>
+        doc && (doc.document_subtype?.trim() || doc.document_number?.trim() ||
+          doc.document_date?.trim() || doc.document_upload?.trim())
       );
 
       if (filledSikaDocs.length === 0) {
@@ -773,15 +774,15 @@ export default function SubmissionForm() {
       for (let i = 0; i < sikaDocuments.length; i++) {
         const doc = sikaDocuments[i];
         if (!doc) continue;
-        
+
         // Cek apakah ada field yang terisi
-        const hasData = doc.document_subtype?.trim() || doc.document_number?.trim() || 
-                       doc.document_date?.trim() || doc.document_upload?.trim();
-        
+        const hasData = doc.document_subtype?.trim() || doc.document_number?.trim() ||
+          doc.document_date?.trim() || doc.document_upload?.trim();
+
         // Jika ada data, semua field harus lengkap
         if (hasData) {
           const missingFields = [];
-          
+
           if (!doc.document_subtype?.trim()) missingFields.push('Jenis SIKA');
           if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
           if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
@@ -803,14 +804,14 @@ export default function SubmissionForm() {
       for (let i = 0; i < workOrderDocuments.length; i++) {
         const doc = workOrderDocuments[i];
         if (!doc) continue;
-        
+
         // Cek apakah ada field yang terisi
         const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
-        
+
         // Jika ada data, semua field harus lengkap
         if (hasData) {
           const missingFields = [];
-          
+
           if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
           if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
           if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
@@ -831,14 +832,14 @@ export default function SubmissionForm() {
       for (let i = 0; i < kontrakKerjaDocuments.length; i++) {
         const doc = kontrakKerjaDocuments[i];
         if (!doc) continue;
-        
+
         // Cek apakah ada field yang terisi
         const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
-        
+
         // Jika ada data, semua field harus lengkap
         if (hasData) {
           const missingFields = [];
-          
+
           if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
           if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
           if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
@@ -859,14 +860,14 @@ export default function SubmissionForm() {
       for (let i = 0; i < jsaDocuments.length; i++) {
         const doc = jsaDocuments[i];
         if (!doc) continue;
-        
+
         // Cek apakah ada field yang terisi (JSA tidak punya subtype)
         const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
-        
+
         // Jika ada data, semua field harus lengkap
         if (hasData) {
           const missingFields = [];
-          
+
           if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
           if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
           if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
@@ -906,7 +907,7 @@ export default function SubmissionForm() {
         if (!worker) continue;
 
         const missingFields = [];
-        
+
         if (!worker.worker_name?.trim()) missingFields.push('Nama Pekerja');
         if (!worker.worker_photo?.trim()) missingFields.push('Foto Pekerja');
         if (!worker.hsse_pass_number?.trim()) missingFields.push('Nomor HSSE Pass');
@@ -926,38 +927,38 @@ export default function SubmissionForm() {
       const workerNames = workers.map((w) => w.worker_name.trim()).join('\n');
 
       // Filter hanya dokumen yang terisi lengkap (tidak kirim card kosong)
-      const validSimjaDocuments = simjaDocuments.filter(doc => 
-        doc.document_number?.trim() && 
-        doc.document_date?.trim() && 
+      const validSimjaDocuments = simjaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
         doc.document_upload?.trim()
       );
 
-      const validSikaDocuments = sikaDocuments.filter(doc => 
+      const validSikaDocuments = sikaDocuments.filter(doc =>
         doc.document_subtype?.trim() &&
-        doc.document_number?.trim() && 
-        doc.document_date?.trim() && 
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
         doc.document_upload?.trim()
       );
 
-      const validWorkOrderDocuments = workOrderDocuments.filter(doc => 
-        doc.document_number?.trim() && 
-        doc.document_date?.trim() && 
+      const validWorkOrderDocuments = workOrderDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
         doc.document_upload?.trim()
       );
 
-      const validKontrakKerjaDocuments = kontrakKerjaDocuments.filter(doc => 
-        doc.document_number?.trim() && 
-        doc.document_date?.trim() && 
+      const validKontrakKerjaDocuments = kontrakKerjaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
         doc.document_upload?.trim()
       );
 
-      const validJsaDocuments = jsaDocuments.filter(doc => 
-        doc.document_number?.trim() && 
-        doc.document_date?.trim() && 
+      const validJsaDocuments = jsaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
         doc.document_upload?.trim()
       );
 
-      const payload: SubmissionData & { 
+      const payload: SubmissionData & {
         workers: Worker[];
         simjaDocuments: SupportDoc[];
         sikaDocuments: SupportDoc[];
@@ -992,21 +993,21 @@ export default function SubmissionForm() {
       setHasDraft(false);
 
       showSuccess('Pengajuan Berhasil Dibuat', 'Pengajuan SIMLOK Anda telah berhasil disimpan dan akan segera diproses.', 2000);
-      
+
       // Redirect ke dashboard - reset flag dan loading state di dalam timeout
       setTimeout(() => {
         router.push('/vendor');
         resetSubmission(); // Reset flag dan loading state
       }, 500);
-      
+
     } catch (error) {
       console.error('Error creating submission:', error);
-      const errorMessage = error instanceof Error 
-        ? (error.message.includes('Failed to create submission') 
-           ? 'Gagal membuat pengajuan. Silakan coba lagi.' 
-           : error.message)
+      const errorMessage = error instanceof Error
+        ? (error.message.includes('Failed to create submission')
+          ? 'Gagal membuat pengajuan. Silakan coba lagi.'
+          : error.message)
         : 'Terjadi kesalahan saat menyimpan pengajuan. Silakan coba lagi.';
-      
+
       showError('Gagal Membuat Pengajuan', errorMessage);
       resetSubmission(); // Reset flag dan loading untuk error case
     }
@@ -1020,6 +1021,7 @@ export default function SubmissionForm() {
       <Card>
         <div className="p-6">
           {/* Toolbar ringan: hanya muncul jika ada draft + based_on terisi + ada foto pekerja */}
+
           {canShowDelete && (
             <div className="mb-4 flex w-full items-center justify-end gap-2">
               <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700">
@@ -1115,20 +1117,20 @@ export default function SubmissionForm() {
                       disabled={isLoading}
                     >
                       <option value="">-- Pilih Dokumen Opsional --</option>
-                      <option 
-                        value="WORK_ORDER" 
+                      <option
+                        value="WORK_ORDER"
                         disabled={visibleOptionalDocs.has('WORK_ORDER')}
                       >
                         Work Order {visibleOptionalDocs.has('WORK_ORDER') ? '(Sudah ditambahkan)' : ''}
                       </option>
-                      <option 
-                        value="KONTRAK_KERJA" 
+                      <option
+                        value="KONTRAK_KERJA"
                         disabled={visibleOptionalDocs.has('KONTRAK_KERJA')}
                       >
                         Kontrak Kerja {visibleOptionalDocs.has('KONTRAK_KERJA') ? '(Sudah ditambahkan)' : ''}
                       </option>
-                      <option 
-                        value="JSA" 
+                      <option
+                        value="JSA"
                         disabled={visibleOptionalDocs.has('JSA')}
                       >
                         Job Safety Analysis (JSA) {visibleOptionalDocs.has('JSA') ? '(Sudah ditambahkan)' : ''}
@@ -1276,62 +1278,46 @@ export default function SubmissionForm() {
                 </div>
 
                 <div>
-                  <Label htmlFor="implementation_start_date">Tanggal Mulai Pelaksanaan <span className="ml-1 text-red-500">*</span></Label>
-                  <DatePicker
-                    id="implementation_start_date"
-                    name="implementation_start_date"
-                    value={formData.implementation_start_date || ''}
-                    onChange={(value) =>
+                  <Label htmlFor="implementation_dates">Tanggal Pelaksanaan <span className="ml-1 text-red-500">*</span></Label>
+                  <DateRangePicker
+                    startDate={formData.implementation_start_date || ''}
+                    endDate={formData.implementation_end_date || ''}
+                    onStartDateChange={(value) =>
                       setFormData((prev) => ({ ...prev, implementation_start_date: value }))
                     }
-                    placeholder="Pilih tanggal mulai"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="implementation_end_date">Tanggal Selesai Pelaksanaan <span className="ml-1 text-red-500">*</span></Label>
-                  <DatePicker
-                    id="implementation_end_date"
-                    name="implementation_end_date"
-                    value={formData.implementation_end_date || ''}
-                    onChange={(value) =>
+                    onEndDateChange={(value) =>
                       setFormData((prev) => ({ ...prev, implementation_end_date: value }))
                     }
-                    placeholder="Pilih tanggal selesai"
-                    required
                   />
                 </div>
 
+              <div>
+                <Label htmlFor="working_hours">Jam Kerja <span className="ml-1 text-red-500">*</span></Label>
+                <TimeRangePicker
+                  id="working_hours"
+                  name="working_hours"
+                  value={formData.working_hours}
+                  onChange={handleTimeChange}
+                  required
+                  placeholder="Pilih jam kerja"
+                />
+              </div>
+
+              {/* Conditional field for holiday working hours */}
+              {hasWeekend && (
                 <div>
-                  <Label htmlFor="working_hours">Jam Kerja <span className="ml-1 text-red-500">*</span></Label>
-                  <TimePicker
-                    id="working_hours"
-                    name="working_hours"
-                    value={formData.working_hours}
-                    onChange={handleTimeChange}
+                  <Label htmlFor="holiday_working_hours">
+                    Jam Kerja Hari Libur (Sabtu/Minggu)
+                    <span className="ml-1 text-red-500">*</span>
+                  </Label>
+                  <TimeRangePicker
+                    id="holiday_working_hours"
+                    name="holiday_working_hours"
+                    value={formData.holiday_working_hours || ''}
+                    onChange={handleHolidayTimeChange}
+                    placeholder="Pilih jam kerja untuk hari libur"
                     required
-                    placeholder="Pilih jam kerja"
-                  />
-                </div>
-
-                {/* Conditional field for holiday working hours */}
-                {hasWeekend && (
-                  <div>
-                    <Label htmlFor="holiday_working_hours">
-                      Jam Kerja Hari Libur (Sabtu/Minggu)
-                      <span className="ml-1 text-red-500">*</span>
-                    </Label>
-                    <TimePicker
-                      id="holiday_working_hours"
-                      name="holiday_working_hours"
-                      value={formData.holiday_working_hours || ''}
-                      onChange={handleHolidayTimeChange}
-                      placeholder="Pilih jam kerja untuk hari libur"
-                      required
-                    />
-
-                  </div>
+                  />                  </div>
                 )}
 
                 <div>
@@ -1396,7 +1382,7 @@ export default function SubmissionForm() {
                           'Home', 'End'
                         ];
                         if (allowed.includes(e.key)) return;
-                        if ((e.ctrlKey || e.metaKey) && ['a','c','v','x','z'].includes(e.key.toLowerCase())) return;
+                        if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x', 'z'].includes(e.key.toLowerCase())) return;
                         if (!/[0-9]/.test(e.key)) e.preventDefault();
                       }}
                       onBlur={() => {
@@ -1407,9 +1393,8 @@ export default function SubmissionForm() {
                         }
                       }}
                       placeholder="Masukkan jumlah pekerja"
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                        rowsMismatch ? 'border-amber-300' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${rowsMismatch ? 'border-amber-300' : 'border-gray-300'
+                        }`}
                     />
                   </div>
 
@@ -1453,7 +1438,7 @@ export default function SubmissionForm() {
                     rows={4}
                     placeholder={`Contoh:\nBudi Santoso\nSari Dewi\nAndi Wijaya`}
                     value={bulkNames}
-                    
+
                     onChange={(e) => setBulkNames(e.target.value)}
                   />
                   <div className="mt-2 flex items-center gap-2">
@@ -1466,12 +1451,12 @@ export default function SubmissionForm() {
               {/* Daftar Pekerja - Compact Layout */}
               <div className="space-y-3">
                 {workers.map((w, idx) => {
-                  const allFieldsComplete = !!w.worker_name.trim() && 
-                                           !!w.worker_photo.trim() && 
-                                           !!w.hsse_pass_number?.trim() && 
-                                           !!w.hsse_pass_valid_thru?.trim() && 
-                                           !!w.hsse_pass_document_upload?.trim();
-                  
+                  const allFieldsComplete = !!w.worker_name.trim() &&
+                    !!w.worker_photo.trim() &&
+                    !!w.hsse_pass_number?.trim() &&
+                    !!w.hsse_pass_valid_thru?.trim() &&
+                    !!w.hsse_pass_document_upload?.trim();
+
                   return (
                     <div key={w.id} className="border border-gray-200 rounded-lg p-4 bg-white hover:border-gray-300 transition-colors">
                       {/* Header dengan Nomor dan Tombol Hapus */}
@@ -1626,3 +1611,6 @@ export default function SubmissionForm() {
     </div>
   );
 }
+
+
+

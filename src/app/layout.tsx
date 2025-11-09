@@ -1,6 +1,7 @@
 // src/app/layout.tsx
 import { Outfit } from "next/font/google";
 import "./globals.css";
+
 import AppProviders from "@/providers/AppProvider"; // provider tunggal
 import "../../public/favicon.ico"
 

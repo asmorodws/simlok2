@@ -1,253 +1,208 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ClockIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useRef } from "react";
 
 interface TimePickerProps {
+  value: string;
+  onChange: (time: string) => void;
+  label?: string;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
   id?: string;
   name?: string;
-  value?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
   className?: string;
+  disabled?: boolean;
+  interval?: number;
 }
 
+// Function to generate time options in 24-hour format
+const generateTimeOptions = (interval: number) => {
+  const options: string[] = [];
+  for (let i = 0; i < 24 * 60; i += interval) {
+    const hours = Math.floor(i / 60);
+    const minutes = i % 60;
+    const timeString = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+    options.push(timeString);
+  }
+  return options;
+};
+
 export default function TimePicker({
-  id,
-  name,
   value,
   onChange,
-  placeholder = "Pilih waktu",
+  label,
+  error,
   required = false,
+  placeholder = "Pilih waktu",
+  id,
+  name,
+  className = '',
   disabled = false,
-  className
+  interval = 60,
 }: TimePickerProps) {
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const timepickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [times] = useState(generateTimeOptions(interval));
 
-  // Generate time options (00:00 to 23:00 with 1 hour intervals)
-  const generateTimeOptions = () => {
-    const times = [];
-    for (let hour = 0; hour < 24; hour++) {
-      const formattedHour = hour.toString().padStart(2, '0');
-      times.push(`${formattedHour}:00`);
+  // Toggle timepicker visibility
+  const toggleTimepickerVisibility = () => {
+    if (!disabled) {
+      setIsVisible(!isVisible);
     }
-    return times;
   };
 
-  const timeOptions = generateTimeOptions();
+  // Handle time selection
+  const handleTimeSelection = (time: string) => {
+    onChange(time);
+    setIsVisible(false);
+  };
 
-  // Parse existing value if any
+  // Close timepicker when clicking outside
   useEffect(() => {
-    if (value && value.trim()) {
-      // Reset first
-      setStartTime('');
-      setEndTime('');
-      
-      // Handle format: "08:00 WIB - 17:00 WIB" or "08:00 - 17:00 WIB" or "08:00 s/d 17:00 WIB"
-      const cleanValue = value.trim();
-      
-      if (cleanValue.includes(' - ')) {
-        const parts = cleanValue.split(' - ');
-        if (parts.length >= 2 && parts[0] && parts[1]) {
-          // Extract start time (remove WIB if present)
-          const start = parts[0].replace(/\s*WIB\s*/gi, '').trim();
-          // Extract end time (remove WIB if present)
-          const end = parts[1].replace(/\s*WIB\s*/gi, '').trim();
-          
-          if (start && end) {
-            setStartTime(start);
-            setEndTime(end);
-          }
-        }
-      } else if (cleanValue.includes(' s/d ')) {
-        const parts = cleanValue.split(' s/d ');
-        if (parts.length >= 2 && parts[0] && parts[1]) {
-          // Extract start time (remove WIB if present)
-          const start = parts[0].replace(/\s*WIB\s*/gi, '').trim();
-          // Extract end time (remove WIB if present)
-          const end = parts[1].replace(/\s*WIB\s*/gi, '').trim();
-          
-          if (start && end) {
-            setStartTime(start);
-            setEndTime(end);
-          }
-        }
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        timepickerRef.current &&
+        !timepickerRef.current.contains(event.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
+        setIsVisible(false);
       }
-    } else {
-      // Reset if value is empty
-      setStartTime('');
-      setEndTime('');
-    }
-  }, [value]);
+    };
 
-  const handleStartTimeChange = (time: string) => {
-    setStartTime(time);
-  };
-
-  const handleEndTimeChange = (time: string) => {
-    setEndTime(time);
-    // Auto-save: langsung apply setelah memilih waktu selesai
-    if (time && startTime) {
-      const timeRange = `${startTime} WIB - ${time} WIB`;
-      if (onChange) {
-        onChange(timeRange);
-      }
-      // Auto close after selection
-      setTimeout(() => setIsOpen(false), 300);
+    if (isVisible) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
-  };
 
-  const handleApply = () => {
-    if (startTime && endTime) {
-      const timeRange = `${startTime} WIB - ${endTime} WIB`;
-      if (onChange) {
-        onChange(timeRange);
-      }
-      setIsOpen(false);
-    }
-  };
-
-  const handleReset = () => {
-    setStartTime('');
-    setEndTime('');
-    if (onChange) {
-      onChange('');
-    }
-  };
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isVisible]);
 
   return (
-    <div className="relative">
-      <div 
-        className={`w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 ${
-          disabled ? 'bg-gray-50 cursor-not-allowed' : 'cursor-pointer hover:border-gray-400'
-        } ${className || ''}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-      >
-        <input
-          id={id}
-          name={name}
-          type="text"
-          value={value || ''}
-          placeholder={placeholder}
-          readOnly
-          required={required}
-          disabled={disabled}
-          className="w-full bg-transparent outline-none cursor-pointer"
-        />
-        <ClockIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-      </div>
+    <>
+      <style jsx>{`
+        /* Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
 
-      {isOpen && !disabled && (
-        <>
-          {/* Overlay to close dropdown when clicking outside - tidak block scroll */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
-            style={{ background: 'transparent' }}
-          />
-          
-          {/* Dropdown content - scrollable dan tidak block halaman */}
-          <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-xl min-w-[350px] max-h-[500px] overflow-y-auto">
-            <div className="p-4 space-y-4">
-              <div className="text-sm font-medium text-gray-900 mb-3">
-                Pilih Rentang Waktu Kerja
-              </div>
-              
-              {/* Start Time Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Waktu Mulai
-                </label>
-                <div className="relative">
-                  <select
-                    value={startTime}
-                    onChange={(e) => handleStartTimeChange(e.target.value)}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
-                  >
-                    <option value="">-- Pilih Waktu Mulai --</option>
-                    {timeOptions.map((time) => (
-                      <option key={`start-${time}`} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
+        .no-scrollbar {
+          -ms-overflow-style: none; /* IE and Edge */
+          scrollbar-width: none; /* Firefox */
+        }
+      `}</style>
 
-              {/* End Time Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Waktu Selesai
-                </label>
-                <div className="relative">
-                  <select
-                    value={endTime}
-                    onChange={(e) => handleEndTimeChange(e.target.value)}
-                    disabled={!startTime}
-                    className={`w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 appearance-none bg-white ${
-                      !startTime 
-                        ? 'bg-gray-50 cursor-not-allowed text-gray-400'
-                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                  >
-                    <option value="">
-                      {!startTime ? '-- Pilih waktu mulai terlebih dahulu --' : '-- Pilih Waktu Selesai --'}
-                    </option>
-                    {timeOptions.map((time) => (
-                      <option key={`end-${time}`} value={time}>
-                        {time}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
+      <div className="relative">
+        {label && (
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+        )}
 
-              {/* Preview */}
-              {startTime && endTime && (
-                <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                  <div className="text-sm text-blue-800">
-                    <strong>Preview:</strong> {startTime} - {endTime} WIB
-                  </div>
-                </div>
-              )}
+        <div className="relative">
+          {/* Timepicker Input with Icons */}
+          <div className="relative flex items-center">
+            {/* Clock Icon */}
+            <span className="absolute left-0 pl-3 text-gray-500 dark:text-gray-400">
+              <svg
+                className="fill-current"
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <g clipPath="url(#clip0_3185_947)">
+                  <path
+                    d="M10.4687 10.3125V5.28125C10.4687 4.90625 10.1562 4.59375 9.78125 4.59375C9.40625 4.59375 9.09375 4.90625 9.09375 5.28125V10.5937C9.09375 10.7812 9.15625 10.9687 9.28125 11.0937L12.75 14.625C12.875 14.75 13.0625 14.8437 13.25 14.8437C13.4375 14.8437 13.5937 14.7812 13.75 14.6562C14.0312 14.375 14.0312 13.9375 13.75 13.6562L10.4687 10.3125Z"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M10 0.46875C4.78125 0.46875 0.5625 4.75 0.5625 10C0.5625 15.25 4.8125 19.5312 10 19.5312C15.1875 19.5312 19.4375 15.25 19.4375 10C19.4375 4.75 15.2188 0.46875 10 0.46875ZM10 18.125C5.5625 18.125 1.9375 14.4688 1.9375 10C1.9375 5.53125 5.5625 1.875 10 1.875C14.4375 1.875 18.0625 5.53125 18.0625 10C18.0625 14.4688 14.4375 18.125 10 18.125Z"
+                    fill="currentColor"
+                  />
+                </g>
+                <defs>
+                  <clipPath id="clip0_3185_947">
+                    <rect width="20" height="20" fill="white" />
+                  </clipPath>
+                </defs>
+              </svg>
+            </span>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between space-x-2 pt-2 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Reset
-                </button>
-                <div className="flex space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApply}
-                    disabled={!startTime || !endTime}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                  >
-                    Terapkan
-                  </button>
-                </div>
-              </div>
-            </div>
+            <input
+              ref={inputRef}
+              id={id}
+              name={name}
+              type="text"
+              className={`w-full rounded-md border bg-white dark:bg-gray-700 py-2.5 pl-12 pr-10 text-gray-900 dark:text-gray-100 outline-none transition ${
+                error
+                  ? 'border-red-500 focus:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 dark:focus:border-blue-500'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`}
+              placeholder={placeholder}
+              readOnly
+              value={value}
+              onClick={toggleTimepickerVisibility}
+              disabled={disabled}
+              required={required}
+            />
+            <span
+              className={`absolute right-0 pr-3 text-gray-500 dark:text-gray-400 ${
+                disabled ? 'cursor-not-allowed' : 'cursor-pointer'
+              }`}
+              onClick={toggleTimepickerVisibility}
+            >
+              {/* Arrow Down Icon */}
+              <svg
+                className="fill-current stroke-current"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M2.29635 5.15354L2.29632 5.15357L2.30055 5.1577L7.65055 10.3827L8.00157 10.7255L8.35095 10.381L13.701 5.10603L13.701 5.10604L13.7035 5.10354C13.722 5.08499 13.7385 5.08124 13.7499 5.08124C13.7613 5.08124 13.7778 5.08499 13.7963 5.10354C13.8149 5.12209 13.8187 5.13859 13.8187 5.14999C13.8187 5.1612 13.815 5.17734 13.7973 5.19552L8.04946 10.8433L8.04945 10.8433L8.04635 10.8464C8.01594 10.8768 7.99586 10.8921 7.98509 10.8992C7.97746 10.8983 7.97257 10.8968 7.96852 10.8952C7.96226 10.8929 7.94944 10.887 7.92872 10.8721L2.20253 5.2455C2.18478 5.22733 2.18115 5.2112 2.18115 5.19999C2.18115 5.18859 2.18491 5.17209 2.20346 5.15354C2.222 5.13499 2.2385 5.13124 2.2499 5.13124C2.2613 5.13124 2.2778 5.13499 2.29635 5.15354Z"
+                  fill="currentColor"
+                  stroke="currentColor"
+                />
+              </svg>
+            </span>
           </div>
-        </>
-      )}
-    </div>
+
+          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+
+          {/* Timepicker Container */}
+          {isVisible && (
+            <div
+              ref={timepickerRef}
+              className="no-scrollbar absolute right-0 z-50 mt-2 h-[300px] w-[120px] overflow-hidden overflow-y-auto rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 shadow-lg"
+            >
+              {times.map((time, index) => {
+                const isSelected = time === value;
+                return (
+                  <div
+                    key={index}
+                    className={`time-option cursor-pointer rounded-md px-3 py-2 text-center text-sm transition ${
+                      isSelected
+                        ? "bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 font-semibold"
+                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                    onClick={() => handleTimeSelection(time)}
+                  >
+                    {time}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }

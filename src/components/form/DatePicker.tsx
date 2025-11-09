@@ -1,323 +1,309 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import ReactDatePicker from 'react-datepicker';
-import { toJakartaISOString } from '@/lib/timezone';
-import { useServerTime } from '@/hooks/useServerTime';
+import React, { useState, useRef, useEffect } from 'react';
+import { getServerDateString } from '@/lib/serverDate';
 
-export interface DatePickerProps {
+interface DatePickerProps {
+  value: string;
+  onChange: (date: string) => void;
+  label?: string;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
   id?: string;
   name?: string;
-  value?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
   className?: string;
-  autoFocus?: boolean;
+  disabled?: boolean;
 }
 
-// DatePicker using react-datepicker with server time sync
 export default function DatePicker({
   value,
   onChange,
-  placeholder = 'Pilih tanggal',
-  disabled = false,
+  label,
+  error,
+  required = false,
+  placeholder = 'Select date',
+  id,
+  name,
   className = '',
-  autoFocus = false
+  disabled = false,
 }: DatePickerProps) {
-  const { getCurrentServerTime, getCurrentDate, isLoaded } = useServerTime();
-  const [todayDate, setTodayDate] = useState<Date | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(
+    value ? new Date(value + 'T00:00:00') : new Date()
+  );
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Update today date when server time is loaded (once only)
+  // Generate year range: 2020 to current year + 5
+  const currentYear = new Date().getFullYear();
+  const yearRange = Array.from({ length: currentYear - 2020 + 6 }, (_, i) => 2020 + i);
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
   useEffect(() => {
-    if (isLoaded) {
-      setTodayDate(getCurrentServerTime());
+    if (isOpen && calendarRef.current) {
+      const calendar = calendarRef.current;
+      calendar.innerHTML = '';
+
+      const header = document.createElement('div');
+      header.className =
+        'flex items-center justify-between mb-4 text-gray-900 dark:text-gray-100';
+
+      const prevButton = document.createElement('button');
+      prevButton.type = 'button';
+      prevButton.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      `;
+      prevButton.className =
+        'p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
+      prevButton.onclick = () => {
+        setCurrentMonth(
+          new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+        );
+      };
+
+      // Month and Year Selectors Container
+      const monthYearContainer = document.createElement('div');
+      monthYearContainer.className = 'flex gap-2';
+
+      // Month Selector
+      const monthSelect = document.createElement('select');
+      monthSelect.className = 'px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600';
+      monthNames.forEach((month, index) => {
+        const option = document.createElement('option');
+        option.value = index.toString();
+        option.textContent = month;
+        if (index === currentMonth.getMonth()) {
+          option.selected = true;
+        }
+        monthSelect.appendChild(option);
+      });
+      monthSelect.onchange = (e) => {
+        const target = e.target as HTMLSelectElement;
+        setCurrentMonth(
+          new Date(currentMonth.getFullYear(), parseInt(target.value), 1)
+        );
+      };
+
+      // Year Selector
+      const yearSelect = document.createElement('select');
+      yearSelect.className = 'px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600';
+      yearRange.forEach((year) => {
+        const option = document.createElement('option');
+        option.value = year.toString();
+        option.textContent = year.toString();
+        if (year === currentMonth.getFullYear()) {
+          option.selected = true;
+        }
+        yearSelect.appendChild(option);
+      });
+      yearSelect.onchange = (e) => {
+        const target = e.target as HTMLSelectElement;
+        setCurrentMonth(
+          new Date(parseInt(target.value), currentMonth.getMonth(), 1)
+        );
+      };
+
+      monthYearContainer.appendChild(monthSelect);
+      monthYearContainer.appendChild(yearSelect);
+
+      const nextButton = document.createElement('button');
+      nextButton.type = 'button';
+      nextButton.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      `;
+      nextButton.className =
+        'p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded';
+      nextButton.onclick = () => {
+        setCurrentMonth(
+          new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+        );
+      };
+
+      header.appendChild(prevButton);
+      header.appendChild(monthYearContainer);
+      header.appendChild(nextButton);
+
+      const weekdays = document.createElement('div');
+      weekdays.className = 'grid grid-cols-7 gap-1 mb-2';
+      ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].forEach((day) => {
+        const dayElement = document.createElement('div');
+        dayElement.className =
+          'text-center text-sm font-medium text-gray-600 dark:text-gray-400 py-2';
+        dayElement.textContent = day;
+        weekdays.appendChild(dayElement);
+      });
+
+      const daysGrid = document.createElement('div');
+      daysGrid.className = 'grid grid-cols-7 gap-1 mb-4';
+
+      const firstDay = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        1
+      );
+      const lastDay = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + 1,
+        0
+      );
+      const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
+
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        daysGrid.appendChild(document.createElement('div'));
+      }
+
+      const selectedDateStr = value;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayButton = document.createElement('button');
+        dayButton.type = 'button';
+        dayButton.textContent = day.toString();
+
+        const dateStr = new Date(
+          currentMonth.getFullYear(),
+          currentMonth.getMonth(),
+          day
+        )
+          .toISOString()
+          .split('T')[0];
+
+        if (!dateStr) continue;
+
+        const isSelected = dateStr === selectedDateStr;
+
+        dayButton.className = `p-2 text-sm rounded ${
+          isSelected
+            ? 'bg-blue-500 text-white font-semibold'
+            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
+        }`;
+
+        dayButton.onclick = () => {
+          onChange(dateStr);
+          setIsOpen(false);
+        };
+
+        daysGrid.appendChild(dayButton);
+      }
+
+      const buttons = document.createElement('div');
+      buttons.className = 'flex gap-2';
+
+      const todayButton = document.createElement('button');
+      todayButton.type = 'button';
+      todayButton.textContent = 'Hari ini';
+      todayButton.className =
+        'flex-1 px-3 py-2 text-sm border border-blue-500 text-blue-500 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20';
+      todayButton.onclick = async () => {
+        try {
+          const todayDate = await getServerDateString();
+          onChange(todayDate);
+          setIsOpen(false);
+        } catch (error) {
+          console.error('Error getting server date:', error);
+          // Fallback to client date if server date fails
+          const fallbackDate = new Date().toISOString().split('T')[0];
+          if (fallbackDate) {
+            onChange(fallbackDate);
+            setIsOpen(false);
+          }
+        }
+      };
+
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.textContent = 'Reset';
+      removeButton.className =
+        'flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100';
+      removeButton.onclick = () => {
+        onChange('');
+        setIsOpen(false);
+      };
+
+      const doneButton = document.createElement('button');
+      doneButton.type = 'button';
+      doneButton.textContent = 'Terapkan';
+      doneButton.className =
+        'flex-1 px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600';
+      doneButton.onclick = () => {
+        setIsOpen(false);
+      };
+
+      buttons.appendChild(todayButton);
+      buttons.appendChild(removeButton);
+      buttons.appendChild(doneButton);
+
+      calendar.appendChild(header);
+      calendar.appendChild(weekdays);
+      calendar.appendChild(daysGrid);
+      calendar.appendChild(buttons);
     }
-    // getCurrentServerTime is stable via useCallback, but we only need to run this once when isLoaded changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded]);
+  }, [isOpen, currentMonth, value, onChange]);
 
-  // Convert string value to Date object anchored at Jakarta timezone
-  const selectedDate = value ? new Date(`${value}T00:00:00+07:00`) : null;
-
-  // Get real Jakarta time from server (not device time) for calculating min/max dates
-  const serverTime = todayDate || getCurrentServerTime();
-  const currentYear = serverTime.getFullYear();
-  
-  // MinDate: 1 Jan 2020 Jakarta time
-  const minDate = new Date('2020-01-01T00:00:00+07:00');
-  
-  // MaxDate: 31 Des tahun sekarang + 5 (Jakarta) - dihitung dari waktu real server
-  const maxDate = new Date(`${currentYear + 5}-12-31T23:59:59+07:00`);
-
-  // Handle date change
-  const handleChange = (date: Date | null) => {
-    if (date && onChange) {
-      // Ensure we use Jakarta date when converting selected Date to YYYY-MM-DD
-      const jakartaIso = (toJakartaISOString(date) || date.toISOString()) as string;
-      const formattedDate: string = (jakartaIso.split('T')[0] || '');
-      onChange(formattedDate);
-    } else if (!date && onChange) {
-      onChange('');
-    }
-  };
-
-  // Custom handler for "Today" button - uses server time instead of browser time
-  const handleTodayClick = () => {
-    if (onChange) {
-      // Use server date (YYYY-MM-DD format from Jakarta timezone)
-      const serverDate = getCurrentDate();
-      onChange(serverDate);
-    }
+  const formatDisplayDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   return (
     <div className="relative">
-      <ReactDatePicker
-        selected={selectedDate}
-        onChange={handleChange}
-        placeholderText={placeholder}
+      {label && (
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          {label}
+          {required && <span className="text-red-500 ml-1">*</span>}
+        </label>
+      )}
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        id={id}
+        name={name}
         disabled={disabled}
-        autoFocus={autoFocus}
-        dateFormat="dd/MM/yyyy"
-        className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white ${className}`}
-        calendarClassName="react-datepicker-calendar"
-        popperClassName="react-datepicker-popper"
-        popperPlacement="bottom-start"
-        showPopperArrow={false}
-        isClearable={true}
-        {...(todayDate ? { openToDate: todayDate } : {})}
-        showMonthDropdown
-        showYearDropdown
-        dropdownMode="select"
-        minDate={minDate}
-        maxDate={maxDate}
-        onKeyDown={(e) => {
-          // Mencegah pengetikan manual kecuali untuk navigasi
-          if (
-            e.key !== 'Tab' && 
-            e.key !== 'Enter' && 
-            e.key !== 'Escape' && 
-            e.key !== 'ArrowUp' && 
-            e.key !== 'ArrowDown' && 
-            e.key !== 'ArrowLeft' && 
-            e.key !== 'ArrowRight'
-          ) {
-            e.preventDefault();
-          }
-        }}
-        onFocus={(e) => {
-          // Membuka datepicker saat input mendapat focus
-          e.target.blur();
-          e.target.focus();
-        }}
+        className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-left flex items-center justify-between ${
+          error
+            ? 'border-red-500'
+            : 'border-gray-300 dark:border-gray-600'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}
       >
-        {/* Custom Today Button - uses server time instead of browser time */}
-        <div className="react-datepicker__today-button-custom" onClick={handleTodayClick}>
-          Hari ini
+        <span>{value ? formatDisplayDate(value) : placeholder}</span>
+        <svg
+          className="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+          />
+        </svg>
+      </button>
+
+      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+
+      {isOpen && (
+        <div 
+          className="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg p-4 w-70 top-full mt-1"
+        >
+          <div ref={calendarRef}></div>
         </div>
-      </ReactDatePicker>
-      <style jsx global>{`
-        /* Styling untuk tombol clear di DatePicker */
-        .react-datepicker__close-icon {
-          position: absolute;
-          right: 8px;
-          top: 50%;
-          transform: translateY(-50%);
-          background-color: transparent;
-          border: none;
-          cursor: pointer;
-          padding: 0;
-          height: 20px;
-          width: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1;
-        }
-
-        .react-datepicker__close-icon::after {
-          content: '×';
-          font-size: 20px;
-          color: #9ca3af;
-          background-color: #f3f4f6;
-          border-radius: 50%;
-          height: 20px;
-          width: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .react-datepicker__close-icon:hover::after {
-          background-color: #ef4444;
-          color: white;
-        }
-
-        /* Berikan padding kanan lebih untuk input agar tidak tertutup tombol clear */
-        .react-datepicker__input-container input:not(:placeholder-shown) {
-          padding-right: 35px;
-        }
-
-        /* Styling datepicker header - Simple & Clean */
-        .react-datepicker__header {
-          background-color: white;
-          border-bottom: 1px solid #e5e7eb;
-          padding: 12px 0;
-        }
-
-        .react-datepicker__current-month {
-          display: none; /* Hide karena sudah ada dropdown */
-        }
-
-        .react-datepicker__day-name {
-          color: #6b7280;
-          font-weight: 500;
-          font-size: 13px;
-          margin: 4px;
-        }
-
-        /* Container untuk dropdown */
-        .react-datepicker__month-dropdown-container,
-        .react-datepicker__year-dropdown-container {
-          margin: 0 4px;
-        }
-
-        /* Styling dropdown bulan dan tahun - Simple */
-        .react-datepicker__month-select,
-        .react-datepicker__year-select {
-          padding: 6px 10px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          background-color: white;
-          color: #374151;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.15s;
-          margin: 0 2px;
-        }
-
-        .react-datepicker__month-select:hover,
-        .react-datepicker__year-select:hover {
-          border-color: #3b82f6;
-        }
-
-        .react-datepicker__month-select:focus,
-        .react-datepicker__year-select:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-        }
-
-        /* Calendar styling */
-        .react-datepicker {
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          font-family: inherit;
-        }
-
-        .react-datepicker__month {
-          margin: 8px;
-        }
-
-        .react-datepicker__day {
-          border-radius: 6px;
-          margin: 2px;
-          font-size: 13px;
-          transition: all 0.15s;
-        }
-
-        .react-datepicker__day:hover {
-          background-color: #eff6ff;
-          color: #3b82f6;
-        }
-
-        .react-datepicker__day--selected,
-        .react-datepicker__day--keyboard-selected {
-          background-color: #3b82f6 !important;
-          color: white !important;
-          font-weight: 500;
-        }
-
-        .react-datepicker__day--selected:hover,
-        .react-datepicker__day--keyboard-selected:hover {
-          background-color: #2563eb !important;
-          color: white !important;
-        }
-
-        .react-datepicker__day--today {
-          font-weight: 600;
-          color: #3b82f6;
-          background-color: #eff6ff;
-        }
-
-        .react-datepicker__day--today.react-datepicker__day--selected {
-          background-color: #3b82f6 !important;
-          color: white !important;
-        }
-
-        .react-datepicker__day--disabled {
-          color: #d1d5db;
-          cursor: not-allowed;
-        }
-
-        .react-datepicker__day--disabled:hover {
-          background-color: transparent;
-        }
-
-        /* Today button - Simple */
-        .react-datepicker__today-button {
-          background-color: white;
-          border-top: 1px solid #e5e7eb;
-          padding: 10px;
-          text-align: center;
-          cursor: pointer;
-          font-weight: 500;
-          font-size: 13px;
-          color: #3b82f6;
-          transition: all 0.15s;
-        }
-
-        .react-datepicker__today-button:hover {
-          background-color: #f9fafb;
-        }
-
-        /* Custom Today button - uses server time */
-        .react-datepicker__today-button-custom {
-          background-color: white;
-          border-top: 1px solid #e5e7eb;
-          padding: 10px;
-          text-align: center;
-          cursor: pointer;
-          font-weight: 500;
-          font-size: 13px;
-          color: #3b82f6;
-          transition: all 0.15s;
-        }
-
-        .react-datepicker__today-button-custom:hover {
-          background-color: #f9fafb;
-        }
-
-        /* Navigation arrows */
-        .react-datepicker__navigation {
-          top: 12px;
-        }
-
-        .react-datepicker__navigation-icon::before {
-          border-color: #6b7280;
-          border-width: 2px 2px 0 0;
-        }
-
-        .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-          border-color: #3b82f6;
-        }
-      `}</style>
+      )}
     </div>
   );
 }
-

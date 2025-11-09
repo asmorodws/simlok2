@@ -65,8 +65,8 @@ export default function SubmissionsCardView({
 
     // Default fallback
     return {
-      label: 'Sedang Diproses',
-      color: 'bg-gray-100 text-gray-800',
+      label: 'Menunggu Review',
+      color: 'bg-yellow-100 text-yellow-800',
       description: 'Pengajuan sedang dalam proses'
     };
   };

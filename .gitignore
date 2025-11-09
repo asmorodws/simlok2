@@ -55,4 +55,8 @@ next-env.d.ts
 *.tmp
 *.log
 
+# logs directory
+/logs
+/logs/*
+
 ./users.txt

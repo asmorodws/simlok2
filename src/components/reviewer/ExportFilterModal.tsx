@@ -7,7 +7,7 @@ import {
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
 import Button from '@/components/ui/button/Button';
-import DatePicker from '@/components/form/DatePicker';
+import DateRangePicker from '@/components/form/DateRangePicker';
 
 interface ExportFilterModalProps {
   isOpen: boolean;
@@ -96,30 +96,12 @@ export default function ExportFilterModal({
                 <CalendarDaysIcon className="h-4 w-4 inline mr-1" />
                 Filter Rentang Tanggal (Opsional)
               </label>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Tanggal Mulai
-                  </label>
-                  <DatePicker
-                    value={startDate}
-                    onChange={(value) => setStartDate(value)}
-                    placeholder="Pilih tanggal mulai"
-                    className="border-gray-300 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Tanggal Akhir
-                  </label>
-                  <DatePicker
-                    value={endDate}
-                    onChange={(value) => setEndDate(value)}
-                    placeholder="Pilih tanggal akhir"
-                    className="border-gray-300 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-              </div>
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={(value) => setStartDate(value)}
+                onEndDateChange={(value) => setEndDate(value)}
+              />
               <p className="text-xs text-gray-500 mt-2">
                 Kosongkan kedua field untuk export semua data
               </p>

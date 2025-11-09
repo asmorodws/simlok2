@@ -8,7 +8,7 @@ import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
-import TimePicker from '@/components/form/TimePicker';
+import TimeRangePicker from '@/components/form/TimeRangePicker';
 import FileUpload from '@/components/form/FileUpload';
 import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -653,34 +653,32 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
                   />
                 </div>
 
+              <div>
+                <Label htmlFor="jam_kerja">Jam kerja</Label>
+                <TimeRangePicker
+                  id="jam_kerja"
+                  name="jam_kerja"
+                  value={formData.jam_kerja}
+                  onChange={handleTimeChange}
+                  required
+                  placeholder="Pilih jam kerja"
+                />
+              </div>
+
+              {/* Conditional field for holiday working hours */}
+              {hasWeekend && (
                 <div>
-                  <Label htmlFor="jam_kerja">Jam kerja</Label>
-                  <TimePicker
-                    id="jam_kerja"
-                    name="jam_kerja"
-                    value={formData.jam_kerja}
+                  <Label htmlFor="jam_kerja_libur">
+                    Jam kerja hari libur (Sabtu/Minggu)
+                    <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
+                  </Label>
+                  <TimeRangePicker
+                    id="jam_kerja_libur"
+                    name="jam_kerja_libur"
+                    value={formData.jam_kerja_libur}
                     onChange={handleTimeChange}
-                    required
-                    placeholder="Pilih jam kerja"
-                  />
-                </div>
-
-                {/* Conditional field for holiday working hours */}
-                {hasWeekend && (
-                  <div>
-                    <Label htmlFor="jam_kerja_libur">
-                      Jam kerja hari libur (Sabtu/Minggu)
-                      <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
-                    </Label>
-                    <TimePicker
-                      id="jam_kerja_libur"
-                      name="jam_kerja_libur"
-                      value={formData.jam_kerja_libur}
-                      onChange={handleTimeChange}
-                      placeholder="Pilih jam kerja untuk hari libur"
-                    />
-
-                  </div>
+                    placeholder="Pilih jam kerja untuk hari libur"
+                  />                  </div>
                 )}
 
                 <div>

@@ -20,8 +20,8 @@ import {
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
-import DatePicker from '@/components/form/DatePicker';
-import TimePicker from '@/components/form/TimePicker';
+import DateRangePicker from '@/components/form/DateRangePicker';
+import TimeRangePicker from '@/components/form/TimeRangePicker';
 
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
 import DetailSection from '@/components/common/DetailSection';
@@ -131,7 +131,7 @@ interface ImprovedDateRangePickerProps {
 const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
   value,
   onChange,
-  disabled = false,
+  disabled: _disabled = false,
   className = ''
 }) => {
   const [localRange, setLocalRange] = useState<DateRange>(value);
@@ -201,38 +201,22 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
 
   return (
     <div className={`relative ${className}`} style={{ overflow: 'visible' }}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative" style={{ zIndex: 20 }}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tanggal Mulai Pelaksanaan
-          </label>
-          <DatePicker
-            value={localRange.startDate}
-            onChange={handleStartChange}
-            disabled={disabled}
-            placeholder="Pilih tanggal mulai"
-            className="w-full relative"
-          />
-          {errors.start && (
-            <div className="mt-1 text-sm text-red-600">{errors.start}</div>
-          )}
-        </div>
-
-        <div className="relative" style={{ zIndex: 20 }}>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tanggal Selesai Pelaksanaan
-          </label>
-          <DatePicker
-            value={localRange.endDate}
-            onChange={handleEndChange}
-            disabled={disabled}
-            placeholder="Pilih tanggal selesai"
-            className="w-full relative"
-          />
-          {errors.end && (
-            <div className="mt-1 text-sm text-red-600">{errors.end}</div>
-          )}
-        </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Tanggal Pelaksanaan
+        </label>
+        <DateRangePicker
+          startDate={localRange.startDate}
+          endDate={localRange.endDate}
+          onStartDateChange={handleStartChange}
+          onEndDateChange={handleEndChange}
+        />
+        {errors.start && (
+          <div className="mt-1 text-sm text-red-600">{errors.start}</div>
+        )}
+        {errors.end && (
+          <div className="mt-1 text-sm text-red-600">{errors.end}</div>
+        )}
       </div>
 
       {hasValidRange && (
@@ -1167,7 +1151,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Jam Kerja (Hari Kerja)
                           </label>
-                          <TimePicker
+                          <TimeRangePicker
                             value={workingHours}
                             onChange={handleWorkingHoursChange}
                             disabled={submission.approval_status !== 'PENDING_APPROVAL'}
@@ -1189,7 +1173,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                               (Range tanggal termasuk Sabtu/Minggu)
                             </span>
                           </label>
-                          <TimePicker
+                          <TimeRangePicker
                             value={holidayWorkingHours}
                             onChange={handleHolidayWorkingHoursChange}
                             disabled={submission.approval_status !== 'PENDING_APPROVAL'}
@@ -1700,7 +1684,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                       <InfoCard
                         label="Jam Kerja"
                         value={
-                          <div className="space-y-0.5">
+                          <div className="space-y-0.5 text-sm font-normal text-gray-900">
                             <div>{workingHours || submission.working_hours} (Hari kerja)</div>
                             {(holidayWorkingHours || submission.holiday_working_hours) && (
                               <div>{holidayWorkingHours || submission.holiday_working_hours} (Hari libur)</div>

@@ -980,7 +980,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                       <InfoCard
                         label="Jam Kerja"
                         value={
-                          <div className="space-y-0.5">
+                          <div className="space-y-0.5 text-sm font-normal text-gray-900">
                             <div>{submission.working_hours} (Hari kerja)</div>
                             {submission.holiday_working_hours && (
                               <div>{submission.holiday_working_hours} (Hari libur)</div>
