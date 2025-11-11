@@ -17,13 +17,15 @@ The error occurred in the image loading pipeline at `/src/utils/pdf/imageLoader.
 
 1. Images were supposed to be optimized to JPEG format via `optimizeImage()`
 2. However, some images retained PNG compression methods (flate/deflate)
-3. When `pdfDoc.embedJpg()` tried to parse these images, it encountered PNG-specific compression methods (96, 186)
-4. pdf-lib's JPEG embedder couldn't handle these compression methods and threw an error
+3. **Additional issue:** `optimizeImage()` had a fallback that returned the original buffer unchanged if optimization failed
+4. When `pdfDoc.embedJpg()` tried to parse these images, it encountered PNG-specific compression methods (96, 186)
+5. pdf-lib's JPEG embedder couldn't handle these compression methods and threw an error
 
 **Technical Details:**
 - Compression method codes 96, 186 are specific to PNG format (deflate/flate compression)
 - pdf-lib has separate embedders for JPEG (`embedJpg()`) and PNG (`embedPng()`)
 - Using the wrong embedder for the actual image format causes this error
+- **Critical:** If `optimizeImage()` returned the original buffer, PNG images would be passed to `embedJpg()` causing the error
 
 ## Solution
 
@@ -122,6 +124,19 @@ if (cachedBuffer) {
    - ✅ Updated cached buffer embedding with JPG/PNG fallback
    - ✅ Updated remote URL handling with fallback
    - ✅ File loading already uses `loadFileImage()` which has 3-tier fallback
+
+### `/src/utils/pdf/imageOptimizer.ts`
+
+**Modified Function:**
+
+4. **`optimizeImage()`** (Lines ~25-75)
+   - ✅ Added 2-tier fallback for optimization failures:
+     1. Standard optimization with resize
+     2. **NEW:** Basic JPEG conversion without resize (quality 85)
+   - ✅ Enhanced warning messages when returning original buffer
+   - ✅ Added compression statistics logging
+   - ✅ **CRITICAL:** Now attempts JPEG conversion even if resize fails
+   - ✅ Prevents returning PNG buffers that would cause embedding errors
 
 ## Benefits
 
