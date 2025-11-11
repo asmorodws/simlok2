@@ -71,6 +71,7 @@ const imageCache = new ImageCache();
  * Load and process image from base64 string
  * 🎯 FIXED: Always embed as JPG after optimization (optimizeImage converts to JPEG)
  * 🎯 FIXED: Cache optimized buffers instead of PDFImage objects
+ * 🎯 CRITICAL FIX: Handle compression errors with fallback
  */
 async function loadBase64Image(
   pdfDoc: PDFDocument,
@@ -99,13 +100,25 @@ async function loadBase64Image(
       imageCache.set(cacheKey, optimizedBuffer);
     }
     
-    // 🎯 CRITICAL FIX: Always embed as JPG after optimization
-    // optimizeImage() converts all images to JPEG format for better compression
-    console.log(`[LoadBase64Image] Embedding as JPG (optimized format)`);
-    const result = await pdfDoc.embedJpg(optimizedBuffer);
-    
-    console.log(`[LoadBase64Image] ✅ Successfully embedded image in PDF`);
-    return result;
+    // 🎯 CRITICAL FIX: Try to embed with error handling for compression issues
+    try {
+      console.log(`[LoadBase64Image] Attempting to embed as JPG (optimized format)`);
+      const result = await pdfDoc.embedJpg(optimizedBuffer);
+      console.log(`[LoadBase64Image] ✅ Successfully embedded image in PDF`);
+      return result;
+    } catch (embedError) {
+      console.warn('[LoadBase64Image] ⚠️ JPG embed failed, trying PNG fallback:', embedError);
+      
+      // Fallback: Try embedding as PNG if JPG fails
+      try {
+        const resultPng = await pdfDoc.embedPng(optimizedBuffer);
+        console.log(`[LoadBase64Image] ✅ Successfully embedded as PNG fallback`);
+        return resultPng;
+      } catch (pngError) {
+        console.error('[LoadBase64Image] ❌ Both JPG and PNG embed failed');
+        throw pngError;
+      }
+    }
   } catch (error) {
     console.warn('[LoadBase64Image] ❌ Failed to process base64 image:', error);
     return null;
@@ -116,6 +129,7 @@ async function loadBase64Image(
  * Load and process image from filesystem
  * 🎯 FIXED: Always embed as JPG after optimization (optimizeImage converts to JPEG)
  * 🎯 FIXED: Return both PDFImage and optimized buffer for caching
+ * 🎯 CRITICAL FIX: Handle compression errors with fallback and re-optimization
  */
 async function loadFileImage(
   pdfDoc: PDFDocument,
@@ -136,13 +150,46 @@ async function loadFileImage(
     const optimizedBuffer = await optimizeImage(imageBuffer);
     console.log(`[LoadFileImage] Optimized image size: ${optimizedBuffer.length} bytes`);
 
-    // 🎯 CRITICAL FIX: Always embed as JPG after optimization
-    // optimizeImage() converts all images to JPEG format for better compression
-    console.log(`[LoadFileImage] Embedding as JPG (optimized format)`);
-    const result = await pdfDoc.embedJpg(optimizedBuffer);
-    
-    console.log(`[LoadFileImage] ✅ Successfully embedded image in PDF`);
-    return { image: result, buffer: optimizedBuffer };
+    // 🎯 CRITICAL FIX: Try to embed with error handling for compression issues
+    try {
+      console.log(`[LoadFileImage] Attempting to embed as JPG (optimized format)`);
+      const result = await pdfDoc.embedJpg(optimizedBuffer);
+      console.log(`[LoadFileImage] ✅ Successfully embedded image in PDF`);
+      return { image: result, buffer: optimizedBuffer };
+    } catch (embedError) {
+      console.warn(`[LoadFileImage] ⚠️ JPG embed failed, trying re-optimization:`, embedError);
+      
+      // Fallback 1: Try re-optimizing with higher quality
+      try {
+        const sharp = (await import('sharp')).default;
+        const reOptimizedBuffer = await sharp(imageBuffer)
+          .jpeg({ quality: 95, progressive: false, mozjpeg: false })
+          .toBuffer();
+        
+        console.log(`[LoadFileImage] Re-optimized with quality 95: ${reOptimizedBuffer.length} bytes`);
+        const result = await pdfDoc.embedJpg(reOptimizedBuffer);
+        console.log(`[LoadFileImage] ✅ Successfully embedded re-optimized JPG`);
+        return { image: result, buffer: reOptimizedBuffer };
+      } catch (reOptError) {
+        console.warn(`[LoadFileImage] ⚠️ Re-optimization failed, trying PNG:`, reOptError);
+        
+        // Fallback 2: Convert to PNG
+        try {
+          const sharp = (await import('sharp')).default;
+          const pngBuffer = await sharp(imageBuffer)
+            .png({ compressionLevel: 6 })
+            .toBuffer();
+          
+          console.log(`[LoadFileImage] Converted to PNG: ${pngBuffer.length} bytes`);
+          const resultPng = await pdfDoc.embedPng(pngBuffer);
+          console.log(`[LoadFileImage] ✅ Successfully embedded as PNG fallback`);
+          return { image: resultPng, buffer: pngBuffer };
+        } catch (pngError) {
+          console.error(`[LoadFileImage] ❌ All embedding methods failed`);
+          throw pngError;
+        }
+      }
+    }
   } catch (error) {
     console.error(`[LoadFileImage] ❌ Failed to process file image:`, error);
     return null;
@@ -171,8 +218,15 @@ export async function loadWorkerPhoto(
       console.log(`[LoadWorkerPhoto] ✅ Using cached buffer, embedding in new PDF: ${photoPath}`);
       try {
         // Re-embed cached buffer into this PDFDocument instance
-        const resultImage = await pdfDoc.embedJpg(cachedBuffer);
-        return resultImage;
+        // 🎯 CRITICAL FIX: Try JPG first, fallback to PNG
+        try {
+          const resultImage = await pdfDoc.embedJpg(cachedBuffer);
+          return resultImage;
+        } catch (embedError) {
+          console.warn(`[LoadWorkerPhoto] ⚠️ Cached JPG embed failed, trying PNG:`, embedError);
+          const resultImage = await pdfDoc.embedPng(cachedBuffer);
+          return resultImage;
+        }
       } catch (error) {
         console.warn(`[LoadWorkerPhoto] ⚠️ Failed to embed cached buffer, reloading:`, error);
         imageCache.delete(photoPath);
@@ -207,8 +261,24 @@ export async function loadWorkerPhoto(
         optimizedBuffer = await optimizeImage(buffer);
         imageCache.set(photoPath, optimizedBuffer);
         
-        resultImage = await pdfDoc.embedJpg(optimizedBuffer);
-        console.log(`[LoadWorkerPhoto] ✅ Remote image loaded successfully`);
+        // 🎯 CRITICAL FIX: Try to embed with error handling
+        try {
+          resultImage = await pdfDoc.embedJpg(optimizedBuffer);
+          console.log(`[LoadWorkerPhoto] ✅ Remote image loaded successfully as JPG`);
+        } catch (embedError) {
+          console.warn(`[LoadWorkerPhoto] ⚠️ JPG embed failed, trying PNG:`, embedError);
+          try {
+            const sharp = (await import('sharp')).default;
+            const pngBuffer = await sharp(buffer).png({ compressionLevel: 6 }).toBuffer();
+            resultImage = await pdfDoc.embedPng(pngBuffer);
+            optimizedBuffer = pngBuffer; // Update cached buffer
+            imageCache.set(photoPath, pngBuffer);
+            console.log(`[LoadWorkerPhoto] ✅ Remote image loaded as PNG fallback`);
+          } catch (pngError) {
+            console.error(`[LoadWorkerPhoto] ❌ Both JPG and PNG embed failed`);
+            return null;
+          }
+        }
       } catch (error) {
         console.warn(`[LoadWorkerPhoto] ❌ Failed to fetch remote image:`, error);
         return null;
