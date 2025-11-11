@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/singletons";
 import { withUserCache } from "@/lib/api-cache";
 import { CacheTTL } from "@/lib/cache";
+import DashboardService from "@/services/DashboardService";
 
 export async function GET() {
   try {
@@ -41,30 +41,18 @@ export async function GET() {
 }
 
 async function fetchVendorStats(userId: string) {
+  // Get vendor statistics from service
+  const stats = await DashboardService.getVendorStats(userId);
 
-    // Get submission statistics for current vendor
-    const stats = await prisma.submission.groupBy({
-      by: ['approval_status'],
-      where: { user_id: userId },
-      _count: {
-        approval_status: true
-      }
-    });
-
-    // Get total count
-    const totalCount = await prisma.submission.count({
-      where: { user_id: userId }
-    });
-
-  // Format statistics
+  // Format for legacy compatibility
   return {
-    totalSubmissions: totalCount,
-    pendingSubmissions: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    approvedSubmissions: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    rejectedSubmissions: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
-    draftSubmissions: 0, // Assuming no draft status in current schema
-    totalApproved: stats.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-    totalPending: stats.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-    totalRejected: stats.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0
+    totalSubmissions: stats.total,
+    pendingSubmissions: stats.byStatus.PENDING,
+    approvedSubmissions: stats.byStatus.APPROVED,
+    rejectedSubmissions: stats.byStatus.REJECTED,
+    draftSubmissions: 0, // No draft status in current schema
+    totalApproved: stats.byStatus.APPROVED,
+    totalPending: stats.byStatus.PENDING,
+    totalRejected: stats.byStatus.REJECTED
   };
 }

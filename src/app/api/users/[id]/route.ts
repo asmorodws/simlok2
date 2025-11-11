@@ -3,8 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
-import { toJakartaISOString } from '@/lib/timezone';
-import bcrypt from 'bcryptjs';
+import { UserService } from '@/services/UserService';
 
 // Schema for validating user update data
 const updateUserSchema = z.object({
@@ -46,54 +45,23 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    const whereClause: any = { 
-      id
-    };
-
-    // Role-based access control
-    if (session.user.role === 'REVIEWER') {
-      // Reviewers can only see vendor users
-      whereClause.role = 'VENDOR';
-    } else if (session.user.role === 'ADMIN') {
-      // Admins cannot see SUPER_ADMIN users
-      whereClause.NOT = { role: 'SUPER_ADMIN' };
-    }
-    // SUPER_ADMIN can see all users (no additional filter)
-
-    const user = await prisma.user.findFirst({
-      where: whereClause,
-      select: {
-        id: true,
-        email: true,
-        officer_name: true,
-        vendor_name: true,
-        address: true,
-        phone_number: true,
-        profile_photo: true,
-        created_at: true,
-        verified_at: true,
-        verified_by: true,
-        verification_status: true,
-        rejected_at: true,
-        rejected_by: true,
-        rejection_reason: true,
-        role: true,
-        isActive: true
-      }
-    });
+    // Use UserService to get user by ID
+    const user = await UserService.getUserById(id);
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const formattedUser = {
-      ...user,
-      created_at: toJakartaISOString(user.created_at) || user.created_at,
-      verified_at: toJakartaISOString(user.verified_at) || user.verified_at,
-      rejected_at: toJakartaISOString(user.rejected_at) || user.rejected_at,
-    };
+    // Apply role-based filtering
+    if (session.user.role === 'REVIEWER' && user.role !== 'VENDOR') {
+      return NextResponse.json({ error: 'Reviewers can only view vendor users' }, { status: 403 });
+    }
+    
+    if (session.user.role === 'ADMIN' && user.role === 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Admins cannot view SUPER_ADMIN users' }, { status: 403 });
+    }
 
-    return NextResponse.json({ user: formattedUser });
+    return NextResponse.json({ user });
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -116,17 +84,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Check if this is only an isActive update
     const isOnlyActiveUpdate = Object.keys(body).length === 1 && body.hasOwnProperty('isActive');
 
-    // Permission check:
-    // - SUPER_ADMIN/ADMIN: Can update everything
-    // - REVIEWER: Can update VENDOR users (full data edit or isActive only)
+    // Permission check
     if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'ADMIN') {
-      // SUPER_ADMIN and ADMIN can update everything
+      // Full access
     } else if (session.user.role === 'REVIEWER') {
       // REVIEWER can update VENDOR users
-      const targetUser = await prisma.user.findUnique({
-        where: { id },
-        select: { role: true }
-      });
+      const targetUser = await UserService.getUserById(id);
       
       if (!targetUser || targetUser.role !== 'VENDOR') {
         return NextResponse.json({ error: 'Reviewers can only update vendor accounts' }, { status: 403 });
@@ -137,144 +100,36 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'Reviewers cannot change user role' }, { status: 403 });
       }
     } else {
-      // No permission for other roles
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id }
-    });
+    // Use service layer for update (filter out undefined values)
+    const updateData: Record<string, any> = {};
+    if (validatedData.email) updateData.email = validatedData.email;
+    if (validatedData.password) updateData.password = validatedData.password;
+    if (validatedData.officer_name !== undefined) updateData.officer_name = validatedData.officer_name;
+    if (validatedData.vendor_name !== undefined) updateData.vendor_name = validatedData.vendor_name;
+    if (validatedData.phone_number !== undefined) updateData.phone_number = validatedData.phone_number;
+    if (validatedData.address !== undefined) updateData.address = validatedData.address;
+    if (validatedData.role) updateData.role = validatedData.role;
+    if (validatedData.verification_status) updateData.verification_status = validatedData.verification_status;
+    if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
 
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // If this is only an isActive update, handle it separately
-    if (isOnlyActiveUpdate && validatedData.isActive !== undefined) {
-      const updatedUser = await prisma.user.update({
-        where: { id },
-        data: { isActive: validatedData.isActive },
-        select: {
-          id: true,
-          email: true,
-          officer_name: true,
-          vendor_name: true,
-          phone_number: true,
-          address: true,
-          role: true,
-          verification_status: true,
-          isActive: true,
-          created_at: true,
-          verified_at: true,
-          rejected_at: true,
-          rejection_reason: true,
-        }
-      });
-
-      const formattedUpdatedUser = {
-        ...updatedUser,
-        created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
-        verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
-        rejected_at: toJakartaISOString(updatedUser.rejected_at) || updatedUser.rejected_at,
-      };
-
-      return NextResponse.json({
-        user: formattedUpdatedUser,
-        message: 'Account status updated successfully'
-      });
-    }
-
-    // Check if email is being changed and already exists
-    if (validatedData.email && validatedData.email !== existingUser.email) {
-      const emailExists = await prisma.user.findUnique({
-        where: { email: validatedData.email }
-      });
-
-      if (emailExists) {
-        return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
-      }
-    }
-
-    // Prepare update data
-    const updateData: any = {
-      email: validatedData.email || existingUser.email,
-      phone_number: validatedData.phone_number ?? existingUser.phone_number,
-      address: validatedData.address ?? existingUser.address,
-      role: validatedData.role || existingUser.role,
-    };
-
-    // Handle isActive field
-    if (validatedData.isActive !== undefined) {
-      updateData.isActive = validatedData.isActive;
-    }
-
-    // Handle verification_status field (SUPER_ADMIN and REVIEWER only)
-    if (validatedData.verification_status) {
-      if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'REVIEWER') {
-        updateData.verification_status = validatedData.verification_status;
-        
-        // Update timestamps based on status
-        if (validatedData.verification_status === 'VERIFIED') {
-          updateData.verified_at = new Date();
-          updateData.rejected_at = null;
-          updateData.rejection_reason = null;
-        } else if (validatedData.verification_status === 'REJECTED') {
-          updateData.rejected_at = new Date();
-          updateData.verified_at = null;
-        } else if (validatedData.verification_status === 'PENDING') {
-          updateData.verified_at = null;
-          updateData.rejected_at = null;
-          updateData.rejection_reason = null;
-        }
-      }
-    }
-
-    // Handle password update if provided
-    if (validatedData.password) {
-      updateData.password = await bcrypt.hash(validatedData.password, 12);
-    }
-
-    // Handle name fields based on role
-    if (updateData.role === 'VENDOR') {
-      updateData.vendor_name = validatedData.vendor_name ?? existingUser.vendor_name;
-      updateData.officer_name = validatedData.officer_name ?? existingUser.officer_name;
-    } else {
-      updateData.officer_name = validatedData.officer_name ?? existingUser.officer_name;
-      updateData.vendor_name = null;
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        officer_name: true,
-        vendor_name: true,
-        phone_number: true,
-        address: true,
-        role: true,
-        verification_status: true,
-        isActive: true,
-        created_at: true
-      }
-    });
+    const updatedUser = await UserService.updateUserAdmin(
+      id,
+      updateData as any,
+      session.user.id,
+      session.user.role as any
+    );
 
     console.log('PUT /api/users/[id] - Updated user:', {
       id: updatedUser.id,
       isActive: updatedUser.isActive
     });
 
-    const formattedUpdatedUser2 = {
-      ...updatedUser,
-      created_at: toJakartaISOString(updatedUser.created_at) || updatedUser.created_at,
-    };
-
     return NextResponse.json({
-      user: formattedUpdatedUser2,
-      message: 'User updated successfully'
+      user: updatedUser,
+      message: isOnlyActiveUpdate ? 'Account status updated successfully' : 'User updated successfully'
     });
 
   } catch (error) {
@@ -283,6 +138,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         error: 'Validation error', 
         details: error.issues 
       }, { status: 400 });
+    }
+    
+    if ((error as Error).message === 'User not found') {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if ((error as Error).message === 'Email already exists') {
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
     }
     
     console.error('Error updating user:', error);
@@ -308,59 +171,25 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validatedData = verificationSchema.parse(body);
 
-    // Check if user exists and is accessible by current role
-    const whereClause: any = { 
-      id
-      // Allow verification of both active and inactive users
-    };
+    // Check user role access
     if (session.user.role === 'REVIEWER') {
-      // Reviewers can only verify vendor users
-      whereClause.role = 'VENDOR';
-    } else if (session.user.role === 'ADMIN') {
-      // Admins cannot verify SUPER_ADMIN users
-      whereClause.NOT = { role: 'SUPER_ADMIN' };
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: whereClause
-    });
-
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Prepare update data based on action
-    const updateData: any = {};
-    
-    if (validatedData.action === 'VERIFY') {
-      updateData.verification_status = 'VERIFIED';
-      updateData.verified_at = new Date();
-      updateData.verified_by = session.user.id;
-      updateData.rejected_at = null;
-      updateData.rejected_by = null;
-      updateData.rejection_reason = null;
-    } else if (validatedData.action === 'REJECT') {
-      updateData.verification_status = 'REJECTED';
-      updateData.rejected_at = new Date();
-      updateData.rejected_by = session.user.id;
-      updateData.rejection_reason = validatedData.rejection_reason || 'No reason provided';
-      updateData.verified_at = null;
-      updateData.verified_by = null;
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        officer_name: true,
-        vendor_name: true,
-        verification_status: true,
-        verified_at: true,
-        rejected_at: true,
+      const targetUser = await UserService.getUserById(id);
+      if (!targetUser || targetUser.role !== 'VENDOR') {
+        return NextResponse.json({ error: 'Reviewers can only verify vendor users' }, { status: 404 });
       }
+    } else if (session.user.role === 'ADMIN') {
+      const targetUser = await UserService.getUserById(id);
+      if (!targetUser || targetUser.role === 'SUPER_ADMIN') {
+        return NextResponse.json({ error: 'Admins cannot verify SUPER_ADMIN users' }, { status: 404 });
+      }
+    }
+
+    // Use service layer for verification
+    const updatedUser = await UserService.verifyUser({
+      userId: id,
+      verifiedBy: session.user.id,
+      action: validatedData.action === 'VERIFY' ? 'VERIFIED' : 'REJECTED',
+      ...(validatedData.rejection_reason && { rejectionReason: validatedData.rejection_reason })
     });
 
     // Notify user of verification result
@@ -368,14 +197,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       notifyUserVerificationResult(id, validatedData.action, validatedData.rejection_reason)
     );
 
-    const formattedUpdatedUser3 = {
-      ...updatedUser,
-      verified_at: toJakartaISOString(updatedUser.verified_at) || updatedUser.verified_at,
-      rejected_at: toJakartaISOString(updatedUser.rejected_at) || updatedUser.rejected_at,
-    };
-
     return NextResponse.json({
-      user: formattedUpdatedUser3,
+      user: updatedUser,
       message: validatedData.action === 'VERIFY' 
         ? 'User verified successfully' 
         : 'User rejected successfully'
@@ -387,6 +210,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         error: 'Validation error', 
         details: error.issues 
       }, { status: 400 });
+    }
+
+    if ((error as Error).message === 'User not found') {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
     
     console.error('Error processing user verification:', error);
@@ -407,15 +234,6 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     // Only SUPER_ADMIN can delete users
     if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 });
-    }
-
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id }
-    });
-
-    if (!existingUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Prevent deleting yourself

@@ -105,7 +105,7 @@ export default function ChangePasswordCard() {
 
     try {
       setIsSaving(true);
-      const res = await fetch("/api/user/change-password", {
+      const res = await fetch("/api/users/change-password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

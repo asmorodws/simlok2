@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { DocumentIcon, XMarkIcon, CloudArrowUpIcon } from '@heroicons/react/24/outline';
-import { compressFile, shouldCompressFile, formatFileSize, calculateSavings } from '@/utils/client-file-compressor';
+import { useFileUpload } from '@/hooks/useFileUpload';
 
 interface FileUploadProps {
   id?: string;
@@ -12,7 +12,7 @@ interface FileUploadProps {
   onFileChange?: (file: File | null) => void;
   accept?: string;
   multiple?: boolean;
-  maxSize?: number; // in MB - default is now 8MB
+  maxSize?: number;
   required?: boolean;
   disabled?: boolean;
   className?: string;
@@ -28,173 +28,35 @@ export default function FileUpload({
   onFileChange,
   accept = ".pdf,.doc,.docx,.jpg,.jpeg,.png",
   multiple = false,
-  maxSize = 8, // 8MB default
+  maxSize = 8,
   required = false,
   disabled = false,
   className,
   label,
   description
 }: FileUploadProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [compressing, setCompressing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFileInput = (file: File): string | null => {
-    // Check file size first
-    if (file.size > maxSize * 1024 * 1024) {
-      return `Ukuran file terlalu besar. Maksimal ${maxSize}MB`;
-    }
-
-    // Check file type based on accept prop
-    const acceptedTypes = accept.split(',').map(type => type.trim());
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    
-    const isValidType = acceptedTypes.some(type => {
-      if (type.startsWith('.')) {
-        return type === fileExtension;
-      }
-      return file.type.match(type);
-    });
-
-    if (!isValidType) {
-      return `Tipe file tidak didukung. Tipe yang diizinkan: ${accept}`;
-    }
-
-    return null;
-  };
-
-  const uploadFile = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    // Add field name to help categorize the file
-    if (name) {
-      formData.append('fieldName', name);
-    }
-
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Upload failed');
-    }
-
-    const data = await response.json();
-    return data.url;
-  };
-
-  const handleFileSelect = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    let file = files[0];
-    if (!file) return;
-    
-    setError(null);
-    setCompressionInfo(null);
-
-    // Validate file
-    const validationError = validateFileInput(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    try {
-      const originalSize = file.size;
-      
-      // ========== CLIENT-SIDE COMPRESSION ==========
-      // Compress file before upload if needed
-      if (shouldCompressFile(file)) {
-        setCompressing(true);
-        setUploadProgress(0);
-        
-        console.log(`🔄 Compressing ${file.name} (${formatFileSize(originalSize)})...`);
-        
-        file = await compressFile(file, (progress) => {
-          setUploadProgress(progress * 0.5); // 0-50% for compression
-        });
-        
-        const savings = calculateSavings(originalSize, file.size);
-        if (savings.percentage > 0) {
-          const info = `✅ Compressed: ${formatFileSize(originalSize)} → ${formatFileSize(file.size)} (saved ${savings.percentage.toFixed(1)}%)`;
-          setCompressionInfo(info);
-          console.log(info);
-        }
-        
-        setCompressing(false);
-      }
-      
-      // ========== UPLOAD TO SERVER ==========
-      setUploading(true);
-
-      // Simulate progress for better UX (50-90% for upload)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 5, 90));
-      }, 100);
-
-      const fileUrl = await uploadFile(file);
-      
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      // Notify parent components
-      if (onChange) {
-        onChange(fileUrl);
-      }
-      if (onFileChange) {
-        onFileChange(file);
-      }
-
-      setTimeout(() => {
-        setUploading(false);
-        setUploadProgress(0);
-      }, 500);
-
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Upload failed');
-      setUploading(false);
-      setCompressing(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (disabled) return;
-
-    const files = e.dataTransfer.files;
-    handleFileSelect(files);
-  };
+  // ✅ Use centralized file upload hook - replaces ~100 lines of duplicate logic
+  const upload = useFileUpload({
+    uploadEndpoint: '/api/upload',
+    accept,
+    maxSizeMB: maxSize,
+    compressionOptions: {
+      maxSizeKB: 500,
+      quality: 0.8
+    },
+    ...(name && { additionalData: { fieldName: name } }),
+    onUploadSuccess: (url) => {
+      onChange?.(url);
+    },
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    handleFileSelect(e.target.files);
+    upload.handleFileSelect(e.target.files);
+    if (onFileChange && e.target.files?.[0]) {
+      onFileChange(e.target.files[0]);
+    }
   };
 
   const handleClick = () => {
@@ -202,25 +64,26 @@ export default function FileUpload({
     fileInputRef.current?.click();
   };
 
-  const removeFile = () => {
-    if (onChange) {
-      onChange('');
-    }
-    if (onFileChange) {
-      onFileChange(null);
-    }
+  const handleRemove = () => {
+    upload.removeFile();
+    onChange?.('');
+    onFileChange?.(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    setError(null);
   };
 
   const getFileName = () => {
     if (value) {
       return value.split('/').pop() || 'Uploaded file';
     }
+    if (upload.currentFile) {
+      return upload.currentFile.name;
+    }
     return null;
   };
+
+  const fileName = getFileName();
 
   return (
     <div className={`space-y-2 ${className || ''}`}>
@@ -235,25 +98,22 @@ export default function FileUpload({
         <p className="text-sm text-gray-500">{description}</p>
       )}
 
-      {/* Compression help text */}
       <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-md p-2">
         💡 <strong>Tip:</strong> Gambar akan otomatis dikompresi saat upload untuk menghemat ruang penyimpanan dan mempercepat upload.
       </div>
 
       <div
         className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
-          dragActive 
+          upload.isDragging 
             ? 'border-blue-400 bg-blue-50' 
             : disabled 
-            ? 'border-gray-200 bg-gray-50' 
-            : 'border-gray-300 hover:border-gray-400'
-        } ${
-          !disabled ? 'cursor-pointer' : 'cursor-not-allowed'
+            ? 'border-gray-200 bg-gray-50 cursor-not-allowed' 
+            : 'border-gray-300 hover:border-gray-400 cursor-pointer'
         }`}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+        onDragEnter={upload.handleDragEnter}
+        onDragLeave={upload.handleDragLeave}
+        onDragOver={upload.handleDragOver}
+        onDrop={upload.handleDrop}
         onClick={handleClick}
       >
         <input
@@ -261,72 +121,84 @@ export default function FileUpload({
           id={id}
           name={name}
           type="file"
+          onChange={handleInputChange}
           accept={accept}
           multiple={multiple}
           required={required}
           disabled={disabled}
-          onChange={handleInputChange}
           className="hidden"
         />
 
-        {uploading ? (
-          <div className="text-center">
-            <CloudArrowUpIcon className="mx-auto h-12 w-12 text-blue-500 animate-pulse" />
-            <div className="mt-4">
-              <div className="text-sm font-medium text-gray-900">
-                {compressing ? 'Compressing file...' : 'Uploading...'}
-              </div>
+        <div className="text-center">
+          {upload.isCompressing ? (
+            <>
+              <CloudArrowUpIcon className="mx-auto h-12 w-12 text-blue-400 animate-pulse" />
+              <p className="mt-2 text-sm text-gray-600">
+                Mengkompresi file... {upload.uploadProgress}%
+              </p>
               <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
+                  style={{ width: `${upload.uploadProgress}%` }}
                 />
               </div>
-              <div className="text-xs text-gray-500 mt-1">{uploadProgress}%</div>
-              {compressionInfo && (
-                <div className="text-xs text-green-600 mt-2 bg-green-50 rounded px-2 py-1">
-                  {compressionInfo}
-                </div>
-              )}
-            </div>
-          </div>
-        ) : value ? (
-          <div className="text-center">
-            <DocumentIcon className="mx-auto h-12 w-12 text-green-500" />
-            <div className="mt-4">
-              <div className="text-sm font-medium text-gray-900">{getFileName()}</div>
-              <div className="text-xs text-gray-500 mt-1">File uploaded successfully</div>
+            </>
+          ) : upload.isUploading ? (
+            <>
+              <CloudArrowUpIcon className="mx-auto h-12 w-12 text-blue-400 animate-pulse" />
+              <p className="mt-2 text-sm text-gray-600">
+                Uploading... {upload.uploadProgress}%
+              </p>
+              <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${upload.uploadProgress}%` }}
+                />
+              </div>
+            </>
+          ) : fileName ? (
+            <>
+              <DocumentIcon className="mx-auto h-12 w-12 text-green-500" />
+              <p className="mt-2 text-sm text-gray-900 font-medium">{fileName}</p>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  removeFile();
+                  handleRemove();
                 }}
-                className="mt-2 inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100"
+                disabled={disabled}
+                className="mt-2 inline-flex items-center px-3 py-1 text-sm text-red-600 hover:text-red-700 disabled:opacity-50"
               >
                 <XMarkIcon className="h-4 w-4 mr-1" />
-                Remove
+                Hapus file
               </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center">
-            <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="mt-4">
-              <div className="text-sm font-medium text-gray-900">
-                {dragActive ? 'Drop file here' : 'Click to upload or drag and drop'}
+            </>
+          ) : (
+            <>
+              <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <div className="mt-4 flex text-sm text-gray-600 justify-center">
+                <span className="font-semibold text-blue-600 hover:text-blue-700">
+                  Upload file
+                </span>
+                <span className="pl-1">atau drag and drop</span>
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {accept} up to {maxSize}MB
-              </div>
-            </div>
-          </div>
-        )}
+              <p className="mt-1 text-xs text-gray-500">
+                {accept.replace(/\./g, '').toUpperCase()} hingga {maxSize}MB
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
-      {error && (
+      {upload.compressionInfo && (
+        <div className="text-xs text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
+          {upload.compressionInfo}
+        </div>
+      )}
+
+      {upload.error && (
         <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-2">
-          {error}
+          {upload.error}
         </div>
       )}
     </div>

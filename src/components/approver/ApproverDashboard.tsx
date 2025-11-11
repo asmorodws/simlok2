@@ -7,10 +7,11 @@ import {
   ChartBarIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import DashboardStatsCard from '@/components/dashboard/DashboardStatsCard';
 
 import { useToast } from '@/hooks/useToast';
 import { useSocket } from '@/components/common/RealtimeUpdates';
-import { SkeletonDashboardCard, SkeletonTable } from '@/components/ui/skeleton';
+import { SkeletonTable } from '@/components/ui/skeleton';
 import ApproverSubmissionDetailModal from './ApproverSubmissionDetailModal';
 import Link from 'next/link';
 import ApproverTable, { type ApproverSubmission } from '@/components/approver/ApproverTable';
@@ -147,66 +148,36 @@ export default function ApproverDashboard() {
   return (
     <div className="space-y-6">
       {/* Statistics Cards */}
-      {statsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Total Pengajuan</h3>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{stats.total}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-full">
-                <ClipboardDocumentListIcon className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
-                <p className="text-2xl font-bold text-amber-600 mt-1">
-                  {stats.pending_approval_meets + stats.pending_approval_not_meets}
-                </p>
-              </div>
-              <div className="p-3 bg-amber-100 rounded-full">
-                <ClockIcon className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
-                <p className="text-2xl font-bold text-green-600 mt-1">{stats.approved}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-full">
-                <CheckCircleIcon className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-                <p className="text-2xl font-bold text-red-600 mt-1">{stats.rejected}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-full">
-                <ChartBarIcon className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <DashboardStatsCard
+          title="Total Pengajuan"
+          value={stats.total}
+          icon={ClipboardDocumentListIcon}
+          color="blue"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Menunggu Persetujuan"
+          value={stats.pending_approval_meets + stats.pending_approval_not_meets}
+          icon={ClockIcon}
+          color="yellow"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Disetujui"
+          value={stats.approved}
+          icon={CheckCircleIcon}
+          color="green"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Ditolak"
+          value={stats.rejected}
+          icon={ChartBarIcon}
+          color="red"
+          loading={statsLoading}
+        />
+      </div>
 
       {/* Recent Submissions (tabel reusable, tampilan seragam dgn Reviewer) */}
       <div className="bg-white rounded-xl border shadow-sm">

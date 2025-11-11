@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { useNotificationsStore } from '@/store/notifications';
+import { useNotificationsStore } from '@/store/useNotificationStore';
 
 interface SSEMessage {
   type: string;

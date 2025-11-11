@@ -4,16 +4,17 @@
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CheckCircleIcon, ClockIcon, XCircleIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import Card from "../ui/Card";
 import Button from "../ui/button/Button";
+import DashboardStatsCard from "@/components/dashboard/DashboardStatsCard";
 import SubmissionDetailModal from "../vendor/SubmissionDetailModal";
 import ConfirmModal from "../ui/modal/ConfirmModal";
 import { useStatsStore } from "@/store/useStatsStore";
 import { useSubmissionStore } from "@/store/useSubmissionStore";
 import { useSocket } from "@/components/common/RealtimeUpdates";
 import { useToast } from "@/hooks/useToast";
-import { SkeletonDashboardCard, SkeletonTable } from "@/components/ui/skeleton";
+import { SkeletonTable } from "@/components/ui/skeleton";
 
 import { SubmissionsTable } from "@/components/submissions/SubmissionsTable";
 import SubmissionsCardView from "@/components/submissions/SubmissionsCardView";
@@ -132,35 +133,35 @@ export default function VendorDashboard() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {statsLoading ? (
-          <>
-            <SkeletonDashboardCard />
-            <SkeletonDashboardCard />
-            <SkeletonDashboardCard />
-          </>
-        ) : (
-          <>
-            <Card className="p-6">
-              <p className="text-sm text-gray-600">Total Disetujui</p>
-              <p className="text-3xl font-bold text-green-600 mt-2">
-                {vendorStats?.totalApproved || 0}
-              </p>
-            </Card>
-            <Card className="p-6">
-              <p className="text-sm text-gray-600">Total Menunggu</p>
-              <p className="text-3xl font-bold text-yellow-600 mt-2">
-                {vendorStats?.totalPending || 0}
-              </p>
-            </Card>
-            <Card className="p-6">
-              <p className="text-sm text-gray-600">Total Ditolak</p>
-              <p className="text-3xl font-bold text-red-600 mt-2">
-                {vendorStats?.totalRejected || 0}
-              </p>
-            </Card>
-          </>
-        )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <DashboardStatsCard
+          title="Total Pengajuan"
+          value={vendorStats?.totalSubmissions || 0}
+          icon={DocumentTextIcon}
+          color="blue"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Total Disetujui"
+          value={vendorStats?.totalApproved || 0}
+          icon={CheckCircleIcon}
+          color="green"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Total Menunggu"
+          value={vendorStats?.totalPending || 0}
+          icon={ClockIcon}
+          color="yellow"
+          loading={statsLoading}
+        />
+        <DashboardStatsCard
+          title="Total Ditolak"
+          value={vendorStats?.totalRejected || 0}
+          icon={XCircleIcon}
+          color="red"
+          loading={statsLoading}
+        />
       </div>
 
       {/* Recent Submissions */}

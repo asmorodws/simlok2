@@ -1,657 +1,1242 @@
-# SIMLOK2 - Sistem Izin Lokasi Kerja (Optimized)
-
-**Real-time Next.js application** untuk manajemen pengajuan SIMLOK (Surat Izin Lokasi Kerja) dengan fitur **Socket.IO realtime**, **Redis caching**, dan **clean architecture**. Aplikasi ini sudah dioptimasi untuk **performa tinggi**, **real-time updates**, dan **mudah di-maintenance**.
-
-## 🚀 Fitur Utama (OPTIMIZED)
-
-- **⚡ Real-time Updates**: Socket.IO + Redis untuk update instant tanpa refresh
-- **🔔 Smart Notifications**: Complete notification system dengan unread counts
-- **⚡ High Performance**: Redis caching dan optimized database queries
-- **🎯 Clean Architecture**: Singleton patterns, API v1 dengan DTO validation
-- **🛡️ Robust Security**: NextAuth.js, role-based access, input validation
-- **📊 Live Dashboard**: Real-time statistics dan submission updates
-- **🔄 Event-Driven**: Arsitektur berbasis events untuk scalability
-- **🎨 Modern UI**: Responsive design dengan TailwindCSS 4
-- **📁 File Management**: Upload, preview, dan manajemen dokumen
-- ** PDF Generation**: Auto-generate PDF SIMLOK dengan template
-
-## 🏗️ Tech Stack (Optimized)
-
-### Core Technologies
-- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
-- **Backend**: Custom Socket.IO Server + Next.js API Routes  
-- **Database**: MySQL via Prisma 6.x ORM (with optimized indexing)
-- **Cache**: Redis (ioredis) with namespaced helpers
-- **Realtime**: Socket.IO 4.x + @socket.io/redis-adapter
-- **State Management**: Zustand stores
-- **Authentication**: NextAuth.js v4 + Prisma Adapter
-- **Styling**: TailwindCSS v4
-- **Validation**: Zod schemas for API endpoints and events
-
-### Performance Features
-- **🔄 Real-time Events**: Socket.IO dengan Redis pub/sub adapter
-- **⚡ Singleton Pattern**: HMR-safe database dan Redis connections
-- **🗃️ Smart Caching**: Redis dengan namespace-based cache invalidation
-- **📊 Optimized Queries**: Database indexing dan efficient Prisma queries
-- **🎯 API v1**: Modern REST API dengan DTO validation dan pagination
-- **🔔 Complete Notifications**: Real-time notification system
-
-## 📁 Struktur Proyek (Optimized Architecture)
-
-```
-src/
-├── app/                           # Next.js App Router
-│   ├── (auth)/                   # Auth routes (login, signup)
-│   ├── (dashboard)/              # Dashboard routes dengan real-time features
-│   ├── api/                      # API endpoints
-│   │   ├── v1/                   # API v1 dengan validasi DTO
-│   │   │   └── notifications/    # Modern notification endpoints
-│   │   ├── auth/                 # NextAuth endpoints
-│   │   ├── admin/                # Admin-specific endpoints
-│   │   ├── vendor/               # Vendor-specific endpoints
-│   │   └── submissions/          # CRUD submissions
-│   ├── globals.css              # Global styles
-│   ├── layout.tsx               # Root layout dengan providers
-│   └── socket-provider.tsx      # Socket.IO client provider dengan event handling
-├── components/                   # React components
-│   ├── ui/                      # Reusable UI components
-│   ├── admin/                   # Admin-specific components
-│   ├── vendor/                  # Vendor-specific components
-│   ├── notifications/           # Notification system components
-│   └── common/                  # Shared components
-├── features/                    # Feature-based modules (NEW)
-│   └── notifications/           # Complete notification feature
-│       ├── ui/                  # Notification UI components
-│       ├── data/                # Data services dengan API integration
-│       ├── types/               # TypeScript types
-│       └── server/              # Server-side notification logic
-├── lib/                         # Core utilities dan services
-│   ├── singletons.ts           # ⭐ Prisma, Redis, Socket.IO singletons (HMR-safe)
-│   ├── cache.ts                # ⭐ Redis cache helpers dengan namespacing
-│   ├── api-utils.ts            # ⭐ API utility functions dengan validation
-│   ├── auth.ts                 # NextAuth configuration
-│   └── db.ts                   # Database utilities
-├── server/                      # Server-side modules (NEW)
-│   ├── socket.ts               # Socket.IO server logic
-│   ├── events.ts               # Business event handlers
-│   └── eventsPublisher.ts      # ⭐ Centralized event publishing service
-├── shared/                      # Shared constants dan types (NEW)
-│   ├── events.ts               # ⭐ Socket.IO event schemas dengan validation
-│   ├── dto.ts                  # ⭐ API DTO schemas (Zod)
-│   └── constants.ts            # Application constants
-├── store/                       # Zustand stores
-│   ├── notifications.ts        # ⭐ Notification state management
-│   ├── stats.ts                # Statistics state
-│   └── lists.ts                # Lists state dengan real-time updates
-└── types/                       # TypeScript type definitions
-    ├── next-auth.d.ts          # NextAuth type extensions
-    ├── role.ts                 # Role definitions
-    └── submission.ts           # Submission types
-```
-
-### Key Architecture Improvements
-- **⭐ Singleton Pattern**: HMR-safe database dan Redis connections
-- **⭐ Event-Driven**: Centralized event publishing untuk real-time updates  
-- **⭐ Feature Modules**: Organized code dengan complete feature isolation
-- **⭐ API v1**: Modern REST API dengan DTO validation dan proper error handling
-- **⭐ Smart Caching**: Redis dengan namespace-based cache invalidation
-
-## 🛠️ Development Setup
-
-### Prerequisites
-- Node.js 18+ 
-- MySQL 8.0+
-- Redis 6.0+ (untuk real-time features)
-
-### Quick Start - Complete Setup
-
-```bash
-# 1. Clone dan install dependencies
-git clone <repository-url>
-cd simlok2
-npm install
-
-# 2. Setup environment variables
-cp .env.example .env.local
-
-# 3. Generate NextAuth secret
-openssl rand -base64 32
-# Copy hasil ke NEXTAUTH_SECRET di .env.local
-
-# 4. Edit .env.local dengan konfigurasi database dan Redis
-# DATABASE_URL="mysql://user:password@localhost:3306/simlok2"
-# REDIS_URL="redis://localhost:6379"
-# NEXTAUTH_SECRET="your-generated-secret"
-# NEXTAUTH_URL="http://localhost:3000"
-
-# 5. Setup database
-npx prisma migrate dev
-npm run seed
-
-# 6. Start Redis server (pastikan Redis running)
-redis-server
-
-# 7. Development dengan Socket.IO real-time features
-npm run dev
-```
-
-### Production Deployment
-
-```bash
-# 1. Build aplikasi
-npm run build
-
-# 2. Start production server dengan Socket.IO
-npm run start
-```
-
-### Development Options
-
-```bash
-# Option 1: Full development dengan Socket.IO + Redis realtime
-npm run dev              # Custom server dengan all features
-
-# Option 2: Next.js only (tanpa Socket.IO) untuk debugging
-npm run dev:next         # Standard Next.js dev server
-
-# Type checking
-npm run typecheck        # TypeScript validation
-```
-
-## 📋 Environment Variables
-
-### Required Variables
-```bash
-# Database MySQL
-DATABASE_URL="mysql://username:password@host:port/database"
-
-# Redis (untuk real-time features)
-REDIS_URL="redis://localhost:6379"
-
-# NextAuth Configuration
-NEXTAUTH_URL="http://localhost:3000"  # atau domain production
-NEXTAUTH_SECRET="your-32-character-secret-key"
-```
-
-### Optional Variables
-```bash
-# JWT Settings (defaults provided)
-JWT_EXPIRE_TIME=21600        # Session duration (6 hours)
-SESSION_MAX_AGE=21600        # Max session age  
-SESSION_UPDATE_AGE=1800      # Update interval (30 min)
-
-# Performance tuning
-REDIS_MAX_RETRIES=3          # Redis connection retries
-SOCKET_PING_TIMEOUT=30000    # Socket.IO ping timeout
-```
-
-### Complete .env.local Example
-```bash
-# Development Configuration
-DATABASE_URL="mysql://root:@localhost:3306/simlok2"
-REDIS_URL="redis://localhost:6379"
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="development-secret-min-32-chars-example"
-
-# Production Configuration  
-# DATABASE_URL="mysql://user:pass@production-host:3306/simlok_prod"
-# REDIS_URL="redis://production-redis:6379"
-# NEXTAUTH_URL="https://simlok.yourdomain.com"
-# NEXTAUTH_SECRET="production-very-secure-secret-key"
-```
-
-## 🔐 Data Default Setelah Seeding
-
-Setelah menjalankan `npm run seed`, Anda dapat login dengan akun berikut:
-
-| Peran     | Email                  | Password     | Status      |
-|-----------|------------------------|--------------|-------------|
-| Admin     | admin@example.com      | admin123     | Verified    |
-| Verifier  | verifier@example.com   | verifier123  | Verified    |
-| Vendor    | vendora@example.com    | vendor123    | Verified    |
-
-### Data Dummy yang Dibuat
-- **3 User**: 1 Admin, 1 Verifier, 1 Vendor (sudah terverifikasi)
-- **8+ Pengajuan SIMLOK**: Dengan berbagai status (PENDING, APPROVED, REJECTED)
-- **Dokumen Sample**: Nomor SIMJA, SIKA, dan SIMLOK yang realistis
-- **Riwayat Aktivitas**: Data created/updated dengan timestamp yang bervariasi
-
-## 🎯 Panduan Penggunaan
-
-### Flow Registrasi Vendor
-1. **Akses halaman signup** (`/signup`)
-2. **Isi form registrasi** dengan data lengkap vendor
-3. **Submit form** → Redirect ke halaman verification-pending
-4. **Admin verifikasi** akun di dashboard admin
-5. **Vendor dapat login** setelah diverifikasi
-
-### Flow Pengajuan SIMLOK
-1. **Vendor login** dan akses dashboard
-2. **Buat pengajuan baru** dengan upload dokumen
-3. **Admin review** pengajuan di dashboard admin
-4. **Admin approve/reject** dengan keterangan
-5. **PDF SIMLOK generate** otomatis jika approved
-
-### Management User (Admin)
-- **Dashboard Admin**: Statistik lengkap dan tabel user terbaru
-- **User Management**: Verifikasi, edit, delete user
-- **Pengajuan Management**: Approve/reject dengan modal detail
-
-## 📦 Available Scripts
-
-```bash
-# Development
-npm run dev          # Start custom server dengan Socket.IO + Redis realtime
-npm run dev:next     # Start Next.js dev server only (tanpa Socket.IO)
-
-# Production  
-npm run build        # Build aplikasi untuk produksi (dengan optimizations)
-npm run start        # Start production server dengan semua fitur real-time
-
-# Code Quality
-npm run lint         # ESLint untuk code quality
-npm run typecheck    # TypeScript type checking
-
-# Database
-npm run seed         # Seed database dengan data lengkap
-npm run seed:simple  # Seed database dengan data minimal
-```
-
-## 🔗 API Endpoints
-
-### Authentication
-- `POST /api/auth/signin` - Login with email/password
-- `POST /api/auth/signup` - Register vendor baru
-
-### Submissions (SIMLOK)
-- `GET /api/submissions` - List submissions dengan filtering
-- `POST /api/submissions` - Create submission dengan file upload
-- `GET /api/submissions/[id]` - Get submission detail
-- `PUT /api/submissions/[id]` - Update submission
-- `DELETE /api/submissions/[id]` - Delete submission
-
-### Admin Management
-- `GET /api/admin/submissions` - Admin submissions management
-- `GET /api/admin/users` - User management dan verification
-- `PUT /api/users/[id]/verify` - Verify vendor account
-
-### Notifications API (v1) ⭐ NEW
-- `GET /api/v1/notifications` - Get notifications dengan pagination
-- `POST /api/v1/notifications/[id]/read` - Mark notification sebagai read
-- `POST /api/v1/notifications/read-all` - Mark all notifications sebagai read
-- `GET /api/v1/notifications/unread-count` - Get unread notification count
-
-## � Real-time Features ⭐ NEW
-
-### Socket.IO Events
-
-**Client Connection:**
-```javascript
-// Auto-join room berdasarkan user role
-socket.emit('join', { userId, role });
-```
-
-**Server → Client Events:**
-- `admin:new_submission` - Pengajuan baru untuk admin/verifier
-- `admin:new_vendor` - Pendaftaran vendor baru  
-- `vendor:submission_status_changed` - Update status pengajuan untuk vendor
-- `notification:new` - Notifikasi baru dengan data lengkap
-- `notification:unread_count` - Update realtime unread count
-- `stats:update` - Update statistik dashboard
-
-### Socket.IO Rooms
-- `admin` - Room untuk semua admin dan verifier
-- `vendor:{vendorId}` - Room spesifik untuk masing-masing vendor
-
-### Real-time Data Flow
-```
-User Action → API Endpoint → Database Update → Event Publisher → Socket.IO → All Connected Clients
-```
-
-### Notification System ⭐ Complete
-- **⚡ Real-time Push**: Notifikasi langsung tanpa refresh
-- **🔔 Unread Badges**: Live update unread count  
-- **📋 Notification Panel**: Paginated notifications dengan mark as read
-- **🎯 Role-based**: Notifikasi sesuai dengan role user (admin/vendor)
-- **📱 Responsive**: Bell icon dengan dropdown panel
-
-### Cache Strategy ⭐ Optimized
-```javascript
-// Redis cache dengan namespace
-await cache.set('stats', 'admin', data, 300); // 5 minutes TTL
-await cache.get('notifications', userId);
-await cache.invalidatePattern('submissions:*'); // Bulk invalidation
-```
-
-## �🗄️ Database Schema (Optimized)
-
-### Core Tables (Optimized)
-
-#### User Model
-```prisma
-model User {
-  id              String    @id @default(cuid())
-  nama_petugas    String
-  email           String    @unique
-  password        String?
-  nama_vendor     String?   # Untuk role VENDOR
-  alamat          String
-  no_telp         String
-  role            Role      @default(VENDOR)
-  verified_at     DateTime?
-  verified_by     String?
-  date_created_at DateTime  @default(now())
-  
-  submissions     Submission[]
-  notifications   Notification[]
-  notificationReads NotificationRead[]
-  
-  @@index([role])
-  @@index([verified_at])
-}
-```
-
-#### Notification Model ⭐ NEW
-```prisma
-model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String   @db.Text
-  type      NotificationType
-  userId    String   # Target user
-  createdAt DateTime @default(now())
-  
-  # Related data (optional)
-  submissionId String?
-  triggeredBy  String? # User yang trigger notifikasi
-  
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reads       NotificationRead[]
-  
-  @@index([userId, createdAt])
-  @@index([type])
-}
-
-model NotificationRead {
-  id             String       @id @default(cuid())
-  notificationId String
-  userId         String
-  readAt         DateTime     @default(now())
-  
-  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([notificationId, userId])
-  @@index([userId])
-}
-
-enum NotificationType {
-  SUBMISSION_CREATED
-  SUBMISSION_APPROVED  
-  SUBMISSION_REJECTED
-  VENDOR_REGISTERED
-  SYSTEM_UPDATE
-}
-```
-
-#### Submission Model (Enhanced Indexing)
-```prisma
-model Submission {
-  // ... existing fields ...
-  
-  @@index([userId])
-  @@index([status_approval_admin])
-  @@index([created_at])
-  @@index([status_approval_admin, created_at]) # Composite index
-}
-```
-
-## 🔒 Fitur Keamanan
-
-- **Password Hashing**: bcryptjs dengan salt rounds tinggi
-- **JWT Tokens**: Session management dengan expiry dan refresh
-- **CSRF Protection**: Built-in NextAuth.js CSRF protection
-- **Route Protection**: Middleware-based authentication dan authorization
-- **Role Validation**: Server-side role checking di setiap endpoint
-- **Input Validation**: Zod schema validation untuk semua input
-- **Rate Limiting**: Protection terhadap brute force attacks
-- **SQL Injection Prevention**: Prisma ORM dengan prepared statements
-
-## 🎯 Key Features (Complete Implementation)
-
-### 1. ⚡ Real-time Dashboard
-- ✅ Auto-update tanpa refresh halaman  
-- ✅ Live statistics updates via Socket.IO
-- ✅ Real-time submission list updates
-- ✅ Instant notification push
-
-### 2. 🔔 Complete Notification System ⭐ NEW
-- ✅ Push notifications untuk semua events penting
-- ✅ Unread count badge dengan live updates
-- ✅ Mark as read / mark all as read functionality
-- ✅ Notification panel dengan pagination
-- ✅ Role-based notification targeting
-
-### 3. 🛡️ Enhanced Security & Performance
-- ✅ Role-based access control (Admin/Verifier/Vendor)
-- ✅ NextAuth.js dengan JWT session management  
-- ✅ Redis caching untuk performa optimal
-- ✅ Optimized database queries dengan proper indexing
-- ✅ Input validation dengan Zod schemas
-
-### 4. � Advanced File Management
-- ✅ Upload documents (SIKA, SIMJA, ID Card)
-- ✅ Document preview dan download
-- ✅ Organized file storage per user/category
-- ✅ File size dan type validation
-
-### 5. 🏗️ Clean Architecture ⭐ REFACTORED
-- ✅ Singleton patterns untuk HMR safety
-- ✅ Feature-based code organization
-- ✅ API v1 dengan DTO validation
-- ✅ Event-driven architecture
-- ✅ Separation of concerns dengan proper modules
-
-## 🚀 Deployment (Production Ready)
-
-### Production Environment Setup
-```bash
-# Required environment variables
-NODE_ENV=production
-DATABASE_URL="mysql://user:password@host:3306/database"
-REDIS_URL="redis://production-redis:6379"
-NEXTAUTH_SECRET="secure-production-secret-key"
-NEXTAUTH_URL="https://your-domain.com"
-
-# Optional performance tuning
-REDIS_MAX_RETRIES=3
-SOCKET_PING_TIMEOUT=30000
-```
-
-### Production Deployment
-```bash
-# Build dan deploy
-npm ci --only=production
-npm run build
-npm run start
-```
-
-### Docker Setup (Recommended)
-```yaml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    depends_on:
-      - mysql
-      - redis
-    environment:
-      - DATABASE_URL=mysql://user:password@mysql:3306/simlok
-      - REDIS_URL=redis://redis:6379
-      
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: simlok
-      
-  redis:
-    image: redis:6.0-alpine
-    command: redis-server --appendonly yes
-```
-
-## �🚨 Troubleshooting (Updated)
-
-### Common Issues & Solutions
-
-1. **Redis Connection Error**
-   ```bash
-   # Start Redis locally
-   redis-server
-   
-   # Check Redis connection
-   redis-cli ping
-   # Should return "PONG"
-   ```
-
-2. **Socket.IO Not Working**
-   ```bash
-   # Pastikan menggunakan custom server (BUKAN dev:next)
-   npm run dev  # ✅ Correct - includes Socket.IO
-   # npm run dev:next  # ❌ Wrong - Next.js only
-   
-   # Check environment
-   echo $REDIS_URL
-   ```
-
-3. **Database Connection Error**
-   ```bash
-   # Reset database dengan migration
-   npx prisma migrate reset
-   npm run seed
-   
-   # Test connection
-   npx prisma db pull
-   ```
-
-4. **Build/TypeScript Errors**
-   ```bash
-   # Type checking
-   npm run typecheck
-   
-   # Fix linting issues
-   npm run lint
-   
-   # Clear build cache
-   rm -rf .next
-   npm run build
-   ```
-
-5. **Notification System Issues**
-   ```bash
-   # Check Redis connection untuk events
-   redis-cli monitor
-   
-   # Test Socket.IO connection di browser console
-   console.log(socket.connected);
-   ```
-
-6. **Performance Issues**
-   ```bash
-   # Check Redis cache status
-   redis-cli info memory
-   
-   # Monitor database queries
-   npx prisma studio
-   ```
-
-## 📚 Development Resources
-
-### Architecture Documentation
-- [Singleton Pattern Implementation](src/lib/singletons.ts) - HMR-safe database connections
-- [Event Publisher Service](src/server/eventsPublisher.ts) - Centralized Socket.IO events
-- [Cache Helper Functions](src/lib/cache.ts) - Redis namespace-based caching
-- [API v1 with DTO Validation](src/app/api/v1/) - Modern REST API design
-- [Notification Feature Module](src/features/notifications/) - Complete notification system
-
-### Socket.IO Integration
-- Custom server in [server.js](server.js) menggunakan singleton patterns
-- Event handling di [src/server/socket.ts](src/server/socket.ts)
-- Client provider di [src/app/socket-provider.tsx](src/app/socket-provider.tsx)
-
-### External Resources
-- [Next.js 15 Documentation](https://nextjs.org/docs)
-- [Socket.IO Documentation](https://socket.io/docs/v4/)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [Redis Documentation](https://redis.io/docs/)
-- [NextAuth.js Documentation](https://next-auth.js.org/)
-
-## 📊 Performance Benchmarks
-
-### Optimizations Implemented
-- **Database**: Proper indexing, optimized queries, connection pooling
-- **Cache**: Redis dengan TTL dan namespace-based invalidation
-- **Real-time**: Efficient Socket.IO dengan room-based targeting
-- **Frontend**: Code splitting, lazy loading, optimized bundle size
-- **Build**: TypeScript strict mode, ESLint optimizations
-
-### Key Metrics (After Optimization)
-- **Build Time**: ~14s (dengan type checking dan linting)
-- **Bundle Size**: Optimized dengan proper code splitting
-- **Database Queries**: Indexed dan cached untuk performa optimal
-- **Real-time Latency**: < 100ms untuk Socket.IO events
-- **Memory Usage**: Reduced dengan singleton patterns
-
-## 🤝 Contributing
-
-## 🤝 Contributing
-
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests (`npm run typecheck && npm run lint`)
-4. Commit changes (`git commit -m 'feat: add amazing feature'`)
-5. Push to branch (`git push origin feature/amazing-feature`)
-6. Open Pull Request
-
-### Development Guidelines
-- Ikuti TypeScript strict mode
-- Gunakan singleton patterns untuk database/Redis connections
-- Implement proper error handling dengan Zod validation
-- Tulis tests untuk fitur baru
-- Update dokumentasi untuk API changes
-
-##  License
-
-Aplikasi ini untuk keperluan internal dan tidak untuk didistribusikan secara komersial.
+# 🏗️ SimLok - Sistem Informasi Manajemen Lokasi Kerja
+
+> Comprehensive Work Location Management System with Multi-Stage Approval Workflow
+
+[![Next.js](https://img.shields.io/badge/Next.js-15.4.6-black)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.1.0-blue)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.16.2-2D3748)](https://www.prisma.io/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC)](https://tailwindcss.com/)
 
 ---
 
-## ✨ What's New in This Version
+## 📋 Table of Contents
 
-### 🚀 Major Refactoring (2024)
-- **⚡ Real-time Architecture**: Complete Socket.IO + Redis implementation  
-- **🔔 Notification System**: Full-featured notification system dengan UI
-- **🏗️ Clean Code**: Singleton patterns, feature modules, API v1
-- **📊 Performance**: Redis caching, optimized queries, proper indexing
-- **🛡️ Robust Validation**: Zod schemas untuk semua API dan events
-- **🎯 Type Safety**: Complete TypeScript coverage dengan strict mode
+- [Overview](#-overview)
+- [System Architecture](#-system-architecture)
+- [Data Flow](#-data-flow-diagram)
+- [Role-Based Workflow](#-role-based-workflow)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [Database Schema](#-database-schema)
+- [API Documentation](#-api-documentation)
+- [Features](#-features)
+- [Logger System](#-logger-system)
+- [Contributing](#-contributing)
+- [License](#-license)
 
-### 🔧 Technical Improvements
-- HMR-safe singleton patterns untuk development
-- Event-driven architecture dengan centralized publisher
-- Namespace-based Redis caching dengan smart invalidation
-- Modern API design dengan DTO validation dan pagination
-- Complete feature isolation dengan organized code structure
+---
+
+## 🎯 Overview
+
+**SimLok** is an enterprise-grade work location management system designed for organizations that need to track, review, and approve work site submissions with multiple validation stages. The system implements a sophisticated multi-role approval workflow with real-time notifications, document management, and comprehensive audit logging.
+
+### Key Features
+
+- 🔐 **Multi-Role Authentication** - 6 distinct user roles with granular permissions
+- 📝 **Submission Management** - Create, track, and manage work location submissions
+- ✅ **Multi-Stage Approval** - 4-stage workflow: Verification → Review → Approval → Final Check
+- 📄 **Document Management** - Upload and manage required documents (SIMJA, SIKA, JSA, etc.)
+- 🔔 **Real-Time Notifications** - Instant updates via Socket.IO/SSE
+- 📊 **Admin Dashboard** - Comprehensive analytics and system monitoring
+- 📱 **QR Code System** - Track site visits and work order verification
+- 🗄️ **Advanced Logging** - File-based logging with 30-day retention
+- 🌐 **Export Capabilities** - Generate XLSX/CSV/PDF reports
+
+---
+
+## 🏛️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CLIENT LAYER (React 19)                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │   Dashboard   │  │   Forms      │  │   Admin UI   │              │
+│  │   Components  │  │   Components │  │   (Logs)     │              │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘              │
+│         │                  │                  │                       │
+│         └──────────────────┴──────────────────┘                       │
+│                            │                                          │
+├────────────────────────────┼──────────────────────────────────────────┤
+│                    MIDDLEWARE LAYER                                   │
+│                            │                                          │
+│  ┌─────────────────────────▼──────────────────────────┐              │
+│  │         Authentication Middleware                   │              │
+│  │  (Session Check, Role Validation, CSRF Protection)  │              │
+│  └─────────────────────────┬──────────────────────────┘              │
+│                            │                                          │
+├────────────────────────────┼──────────────────────────────────────────┤
+│                      API ROUTE LAYER                                  │
+│                            │                                          │
+│  ┌─────────────┬───────────┴──────────┬─────────────┐                │
+│  │             │                       │             │                │
+│  │ /api/       │  /api/               │ /api/       │                │
+│  │ submissions │  notifications       │ logs        │                │
+│  │             │                       │             │                │
+│  └─────┬───────┴──────┬───────────────┴─────┬───────┘                │
+│        │              │                      │                        │
+├────────┼──────────────┼──────────────────────┼────────────────────────┤
+│   SERVICE LAYER (Business Logic)            │                        │
+│        │              │                      │                        │
+│  ┌─────▼──────┐  ┌───▼────────┐  ┌──────────▼─────┐                 │
+│  │ Submission │  │Notification│  │  Logger Service │                 │
+│  │  Service   │  │  Service   │  │  (File-based)   │                 │
+│  └─────┬──────┘  └───┬────────┘  └──────────┬─────┘                 │
+│        │              │                      │                        │
+├────────┼──────────────┼──────────────────────┼────────────────────────┤
+│               DATA ACCESS LAYER (Prisma ORM)                          │
+│        │              │                      │                        │
+│  ┌─────▼──────────────▼──────────────────────▼─────┐                 │
+│  │           Prisma Client (Query Builder)          │                 │
+│  └─────────────────────────┬──────────────────────┘                  │
+│                            │                                          │
+├────────────────────────────┼──────────────────────────────────────────┤
+│                     DATABASE LAYER                                    │
+│                            │                                          │
+│  ┌─────────────────────────▼──────────────────────┐                  │
+│  │              MySQL Database                     │                  │
+│  │  (Users, Submissions, Notifications, Sessions)  │                  │
+│  └─────────────────────────────────────────────────┘                  │
+│                                                                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                      EXTERNAL SERVICES                                │
+│                                                                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               │
+│  │    Redis     │  │   Socket.IO  │  │  File System │               │
+│  │   (Cache)    │  │   (Real-time)│  │   (Uploads)  │               │
+│  └──────────────┘  └──────────────┘  └──────────────┘               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔄 Data Flow Diagram
+
+### Submission Creation Flow
+
+```
+┌──────────┐
+│  VENDOR  │
+│  (User)  │
+└────┬─────┘
+     │
+     │ 1. Create Submission
+     │    - Work details
+     │    - Documents (PDF)
+     │    - Worker list (XLSX/CSV)
+     │
+     ▼
+┌────────────────────────┐
+│  /api/submissions      │
+│  (POST)                │
+├────────────────────────┤
+│ • Validate session     │
+│ • Check user role      │
+│ • Parse form data      │
+│ • Upload files         │
+│ • Log request          │
+└────┬───────────────────┘
+     │
+     │ 2. Save to Database
+     │
+     ▼
+┌────────────────────────┐
+│  Prisma Transaction    │
+├────────────────────────┤
+│ • Create submission    │
+│ • Link documents       │
+│ • Import workers       │
+│ • Create notification  │
+└────┬───────────────────┘
+     │
+     │ 3. Emit Events
+     │
+     ├──────────────────┬──────────────────┬──────────────────┐
+     │                  │                  │                  │
+     ▼                  ▼                  ▼                  ▼
+┌─────────┐      ┌──────────┐      ┌──────────┐      ┌──────────┐
+│ Socket  │      │  Redis   │      │  Logger  │      │  Email   │
+│ Emit    │      │  Cache   │      │  File    │      │  (Queue) │
+└─────────┘      └──────────┘      └──────────┘      └──────────┘
+     │
+     │ 4. Notify Roles
+     │
+     ▼
+┌────────────────────────┐
+│  VERIFIER Dashboard    │
+│  (Real-time update)    │
+└────────────────────────┘
+```
+
+### Approval Workflow Data Flow
+
+```
+VENDOR         VERIFIER       REVIEWER        APPROVER       VERIFIER
+  │               │              │                │              │
+  │ Submit        │              │                │              │
+  ├──────────────►│              │                │              │
+  │               │ Verify       │                │              │
+  │               ├─────────────►│                │              │
+  │               │              │ Review         │              │
+  │               │              ├───────────────►│              │
+  │               │              │                │ Approve      │
+  │               │              │                ├─────────────►│
+  │               │              │                │              │ Final Check
+  │               │              │                │              │
+  │◄──────────────┴──────────────┴────────────────┴──────────────┤
+  │                                                               │
+  │          APPROVED - QR Code Generated                         │
+  │                                                               │
+  ▼                                                               ▼
+Dashboard                                                    Dashboard
+(View Status)                                              (Scan QR)
+```
+
+---
+
+## 👥 Role-Based Workflow
+
+### User Roles & Permissions
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         USER ROLES                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │   VENDOR    │  │  VERIFIER   │  │  REVIEWER   │              │
+│  ├─────────────┤  ├─────────────┤  ├─────────────┤              │
+│  │ • Create    │  │ • Verify    │  │ • Review    │              │
+│  │   submission│  │   identity  │  │   documents │              │
+│  │ • Upload    │  │ • Check     │  │ • Check     │              │
+│  │   documents │  │   data      │  │   compliance│              │
+│  │ • Track     │  │ • Accept/   │  │ • Accept/   │              │
+│  │   status    │  │   Reject    │  │   Reject    │              │
+│  │ • View own  │  │ • Final     │  │             │              │
+│  │   data      │  │   check     │  │             │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+│                                                                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  APPROVER   │  │ SUPER_ADMIN │  │   VISITOR   │              │
+│  ├─────────────┤  ├─────────────┤  ├─────────────┤              │
+│  │ • Final     │  │ • Full      │  │ • Read-only │              │
+│  │   approval  │  │   control   │  │   access    │              │
+│  │ • Business  │  │ • User mgmt │  │ • View      │              │
+│  │   decision  │  │ • System    │  │   approved  │              │
+│  │ • Accept/   │  │   config    │  │   data      │              │
+│  │   Reject    │  │ • Logs      │  │ • No edit   │              │
+│  │             │  │ • Analytics │  │             │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Workflow Stages
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                    SUBMISSION LIFECYCLE                         │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. PENDING_VERIFICATION (verificationStatus = PENDING)         │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Vendor submits work location details          │        │
+│     │ • Uploads required documents                    │        │
+│     │ • Imports worker list                           │        │
+│     │ • Waits for verifier check                      │        │
+│     └──────────────────┬──────────────────────────────┘        │
+│                        │                                        │
+│                        ▼                                        │
+│  2. PENDING_REVIEW (verificationStatus = VERIFIED)              │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Verifier checks vendor identity               │        │
+│     │ • Validates submission completeness             │        │
+│     │ • Can reject if data invalid                    │        │
+│     │ • Forwards to reviewer if valid                 │        │
+│     └──────────────────┬──────────────────────────────┘        │
+│                        │                                        │
+│                        ▼                                        │
+│  3. PENDING_APPROVAL (reviewStatus = MEETS_REQUIREMENTS)        │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Reviewer checks document compliance           │        │
+│     │ • Verifies work safety requirements             │        │
+│     │ • Can reject if non-compliant                   │        │
+│     │ • Forwards to approver if compliant             │        │
+│     └──────────────────┬──────────────────────────────┘        │
+│                        │                                        │
+│                        ▼                                        │
+│  4. APPROVED (approvalStatus = APPROVED)                        │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Approver makes final business decision        │        │
+│     │ • Can reject for business reasons               │        │
+│     │ • Sends to verifier for final check             │        │
+│     └──────────────────┬──────────────────────────────┘        │
+│                        │                                        │
+│                        ▼                                        │
+│  5. FINAL_APPROVED (Verifier final check)                      │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Verifier performs final validation            │        │
+│     │ • QR code generated for work order              │        │
+│     │ • Implementation dates set                      │        │
+│     │ • Submission becomes active                     │        │
+│     └─────────────────────────────────────────────────┘        │
+│                                                                 │
+│  REJECTED (Any stage)                                           │
+│     ┌─────────────────────────────────────────────────┐        │
+│     │ • Any role can reject during their stage        │        │
+│     │ • Rejection notes required                      │        │
+│     │ • Vendor can resubmit if allowed                │        │
+│     └─────────────────────────────────────────────────┘        │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: Next.js 15.4.6 (App Router)
+- **UI Library**: React 19.1.0 (Server Components)
+- **Language**: TypeScript 5.9.2 (Strict Mode)
+- **Styling**: Tailwind CSS 4.0
+- **State Management**: Zustand 5.1.3
+- **Forms**: React Hook Form + Zod validation (planned)
+- **Icons**: Lucide React
+
+### Backend
+- **API**: Next.js API Routes (App Router)
+- **ORM**: Prisma 6.16.2
+- **Database**: MySQL 8.0+
+- **Authentication**: NextAuth.js (Session-based)
+- **Session Store**: Prisma Adapter (database sessions)
+- **Real-time**: Socket.IO / Server-Sent Events
+
+### Infrastructure
+- **Cache**: Redis (optional)
+- **File Storage**: Local file system (`/public/uploads`)
+- **Logging**: Custom file-based logger (`/logs`)
+- **Process Manager**: PM2 (production)
+
+### Development Tools
+- **Linting**: ESLint 9
+- **Code Style**: Prettier
+- **Git Hooks**: Husky + lint-staged (recommended)
+- **Testing**: Jest + React Testing Library (planned)
+
+---
+
+## 📁 Project Structure
+
+```
+simlok2/
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   ├── seed.ts                # Seeder for demo data
+│   ├── localseed.ts           # Local development seed
+│   └── migrations/            # Database migrations
+│
+├── public/
+│   ├── assets/                # Static assets (images, fonts)
+│   └── uploads/               # User uploaded files
+│       ├── documents/         # Submission documents
+│       ├── id-cards/          # ID card images
+│       └── workers/           # Worker list XLSX/CSV
+│
+├── src/
+│   ├── app/                   # Next.js App Router
+│   │   ├── (auth)/            # Auth pages (login, register)
+│   │   ├── (dashboard)/       # Protected dashboard routes
+│   │   │   ├── vendor/        # Vendor-specific pages
+│   │   │   ├── verifier/      # Verifier-specific pages
+│   │   │   ├── reviewer/      # Reviewer-specific pages
+│   │   │   ├── approver/      # Approver-specific pages
+│   │   │   ├── super-admin/   # Admin pages
+│   │   │   └── visitor/       # Visitor read-only pages
+│   │   └── api/               # API routes
+│   │       ├── auth/          # Authentication endpoints
+│   │       ├── submissions/   # Submission CRUD
+│   │       ├── notifications/ # Notification API
+│   │       ├── logs/          # Logger API (admin only)
+│   │       └── users/         # User management
+│   │
+│   ├── components/            # React components
+│   │   ├── ui/                # Reusable UI components (planned)
+│   │   ├── form/              # Form components (DatePicker, etc.)
+│   │   ├── layout/            # Layout components (Sidebar, Header)
+│   │   └── dashboard/         # Dashboard-specific components
+│   │
+│   ├── lib/                   # Core utilities
+│   │   ├── auth.ts            # Auth configuration
+│   │   ├── prisma.ts          # Prisma client
+│   │   ├── logger.ts          # Logger class (NEW ✨)
+│   │   ├── serverDate.ts      # Server-side date utilities
+│   │   └── utils.ts           # General utilities
+│   │
+│   ├── services/              # Business logic layer
+│   │   ├── submissionService.ts
+│   │   ├── notificationService.ts
+│   │   └── userService.ts
+│   │
+│   ├── middleware/            # Custom middleware
+│   │   └── withAuth.ts        # Role-based auth middleware
+│   │
+│   ├── types/                 # TypeScript types
+│   │   ├── enums.ts           # Centralized enums (NEW ✨)
+│   │   ├── next-auth.d.ts     # NextAuth type augmentation
+│   │   └── index.ts           # Global types
+│   │
+│   ├── hooks/                 # Custom React hooks
+│   │   ├── useAuth.ts
+│   │   ├── useSubmissions.ts
+│   │   └── useNotifications.ts
+│   │
+│   ├── store/                 # Zustand stores
+│   │   └── authStore.ts
+│   │
+│   └── styles/                # Global styles
+│       └── globals.css
+│
+├── logs/                      # Application logs (NEW ✨)
+│   ├── app-2025-01-09.log
+│   └── README.md              # Log directory info
+│
+├── docs/                      # Documentation
+│   ├── LOGGER_SYSTEM.md       # Logger documentation
+│   ├── LOGGER_EXAMPLES.md     # Logger usage examples
+│   ├── OPTIMASI_UPLOAD_API_PERFORMANCE.md
+│   ├── NOTIFICATION_ICONS_STANDARDIZATION.md
+│   └── SERVER_TIME_BEST_PRACTICES.md
+│
+├── scripts/                   # Utility scripts
+│   └── migrate-phone-numbers.ts
+│
+├── .env                       # Environment variables
+├── .env.example               # Environment template
+├── .gitignore
+├── CHANGELOG.md               # Version history (NEW ✨)
+├── README.md                  # This file
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+├── middleware.ts              # Global middleware
+└── eslint.config.js
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+```bash
+# Required
+- Node.js 18.17+ or 20+
+- npm or yarn
+- MySQL 8.0+
+
+# Optional
+- Redis (for caching)
+- PM2 (for production)
+```
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd simlok2
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` with your settings (see [Environment Variables](#-environment-variables))
+
+4. **Setup database**
+   ```bash
+   # Generate Prisma Client
+   npx prisma generate
+
+   # Run migrations
+   npx prisma migrate deploy
+
+   # Seed database (optional)
+   npx prisma db seed
+   ```
+
+5. **Run development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open browser**
+   ```
+   http://localhost:3000
+   ```
+
+### Development Workflow
+
+```bash
+# Development
+npm run dev              # Start dev server with hot reload
+
+# Database
+npx prisma studio        # Open Prisma Studio (DB GUI)
+npx prisma migrate dev   # Create new migration
+npx prisma db push       # Push schema changes (dev only)
+npx prisma db seed       # Seed database
+
+# Build & Production
+npm run build            # Create production build
+npm start                # Start production server
+
+# Linting
+npm run lint             # Run ESLint
+npm run lint:fix         # Fix auto-fixable issues
+```
+
+---
+
+## 🔐 Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# Database
+DATABASE_URL="mysql://user:password@localhost:3306/simlok"
+
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-super-secret-key-change-in-production"
+
+# JWT (Optional - for API tokens)
+JWT_SECRET="another-secret-key-for-jwt"
+JWT_REFRESH_SECRET="refresh-token-secret-key"
+
+# Redis (Optional - for caching)
+REDIS_URL="redis://localhost:6379"
+
+# File Upload
+MAX_FILE_SIZE=10485760        # 10MB in bytes
+UPLOAD_DIR="public/uploads"
+
+# Logger
+LOG_DIR="logs"
+MAX_LOG_FILES=30              # Keep logs for 30 days
+
+# Email (Optional - for notifications)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_USER="your-email@gmail.com"
+SMTP_PASSWORD="your-app-password"
+
+# App Config
+NODE_ENV="development"        # development | production
+NEXT_PUBLIC_APP_NAME="SimLok"
+NEXT_PUBLIC_API_URL="http://localhost:3000/api"
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Core Tables
+
+```sql
+-- Users (Multi-role support)
+User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String   -- Hashed with bcrypt
+  name            String
+  role            User_role -- VENDOR, REVIEWER, etc.
+  phone           String?
+  companyName     String?
+  address         String?
+  verificationStatus VerificationStatus
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+-- Submissions (Work Location Requests)
+Submission {
+  id                    String   @id @default(cuid())
+  vendorId              String
+  workLocation          String   @db.Text -- Up to 65,535 chars
+  workFacilities        String   @db.Text
+  workDescription       String   @db.Text
+  implementationDateStart DateTime?
+  implementationDateEnd   DateTime?
+  workerCount           Int
+  verificationStatus    VerificationStatus
+  reviewStatus          ReviewStatus
+  approvalStatus        ApprovalStatus
+  qrCode                String?  @db.VarChar(1000)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  -- Relations
+  vendor                User
+  documents             Document[]
+  workers               Worker[]
+  notifications         Notification[]
+  qrScans               QRScan[]
+}
+
+-- Documents (Required Files)
+Document {
+  id              String   @id @default(cuid())
+  submissionId    String
+  fileName        String
+  filePath        String
+  fileSize        Int
+  fileType        String   -- PDF, XLSX, etc.
+  uploadedAt      DateTime @default(now())
+  
+  -- Relations
+  submission      Submission
+}
+
+-- Workers (Imported from XLSX/CSV)
+Worker {
+  id              String   @id @default(cuid())
+  submissionId    String
+  name            String
+  position        String?
+  idNumber        String?  -- ID card number
+  createdAt       DateTime @default(now())
+  
+  -- Relations
+  submission      Submission
+}
+
+-- Notifications (Real-time alerts)
+Notification {
+  id              String   @id @default(cuid())
+  userId          String
+  submissionId    String?
+  title           String
+  message         String   @db.Text
+  scope           NotificationScope -- admin, vendor, reviewer, approver
+  isRead          Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  
+  -- Relations
+  user            User
+  submission      Submission?
+}
+
+-- Sessions (NextAuth database sessions)
+Session {
+  id              String   @id @default(cuid())
+  sessionToken    String   @unique
+  userId          String
+  expires         DateTime
+  
+  -- Relations
+  user            User
+}
+
+-- QR Scans (Track site visits)
+QRScan {
+  id              String   @id @default(cuid())
+  submissionId    String
+  scannedBy       String   -- User who scanned
+  scannedAt       DateTime @default(now())
+  location        String?  -- GPS coordinates or address
+  
+  -- Relations
+  submission      Submission
+  user            User
+}
+```
+
+### Indexes (Performance Optimization)
+
+```sql
+-- User lookups
+@@index([email])
+@@index([role])
+
+-- Submission queries
+@@index([vendorId])
+@@index([verificationStatus])
+@@index([reviewStatus])
+@@index([approvalStatus])
+@@index([createdAt])
+
+-- Notification queries
+@@index([userId])
+@@index([isRead])
+@@index([scope])
+```
+
+---
+
+## 📡 API Documentation
+
+### Authentication Endpoints
+
+#### `POST /api/auth/register`
+Register a new user account
+
+**Request Body:**
+```json
+{
+  "email": "vendor@example.com",
+  "password": "SecurePass123!",
+  "name": "John Doe",
+  "role": "VENDOR",
+  "phone": "+628123456789",
+  "companyName": "PT Example Ltd",
+  "address": "Jakarta, Indonesia"
+}
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "user": {
+    "id": "clx123abc",
+    "email": "vendor@example.com",
+    "name": "John Doe",
+    "role": "VENDOR"
+  }
+}
+```
+
+---
+
+#### `POST /api/auth/signin`
+Login with email and password
+
+**Request Body:**
+```json
+{
+  "email": "vendor@example.com",
+  "password": "SecurePass123!"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "session": {
+    "user": {
+      "id": "clx123abc",
+      "email": "vendor@example.com",
+      "name": "John Doe",
+      "role": "VENDOR"
+    },
+    "expires": "2025-02-09T12:00:00.000Z"
+  }
+}
+```
+
+---
+
+### Submission Endpoints
+
+#### `GET /api/submissions`
+Retrieve submissions (filtered by user role)
+
+**Query Parameters:**
+- `status` (optional): Filter by verification/review/approval status
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page (default: 20)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "submissions": [
+    {
+      "id": "sub123",
+      "workLocation": "Site A - Jakarta",
+      "verificationStatus": "PENDING",
+      "reviewStatus": "PENDING_REVIEW",
+      "approvalStatus": "PENDING_APPROVAL",
+      "workerCount": 25,
+      "createdAt": "2025-01-09T10:00:00.000Z",
+      "vendor": {
+        "name": "John Doe",
+        "companyName": "PT Example Ltd"
+      }
+    }
+  ],
+  "pagination": {
+    "total": 45,
+    "page": 1,
+    "pages": 3
+  }
+}
+```
+
+---
+
+#### `POST /api/submissions`
+Create a new submission (VENDOR only)
+
+**Request Body (multipart/form-data):**
+```
+workLocation: "Construction Site A - Jakarta"
+workFacilities: "Office, Workshop, Storage"
+workDescription: "Building construction project"
+workerCount: 25
+documents: [File, File, ...] (PDF files)
+workerList: File (XLSX/CSV)
+```
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Submission created successfully",
+  "submission": {
+    "id": "sub123",
+    "workLocation": "Construction Site A - Jakarta",
+    "verificationStatus": "PENDING",
+    "qrCode": null,
+    "createdAt": "2025-01-09T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+#### `PATCH /api/submissions/[id]/verify`
+Verify a submission (VERIFIER only)
+
+**Request Body:**
+```json
+{
+  "action": "VERIFIED", // or "REJECTED"
+  "notes": "Identity verified, data is complete"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Submission verified successfully",
+  "submission": {
+    "id": "sub123",
+    "verificationStatus": "VERIFIED",
+    "reviewStatus": "PENDING_REVIEW"
+  }
+}
+```
+
+---
+
+#### `PATCH /api/submissions/[id]/review`
+Review a submission (REVIEWER only)
+
+**Request Body:**
+```json
+{
+  "action": "MEETS_REQUIREMENTS", // or "NOT_MEETS_REQUIREMENTS"
+  "notes": "All documents comply with safety standards"
+}
+```
+
+---
+
+#### `PATCH /api/submissions/[id]/approve`
+Approve a submission (APPROVER only)
+
+**Request Body:**
+```json
+{
+  "action": "APPROVED", // or "REJECTED"
+  "notes": "Approved for implementation",
+  "implementationDateStart": "2025-02-01",
+  "implementationDateEnd": "2025-03-31"
+}
+```
+
+---
+
+### Notification Endpoints
+
+#### `GET /api/notifications`
+Get user notifications
+
+**Query Parameters:**
+- `unreadOnly` (optional): "true" to get only unread notifications
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "notifications": [
+    {
+      "id": "notif123",
+      "title": "New Submission",
+      "message": "Vendor John Doe submitted a new work location request",
+      "isRead": false,
+      "createdAt": "2025-01-09T10:00:00.000Z",
+      "submission": {
+        "id": "sub123",
+        "workLocation": "Site A"
+      }
+    }
+  ],
+  "unreadCount": 5
+}
+```
+
+---
+
+#### `PATCH /api/notifications/[id]/read`
+Mark notification as read
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Notification marked as read"
+}
+```
+
+---
+
+### Logger Endpoints (SUPER_ADMIN only)
+
+#### `GET /api/logs`
+Retrieve application logs
+
+**Query Parameters:**
+- `date` (optional): "YYYY-MM-DD" to get specific date logs
+- `level` (optional): "ERROR" | "WARN" | "INFO" | "DEBUG"
+- `search` (optional): Search term to filter logs
+- `daysBack` (optional): Number of days to search back (default: 7)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "logs": [
+    {
+      "timestamp": "2025-01-09T10:15:30.123Z",
+      "level": "ERROR",
+      "message": "Submission validation failed",
+      "context": {
+        "userId": "user123",
+        "ip": "192.168.1.1",
+        "error": "Missing required documents"
+      }
+    }
+  ],
+  "total": 156
+}
+```
+
+---
+
+#### `DELETE /api/logs`
+Clear logs for a specific date or all logs
+
+**Request Body:**
+```json
+{
+  "date": "2025-01-09" // or "all"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Logs cleared for 2025-01-09"
+}
+```
+
+---
+
+## ✨ Features
+
+### 1. Multi-Role Authentication System
+- **6 distinct roles**: VENDOR, REVIEWER, APPROVER, VERIFIER, SUPER_ADMIN, VISITOR
+- Session-based authentication with database storage
+- Role-based access control (RBAC) on all routes
+- Protected API endpoints with middleware
+- Automatic session expiration and refresh
+
+### 2. Submission Management
+- **Create submissions** with work location details
+- **Upload multiple documents** (PDF, max 10MB each)
+- **Import worker lists** from XLSX/CSV files
+- **Track submission status** through workflow stages
+- **Real-time status updates** via notifications
+- **QR code generation** for approved submissions
+
+### 3. Multi-Stage Approval Workflow
+- **Stage 1: Verification** - Verifier checks vendor identity and data completeness
+- **Stage 2: Review** - Reviewer validates documents and compliance
+- **Stage 3: Approval** - Approver makes business decision
+- **Stage 4: Final Check** - Verifier performs final validation
+- Rejection capability at any stage with mandatory notes
+
+### 4. Document Management
+- Support for multiple document types (SIMJA, SIKA, JSA, Work Order, Contract)
+- Secure file upload with validation
+- File size limit: 10MB per file
+- Allowed formats: PDF, XLSX, CSV
+- Document versioning (planned)
+
+### 5. Real-Time Notifications
+- Socket.IO/SSE for instant updates
+- Scope-based notifications (admin, vendor, reviewer, approver)
+- In-app notification center
+- Email notifications (planned)
+- Push notifications (planned)
+
+### 6. Admin Dashboard
+- Comprehensive system analytics
+- User management (create, edit, delete users)
+- Submission overview and statistics
+- Log viewer with filtering and search
+- System configuration
+
+### 7. Logger System (NEW ✨)
+- **File-based logging** with automatic rotation
+- **4 log levels**: INFO, WARN, ERROR, DEBUG
+- **30-day retention** policy
+- **Search and filter** capabilities
+- **Color-coded console** output
+- **API for log access** (admin only)
+- **Structured logging** with context metadata
+
+### 8. QR Code System
+- Generate QR codes for approved work orders
+- Track QR scans with timestamp and location
+- Verify work order authenticity on-site
+- Scan history and analytics
+
+### 9. Export & Reporting
+- Export submissions to XLSX/CSV/PDF
+- Generate compliance reports
+- Worker list exports
+- Custom date range selection
+
+---
+
+## 📊 Logger System
+
+### Overview
+SimLok includes a comprehensive file-based logging system for monitoring application behavior, tracking errors, and debugging issues.
+
+### Features
+- **Multi-level logging**: INFO, WARN, ERROR, DEBUG
+- **Automatic rotation**: New log file each day
+- **30-day retention**: Old logs automatically deleted
+- **Structured logs**: JSON-like format with metadata
+- **Color-coded output**: Easy to read in console
+- **Search capability**: Find logs by term across multiple days
+- **Admin UI**: View and manage logs from dashboard
+
+### Usage Example
+
+```typescript
+import logger from '@/lib/logger';
+
+// Basic logging
+logger.info('User logged in', { userId: 'user123', ip: '192.168.1.1' });
+logger.warn('Upload limit exceeded', { userId: 'user123', fileSize: '15MB' });
+logger.error('Database connection failed', { error: err.message });
+logger.debug('Query executed', { query: 'SELECT * FROM users', duration: '45ms' });
+
+// API request logging
+import { getRequestMetadata } from '@/lib/logger';
+
+export async function POST(request: NextRequest) {
+  const metadata = getRequestMetadata(request);
+  
+  try {
+    logger.info('API request received', {
+      ...metadata,
+      endpoint: '/api/submissions'
+    });
+    
+    // Your API logic...
+    
+    logger.info('API request completed', { ...metadata, duration: '250ms' });
+  } catch (error) {
+    logger.apiError(error as Error, request, {
+      endpoint: '/api/submissions',
+      action: 'create_submission'
+    });
+  }
+}
+```
+
+### Log File Format
+
+```
+logs/
+  app-2025-01-09.log
+  app-2025-01-08.log
+  app-2025-01-07.log
+  ...
+```
+
+Each log entry:
+```
+[2025-01-09T10:15:30.123Z] [INFO] User logged in | userId: user123, ip: 192.168.1.1
+[2025-01-09T10:16:45.456Z] [ERROR] Database query failed | error: Connection timeout, query: SELECT * FROM...
+```
+
+### Admin UI Access
+Navigate to: `/admin/logs`
+
+Features:
+- Filter by date
+- Filter by level (ALL, ERROR, WARN, INFO, DEBUG)
+- Search logs with term
+- Clear logs by date
+- View raw log details
+
+---
+
+## 🤝 Contributing
+
+### Contribution Guidelines
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/amazing-feature
+   ```
+
+3. **Follow coding standards**
+   - Use TypeScript strict mode
+   - Follow ESLint rules
+   - Write meaningful commit messages
+   - Add JSDoc comments for functions
+
+4. **Test your changes**
+   ```bash
+   npm run build
+   npm run lint
+   ```
+
+5. **Commit and push**
+   ```bash
+   git add .
+   git commit -m "feat: add amazing feature"
+   git push origin feature/amazing-feature
+   ```
+
+6. **Create Pull Request**
+   - Describe your changes clearly
+   - Reference related issues
+   - Ensure CI/CD passes
+
+### Code Style
+
+- Use **descriptive variable names** (`submissionId` not `sid`)
+- Prefer **functional components** over class components
+- Use **async/await** over promises
+- Keep functions **small and focused**
+- Add **error handling** for all async operations
+- Use **TypeScript types** (avoid `any`)
+
+### Commit Message Convention
+
+```
+feat: add user export functionality
+fix: resolve submission validation bug
+docs: update API documentation
+refactor: simplify logger implementation
+test: add unit tests for auth service
+chore: update dependencies
+```
+
+---
+
+## 📝 License
+
+This project is proprietary and confidential.
+
+**Copyright © 2025 SimLok Development Team. All rights reserved.**
+
+Unauthorized copying, modification, distribution, or use of this software, via any medium, is strictly prohibited without express written permission from the copyright holder.
 
 ---
 
 ## 📞 Support
 
-Untuk pertanyaan teknis atau bug report:
-- Buat issue di repository ini dengan template yang sesuai
-- Include log errors dan reproduction steps
-- Mention environment details (OS, Node.js version, browser)
+For support, please contact:
+- **Email**: support@simlok.example.com
+- **Documentation**: [docs/](./docs/)
+- **Issue Tracker**: GitHub Issues
 
-**Dibuat dengan ❤️ dan dioptimasi untuk performa maksimal**
+---
+
+## 🎯 Roadmap
+
+### Version 2.1 (Q1 2025)
+- [ ] Service layer extraction (business logic separation)
+- [ ] Zod validation schemas for all forms
+- [ ] Reusable UI component library
+- [ ] Comprehensive unit tests (Jest)
+- [ ] API documentation (OpenAPI/Swagger)
+
+### Version 2.2 (Q2 2025)
+- [ ] Email notification system
+- [ ] Push notifications (PWA)
+- [ ] Advanced analytics dashboard
+- [ ] Document versioning
+- [ ] Audit trail system
+
+### Version 3.0 (Q3 2025)
+- [ ] Mobile app (React Native)
+- [ ] Offline mode support
+- [ ] Advanced search with filters
+- [ ] Role-based dashboards customization
+- [ ] Multi-language support (i18n)
+
+---
+
+## 🏆 Credits
+
+Built with ❤️ by the SimLok Development Team
+
+**Key Technologies:**
+- [Next.js](https://nextjs.org/) - React Framework
+- [Prisma](https://www.prisma.io/) - Database ORM
+- [NextAuth.js](https://next-auth.js.org/) - Authentication
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [TypeScript](https://www.typescriptlang.org/) - Type Safety
+
+---
+
+## 📚 Documentation Index
+
+- [CHANGELOG.md](./CHANGELOG.md) - Version history and changes
+- [LOGGER_SYSTEM.md](./docs/LOGGER_SYSTEM.md) - Logger documentation
+- [LOGGER_EXAMPLES.md](./docs/LOGGER_EXAMPLES.md) - Logger usage examples
+- [OPTIMASI_UPLOAD_API_PERFORMANCE.md](./docs/OPTIMASI_UPLOAD_API_PERFORMANCE.md) - Upload optimization
+- [NOTIFICATION_ICONS_STANDARDIZATION.md](./docs/NOTIFICATION_ICONS_STANDARDIZATION.md) - UI standards
+- [SERVER_TIME_BEST_PRACTICES.md](./docs/SERVER_TIME_BEST_PRACTICES.md) - Date handling guide
+
+---
+
+**Last Updated**: November 9, 2025  
+**Version**: 2.0.0  
+**Status**: Active Development 🚧

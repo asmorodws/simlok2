@@ -10,6 +10,7 @@ import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVer
 import EditUserModal from "@/components/admin/EditUserModal";
 import DeleteUserModal from "@/components/admin/DeleteUserModal";
 import { DashboardLoadingSkeleton } from "@/components/ui/LoadingSpinner";
+import DashboardStatsCard from "@/components/dashboard/DashboardStatsCard";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -114,78 +115,46 @@ export default function SuperAdminDashboard() {
               <DashboardLoadingSkeleton type="stats" count={5} />
             ) : (
               <>
-                <div className="bg-white rounded-xl border shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Menunggu Verifikasi</h3>
-                      <p className="text-2xl font-bold text-amber-600 mt-1">{stats.totalPending}</p>
-                    </div>
-                    <div className="p-3 bg-amber-100 rounded-full">
-                      <ClockIcon className="w-6 h-6 text-amber-600" />
-                    </div>
-                  </div>
-                  {stats.totalPending > 0 && (
-                    <div className="mt-4">
-                      <Link
-                        href="/super-admin/users?tab=pending"
-                        className="text-sm text-amber-600 hover:text-amber-800 font-medium flex items-center"
-                      >
-                        Verifikasi sekarang
-                        <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white rounded-xl border shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Terverifikasi</h3>
-                      <p className="text-2xl font-bold text-green-600 mt-1">{stats.totalVerified}</p>
-                    </div>
-                    <div className="p-3 bg-green-100 rounded-full">
-                      <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Ditolak</h3>
-                      <p className="text-2xl font-bold text-red-600 mt-1">{stats.totalRejected}</p>
-                    </div>
-                    <div className="p-3 bg-red-100 rounded-full">
-                      <XCircleIcon className="w-6 h-6 text-red-600" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Total User</h3>
-                      <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalUsers}</p>
-                    </div>
-                    <div className="p-3 bg-blue-100 rounded-full">
-                      <UserIcon className="w-6 h-6 text-blue-600" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border shadow-sm p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Registrasi Hari Ini</h3>
-                      <p className="text-2xl font-bold text-purple-600 mt-1">{stats.todayRegistrations}</p>
-                    </div>
-                    <div className="p-3 bg-purple-100 rounded-full">
-                      <UserIcon className="w-6 h-6 text-purple-600" />
-                    </div>
-                  </div>
-                </div>
+                <DashboardStatsCard
+                  title="Menunggu Verifikasi"
+                  value={stats.totalPending}
+                  icon={ClockIcon}
+                  color="yellow"
+                  loading={loading}
+                  {...(stats.totalPending > 0 && { href: "/super-admin/users?tab=pending" })}
+                />
+                
+                <DashboardStatsCard
+                  title="Terverifikasi"
+                  value={stats.totalVerified}
+                  icon={CheckCircleIcon}
+                  color="green"
+                  loading={loading}
+                />
+                
+                <DashboardStatsCard
+                  title="Ditolak"
+                  value={stats.totalRejected}
+                  icon={XCircleIcon}
+                  color="red"
+                  loading={loading}
+                />
+                
+                <DashboardStatsCard
+                  title="Total User"
+                  value={stats.totalUsers}
+                  icon={UserIcon}
+                  color="blue"
+                  loading={loading}
+                />
+                
+                <DashboardStatsCard
+                  title="Registrasi Hari Ini"
+                  value={stats.todayRegistrations}
+                  icon={UserIcon}
+                  color="purple"
+                  loading={loading}
+                />
               </>
             )}
           </div>

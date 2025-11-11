@@ -107,7 +107,7 @@ export default function NotificationsPage() {
     const snap = version.current();
     setLoading(true);
     try {
-      const res = await fetchJSON<NotifListResponse>(`/api/v1/notifications?scope=${scope}&filter=all&pageSize=100`);
+      const res = await fetchJSON<NotifListResponse>(`/api/notifications?scope=${scope}&filter=all&pageSize=100`);
       if (version.isStale(snap)) return;
       setNotifications(res?.data?.data ?? []);
     } catch (e) {
@@ -140,7 +140,7 @@ export default function NotificationsPage() {
     try {
       setMarkingAsRead(prev => new Set([...prev, notificationId]));
       setNotifications(prev => prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n)));
-      await fetchJSON(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+      await fetchJSON(`/api/notifications/${notificationId}/read`, { method: 'POST' });
     } catch (error) {
       console.error('Error marking as read:', error);
       setNotifications(prev => prev.map(n => (n.id === notificationId ? { ...n, isRead: false } : n)));
@@ -158,7 +158,7 @@ export default function NotificationsPage() {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     try {
       const scopeBody = session?.user?.role;
-      await fetchJSON('/api/v1/notifications/read-all', {
+      await fetchJSON('/api/notifications/read-all', {
         method: 'POST',
         body: JSON.stringify({ scope: scopeBody }),
       });

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { withUserCache } from '@/lib/api-cache';
 import { CacheTTL } from '@/lib/cache';
+import DashboardService from '@/services/DashboardService';
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
     const { data: stats, cached } = await withUserCache(
       'verifier:stats',
       session.user.id,
-      CacheTTL.ONE_MINUTE * 2, // 2 minutes cache
+      CacheTTL.ONE_MINUTE * 2,
       async () => {
         return await fetchVerifierStats(session.user.id);
       }
@@ -43,67 +44,20 @@ export async function GET() {
 }
 
 async function fetchVerifierStats(userId: string) {
-  // Get today's date range (Jakarta timezone)
-  const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
-  const today = new Date(jakartaNow);
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  // Get verifier stats from service
+  const verifierStats = await DashboardService.getVerifierStats(userId);
 
-  // Fetch stats in parallel
-  const [
-    totalScans,
-    todayScans,
-    totalSubmissions,
-    approvedSubmissions,
-    pendingSubmissions,
-    rejectedSubmissions
-  ] = await Promise.all([
-    // Total scans by this verifier
-    prisma.qrScan.count({
-      where: {
-        scanned_by: userId
-      }
-    }),
-    
-    // Today's scans by this verifier
-    prisma.qrScan.count({
-      where: {
-        scanned_by: userId,
-        scanned_at: {
-          gte: todayStart,
-          lt: todayEnd
-        }
-      }
-    }),
-      
-      // Total submissions
-      prisma.submission.count(),
-      
-      // Approved submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'APPROVED'
-        }
-      }),
-      
-      // Pending submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'PENDING_APPROVAL'
-        }
-      }),
-      
-      // Rejected submissions
-      prisma.submission.count({
-        where: {
-          approval_status: 'REJECTED'
-        }
-      })
-    ]);
+  // Get submission counts (these aren't in DashboardService.getVerifierStats)
+  const [totalSubmissions, approvedSubmissions, pendingSubmissions, rejectedSubmissions] = await Promise.all([
+    prisma.submission.count(),
+    prisma.submission.count({ where: { approval_status: 'APPROVED' } }),
+    prisma.submission.count({ where: { approval_status: 'PENDING_APPROVAL' } }),
+    prisma.submission.count({ where: { approval_status: 'REJECTED' } })
+  ]);
 
   return {
-    totalScans,
-    todayScans,
+    totalScans: verifierStats.totalScans,
+    todayScans: verifierStats.todayScans,
     totalSubmissions,
     approvedSubmissions,
     pendingSubmissions,

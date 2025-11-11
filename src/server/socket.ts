@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { pubClient, subClient } from '../lib/redis';
-import { EVENT_NAMES, ROOMS } from '../shared/events';
+import { EVENT_NAMES, ROOMS } from '@/types/events';
 import type { 
   AdminNewSubmissionEvent,
   AdminNewVendorEvent,
@@ -9,7 +9,7 @@ import type {
   NotificationNewEvent,
   NotificationUnreadCountEvent,
   StatsUpdateEvent
-} from '../shared/events';
+} from '@/types/events';
 
 declare global {
   var __socket_io: Server | undefined;

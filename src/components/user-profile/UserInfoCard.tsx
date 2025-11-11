@@ -7,7 +7,7 @@ import TextArea from "../form/textarea/TextArea";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/useToast";
 import ConfirmationModal from "../common/ConfirmationModal";
-import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/lib/validators";
 
 interface UserInfoCardProps {
   user: {
@@ -102,13 +102,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
         newErrors.phone_number = "Nomor telepon wajib diisi";
       } else {
         // Validasi format nomor telepon
-        const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
-          required: true,
-          minLength: 9,
-          maxLength: 13,
-        });
-        
-        if (!phoneValidation.isValid) {
+      const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim());        if (!phoneValidation.isValid) {
           newErrors.phone_number = phoneValidation.error || "Nomor telepon tidak valid";
         }
       }
@@ -155,7 +149,7 @@ export default function UserInfoCard({ user }: UserInfoCardProps) {
               email: formData.email.trim(),
             };
 
-      const response = await fetch("/api/user/profile", {
+      const response = await fetch("/api/users/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),

@@ -13,7 +13,7 @@ import FileUpload from '@/components/form/FileUpload';
 import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { useToast } from '@/hooks/useToast';
-import { hasWeekendInRange } from '@/utils/dateHelpers';
+import { hasWeekendInRange } from '@/lib/serverDate';
 
 // Define Worker interface for dynamic inputs
 interface Worker {

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
 import { z } from 'zod';
 import { notifyApproverReviewedSubmission, notifyVendorSubmissionRejected } from '@/server/events';
 import cache, { CacheKeys } from '@/lib/cache';
+import { SubmissionService } from '@/services/SubmissionService';
+import { RouteParams } from '@/types';
 
 // Schema for validating review data
 const reviewSchema = z.object({
@@ -19,8 +20,6 @@ const reviewSchema = z.object({
   implementation_start_date: z.string().optional().nullable(),
   implementation_end_date: z.string().optional().nullable(),
 });
-
-import { RouteParams } from '@/types';
 
 // PATCH /api/submissions/[id]/review - Set review status and note (Reviewer function)
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
@@ -40,128 +39,84 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validatedData = reviewSchema.parse(body);
 
-    // Check if submission exists
-    const existingSubmission = await prisma.submission.findUnique({
-      where: { id }
-    });
-
-    if (!existingSubmission) {
-      return NextResponse.json({ error: 'Submission tidak ditemukan' }, { status: 404 });
-    }
-
-    // Check if submission can be reviewed
-    // Reviewer can review if:
-    // 1. It's still PENDING_REVIEW (first time review)
-    // 2. OR it's been reviewed but approval_status is still PENDING_APPROVAL (can edit review)
-    if (existingSubmission.review_status !== 'PENDING_REVIEW' && 
-        existingSubmission.approval_status !== 'PENDING_APPROVAL') {
-      return NextResponse.json({ 
-        error: 'Review tidak dapat diubah karena submission sudah disetujui/ditolak oleh approver' 
-      }, { status: 400 });
-    }
-
-    // Prepare update data
-    const updateData: any = {
-      review_status: validatedData.review_status,
-      note_for_approver: validatedData.note_for_approver || '',
-      note_for_vendor: validatedData.note_for_vendor || '',
-      reviewed_at: new Date(),
-      reviewed_by: session.user.officer_name,
-    };
-
-    // Update editable fields if provided by reviewer
-    if (validatedData.working_hours !== undefined) {
-      updateData.working_hours = validatedData.working_hours;
-    }
-    if (validatedData.holiday_working_hours !== undefined) {
-      updateData.holiday_working_hours = validatedData.holiday_working_hours;
-    }
-    if (validatedData.implementation !== undefined) {
-      updateData.implementation = validatedData.implementation;
-    }
-    if (validatedData.content !== undefined) {
-      updateData.content = validatedData.content;
-    }
-    if (validatedData.implementation_start_date !== undefined) {
-      updateData.implementation_start_date = validatedData.implementation_start_date ? new Date(validatedData.implementation_start_date) : null;
-    }
-    if (validatedData.implementation_end_date !== undefined) {
-      updateData.implementation_end_date = validatedData.implementation_end_date ? new Date(validatedData.implementation_end_date) : null;
-    }
-
-    console.log('📝 Review update data:', {
+    console.log('📝 Review request:', {
       id,
-      review_status: updateData.review_status,
-      working_hours: updateData.working_hours,
-      holiday_working_hours: updateData.holiday_working_hours,
-      implementation: updateData.implementation?.substring(0, 50),
-      content: updateData.content?.substring(0, 50),
+      review_status: validatedData.review_status,
+      working_hours: validatedData.working_hours,
+      holiday_working_hours: validatedData.holiday_working_hours,
     });
 
-    // ========== AUTO-REJECT LOGIC ==========
-    // If reviewer marks as NOT_MEETS_REQUIREMENTS, automatically set approval_status to REJECTED
-    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
-      updateData.approval_status = 'REJECTED';
-      updateData.approved_at = new Date();
-      updateData.approved_by = session.user.officer_name;
-      updateData.approved_by_final_id = session.user.id;
-      
-      console.log(`🚫 Auto-rejecting submission ${id} - Reviewer marked as NOT_MEETS_REQUIREMENTS`);
-      
-      // Notify vendor about rejection
-      await notifyVendorSubmissionRejected(existingSubmission, session.user.officer_name || 'Reviewer');
-    }
-    // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
-    // reset approval status back to PENDING_APPROVAL so approver can review again
-    else if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
-      if (existingSubmission.review_status === 'NOT_MEETS_REQUIREMENTS' && 
-          existingSubmission.approval_status === 'REJECTED') {
-        updateData.approval_status = 'PENDING_APPROVAL';
-        updateData.approved_at = null;
-        updateData.approved_by = null;
-        updateData.approved_by_final_id = null;
-        
-        console.log(`✅ Resetting submission ${id} to PENDING_APPROVAL - Reviewer changed to MEETS_REQUIREMENTS`);
-      }
-    }
+    // Prepare data object for service (filter out undefined values)
+    const reviewData: any = {};
+    if (validatedData.working_hours !== undefined) reviewData.working_hours = validatedData.working_hours;
+    if (validatedData.holiday_working_hours !== undefined) reviewData.holiday_working_hours = validatedData.holiday_working_hours;
+    if (validatedData.implementation !== undefined) reviewData.implementation = validatedData.implementation;
+    if (validatedData.content !== undefined) reviewData.content = validatedData.content;
+    if (validatedData.implementation_start_date !== undefined) reviewData.implementation_start_date = validatedData.implementation_start_date;
+    if (validatedData.implementation_end_date !== undefined) reviewData.implementation_end_date = validatedData.implementation_end_date;
+    if (validatedData.note_for_approver) reviewData.note_for_approver = validatedData.note_for_approver;
+    if (validatedData.note_for_vendor) reviewData.note_for_vendor = validatedData.note_for_vendor;
 
-    // Update submission with review status
-    const updatedSubmission = await prisma.submission.update({
-      where: { id },
-      data: updateData,
-      include: {
-        user: true,
-        worker_list: {
-          orderBy: { created_at: 'asc' }
-        },
-        support_documents: {
-          orderBy: { uploaded_at: 'asc' }
-        }
-      }
+    // Use SubmissionService to review submission
+    const updatedSubmission = await SubmissionService.reviewSubmission({
+      submissionId: id,
+      userId: session.user.id,
+      userRole: session.user.role,
+      action: validatedData.review_status,
+      ...(validatedData.note_for_approver && { notes: validatedData.note_for_approver }),
+      ...(Object.keys(reviewData).length > 0 && { data: reviewData }),
     });
 
-    // Invalidate cache for approver stats (review status affects pending counts)
+    // Invalidate cache for approver stats
     cache.delete(CacheKeys.APPROVER_STATS);
-    console.log('🗑️ Cache invalidated: APPROVER_STATS after review');
+    console.log('�️ Cache invalidated: APPROVER_STATS after review');
 
-    // Always notify approver that reviewer has saved a review (both MEETS and NOT_MEETS)
-    // This ensures approver sees the review even when reviewer marks NOT_MEETS_REQUIREMENTS.
+    // Always notify approver that reviewer has saved a review
     await notifyApproverReviewedSubmission(id);
 
-    // Do NOT notify vendor on reviewer NOT_MEETS_REQUIREMENTS. Vendor will only be notified
-    // when approver changes the final approval_status to REJECTED.
+    // If reviewer marked as NOT_MEETS_REQUIREMENTS, notify vendor about rejection
+    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+      const submissionForNotification = await SubmissionService.getSubmissionById(
+        id,
+        session.user.id,
+        session.user.role as any
+      );
+      if (submissionForNotification) {
+        await notifyVendorSubmissionRejected(
+          submissionForNotification as any,
+          session.user.officer_name || 'Reviewer'
+        );
+      }
+    }
 
     return NextResponse.json({
       message: 'Review berhasil disimpan',
       submission: updatedSubmission
     });
 
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 
         error: 'Data tidak valid', 
         details: error.issues 
       }, { status: 400 });
+    }
+    
+    // Handle specific error messages from service
+    if (error.message) {
+      const statusMap: Record<string, number> = {
+        'Submission tidak ditemukan': 404,
+        'Submission not found': 404,
+        'Only REVIEWER can review': 403,
+        'Reviewer access required': 403,
+        'Submission tidak dapat direview': 400,
+      };
+      
+      for (const [msg, status] of Object.entries(statusMap)) {
+        if (error.message.includes(msg)) {
+          return NextResponse.json({ error: error.message }, { status });
+        }
+      }
     }
     
     console.error('Error reviewing submission:', error);

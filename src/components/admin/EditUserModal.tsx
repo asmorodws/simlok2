@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { XMarkIcon, UserIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
-import { useToast } from "@/hooks/useToast";
+import { useUserForm } from "@/hooks/useUserForm";
 import Input from "@/components/form/Input";
 import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
 import { Badge } from "../ui/Badge";
-import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 interface EditUserModalProps {
   user: UserData | null;
@@ -26,143 +25,43 @@ const USER_ROLES = [
 ];
 
 export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: EditUserModalProps) {
-  const { showSuccess, showError } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    officer_name: '',
-    vendor_name: '',
-    email: '',
-    phone_number: '',
-    address: '',
-    role: 'VENDOR',
-    password: '',
-    isActive: true,
-    verification_status: 'PENDING' as 'PENDING' | 'VERIFIED' | 'REJECTED'
+  // ✅ Use centralized form hook - replaces ~150 lines of duplicate logic
+  const userForm = useUserForm({
+    mode: 'edit',
+    userId: user?.id,
+    initialData: {
+      officer_name: user?.officer_name || '',
+      vendor_name: user?.vendor_name || '',
+      email: user?.email || '',
+      phone_number: user?.phone_number || '',
+      address: user?.address || '',
+      role: (user?.role as any) || 'VENDOR',
+      password: '',
+      isActive: user?.isActive ?? true,
+      verification_status: (user?.verification_status as any) || 'PENDING'
+    },
+    onSuccess: (updatedUser) => {
+      onUserUpdate(updatedUser);
+      onClose();
+    },
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Update form when user changes
   useEffect(() => {
     if (user) {
-      setFormData({
+      userForm.setFormData({
         officer_name: user.officer_name || '',
         vendor_name: user.vendor_name || '',
         email: user.email || '',
         phone_number: user.phone_number || '',
         address: user.address || '',
-        role: user.role || 'VENDOR',
+        role: (user.role as any) || 'VENDOR',
         password: '',
         isActive: user.isActive ?? true,
-        verification_status: user.verification_status || 'PENDING'
+        verification_status: (user.verification_status as any) || 'PENDING'
       });
-      setErrors({});
     }
   }, [user]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email wajib diisi';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Format email tidak valid';
-    }
-
-    // Validasi nomor telepon jika diisi
-    if (formData.phone_number && formData.phone_number.trim()) {
-      const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
-        required: false,
-        minLength: 9,
-        maxLength: 13,
-      });
-      
-      if (!phoneValidation.isValid) {
-        newErrors.phone_number = phoneValidation.error || 'Nomor telepon tidak valid';
-      }
-    }
-
-    if (formData.role === 'VENDOR') {
-      if (!formData.vendor_name.trim()) {
-        newErrors.vendor_name = 'Nama vendor wajib diisi untuk role vendor';
-      }
-    } else {
-      if (!formData.officer_name.trim()) {
-        newErrors.officer_name = 'Nama petugas wajib diisi';
-      }
-    }
-
-    // Validate password if provided
-    if (formData.password.trim()) {
-      if (formData.password.length < 6) {
-        newErrors.password = 'Password harus minimal 6 karakter';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const dataToSend = {
-        email: formData.email,
-        phone_number: normalizePhoneNumber(formData.phone_number),
-        address: formData.address,
-        role: formData.role,
-        isActive: formData.isActive,
-        verification_status: formData.verification_status,
-        // Clean up data based on role
-        vendor_name: formData.role === 'VENDOR' ? formData.vendor_name : null,
-        // officer_name is required for ALL roles (including VENDOR)
-        officer_name: formData.officer_name,
-        // Only send password if it's not empty, otherwise send undefined to be excluded
-        password: formData.password.trim() !== '' ? formData.password : undefined
-      };
-
-      const response = await fetch(`/api/users/${user?.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Gagal mengupdate user');
-      }
-
-      const result = await response.json();
-
-      showSuccess('Berhasil', 'Data user berhasil diperbarui');
-      onUserUpdate(result.user);
-      onClose();
-
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      showError('Error', error.message || 'Gagal mengupdate user');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (!isOpen || !user) return null;
 
@@ -191,10 +90,49 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-6">
+            <form onSubmit={userForm.handleSubmit} className="p-6">
               <div className="space-y-6">
-                {/* Account Status Toggle - Simple & Clear */}
-                
+                {/* Account Status Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">Status Akun</span>
+                      <Badge variant={userForm.formData.isActive ? 'success' : 'destructive'}>
+                        {userForm.formData.isActive ? 'Aktif' : 'Nonaktif'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Status akun user di sistem
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={userForm.formData.isActive}
+                      onChange={(e) => userForm.setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                {/* Verification Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status Verifikasi <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="verification_status"
+                    value={userForm.formData.verification_status}
+                    onChange={userForm.handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="PENDING">Pending</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                </div>
 
                 {/* Role Selection */}
                 <div>
@@ -203,8 +141,8 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                   </label>
                   <select
                     name="role"
-                    value={formData.role}
-                    onChange={handleChange}
+                    value={userForm.formData.role}
+                    onChange={userForm.handleChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
@@ -218,7 +156,7 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Conditional Name Fields */}
-                  {formData.role === 'VENDOR' ? (
+                  {userForm.formData.role === 'VENDOR' ? (
                     <>
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -227,10 +165,10 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                         <Input
                           name="vendor_name"
                           type="text"
-                          value={formData.vendor_name}
-                          onChange={handleChange}
+                          value={userForm.formData.vendor_name}
+                          onChange={userForm.handleChange}
                           placeholder="PT. Nama Perusahaan"
-                          {...(errors.vendor_name && { error: errors.vendor_name })}
+                          {...(userForm.errors.vendor_name && { error: userForm.errors.vendor_name })}
                           required
                         />
                       </div>
@@ -241,10 +179,10 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                         <Input
                           name="officer_name"
                           type="text"
-                          value={formData.officer_name}
-                          onChange={handleChange}
+                          value={userForm.formData.officer_name}
+                          onChange={userForm.handleChange}
                           placeholder="Nama Lengkap Petugas"
-                          {...(errors.officer_name && { error: errors.officer_name })}
+                          {...(userForm.errors.officer_name && { error: userForm.errors.officer_name })}
                           required
                         />
                       </div>
@@ -257,10 +195,10 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                       <Input
                         name="officer_name"
                         type="text"
-                        value={formData.officer_name}
-                        onChange={handleChange}
+                        value={userForm.formData.officer_name}
+                        onChange={userForm.handleChange}
                         placeholder="Nama Lengkap Petugas"
-                        {...(errors.officer_name && { error: errors.officer_name })}
+                        {...(userForm.errors.officer_name && { error: userForm.errors.officer_name })}
                         required
                       />
                     </div>
@@ -274,12 +212,42 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                     <Input
                       name="email"
                       type="email"
-                      value={formData.email}
-                      onChange={handleChange}
+                      value={userForm.formData.email}
+                      onChange={userForm.handleChange}
                       placeholder="email@contoh.com"
-                      {...(errors.email && { error: errors.email })}
+                      {...(userForm.errors.email && { error: userForm.errors.email })}
                       required
                     />
+                  </div>
+
+                  {/* Password - Optional for edit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Password Baru
+                    </label>
+                    <div className="relative">
+                      <Input
+                        name="password"
+                        type={userForm.showPassword ? "text" : "password"}
+                        value={userForm.formData.password}
+                        onChange={userForm.handleChange}
+                        placeholder="Kosongkan jika tidak ingin mengubah"
+                        {...(userForm.errors.password && { error: userForm.errors.password })}
+                      />
+                      <button
+                        type="button"
+                        onClick={userForm.togglePasswordVisibility}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {userForm.showPassword ? (
+                          <EyeSlashIcon className="w-5 h-5" />
+                        ) : (
+                          <EyeIcon className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Minimal 6 karakter. Kosongkan jika tidak ingin mengubah password.</p>
                   </div>
 
                   {/* Phone Number */}
@@ -289,166 +257,49 @@ export default function EditUserModal({ user, isOpen, onClose, onUserUpdate }: E
                     </label>
                     <PhoneInput
                       name="phone_number"
-                      value={formData.phone_number}
-                      onChange={handleChange}
+                      value={userForm.formData.phone_number}
+                      onChange={userForm.handleChange}
                       placeholder="81234567890"
-                      {...(errors.phone_number && { error: errors.phone_number })}
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password Baru
-                    </label>
-                    <div className="relative">
-                      <Input
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={handleChange}
-                        placeholder="Masukkan password"
-                        {...(errors.password && { error: errors.password })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <EyeSlashIcon className="w-5 h-5" />
-                        ) : (
-                          <EyeIcon className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                    <Badge variant="warning">
-                                                                Kosongkan field ini jika tidak ingin mengubah password user
-                                                            </Badge>
-                  </div>
-
-                  {/* Account Status Toggle */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status Akun
-                    </label>
-                    <div className={`p-2 rounded-xl border-2 transition-all ${formData.isActive
-                        ? 'border-green-300 bg-gradient-to-r from-green-50 to-emerald-50'
-                        : 'border-red-300 bg-gradient-to-r from-red-50 to-orange-50'
-                      }`}>
-                      <div className="flex items-center justify-between">
-                        {/* Status Display */}
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center ${formData.isActive ? 'bg-green-500' : 'bg-red-500'
-                              }`}
-                          >
-                            <svg
-                              className="w-3 h-3 text-white"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              {formData.isActive ? (
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              ) : (
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              )}
-                            </svg>
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold text-gray-900">
-                              {formData.isActive ? 'AKUN AKTIF' : 'AKUN NONAKTIF'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Toggle Button */}
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, isActive: !prev.isActive }))}
-                          className={`relative inline-flex h-6 w-10 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 shadow-md ${formData.isActive
-                              ? 'bg-green-600 focus:ring-green-300'
-                              : 'bg-red-500 focus:ring-red-300'
-                            }`}
-                        >
-                          <span
-                            className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-200 flex items-center justify-center font-bold text-[10px] ${formData.isActive ? 'translate-x-4 text-green-600' : 'translate-x-1 text-red-500'
-                              }`}
-                          >
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Verification Status */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status Verifikasi
-                    </label>
-                    <select
-                      name="verification_status"
-                      value={formData.verification_status}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="PENDING">Menunggu Verifikasi</option>
-                      <option value="VERIFIED">Terverifikasi</option>
-                      <option value="REJECTED">Ditolak</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ubah status verifikasi user
-                    </p>
-                  </div>
-
-                  {/* Address */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Alamat
-                    </label>
-                    <TextArea
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      placeholder="Alamat lengkap"
-                      rows={3}
-                      {...(errors.address && { error: errors.address })}
+                      {...(userForm.errors.phone_number && { error: userForm.errors.phone_number })}
                     />
                   </div>
                 </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Alamat
+                  </label>
+                  <TextArea
+                    name="address"
+                    value={userForm.formData.address}
+                    onChange={userForm.handleChange}
+                    placeholder="Alamat lengkap"
+                    rows={3}
+                    {...(userForm.errors.address && { error: userForm.errors.address })}
+                  />
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={userForm.loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={userForm.loading}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {userForm.loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
               </div>
             </form>
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
-            </button>
           </div>
         </div>
       </div>

@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { XMarkIcon, UserPlusIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import { UserData } from "@/types/user";
-import { useToast } from "@/hooks/useToast";
+import { useUserForm } from "@/hooks/useUserForm";
 import Input from "@/components/form/Input";
 import PhoneInput from "@/components/form/PhoneInput";
 import TextArea from "@/components/form/textarea/TextArea";
-import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -25,143 +24,17 @@ const USER_ROLES = [
 ];
 
 export default function CreateUserModal({ isOpen, onClose, onUserCreate }: CreateUserModalProps) {
-  const { showSuccess, showError } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    officer_name: '',
-    vendor_name: '',
-    email: '',
-    phone_number: '',
-    address: '',
-    role: 'VENDOR',
-    password: ''
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email wajib diisi';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Format email tidak valid';
-    }
-
-    if (!formData.password.trim()) {
-      newErrors.password = 'Password wajib diisi';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password harus minimal 6 karakter';
-    }
-
-    // Validasi nomor telepon jika diisi
-    if (formData.phone_number && formData.phone_number.trim()) {
-      const phoneValidation = validatePhoneNumberWithMessage(formData.phone_number.trim(), {
-        required: false,
-        minLength: 9,
-        maxLength: 13,
-      });
-      
-      if (!phoneValidation.isValid) {
-        newErrors.phone_number = phoneValidation.error || 'Nomor telepon tidak valid';
-      }
-    }
-
-    if (formData.role === 'VENDOR') {
-      if (!formData.vendor_name.trim()) {
-        newErrors.vendor_name = 'Nama vendor wajib diisi untuk role vendor';
-      }
-    } else {
-      if (!formData.officer_name.trim()) {
-        newErrors.officer_name = 'Nama petugas wajib diisi';
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      showError('Error', 'Mohon periksa kembali data yang diisi');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      const dataToSend = {
-        ...formData,
-        phone_number: formData.phone_number ? normalizePhoneNumber(formData.phone_number) : null,
-        // Clean up data based on role
-        vendor_name: formData.role === 'VENDOR' ? formData.vendor_name : null,
-        // officer_name is required for ALL roles (including VENDOR)
-        officer_name: formData.officer_name
-      };
-
-          const response = await fetch("/api/users", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Gagal membuat user');
-      }
-
-      const result = await response.json();
-      
-      showSuccess('Berhasil', 'User berhasil dibuat');
-      onUserCreate(result.user);
-      
-      // Reset form
-      setFormData({
-        officer_name: '',
-        vendor_name: '',
-        email: '',
-        phone_number: '',
-        address: '',
-        role: 'VENDOR',
-        password: ''
-      });
-      setErrors({});
+  // ✅ Use centralized form hook - replaces ~150 lines of duplicate logic
+  const userForm = useUserForm({
+    mode: 'create',
+    onSuccess: (user) => {
+      onUserCreate(user);
       onClose();
-      
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      showError('Error', error.message || 'Gagal membuat user');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
 
   const handleClose = () => {
-    // Reset form when closing
-    setFormData({
-      officer_name: '',
-      vendor_name: '',
-      email: '',
-      phone_number: '',
-      address: '',
-      role: 'VENDOR',
-      password: ''
-    });
-    setErrors({});
+    userForm.reset();
     onClose();
   };
 
@@ -191,7 +64,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          <form onSubmit={handleSubmit} className="p-6">
+          <form onSubmit={userForm.handleSubmit} className="p-6">
           <div className="space-y-6">
             {/* Role Selection */}
             <div>
@@ -200,8 +73,8 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
               </label>
               <select
                 name="role"
-                value={formData.role}
-                onChange={handleChange}
+                value={userForm.formData.role}
+                onChange={userForm.handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
@@ -215,7 +88,7 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name Fields - Different for VENDOR */}
-              {formData.role === 'VENDOR' ? (
+              {userForm.formData.role === 'VENDOR' ? (
                 <>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -224,10 +97,10 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                     <Input
                       name="vendor_name"
                       type="text"
-                      value={formData.vendor_name}
-                      onChange={handleChange}
+                      value={userForm.formData.vendor_name}
+                      onChange={userForm.handleChange}
                       placeholder="PT. Nama Perusahaan"
-                      {...(errors.vendor_name && { error: errors.vendor_name })}
+                      {...(userForm.errors.vendor_name && { error: userForm.errors.vendor_name })}
                       required
                     />
                   </div>
@@ -238,10 +111,10 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                     <Input
                       name="officer_name"
                       type="text"
-                      value={formData.officer_name}
-                      onChange={handleChange}
+                      value={userForm.formData.officer_name}
+                      onChange={userForm.handleChange}
                       placeholder="Nama Lengkap Petugas"
-                      {...(errors.officer_name && { error: errors.officer_name })}
+                      {...(userForm.errors.officer_name && { error: userForm.errors.officer_name })}
                       required
                     />
                   </div>
@@ -254,10 +127,10 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                   <Input
                     name="officer_name"
                     type="text"
-                    value={formData.officer_name}
-                    onChange={handleChange}
+                    value={userForm.formData.officer_name}
+                    onChange={userForm.handleChange}
                     placeholder="Nama Lengkap Petugas"
-                    {...(errors.officer_name && { error: errors.officer_name })}
+                    {...(userForm.errors.officer_name && { error: userForm.errors.officer_name })}
                     required
                   />
                 </div>
@@ -271,10 +144,10 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                 <Input
                   name="email"
                   type="email"
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={userForm.formData.email}
+                  onChange={userForm.handleChange}
                   placeholder="email@contoh.com"
-                  {...(errors.email && { error: errors.email })}
+                  {...(userForm.errors.email && { error: userForm.errors.email })}
                   required
                 />
               </div>
@@ -287,20 +160,20 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                 <div className="relative">
                   <Input
                     name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={handleChange}
+                    type={userForm.showPassword ? "text" : "password"}
+                    value={userForm.formData.password}
+                    onChange={userForm.handleChange}
                     placeholder="Minimal 6 karakter"
-                    {...(errors.password && { error: errors.password })}
+                    {...(userForm.errors.password && { error: userForm.errors.password })}
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={userForm.togglePasswordVisibility}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                     tabIndex={-1}
                   >
-                    {showPassword ? (
+                    {userForm.showPassword ? (
                       <EyeSlashIcon className="w-5 h-5" />
                     ) : (
                       <EyeIcon className="w-5 h-5" />
@@ -316,10 +189,10 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                 </label>
                 <PhoneInput
                   name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
+                  value={userForm.formData.phone_number}
+                  onChange={userForm.handleChange}
                   placeholder="81234567890"
-                  {...(errors.phone_number && { error: errors.phone_number })}
+                  {...(userForm.errors.phone_number && { error: userForm.errors.phone_number })}
                 />
               </div>
 
@@ -330,11 +203,11 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
                 </label>
                 <TextArea
                   name="address"
-                  value={formData.address}
-                  onChange={handleChange}
+                  value={userForm.formData.address}
+                  onChange={userForm.handleChange}
                   placeholder="Alamat lengkap"
                   rows={3}
-                  {...(errors.address && { error: errors.address })}
+                  {...(userForm.errors.address && { error: userForm.errors.address })}
                 />
               </div>
             </div>
@@ -353,11 +226,11 @@ export default function CreateUserModal({ isOpen, onClose, onUserCreate }: Creat
           </button>
           <button
             type="submit"
-            onClick={handleSubmit}
-            disabled={loading}
+            onClick={userForm.handleSubmit}
+            disabled={userForm.loading}
             className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Membuat...' : 'Buat User'}
+            {userForm.loading ? 'Membuat...' : 'Buat User'}
           </button>
         </div>
       </div>

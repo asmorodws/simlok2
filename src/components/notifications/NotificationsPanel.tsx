@@ -21,7 +21,7 @@ import ReviewerUserVerificationModal from '../reviewer/ReviewerUserVerificationM
 import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
-import { useNotificationsStore, type Notification } from '../../store/notifications';
+import { useNotificationsStore, type Notification } from '../../store/useNotificationStore';
 
 interface NotificationsPanelProps {
   onClose: () => void;

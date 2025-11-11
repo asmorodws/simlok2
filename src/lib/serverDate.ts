@@ -219,3 +219,83 @@ export function getJakartaDateTimeSync(): string {
   const now = new Date();
   return toJakartaISOString(now) || now.toISOString();
 }
+
+/**
+ * Check if a date range contains weekend days (Saturday or Sunday)
+ * 
+ * @param startDate - Start date in YYYY-MM-DD format
+ * @param endDate - End date in YYYY-MM-DD format
+ * @returns true if the range contains at least one Saturday or Sunday
+ * 
+ * @example
+ * const hasWeekend = hasWeekendInRange('2025-11-04', '2025-11-10'); // true
+ */
+export function hasWeekendInRange(startDate: string, endDate: string): boolean {
+  if (!startDate || !endDate) return false;
+  
+  try {
+    const start = new Date(`${startDate}T00:00:00+07:00`);
+    const end = new Date(`${endDate}T00:00:00+07:00`);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return false;
+    }
+    
+    const current = new Date(start);
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        return true;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking weekend in range:', error);
+    return false;
+  }
+}
+
+/**
+ * Get list of weekend dates in a date range
+ * 
+ * @param startDate - Start date in YYYY-MM-DD format
+ * @param endDate - End date in YYYY-MM-DD format
+ * @returns Array of weekend dates in YYYY-MM-DD format
+ * 
+ * @example
+ * const weekends = getWeekendsInRange('2025-11-04', '2025-11-10');
+ * // Returns: ['2025-11-08', '2025-11-09'] (Saturday & Sunday)
+ */
+export function getWeekendsInRange(startDate: string, endDate: string): string[] {
+  if (!startDate || !endDate) return [];
+  
+  try {
+    const start = new Date(`${startDate}T00:00:00+07:00`);
+    const end = new Date(`${endDate}T00:00:00+07:00`);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return [];
+    }
+    
+    const weekends: string[] = [];
+    const current = new Date(start);
+    
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        const year = current.getFullYear();
+        const month = String(current.getMonth() + 1).padStart(2, '0');
+        const day = String(current.getDate()).padStart(2, '0');
+        weekends.push(`${year}-${month}-${day}`);
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return weekends;
+  } catch (error) {
+    console.error('Error getting weekends in range:', error);
+    return [];
+  }
+}

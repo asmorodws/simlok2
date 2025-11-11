@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
 import SignUpForm from "@/components/auth/SignUpForm";
-import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/utils/phoneNumber";
+import { normalizePhoneNumber, validatePhoneNumberWithMessage } from "@/lib/validators";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -34,11 +34,7 @@ export default function SignupPage() {
     }
     
     // Validasi nomor telepon dengan pesan error yang detail
-    const phoneValidation = validatePhoneNumberWithMessage(no_telp.trim(), {
-      required: true,
-      minLength: 9,
-      maxLength: 13,
-    });
+    const phoneValidation = validatePhoneNumberWithMessage(no_telp.trim());
     
     if (!phoneValidation.isValid) {
       setError(phoneValidation.error || "Nomor telepon tidak valid");

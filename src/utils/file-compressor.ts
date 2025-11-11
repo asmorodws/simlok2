@@ -422,6 +422,43 @@ export class FileCompressor {
 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
+
+  /**
+   * Validate file for worker photo
+   * @param file - File to validate
+   * @returns Validation result with isValid and optional error message
+   */
+  static validateWorkerPhoto(file: File): { isValid: boolean; error?: string } {
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      return {
+        isValid: false,
+        error: 'Hanya file gambar (JPG, JPEG, PNG) yang diperbolehkan untuk foto pekerja'
+      };
+    }
+
+    // Check file size (max 8MB before compression)
+    const maxSize = 8 * 1024 * 1024; // 8MB
+    if (file.size > maxSize) {
+      return {
+        isValid: false,
+        error: 'Ukuran file terlalu besar. Maksimal 8MB'
+      };
+    }
+
+    // Check file extension
+    const allowedExtensions = ['.jpg', '.jpeg', '.png'];
+    const fileExt = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!allowedExtensions.includes(fileExt)) {
+      return {
+        isValid: false,
+        error: 'Ekstensi file tidak valid. Gunakan .jpg, .jpeg, atau .png'
+      };
+    }
+
+    return { isValid: true };
+  }
 }
 
 /**

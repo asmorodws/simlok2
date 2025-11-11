@@ -16,7 +16,7 @@ import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
 import { SubmissionData } from '@/types';
-import { hasWeekendInRange } from '@/utils/dateHelpers';
+import { hasWeekendInRange } from '@/lib/serverDate';
 
 // import modal konfirmasi
 import ConfirmModal from '@/components/ui/modal/ConfirmModal'; // sesuaikan path dengan struktur proyekmu

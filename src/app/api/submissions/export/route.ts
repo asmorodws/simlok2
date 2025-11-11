@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
 import * as XLSX from 'xlsx';
 import { toJakartaISOString } from '@/lib/timezone';
+import { SubmissionService } from '@/services/SubmissionService';
 
 // Fungsi util aman untuk tanggal
 const safeDate = (d?: Date | string | null): string =>
@@ -27,50 +27,32 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    
+    // Build filters object, excluding undefined values
+    const filters: any = {
+      userRole: session.user.role,
+    };
+    
     const reviewStatus = searchParams.get('reviewStatus');
     const approvalStatus = searchParams.get('approvalStatus');
     const search = searchParams.get('search');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-
-    const whereClause: any = {};
-
-    switch (session.user.role) {
-      case 'REVIEWER':
-        whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
-        break;
-      case 'APPROVER':
-        whereClause.review_status = 'MEETS_REQUIREMENTS';
-        whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
-        break;
-    }
-
-    if (reviewStatus) whereClause.review_status = reviewStatus;
-    if (approvalStatus) whereClause.approval_status = approvalStatus;
-    if (search) {
-      whereClause.OR = [
-        { vendor_name: { contains: search } },
-        { job_description: { contains: search } },
-        { officer_name: { contains: search } },
-      ];
-    }
-    if (startDate || endDate) {
-      whereClause.created_at = {};
-      if (startDate) whereClause.created_at.gte = new Date(startDate);
-      if (endDate) whereClause.created_at.lte = new Date(endDate);
-    }
-
-    const submissions = await prisma.submission.findMany({
-      where: whereClause,
-      include: {
-        support_documents: true,
-        worker_list: true,
-      },
-      orderBy: { created_at: 'desc' },
-    });
+    
+    if (reviewStatus) filters.reviewStatus = reviewStatus;
+    if (approvalStatus) filters.approvalStatus = approvalStatus;
+    if (search) filters.search = search;
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    
+    // Fetch submissions using service
+    const submissions = await SubmissionService.getSubmissionsForExport(filters);
 
     if (!submissions || submissions.length === 0) {
-      return NextResponse.json({ error: 'NO_DATA', message: 'Tidak ada data ditemukan.' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'NO_DATA', 
+        message: 'Tidak ada data ditemukan.' 
+      }, { status: 404 });
     }
 
     // --- urutan header dokumen yang tetap

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
-import { useNotificationsStore } from '../../store/notifications';
+import { useNotificationsStore } from '../../store/useNotificationStore';
 import { useRealTimeNotifications } from '../../hooks/useRealTimeNotifications';
 import NotificationsPanel from './NotificationsPanel';
 
@@ -86,9 +86,9 @@ export default function NotificationsBell() {
       }
 
       console.log('Loading notifications with params:', params.toString());
-      console.log('Using endpoint: /api/v1/notifications (Build: 2025-09-06-v3)');
+      console.log('Using endpoint: /api/notifications (Build: 2025-11-09)');
 
-      const response = await fetch(`/api/v1/notifications?${params}`);
+      const response = await fetch(`/api/notifications?${params}`);
       if (response.ok) {
         const result = await response.json();
         console.log('Notifications loaded:', result);

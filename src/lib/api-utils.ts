@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { ZodError, ZodSchema } from 'zod';
-import type { ApiError, ApiSuccess } from '@/shared/dto';
+import type { ApiError, ApiSuccess } from '@/types/dto';
 
 /**
  * Standard API response helpers

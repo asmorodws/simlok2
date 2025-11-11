@@ -19,12 +19,13 @@ import {
   DocumentCheckIcon,
   CameraIcon
 } from '@heroicons/react/24/outline';
+import DashboardStatsCard from '@/components/dashboard/DashboardStatsCard';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useToast } from '@/hooks/useToast';
 import Button from '../ui/button/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Skeleton, SkeletonDashboardCard, SkeletonCard } from '@/components/ui/skeleton';
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 import CameraQRScanner from '../scanner/CameraQRScanner';
 import ScanDetailModal from '@/components/common/ScanDetailModal';
 import SimlokPdfModal from '@/components/common/SimlokPdfModal';
@@ -200,12 +201,12 @@ export default function VerifierDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - using DashboardStatsCard with loading state */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
-          <SkeletonDashboardCard />
+          <DashboardStatsCard title="Total Scan QR" value={0} icon={QrCodeIcon} color="blue" loading={true} />
+          <DashboardStatsCard title="Scan Hari Ini" value={0} icon={CalendarDaysIcon} color="green" loading={true} />
+          <DashboardStatsCard title="Total Submission" value={0} icon={DocumentTextIcon} color="purple" loading={true} />
+          <DashboardStatsCard title="Disetujui" value={0} icon={DocumentCheckIcon} color="yellow" loading={true} />
         </div>
 
         {/* Quick Scan Actions */}
@@ -233,53 +234,34 @@ export default function VerifierDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Total Scan QR</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.totalScans}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-full">
-              <QrCodeIcon className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Scan Hari Ini</h3>
-              <p className="text-2xl font-bold text-green-600 mt-1">{stats.todayScans}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <CalendarDaysIcon className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Total Submission</h3>
-              <p className="text-2xl font-bold text-purple-600 mt-1">{stats.totalSubmissions}</p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-full">
-              <DocumentTextIcon className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border shadow-sm p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">Disetujui</h3>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{stats.approvedSubmissions}</p>
-            </div>
-            <div className="p-3 bg-amber-100 rounded-full">
-              <DocumentCheckIcon className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-        </div>
+        <DashboardStatsCard
+          title="Total Scan QR"
+          value={stats.totalScans}
+          icon={QrCodeIcon}
+          color="blue"
+          loading={loading}
+        />
+        <DashboardStatsCard
+          title="Scan Hari Ini"
+          value={stats.todayScans}
+          icon={CalendarDaysIcon}
+          color="green"
+          loading={loading}
+        />
+        <DashboardStatsCard
+          title="Total Submission"
+          value={stats.totalSubmissions}
+          icon={DocumentTextIcon}
+          color="purple"
+          loading={loading}
+        />
+        <DashboardStatsCard
+          title="Disetujui"
+          value={stats.approvedSubmissions}
+          icon={DocumentCheckIcon}
+          color="yellow"
+          loading={loading}
+        />
       </div>
 
       {/* Quick Scan Actions */}
