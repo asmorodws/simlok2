@@ -118,57 +118,210 @@ const ScanModal: React.FC<ScanModalProps> = ({
               <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
                 <h3 className="font-semibold mb-4 text-lg">Detail SIMLOK</h3>
                 <div className="space-y-4 md:space-y-3">
+                  {/* Basic Info */}
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <span className="text-sm text-gray-600">Nomor SIMLOK:</span>
-                      <p className="font-medium">{submission.number || '-'}</p>
+                      <p className="font-medium">{submission.simlok_number || submission.number || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-sm text-gray-600">Status:</span>
-                      <p className="font-medium capitalize">
-                        {submission.status === 'approved' ? 'Disetujui' : 
-                         submission.status === 'pending' ? 'Menunggu' : 
-                         submission.status === 'rejected' ? 'Ditolak' : 
-                         submission.status}
+                      <span className="text-sm text-gray-600">Tanggal SIMLOK:</span>
+                      <p className="font-medium">
+                        {submission.simlok_date ? 
+                          new Date(submission.simlok_date).toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                          }) : '-'}
                       </p>
                     </div>
                   </div>
-                  <div>
-                    <span className="text-sm text-gray-600">Vendor:</span>
-                    <p className="font-medium">{submission.vendor?.name || '-'}</p>
+
+                  {/* Vendor Info */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Vendor:</span>
+                      <p className="font-medium">{submission.vendor_name || submission.vendor?.name || '-'}</p>
+                    </div>
+                    {submission.vendor_phone && (
+                      <div>
+                        <span className="text-sm text-gray-600">Telepon Vendor:</span>
+                        <p className="font-medium">{submission.vendor_phone}</p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Job Description */}
                   <div>
                     <span className="text-sm text-gray-600">Pekerjaan:</span>
-                    <p className="font-medium">{submission.title || submission.task || '-'}</p>
+                    <p className="font-medium">{submission.job_description || submission.title || submission.task || '-'}</p>
                   </div>
+
+                  {/* Location */}
                   <div>
-                    <span className="text-sm text-gray-600">Lokasi:</span>
-                    <p className="font-medium">{submission.location || '-'}</p>
+                    <span className="text-sm text-gray-600">Lokasi Pekerjaan:</span>
+                    <p className="font-medium">{submission.work_location || submission.location || '-'}</p>
                   </div>
-                  {submission.workers && submission.workers.length > 0 && (
-                    <div>
-                      <span className="text-sm text-gray-600">Pekerja:</span>
-                      <div className="mt-1">
-                        {submission.workers.map((worker: any, index: number) => (
-                          <p key={index} className="font-medium text-sm">
-                            • {worker.name}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+
+                  {/* Implementation Period */}
                   {(submission.implementation_start_date || submission.implementation_end_date) && (
                     <div>
                       <span className="text-sm text-gray-600">Periode Pelaksanaan:</span>
                       <p className="font-medium">
                         {submission.implementation_start_date ? 
-                          new Date(submission.implementation_start_date).toLocaleDateString('id-ID') : 
-                          '-'} 
+                          new Date(submission.implementation_start_date).toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                          }) : '-'} 
                         {submission.implementation_end_date && 
-                          ` s/d ${new Date(submission.implementation_end_date).toLocaleDateString('id-ID')}`}
+                          ` s/d ${new Date(submission.implementation_end_date).toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                          })}`}
                       </p>
                     </div>
                   )}
+
+                  {/* Working Hours */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {submission.working_hours && (
+                      <div>
+                        <span className="text-sm text-gray-600">Jam Kerja (Hari Biasa):</span>
+                        <p className="font-medium">{submission.working_hours}</p>
+                      </div>
+                    )}
+                    {submission.holiday_working_hours && (
+                      <div>
+                        <span className="text-sm text-gray-600">Jam Kerja (Hari Libur):</span>
+                        <p className="font-medium">{submission.holiday_working_hours}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Work Facilities */}
+                  {submission.work_facilities && (
+                    <div>
+                      <span className="text-sm text-gray-600">Sarana Kerja:</span>
+                      <p className="font-medium whitespace-pre-line">{submission.work_facilities}</p>
+                    </div>
+                  )}
+
+                  {/* Based On (Dasar) */}
+                  {submission.based_on && (
+                    <div>
+                      <span className="text-sm text-gray-600">Dasar:</span>
+                      <p className="font-medium">{submission.based_on}</p>
+                    </div>
+                  )}
+
+                  {/* Documents Info */}
+                  <div className="pt-2 border-t border-gray-200">
+                    <span className="text-sm text-gray-600 font-semibold">Dokumen Pendukung:</span>
+                    <div className="mt-2 space-y-2">
+                      {/* SIMJA */}
+                      {submission.simja_number && (
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium">SIMJA</p>
+                            <p className="text-xs text-gray-600">
+                              {submission.simja_number}
+                              {submission.simja_date && 
+                                ` - ${new Date(submission.simja_date).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}`}
+                            </p>
+                          </div>
+                          {submission.simja_type && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              {submission.simja_type}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* SIKA */}
+                      {submission.sika_number && (
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium">SIKA</p>
+                            <p className="text-xs text-gray-600">
+                              {submission.sika_number}
+                              {submission.sika_date && 
+                                ` - ${new Date(submission.sika_date).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}`}
+                            </p>
+                          </div>
+                          {submission.sika_type && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                              {submission.sika_type}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* HSSE Pass */}
+                      {submission.hsse_pass_number && (
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-medium">HSSE Pass</p>
+                            <p className="text-xs text-gray-600">
+                              {submission.hsse_pass_number}
+                              {submission.hsse_pass_valid_thru && 
+                                ` - Berlaku s/d ${new Date(submission.hsse_pass_valid_thru).toLocaleDateString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                })}`}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Workers */}
+                  {submission.workers && submission.workers.length > 0 && (
+                    <div className="pt-2 border-t border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm text-gray-600 font-semibold">Daftar Pekerja:</span>
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                          {submission.worker_count || submission.workers.length} Orang
+                        </span>
+                      </div>
+                      <div className="max-h-32 overflow-y-auto">
+                        {submission.workers.map((worker: any, index: number) => (
+                          <p key={index} className="font-medium text-sm py-1">
+                            {index + 1}. {worker.worker_name || worker.name}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status Badge */}
+                  <div className="pt-2 border-t border-gray-200">
+                    <span className="text-sm text-gray-600">Status Pengajuan:</span>
+                    <div className="mt-1">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        submission.approval_status === 'APPROVED' || submission.status === 'approved' 
+                          ? 'bg-green-100 text-green-800' 
+                          : submission.approval_status === 'PENDING_APPROVAL' || submission.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {submission.approval_status === 'APPROVED' || submission.status === 'approved' ? '✓ Disetujui' : 
+                         submission.approval_status === 'PENDING_APPROVAL' || submission.status === 'pending' ? '⏳ Menunggu Persetujuan' : 
+                         '✗ Ditolak'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

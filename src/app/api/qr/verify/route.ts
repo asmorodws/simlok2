@@ -214,24 +214,68 @@ export async function POST(request: NextRequest) {
       console.log('=== SCAN RECORD CREATED SUCCESSFULLY ===');
       console.log('scanRecord.id:', scanRecord.id);
 
-      // Return verification result with submission data in the format expected by the modal
+      // Return verification result with complete submission data in the format expected by the modal
       return NextResponse.json({
         success: true,
         message: 'QR code/barcode verified successfully',
-  scan_id: scanRecord.id,
-  scanned_at: toJakartaISOString(scanRecord.scanned_at) || scanRecord.scanned_at,
+        scan_id: scanRecord.id,
+        scanned_at: toJakartaISOString(scanRecord.scanned_at) || scanRecord.scanned_at,
         scanned_by: scanRecord.user?.officer_name || session.user.officer_name,
         data: {
           submission: {
+            // Basic Info
             id: submission.id,
+            simlok_number: submission.simlok_number,
             number: submission.simlok_number,
-            title: submission.job_description,
-            task: submission.implementation || 'No task description',
-            workers: submission.worker_names.split('\n').filter(name => name.trim()).map(name => ({ name: name.trim() })),
+            simlok_date: toJakartaISOString(submission.simlok_date) || submission.simlok_date,
+            
+            // Vendor Info
+            vendor_name: submission.vendor_name,
+            vendor_phone: submission.vendor_phone,
+            officer_name: submission.officer_name,
             vendor: submission.vendor_name ? { name: submission.vendor_name } : undefined,
-            location: submission.work_location || undefined,
+            
+            // Job Details
+            job_description: submission.job_description,
+            title: submission.job_description,
+            work_location: submission.work_location,
+            location: submission.work_location,
+            
+            // Implementation Period
             implementation_start_date: toJakartaISOString(submission.implementation_start_date) || submission.implementation_start_date,
             implementation_end_date: toJakartaISOString(submission.implementation_end_date) || submission.implementation_end_date,
+            implementation: submission.implementation,
+            task: submission.implementation || 'No task description',
+            
+            // Working Hours & Facilities
+            working_hours: submission.working_hours,
+            holiday_working_hours: submission.holiday_working_hours,
+            work_facilities: submission.work_facilities,
+            based_on: submission.based_on,
+            
+            // Documents
+            simja_number: submission.simja_number,
+            simja_date: toJakartaISOString(submission.simja_date) || submission.simja_date,
+            simja_type: submission.simja_type,
+            sika_number: submission.sika_number,
+            sika_date: toJakartaISOString(submission.sika_date) || submission.sika_date,
+            sika_type: submission.sika_type,
+            hsse_pass_number: submission.hsse_pass_number,
+            hsse_pass_valid_thru: toJakartaISOString(submission.hsse_pass_valid_thru) || submission.hsse_pass_valid_thru,
+            
+            // Workers
+            worker_count: submission.worker_count,
+            worker_names: submission.worker_names,
+            workers: submission.worker_list?.map((w: any) => ({
+              id: w.id,
+              worker_name: w.worker_name,
+              name: w.worker_name,
+              worker_photo: w.worker_photo,
+            })) || submission.worker_names?.split('\n').filter((name: string) => name.trim()).map((name: string) => ({ name: name.trim() })) || [],
+            
+            // Status
+            approval_status: submission.approval_status,
+            review_status: submission.review_status,
             status: submission.approval_status.toLowerCase(),
           }
         }
