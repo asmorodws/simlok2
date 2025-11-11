@@ -125,7 +125,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
                       <p className="font-medium">{submission.simlok_number || submission.number || '-'}</p>
                     </div>
                     <div>
-                      <span className="text-sm text-gray-600">Tanggal SIMLOK:</span>
+                      <span className="text-sm text-gray-600">Tanggal disetujui:</span>
                       <p className="font-medium">
                         {submission.simlok_date ? 
                           new Date(submission.simlok_date).toLocaleDateString('id-ID', {
@@ -208,13 +208,7 @@ const ScanModal: React.FC<ScanModalProps> = ({
                     </div>
                   )}
 
-                  {/* Based On (Dasar) */}
-                  {submission.based_on && (
-                    <div>
-                      <span className="text-sm text-gray-600">Dasar:</span>
-                      <p className="font-medium">{submission.based_on}</p>
-                    </div>
-                  )}
+               
 
                   {/* Documents Info */}
                   <div className="pt-2 border-t border-gray-200">

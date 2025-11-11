@@ -33,16 +33,30 @@ interface ScanData {
   submission: {
     id: string;
     simlok_number?: string;
+    simlok_date?: string;
     vendor_name: string;
     officer_name: string;
     job_description: string;
     work_location: string;
     approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+    // Working hours & facilities
     working_hours?: string;
+    holiday_working_hours?: string;
+    work_facilities?: string;
+    based_on?: string;
     implementation?: string;
+    // Documents
     simja_number?: string;
+    simja_date?: string;
+    simja_type?: string;
     sika_number?: string;
+    sika_date?: string;
+    sika_type?: string;
+    hsse_pass_number?: string;
+    hsse_pass_valid_thru?: string;
+    // Workers
     worker_count?: number;
+    worker_names?: string;
     implementation_start_date?: string;
     implementation_end_date?: string;
     created_at?: string;
@@ -271,10 +285,22 @@ export default function ScanDetailModal({
                     <div className="bg-white rounded-lg p-4 border border-gray-200">
                       <div className="flex items-center space-x-2 mb-2">
                         <ClockIcon className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-gray-600">Jam Kerja</span>
+                        <span className="text-sm font-medium text-gray-600">Jam Kerja (Hari Biasa)</span>
                       </div>
                       <p className="text-sm text-gray-700">
                         {scan.submission.working_hours}
+                      </p>
+                    </div>
+                  )}
+
+                  {scan.submission.holiday_working_hours && (
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <ClockIcon className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-600">Jam Kerja (Hari Libur)</span>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        {scan.submission.holiday_working_hours}
                       </p>
                     </div>
                   )}
@@ -297,25 +323,89 @@ export default function ScanDetailModal({
                 </div>
               </div>
 
-              {/* Document Numbers */}
-              {(scan.submission.simja_number || scan.submission.sika_number) && (
+              {/* Work Facilities & Based On */}
+              {(scan.submission.work_facilities || scan.submission.based_on) && (
                 <div className="mt-6 pt-4 border-t border-gray-200">
-                  <h5 className="text-sm font-semibold text-gray-700 mb-3">Nomor Dokumen Pendukung</h5>
+                  <div className="grid grid-cols-1 gap-4">
+                    {scan.submission.work_facilities && (
+                      <div className="bg-white rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <BriefcaseIcon className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-gray-600">Sarana Kerja</span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                          {scan.submission.work_facilities}
+                        </p>
+                      </div>
+                    )}
+                    
+                   
+                  </div>
+                </div>
+              )}
+
+              {/* Document Numbers */}
+              {(scan.submission.simja_number || scan.submission.sika_number || scan.submission.hsse_pass_number) && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h5 className="text-sm font-semibold text-gray-700 mb-3">Dokumen Pendukung</h5>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {scan.submission.simja_number && (
                       <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                        <span className="text-xs font-medium text-blue-600">SIMJA</span>
-                        <p className="text-sm font-semibold text-blue-900 mt-1">
-                          {scan.submission.simja_number}
-                        </p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-xs font-medium text-blue-600">SIMJA</span>
+                            <p className="text-sm font-semibold text-blue-900 mt-1">
+                              {scan.submission.simja_number}
+                            </p>
+                            {scan.submission.simja_date && (
+                              <p className="text-xs text-blue-700 mt-1">
+                                {format(new Date(scan.submission.simja_date), 'dd MMM yyyy', { locale: id })}
+                              </p>
+                            )}
+                          </div>
+                          {scan.submission.simja_type && (
+                            <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                              {scan.submission.simja_type}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                     {scan.submission.sika_number && (
                       <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <span className="text-xs font-medium text-green-600">SIKA</span>
-                        <p className="text-sm font-semibold text-green-900 mt-1">
-                          {scan.submission.sika_number}
-                        </p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <span className="text-xs font-medium text-green-600">SIKA</span>
+                            <p className="text-sm font-semibold text-green-900 mt-1">
+                              {scan.submission.sika_number}
+                            </p>
+                            {scan.submission.sika_date && (
+                              <p className="text-xs text-green-700 mt-1">
+                                {format(new Date(scan.submission.sika_date), 'dd MMM yyyy', { locale: id })}
+                              </p>
+                            )}
+                          </div>
+                          {scan.submission.sika_type && (
+                            <span className="text-xs bg-green-200 text-green-800 px-2 py-1 rounded">
+                              {scan.submission.sika_type}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {scan.submission.hsse_pass_number && (
+                      <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div>
+                          <span className="text-xs font-medium text-yellow-600">HSSE Pass</span>
+                          <p className="text-sm font-semibold text-yellow-900 mt-1">
+                            {scan.submission.hsse_pass_number}
+                          </p>
+                          {scan.submission.hsse_pass_valid_thru && (
+                            <p className="text-xs text-yellow-700 mt-1">
+                              Berlaku s/d {format(new Date(scan.submission.hsse_pass_valid_thru), 'dd MMM yyyy', { locale: id })}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
