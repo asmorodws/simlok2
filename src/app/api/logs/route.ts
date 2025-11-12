@@ -16,27 +16,45 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
     const level = searchParams.get('level') as LogLevel | null;
     const search = searchParams.get('search');
-    const daysBack = parseInt(searchParams.get('daysBack') || '7', 10);
 
-    if (!date) {
-      return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: 'Invalid date range' }, { status: 400 });
     }
 
-    let logs: string[];
+    let logs: string[] = [];
 
-    if (search) {
-      // Search across multiple days
-      logs = logger.searchLogs(search, daysBack);
-    } else {
-      // Get logs for specific date and level
+    // Get all dates in range
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const dates: string[] = [];
+    
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      dates.push(d.toISOString().split('T')[0] || '');
+    }
+
+    // Collect logs from all dates in range
+    for (const date of dates) {
+      if (!date) continue;
+      
+      let dateLogs: string[];
       if (level) {
-        logs = logger.getLogs(date, level);
+        dateLogs = logger.getLogs(date, level);
       } else {
-        logs = logger.getLogs(date);
+        dateLogs = logger.getLogs(date);
       }
+      
+      // Filter by search term if provided
+      if (search) {
+        dateLogs = dateLogs.filter(log => 
+          log.toLowerCase().includes(search.toLowerCase())
+        );
+      }
+      
+      logs.push(...dateLogs);
     }
 
     // Parse logs into structured format
@@ -55,7 +73,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      date,
+      startDate,
+      endDate,
       level: level || 'ALL',
       total: parsedLogs.length,
       logs: parsedLogs,
@@ -66,7 +85,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// DELETE /api/logs - Clear logs (for specific date or all)
+// DELETE /api/logs - Clear logs (for date range or all)
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -76,10 +95,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    const { date } = await request.json();
+    const { startDate, endDate } = await request.json();
     const logDir = path.join(process.cwd(), 'logs');
 
-    if (!date || date === 'all') {
+    if (!startDate || !endDate) {
       // Clear all logs
       const files = fs.readdirSync(logDir);
       files.forEach(file => {
@@ -94,24 +113,33 @@ export async function DELETE(request: NextRequest) {
 
       return NextResponse.json({ message: 'All logs cleared successfully' });
     } else {
-      // Clear logs for specific date
+      // Clear logs for date range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const dates: string[] = [];
+      
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().split('T')[0] || '');
+      }
+
       const files = fs.readdirSync(logDir);
       const deletedFiles: string[] = [];
 
       files.forEach(file => {
-        if (file.includes(date) && file.endsWith('.log')) {
+        const matchingDate = dates.find(date => file.includes(date));
+        if (matchingDate && file.endsWith('.log')) {
           fs.unlinkSync(path.join(logDir, file));
           deletedFiles.push(file);
         }
       });
 
-      logger.info('API:Logs', `Logs cleared for date ${date} by ${session.user.email}`, {
+      logger.info('API:Logs', `Logs cleared for range ${startDate} to ${endDate} by ${session.user.email}`, {
         userId: session.user.id,
         deletedFiles,
       });
 
       return NextResponse.json({ 
-        message: `Logs cleared for ${date}`,
+        message: `Logs cleared for ${startDate} to ${endDate}`,
         deletedFiles,
       });
     }

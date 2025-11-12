@@ -168,15 +168,10 @@ export default function DatePicker({
         dayButton.type = 'button';
         dayButton.textContent = day.toString();
 
-        const dateStr = new Date(
-          currentMonth.getFullYear(),
-          currentMonth.getMonth(),
-          day
-        )
-          .toISOString()
-          .split('T')[0];
-
-        if (!dateStr) continue;
+        // Format date without timezone issues: YYYY-MM-DD
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
         const isSelected = dateStr === selectedDateStr;
 

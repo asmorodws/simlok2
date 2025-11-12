@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Download, Trash2, Calendar, Filter, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Download, Trash2, X, Search, Filter } from 'lucide-react';
+import DateRangePicker from '@/components/form/DateRangePicker';
 
 interface LogEntry {
   timestamp?: string;
@@ -12,7 +13,8 @@ interface LogEntry {
 }
 
 interface LogsResponse {
-  date: string;
+  startDate: string;
+  endDate: string;
   level: string;
   total: number;
   logs: LogEntry[];
@@ -26,19 +28,21 @@ export default function LogsViewer() {
   const [error, setError] = useState<string | null>(null);
   
   // Filters
-  const [selectedDate, setSelectedDate] = useState<string>(
+  const [startDate, setStartDate] = useState<string>(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] || ''
+  );
+  const [endDate, setEndDate] = useState<string>(
     new Date().toISOString().split('T')[0] || ''
   );
   const [selectedLevel, setSelectedLevel] = useState<LogLevel>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
-  const [daysBack, setDaysBack] = useState(7);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 50;
 
   // Fetch logs
-  const fetchLogs = useCallback(async () => {
+  const fetchLogs = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -47,9 +51,11 @@ export default function LogsViewer() {
       
       if (searchTerm) {
         params.set('search', searchTerm);
-        params.set('daysBack', daysBack.toString());
+        params.set('startDate', startDate);
+        params.set('endDate', endDate);
       } else {
-        params.set('date', selectedDate);
+        params.set('startDate', startDate);
+        params.set('endDate', endDate);
         if (selectedLevel !== 'ALL') {
           params.set('level', selectedLevel);
         }
@@ -70,12 +76,13 @@ export default function LogsViewer() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, selectedLevel, searchTerm, daysBack]);
+  };
 
-  // Auto-fetch on mount and filter changes
+  // Auto-fetch on mount
   useEffect(() => {
     fetchLogs();
-  }, [fetchLogs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Download logs as text file
   const handleDownload = () => {
@@ -84,7 +91,7 @@ export default function LogsViewer() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `logs-${selectedDate}-${selectedLevel}.txt`;
+    a.download = `logs-${startDate}-to-${endDate}-${selectedLevel}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -101,7 +108,7 @@ export default function LogsViewer() {
       const response = await fetch('/api/logs', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: selectedDate }),
+        body: JSON.stringify({ startDate, endDate }),
       });
 
       if (response.ok) {
@@ -142,26 +149,22 @@ export default function LogsViewer() {
     <div className="space-y-4">
       {/* Filters Card */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Date Filter */}
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {/* Date Range Filter */}
+          <div className="md:col-span-2 lg:col-span-2 xl:col-span-2">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Date
+              Date Range
             </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                disabled={!!searchTerm}
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
-              />
-            </div>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onStartDateChange={setStartDate}
+              onEndDateChange={setEndDate}
+            />
           </div>
 
           {/* Level Filter */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-1 lg:col-span-1 xl:col-span-1">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Level
             </label>
@@ -183,7 +186,7 @@ export default function LogsViewer() {
           </div>
 
           {/* Search */}
-          <div className="lg:col-span-5">
+          <div className="md:col-span-2 lg:col-span-2 xl:col-span-2">
             <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Search Logs
             </label>
@@ -194,7 +197,7 @@ export default function LogsViewer() {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search across multiple days..."
+                  placeholder="Search in date range..."
                   className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition"
                 />
               </div>
@@ -207,27 +210,15 @@ export default function LogsViewer() {
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <select
-                value={daysBack}
-                onChange={(e) => setDaysBack(Number(e.target.value))}
-                disabled={!searchTerm}
-                className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white disabled:opacity-50 transition"
-              >
-                <option value={1}>1 day</option>
-                <option value={3}>3 days</option>
-                <option value={7}>7 days</option>
-                <option value={14}>14 days</option>
-                <option value={30}>30 days</option>
-              </select>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="lg:col-span-2 flex items-end gap-2">
+          <div className="md:col-span-1 lg:col-span-1 xl:col-span-1 flex items-end">
             <button
               onClick={fetchLogs}
               disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh

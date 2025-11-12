@@ -52,18 +52,17 @@ export default function DateRangePicker({
   };
 
   const handleDateClick = (day: number) => {
-    const selectedDate = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
-    );
-    const formattedDate = selectedDate.toISOString().split('T')[0] || '';
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    
+    // Format date without timezone issues: YYYY-MM-DD
+    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
     if (!tempStartDate || (tempStartDate && tempEndDate)) {
       setTempStartDate(formattedDate);
       setTempEndDate('');
     } else if (tempStartDate && !tempEndDate) {
-      if (new Date(formattedDate) < new Date(tempStartDate)) {
+      if (formattedDate < tempStartDate) {
         setTempStartDate(formattedDate);
         setTempEndDate(tempStartDate);
       } else {
@@ -108,34 +107,26 @@ export default function DateRangePicker({
 
   const isDateInRange = (day: number) => {
     if (!tempStartDate || !tempEndDate) return false;
-    const date = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
-    );
-    const dateStr = date.toISOString().split('T')[0];
-    if (!dateStr) return false;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return dateStr >= tempStartDate && dateStr <= tempEndDate;
   };
 
   const isStartDate = (day: number) => {
     if (!tempStartDate) return false;
-    const date = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
-    );
-    return date.toISOString().split('T')[0] === tempStartDate;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return dateStr === tempStartDate;
   };
 
   const isEndDate = (day: number) => {
     if (!tempEndDate) return false;
-    const date = new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth(),
-      day
-    );
-    return date.toISOString().split('T')[0] === tempEndDate;
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return dateStr === tempEndDate;
   };
 
   const changeMonth = (delta: number) => {
