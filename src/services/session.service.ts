@@ -51,6 +51,18 @@ export class SessionService {
   private static readonly SESSION_ABSOLUTE_TIMEOUT = 7 * 24 * 60 * 60 * 1000; // 7 days absolute timeout
   private static readonly ACTIVITY_UPDATE_INTERVAL = 5 * 60 * 1000; // Update activity every 5 minutes
   private static readonly MAX_SESSIONS_PER_USER = 5; // Limit concurrent sessions per user
+  
+  // 🚀 PERFORMANCE: In-memory cache for session validation (30 seconds TTL)
+  // Prevents redundant DB queries when multiple requests come simultaneously
+  private static readonly VALIDATION_CACHE_TTL = 30 * 1000; // 30 seconds
+  private static validationCache = new Map<string, {
+    result: SessionValidationResult;
+    timestamp: number;
+  }>();
+  
+  // 🚀 PERFORMANCE: Logging throttle to prevent console spam
+  private static readonly LOG_THROTTLE_INTERVAL = 30 * 1000; // 30 seconds
+  private static lastLogTime = new Map<string, number>();
 
   /**
    * Create a new session in database
@@ -130,13 +142,38 @@ export class SessionService {
   }
 
   /**
-   * Validate session and get user data
-   * This is called on EVERY request to ensure session is still valid
-   * Database is the single source of truth
+   * 🚀 PERFORMANCE OPTIMIZED: Validate session with in-memory caching
+   * 
+   * This is called on EVERY request, so we cache results for 30 seconds
+   * to prevent redundant DB queries when multiple requests come simultaneously.
+   * 
+   * Example: User loads dashboard with 8 resources (JS, CSS, API calls)
+   * - WITHOUT cache: 8 requests × 3 validations (middleware + JWT + session) = 24 DB queries 🔥
+   * - WITH cache: First request hits DB, next 7 requests use cache = 1 DB query ✅
+   * 
+   * Database is still the single source of truth - cache just reduces latency.
    */
   static async validateSession(sessionToken: string): Promise<SessionValidationResult> {
     try {
       const now = new Date();
+      const cacheKey = sessionToken;
+      
+      // 🚀 CHECK CACHE FIRST (30 second TTL)
+      const cached = this.validationCache.get(cacheKey);
+      if (cached && (now.getTime() - cached.timestamp) < this.VALIDATION_CACHE_TTL) {
+        // Throttled logging to reduce console spam
+        this.throttledLog(
+          `cache-hit-${sessionToken}`,
+          () => console.log(`⚡ Cache hit for session validation (${cached.result.user?.email})`)
+        );
+        return cached.result;
+      }
+
+      // 🔍 CACHE MISS - Query database
+      this.throttledLog(
+        `cache-miss-${sessionToken}`,
+        () => console.log(`🔍 Cache miss - querying database for session validation`)
+      );
 
       // Find session with user data in ONE query (performance optimization)
       const session = await prisma.session.findUnique({
@@ -161,17 +198,34 @@ export class SessionService {
 
       // Session not found in database = INVALID
       if (!session) {
-        console.log(`❌ Session validation failed: Session not found in database`);
-        return {
+        const result = {
           isValid: false,
           reason: 'Session tidak ditemukan di database',
         };
+        
+        // Cache negative results for shorter time (5 seconds)
+        this.validationCache.set(cacheKey, {
+          result,
+          timestamp: now.getTime() - (this.VALIDATION_CACHE_TTL - 5000),
+        });
+        
+        this.throttledLog(
+          `session-not-found-${sessionToken}`,
+          () => console.log(`❌ Session validation failed: Session not found in database`)
+        );
+        return result;
       }
 
       // Session expired = INVALID (delete it)
       if (session.expires < now) {
-        console.log(`❌ Session expired: ${sessionToken.substring(0, 10)}...`);
+        this.validationCache.delete(cacheKey); // Remove from cache
         await this.deleteSession(sessionToken);
+        
+        this.throttledLog(
+          `session-expired-${sessionToken}`,
+          () => console.log(`❌ Session expired: ${sessionToken.substring(0, 10)}...`)
+        );
+        
         return {
           isValid: false,
           reason: 'Session telah kadaluarsa',
@@ -182,8 +236,14 @@ export class SessionService {
       const lastActivity = session.lastActivityAt || session.createdAt || now;
       const idleTime = now.getTime() - lastActivity.getTime();
       if (idleTime > this.SESSION_IDLE_TIMEOUT) {
-        console.log(`❌ Session idle timeout: ${Math.round(idleTime / 60000)} minutes`);
+        this.validationCache.delete(cacheKey); // Remove from cache
         await this.deleteSession(sessionToken);
+        
+        this.throttledLog(
+          `session-idle-${sessionToken}`,
+          () => console.log(`❌ Session idle timeout: ${Math.round(idleTime / 60000)} minutes`)
+        );
+        
         return {
           isValid: false,
           reason: 'Session tidak aktif terlalu lama (idle timeout)',
@@ -193,8 +253,14 @@ export class SessionService {
       // Check absolute timeout (session age too old)
       const sessionAge = now.getTime() - (session.createdAt?.getTime() || 0);
       if (sessionAge > this.SESSION_ABSOLUTE_TIMEOUT) {
-        console.log(`❌ Session absolute timeout: ${Math.round(sessionAge / 86400000)} days old`);
+        this.validationCache.delete(cacheKey); // Remove from cache
         await this.deleteSession(sessionToken);
+        
+        this.throttledLog(
+          `session-absolute-timeout-${sessionToken}`,
+          () => console.log(`❌ Session absolute timeout: ${Math.round(sessionAge / 86400000)} days old`)
+        );
+        
         return {
           isValid: false,
           reason: 'Session telah melewati batas waktu maksimum',
@@ -203,8 +269,14 @@ export class SessionService {
 
       // User not found (foreign key should prevent this, but check anyway)
       if (!session.user) {
-        console.log(`❌ User not found for session`);
+        this.validationCache.delete(cacheKey); // Remove from cache
         await this.deleteSession(sessionToken);
+        
+        this.throttledLog(
+          `user-not-found-${sessionToken}`,
+          () => console.log(`❌ User not found for session`)
+        );
+        
         return {
           isValid: false,
           reason: 'User tidak ditemukan',
@@ -213,8 +285,14 @@ export class SessionService {
 
       // User account is deactivated = INVALID (delete session)
       if (!session.user.isActive) {
-        console.log(`❌ User account deactivated: ${session.user.email}`);
+        this.validationCache.delete(cacheKey); // Remove from cache
         await this.deleteSession(sessionToken);
+        
+        this.throttledLog(
+          `user-deactivated-${session.user.email}`,
+          () => console.log(`❌ User account deactivated: ${session.user.email}`)
+        );
+        
         return {
           isValid: false,
           reason: 'Akun telah dinonaktifkan',
@@ -226,15 +304,19 @@ export class SessionService {
       // Update activity timestamp (throttled to reduce DB writes)
       const timeSinceLastUpdate = now.getTime() - lastActivity.getTime();
       if (timeSinceLastUpdate > this.ACTIVITY_UPDATE_INTERVAL) {
-        await this.updateSessionActivity(sessionToken).catch(err => {
+        // Fire and forget - don't await to prevent blocking
+        this.updateSessionActivity(sessionToken).catch(err => {
           console.error('Warning: Failed to update session activity:', err);
-          // Don't fail validation if activity update fails
         });
       }
 
-      console.log(`✅ Session valid for user: ${session.user.email}`);
+      // Throttled success logging
+      this.throttledLog(
+        `session-valid-${session.user.email}`,
+        () => console.log(`✅ Session valid for user: ${session.user.email}`)
+      );
 
-      return {
+      const result: SessionValidationResult = {
         isValid: true,
         user: session.user,
         session: {
@@ -248,12 +330,63 @@ export class SessionService {
           userAgent: session.userAgent || null,
         },
       };
+
+      // 🚀 CACHE THE RESULT for 30 seconds
+      this.validationCache.set(cacheKey, {
+        result,
+        timestamp: now.getTime(),
+      });
+
+      return result;
     } catch (error) {
       console.error('❌ Error validating session:', error);
       return {
         isValid: false,
         reason: 'Terjadi kesalahan saat validasi session',
       };
+    }
+  }
+
+  /**
+   * 🚀 PERFORMANCE: Throttled logging to prevent console spam
+   * Only logs once per LOG_THROTTLE_INTERVAL (30 seconds) for the same key
+   */
+  private static throttledLog(key: string, logFn: () => void): void {
+    const now = Date.now();
+    const lastLog = this.lastLogTime.get(key) || 0;
+    
+    if (now - lastLog > this.LOG_THROTTLE_INTERVAL) {
+      logFn();
+      this.lastLogTime.set(key, now);
+    }
+  }
+
+  /**
+   * 🚀 PERFORMANCE: Clear validation cache for a session
+   * Called when session is modified (logout, delete, etc)
+   */
+  private static clearValidationCache(sessionToken: string): void {
+    this.validationCache.delete(sessionToken);
+  }
+
+  /**
+   * 🚀 PERFORMANCE: Cleanup old cache entries periodically
+   * Call this in a background job or on app startup
+   */
+  static cleanupValidationCache(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+    
+    this.validationCache.forEach((value, key) => {
+      if (now - value.timestamp > this.VALIDATION_CACHE_TTL) {
+        expiredKeys.push(key);
+      }
+    });
+    
+    expiredKeys.forEach(key => this.validationCache.delete(key));
+    
+    if (expiredKeys.length > 0) {
+      console.log(`🧹 Cleaned up ${expiredKeys.length} expired cache entries`);
     }
   }
 
@@ -309,15 +442,24 @@ export class SessionService {
    */
   static async deleteSession(sessionToken: string): Promise<void> {
     try {
+      // 🚀 Clear cache first
+      this.clearValidationCache(sessionToken);
+      
       // Use deleteMany to avoid P2025 error if record doesn't exist
       const result = await prisma.session.deleteMany({
         where: { sessionToken },
       });
       
       if (result.count === 0) {
-        console.log(`⚠️  Session not found for deletion: ${sessionToken.substring(0, 10)}...`);
+        this.throttledLog(
+          `delete-not-found-${sessionToken}`,
+          () => console.log(`⚠️  Session not found for deletion: ${sessionToken.substring(0, 10)}...`)
+        );
       } else {
-        console.log(`✅ Session deleted: ${sessionToken.substring(0, 10)}...`);
+        this.throttledLog(
+          `delete-success-${sessionToken}`,
+          () => console.log(`✅ Session deleted: ${sessionToken.substring(0, 10)}...`)
+        );
       }
     } catch (error) {
       console.error('❌ Error deleting session:', error);
@@ -331,6 +473,16 @@ export class SessionService {
    */
   static async deleteAllUserSessions(userId: string): Promise<number> {
     try {
+      // 🚀 Clear all cache entries for this user's sessions
+      const userSessions = await prisma.session.findMany({
+        where: { userId },
+        select: { sessionToken: true },
+      });
+      
+      userSessions.forEach(session => {
+        this.clearValidationCache(session.sessionToken);
+      });
+
       const result = await prisma.session.deleteMany({
         where: { userId },
       });
@@ -372,6 +524,9 @@ export class SessionService {
 
       if (result.count > 0) {
         console.log(`🧹 Cleaned up ${result.count} expired sessions`);
+        
+        // 🚀 Also cleanup validation cache
+        this.cleanupValidationCache();
       }
       return result.count;
     } catch (error) {

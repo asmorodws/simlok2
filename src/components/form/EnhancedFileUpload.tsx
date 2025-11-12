@@ -60,6 +60,8 @@ export default function EnhancedFileUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showSuccess, showError, showWarning } = useToast();
   const toastShownRef = useRef(false); // Prevent double toast
+  const abortControllerRef = useRef<AbortController | null>(null); // Cancel ongoing uploads
+  const uploadTokenRef = useRef<number>(0); // Track current upload attempt
 
   // --- Helpers UI ---
   const getAcceptTypes = () => {
@@ -210,7 +212,16 @@ export default function EnhancedFileUpload({
     const uploadEndpoint =
       uploadType === "worker-photo" ? "/api/upload/worker-photo" : "/api/upload";
 
-    const res = await fetch(uploadEndpoint, { method: "POST", body: formData });
+    // Create new AbortController for this upload
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    const res = await fetch(uploadEndpoint, { 
+      method: "POST", 
+      body: formData,
+      signal: controller.signal // Allow cancellation
+    });
+    
     if (!res.ok) {
       let message = "Upload gagal";
       try {
@@ -232,6 +243,18 @@ export default function EnhancedFileUpload({
 
     console.log(`[EnhancedFileUpload] File selected: ${file.name} (${file.size} bytes, type: ${file.type})`);
 
+    // CRITICAL: Cancel any ongoing upload before starting new one
+    if (abortControllerRef.current) {
+      console.log('[EnhancedFileUpload] 🛑 Aborting previous upload');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    // Generate new upload token to track this specific upload attempt
+    uploadTokenRef.current += 1;
+    const currentToken = uploadTokenRef.current;
+    console.log(`[EnhancedFileUpload] Starting upload with token: ${currentToken}`);
+
     setError(null);
     setWarnings([]);
     toastShownRef.current = false; // Reset toast flag
@@ -240,6 +263,12 @@ export default function EnhancedFileUpload({
     console.log(`[EnhancedFileUpload] Starting validation for uploadType: ${uploadType}`);
     const validation = await validateFile(file);
     console.log(`[EnhancedFileUpload] Validation result:`, validation);
+    
+    // Check if this upload was cancelled during validation
+    if (currentToken !== uploadTokenRef.current) {
+      console.log(`[EnhancedFileUpload] ⚠️ Upload cancelled during validation (token mismatch: ${currentToken} vs ${uploadTokenRef.current})`);
+      return;
+    }
     
     if (!validation.isValid) {
       console.error(`[EnhancedFileUpload] ❌ VALIDATION FAILED - File rejected:`, validation.error);
@@ -282,6 +311,13 @@ export default function EnhancedFileUpload({
       const url = await uploadFile(file);
 
       clearInterval(tick);
+      
+      // Check if this upload was cancelled during upload
+      if (currentToken !== uploadTokenRef.current) {
+        console.log(`[EnhancedFileUpload] ⚠️ Upload cancelled after completion (token mismatch: ${currentToken} vs ${uploadTokenRef.current})`);
+        return;
+      }
+      
       setUploadProgress(100);
 
       onChange?.(url);
@@ -296,6 +332,18 @@ export default function EnhancedFileUpload({
         toastShownRef.current = true;
       }
     } catch (e: unknown) {
+      // Check if this was an abort (user cancelled)
+      if (e instanceof Error && e.name === 'AbortError') {
+        console.log('[EnhancedFileUpload] Upload aborted by user');
+        return; // Silent abort, don't show error
+      }
+      
+      // Check if this upload was cancelled
+      if (currentToken !== uploadTokenRef.current) {
+        console.log(`[EnhancedFileUpload] ⚠️ Upload error ignored (token mismatch: ${currentToken} vs ${uploadTokenRef.current})`);
+        return;
+      }
+      
       const msg = e instanceof Error ? e.message : "Gagal mengunggah file";
       setError(msg);
       setLocalPreview(null); // Clear preview on error
@@ -332,6 +380,17 @@ export default function EnhancedFileUpload({
 
   const handleRemove = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    
+    // Cancel any ongoing upload
+    if (abortControllerRef.current) {
+      console.log('[EnhancedFileUpload] 🛑 Aborting upload (remove)');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Increment token to invalidate any pending callbacks
+    uploadTokenRef.current += 1;
+    
     onChange?.("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setError(null);
@@ -342,6 +401,17 @@ export default function EnhancedFileUpload({
 
   const handleReplace = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    
+    // Cancel any ongoing upload before replacing
+    if (abortControllerRef.current) {
+      console.log('[EnhancedFileUpload] 🛑 Aborting upload (replace)');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Increment token to invalidate any pending callbacks
+    uploadTokenRef.current += 1;
+    
     fileInputRef.current?.click();
   };
 

@@ -54,6 +54,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     SUPER_ADMIN: [
       { label: "Dashboard", href: "/super-admin", icon: HomeIcon },
       { label: "Kelola User", href: "/super-admin/users", icon: UsersIcon },
+      // { label: "System Logs", href: "/super-admin/logs", icon: ClipboardDocumentListIcon },
     ],
     REVIEWER: [
       { label: "Dashboard", href: "/reviewer", icon: HomeIcon },

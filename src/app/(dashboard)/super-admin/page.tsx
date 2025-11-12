@@ -326,7 +326,53 @@ export default function SuperAdminDashboard() {
           </div>
 
           {/* Card untuk akses cepat ke fitur */}
-          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Link
+              href="/super-admin/users"
+              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 text-white hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">Kelola User</h3>
+                  <p className="text-blue-100 text-sm mt-1">
+                    CRUD user, verifikasi, dan role management
+                  </p>
+                </div>
+                <UserIcon className="w-12 h-12 opacity-80" />
+              </div>
+            </Link>
+
+            <Link
+              href="/super-admin/logs"
+              className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-sm p-6 text-white hover:shadow-lg transition-shadow"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">System Logs</h3>
+                  <p className="text-purple-100 text-sm mt-1">
+                    Monitor aktivitas, errors, dan performa sistem
+                  </p>
+                </div>
+                <svg className="w-12 h-12 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </Link>
+
+            <div className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl shadow-sm p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">System Health</h3>
+                  <p className="text-gray-100 text-sm mt-1">
+                    Cache, database, dan server monitoring
+                  </p>
+                </div>
+                <svg className="w-12 h-12 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Modal User Verification */}

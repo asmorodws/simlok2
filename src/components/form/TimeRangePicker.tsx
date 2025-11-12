@@ -254,7 +254,7 @@ export default function TimeRangePicker({
                     <button
                       type="button"
                       onClick={() => scrollStartTime('up')}
-                      className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-white dark:from-gray-800 to-transparent py-1 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
+                      className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-white dark:from-gray-800 to-transparent py-2 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
                     >
                       <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -263,7 +263,7 @@ export default function TimeRangePicker({
                     
                     <div 
                       ref={startTimeScrollRef}
-                      className="no-scrollbar max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded"
+                      className="no-scrollbar max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded pt-8 pb-8"
                     >
                       {times.map((time, index) => {
                         const isSelected = time === startTime;
@@ -287,7 +287,7 @@ export default function TimeRangePicker({
                     <button
                       type="button"
                       onClick={() => scrollStartTime('down')}
-                      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white dark:from-gray-800 to-transparent py-1 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
+                      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white dark:from-gray-800 to-transparent py-2 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
                     >
                       <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -306,7 +306,7 @@ export default function TimeRangePicker({
                     <button
                       type="button"
                       onClick={() => scrollEndTime('up')}
-                      className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-white dark:from-gray-800 to-transparent py-1 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
+                      className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-white dark:from-gray-800 to-transparent py-2 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
                     >
                       <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -315,7 +315,7 @@ export default function TimeRangePicker({
                     
                     <div 
                       ref={endTimeScrollRef}
-                      className="no-scrollbar max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded"
+                      className="no-scrollbar  max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded pt-8 pb-8"
                     >
                       {times.map((time, index) => {
                         const isSelected = time === endTime;
@@ -339,7 +339,7 @@ export default function TimeRangePicker({
                     <button
                       type="button"
                       onClick={() => scrollEndTime('down')}
-                      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white dark:from-gray-800 to-transparent py-1 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
+                      className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-white dark:from-gray-800 to-transparent py-2 flex justify-center hover:from-gray-50 dark:hover:from-gray-700 transition"
                     >
                       <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
