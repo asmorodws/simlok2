@@ -7,9 +7,16 @@ import {
   PhotoIcon,
   PencilSquareIcon,
   TrashIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { ImageCompressor } from "@/utils/image-compression";
 import { useToast } from "@/hooks/useToast";
+import {
+  validateWorkerPhoto,
+  validateHSSEWorkerDocument,
+  validatePDFDocument,
+  validateDocument,
+} from "@/utils/fileValidation";
 
 interface EnhancedFileUploadProps {
   id: string;
@@ -48,9 +55,10 @@ export default function EnhancedFileUpload({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [localPreview, setLocalPreview] = useState<string | null>(null); // Local preview before upload
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showWarning } = useToast();
   const toastShownRef = useRef(false); // Prevent double toast
 
   // --- Helpers UI ---
@@ -118,16 +126,56 @@ export default function EnhancedFileUpload({
   };
 
   // --- Validasi & Upload ---
-  const validateFile = (file: File): { isValid: boolean; error?: string } => {
-    switch (uploadType) {
-      case "worker-photo":
-        return ImageCompressor.validateWorkerPhoto(file);
-      case "document":
-        return ImageCompressor.validateDocumentFile(file);
-      case "hsse-worker":
-        return ImageCompressor.validateHSSEWorkerDocument(file);
-      default:
-        return { isValid: false, error: "Tipe upload tidak valid" };
+  const validateFile = async (file: File): Promise<{ isValid: boolean; error?: string; warnings?: string[] }> => {
+    console.log(`[EnhancedFileUpload.validateFile] Validating file: ${file.name}, uploadType: ${uploadType}`);
+    
+    try {
+      let validationResult;
+      
+      switch (uploadType) {
+        case "worker-photo":
+          console.log(`[EnhancedFileUpload.validateFile] Using validateWorkerPhoto`);
+          validationResult = await validateWorkerPhoto(file);
+          break;
+        case "document":
+          console.log(`[EnhancedFileUpload.validateFile] Using validatePDFDocument`);
+          validationResult = await validatePDFDocument(file);
+          break;
+        case "hsse-worker":
+          console.log(`[EnhancedFileUpload.validateFile] Using validateHSSEWorkerDocument`);
+          validationResult = await validateHSSEWorkerDocument(file);
+          break;
+        case "other":
+          console.log(`[EnhancedFileUpload.validateFile] Using validateDocument`);
+          validationResult = await validateDocument(file);
+          break;
+        default:
+          console.error(`[EnhancedFileUpload.validateFile] ❌ Invalid uploadType: ${uploadType}`);
+          return { isValid: false, error: "Tipe upload tidak valid" };
+      }
+      
+      console.log(`[EnhancedFileUpload.validateFile] Validation completed:`, validationResult);
+      
+      // Build result with conditional properties to satisfy exactOptionalPropertyTypes
+      const result: { isValid: boolean; error?: string; warnings?: string[] } = {
+        isValid: validationResult.isValid,
+      };
+      
+      if (validationResult.error) {
+        result.error = validationResult.error;
+      }
+      
+      if (validationResult.warnings) {
+        result.warnings = validationResult.warnings;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('[EnhancedFileUpload.validateFile] ❌ Validation threw exception:', error);
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Gagal memvalidasi file',
+      };
     }
   };
 
@@ -182,17 +230,35 @@ export default function EnhancedFileUpload({
     const file = files[0];
     if (!file) return; // guard: File | undefined
 
+    console.log(`[EnhancedFileUpload] File selected: ${file.name} (${file.size} bytes, type: ${file.type})`);
+
     setError(null);
+    setWarnings([]);
     toastShownRef.current = false; // Reset toast flag
 
-    const validation = validateFile(file);
+    // Comprehensive validation
+    console.log(`[EnhancedFileUpload] Starting validation for uploadType: ${uploadType}`);
+    const validation = await validateFile(file);
+    console.log(`[EnhancedFileUpload] Validation result:`, validation);
+    
     if (!validation.isValid) {
+      console.error(`[EnhancedFileUpload] ❌ VALIDATION FAILED - File rejected:`, validation.error);
       setError(validation.error || "File tidak valid");
       if (!toastShownRef.current) {
         showError("Validasi Gagal", validation.error || "File tidak valid");
         toastShownRef.current = true;
       }
-      return;
+      return; // CRITICAL: Stop here, DO NOT upload
+    }
+    
+    console.log(`[EnhancedFileUpload] ✅ Validation passed, proceeding to upload...`);
+    
+    // Show warnings if any
+    if (validation.warnings && validation.warnings.length > 0) {
+      setWarnings(validation.warnings);
+      validation.warnings.forEach(warning => {
+        showWarning("Perhatian", warning);
+      });
     }
 
     // Create local preview for images immediately
@@ -269,6 +335,7 @@ export default function EnhancedFileUpload({
     onChange?.("");
     if (fileInputRef.current) fileInputRef.current.value = "";
     setError(null);
+    setWarnings([]); // Clear warnings
     setLocalPreview(null); // Clear local preview
     toastShownRef.current = false; // Reset toast flag
   };
@@ -506,8 +573,28 @@ export default function EnhancedFileUpload({
         )}
       </div>
 
+      {/* Warning Messages */}
+      {warnings.length > 0 && !error && (
+        <div className="mt-3 rounded-lg border border-yellow-300 bg-yellow-50 p-3">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium text-yellow-800">Perhatian:</p>
+              <ul className="mt-1.5 space-y-1 text-xs text-yellow-700">
+                {warnings.map((warning, idx) => (
+                  <li key={idx} className="flex items-start">
+                    <span className="mr-2">•</span>
+                    <span className="flex-1">{warning}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bantuan & Error */}
-      {description && !error && (
+      {description && !error && warnings.length === 0 && (
         <p className="mt-2 text-sm text-gray-500">{description}</p>
       )}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}

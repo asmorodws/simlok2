@@ -21,6 +21,7 @@ interface SupportDocumentListProps {
   documents: SupportDoc[];
   onDocumentsChange: (docs: SupportDoc[]) => void;
   disabled?: boolean;
+  invalidDocumentIds?: Map<string, string>; // Map of document ID to error message
 }
 
 export default function SupportDocumentList({
@@ -29,6 +30,7 @@ export default function SupportDocumentList({
   documents,
   onDocumentsChange,
   disabled = false,
+  invalidDocumentIds,
 }: SupportDocumentListProps) {
   const lastAddedRef = useRef<HTMLInputElement | null>(null);
 
@@ -91,11 +93,36 @@ export default function SupportDocumentList({
       </div>
 
       <div className="space-y-6">
-        {documents.map((doc, index) => (
+        {documents.map((doc, index) => {
+          // Check if this document has validation error
+          const hasError = invalidDocumentIds?.has(doc.id) ?? false;
+          const errorMessage = hasError && invalidDocumentIds ? invalidDocumentIds.get(doc.id) : undefined;
+          
+          return (
           <div
             key={doc.id}
-            className="border border-gray-200 rounded-lg p-4 bg-white relative"
+            className={`border rounded-lg p-4 bg-white relative ${
+              hasError ? 'border-red-500 border-2 bg-red-50' : 'border-gray-200'
+            }`}
           >
+            {/* Error banner at top if document is invalid */}
+            {hasError && errorMessage && (
+              <div className="mb-4 -mt-2 -mx-2 px-4 py-3 bg-red-100 border-b-2 border-red-500 rounded-t-lg">
+                <div className="flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-red-800">Dokumen PDF Bermasalah</p>
+                    <p className="text-xs text-red-700 mt-1">{errorMessage}</p>
+                    <p className="text-xs text-red-600 mt-1 font-medium">
+                      ⚠️ Silakan hapus dan unggah ulang file PDF yang valid
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Header with number and delete button */}
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-medium text-gray-700">
@@ -265,7 +292,8 @@ export default function SupportDocumentList({
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add button at the bottom */}

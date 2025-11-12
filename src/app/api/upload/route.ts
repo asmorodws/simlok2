@@ -87,12 +87,81 @@ export async function POST(request: NextRequest) {
 
     // ========== COMPRESS FILES BASED ON TYPE ==========
     
-    // 1. Compress PDF files
+    // 1. Validate and compress PDF files
     if (file.type === 'application/pdf' || fileExtension === '.pdf') {
+      // VALIDATION: Try to load PDF first to ensure it's not corrupted
+      // This catches PDFs with invalid object references that browsers might still open
+      console.log('🔍 Starting PDF validation...');
+      const { PDFDocument } = await import('pdf-lib');
+      
+      // Capture console warnings to detect corruption
+      const originalWarn = console.warn;
+      const warnings: string[] = [];
+      console.warn = (...args: any[]) => {
+        const msg = args.map(a => String(a)).join(' ');
+        warnings.push(msg);
+        originalWarn.apply(console, args);
+      };
+      
+      try {
+        const pdfDoc = await PDFDocument.load(bytes, {
+          ignoreEncryption: true,
+          updateMetadata: false,
+        });
+        
+        // Restore console.warn
+        console.warn = originalWarn;
+        
+        // Check for corruption warnings
+        const hasCorruptionWarning = warnings.some(w => 
+          w.includes('Invalid object ref') ||
+          w.includes('Trying to parse invalid object') ||
+          w.includes('Failed to parse') ||
+          w.includes('corrupt') ||
+          w.includes('missing') ||
+          w.includes('invalid')
+        );
+        
+        if (hasCorruptionWarning) {
+          console.error('❌ PDF validation FAILED - corruption detected in warnings');
+          console.error('Corruption warnings:', warnings);
+          console.log('🛑 REJECTING upload - throwing error');
+          
+          throw new Error('PDF_CORRUPT: File PDF tidak valid atau rusak. PDF memiliki struktur internal yang corrupt. Silakan gunakan file PDF yang valid.');
+        }
+        
+        // Additional validation: ensure PDF has pages
+        const pageCount = pdfDoc.getPageCount();
+        if (pageCount === 0) {
+          console.error('❌ PDF validation FAILED - no pages');
+          throw new Error('PDF_CORRUPT: File PDF tidak memiliki halaman. File mungkin rusak.');
+        }
+        
+        console.log(`✅ PDF validation passed (${pageCount} pages, no corruption warnings)`);
+      } catch (loadError) {
+        // Restore console.warn in case of error
+        console.warn = originalWarn;
+        
+        // Check if it's our custom error
+        if (loadError instanceof Error && loadError.message.startsWith('PDF_CORRUPT:')) {
+          throw loadError; // Re-throw our custom error
+        }
+        
+        console.error('❌ PDF validation FAILED - parse error');
+        console.error('Error details:', loadError);
+        console.log('🛑 REJECTING upload - throwing error');
+        
+        // Throw error with specific message so outer catch can handle it properly
+        throw new Error('PDF_CORRUPT: File PDF tidak valid atau rusak. PDF memiliki struktur internal yang corrupt. Silakan gunakan file PDF yang valid.');
+      }
+      
+      console.log('📦 Validation passed, proceeding to compression...');
+      
+      // If validation passed, proceed with compression
       try {
         const compressionResult = await PDFCompressor.compressPDF(buffer, {
           skipIfSmall: true,
-          skipThresholdKB: 50, // Compress even small PDFs for consistency
+          skipThresholdKB: 50,
           aggressiveCompression: true,
         });
 
@@ -164,6 +233,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // Check if it's a PDF corruption error
+    if (error instanceof Error && error.message.startsWith('PDF_CORRUPT:')) {
+      const errorMessage = error.message.replace('PDF_CORRUPT: ', '');
+      return NextResponse.json({ 
+        error: errorMessage
+      }, { status: 400 });
+    }
+    
     return NextResponse.json({ 
       error: 'Internal server error during file upload' 
     }, { status: 500 });

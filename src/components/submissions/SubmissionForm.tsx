@@ -15,6 +15,7 @@ import TimeRangePicker from '@/components/form/TimeRangePicker';
 import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
+import { validatePDFDocument } from '@/utils/fileValidation';
 import { SubmissionData } from '@/types';
 import { hasWeekendInRange } from '@/utils/dateHelpers';
 
@@ -70,6 +71,9 @@ export default function SubmissionForm() {
 
   // menandai adanya draft
   const [hasDraft, setHasDraft] = useState(false);
+
+  // Track invalid documents (untuk highlight card yang bermasalah)
+  const [invalidDocuments, setInvalidDocuments] = useState<Map<string, string>>(new Map());
 
   // state modal konfirmasi hapus draft
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -672,6 +676,9 @@ export default function SubmissionForm() {
     // Set flag IMMEDIATELY to prevent race condition
     isSubmittingRef.current = true;
     setIsLoading(true);
+    
+    // Clear any previous invalid document markers
+    setInvalidDocuments(new Map());
 
     // Helper to reset submission state (for early returns)
     const resetSubmission = () => {
@@ -958,6 +965,78 @@ export default function SubmissionForm() {
         doc.document_upload?.trim()
       );
 
+      // =====================
+      // CLIENT-SIDE: Verify attached PDFs by fetching and validating their bytes
+      // This is an extra safety gate before submitting to the server. If a file
+      // cannot be downloaded or fails PDF validation, block the submission and
+      // show a clear Indonesian error so the user can re-upload a valid file.
+      // =====================
+      const allAttachedDocs = [
+        ...validSimjaDocuments.map((d) => ({ ...d, typeLabel: 'SIMJA' })),
+        ...validSikaDocuments.map((d) => ({ ...d, typeLabel: 'SIKA' })),
+        ...validWorkOrderDocuments.map((d) => ({ ...d, typeLabel: 'WORK_ORDER' })),
+        ...validKontrakKerjaDocuments.map((d) => ({ ...d, typeLabel: 'KONTRAK_KERJA' })),
+        ...validJsaDocuments.map((d) => ({ ...d, typeLabel: 'JSA' })),
+      ];
+
+      const invalidDocs = new Map<string, string>();
+      let hasInvalidDoc = false;
+
+      for (let i = 0; i < allAttachedDocs.length; i++) {
+        const doc = allAttachedDocs[i];
+        if (!doc || !doc.document_upload) continue;
+
+        // Only validate PDF files (skip images)
+        if (!/\.pdf(\?|$)/i.test(doc.document_upload) && !doc.document_upload.endsWith('.pdf')) continue;
+
+        try {
+          const resolvedUrl = new URL(doc.document_upload, window.location.href).toString();
+          const resp = await fetch(resolvedUrl);
+          if (!resp.ok) {
+            const errorMsg = `Tidak dapat mengunduh dokumen. Silakan unggah ulang.`;
+            invalidDocs.set(doc.id, errorMsg);
+            hasInvalidDoc = true;
+            continue;
+          }
+
+          const blob = await resp.blob();
+          // Create a File object so our validator can operate on it
+          const fileNameFromUrl = (() => {
+            try {
+              const u = new URL(resolvedUrl);
+              return decodeURIComponent(u.pathname.split('/').pop() || `file_${i}.pdf`);
+            } catch {
+              return `file_${i}.pdf`;
+            }
+          })();
+
+          const file = new File([blob], fileNameFromUrl, { type: blob.type || 'application/pdf' });
+
+          const validation = await validatePDFDocument(file);
+          if (!validation.isValid) {
+            const errorMsg = validation.error || 'File PDF tidak valid atau rusak';
+            invalidDocs.set(doc.id, errorMsg);
+            hasInvalidDoc = true;
+          }
+        } catch (err) {
+          console.error('Error while validating attached PDF:', err);
+          const errorMsg = 'Gagal memeriksa dokumen. Silakan unggah ulang.';
+          invalidDocs.set(doc.id, errorMsg);
+          hasInvalidDoc = true;
+        }
+      }
+
+      // If any documents are invalid, set state and block submission
+      if (hasInvalidDoc) {
+        setInvalidDocuments(invalidDocs);
+        showError(
+          'Dokumen PDF Bermasalah',
+          'Beberapa dokumen PDF terdeteksi rusak atau tidak dapat diverifikasi. Silakan periksa highlight merah pada card dokumen dan unggah ulang file yang valid.'
+        );
+        resetSubmission();
+        return;
+      }
+
       const payload: SubmissionData & {
         workers: Worker[];
         simjaDocuments: SupportDoc[];
@@ -1089,6 +1168,7 @@ export default function SubmissionForm() {
                   documents={simjaDocuments}
                   onDocumentsChange={setSimjaDocuments}
                   disabled={isLoading}
+                  invalidDocumentIds={invalidDocuments}
                 />
               </div>
 
@@ -1100,6 +1180,7 @@ export default function SubmissionForm() {
                   documents={sikaDocuments}
                   onDocumentsChange={setSikaDocuments}
                   disabled={isLoading}
+                  invalidDocumentIds={invalidDocuments}
                 />
               </div>
 
@@ -1177,6 +1258,7 @@ export default function SubmissionForm() {
                     documents={workOrderDocuments}
                     onDocumentsChange={setWorkOrderDocuments}
                     disabled={isLoading}
+                    invalidDocumentIds={invalidDocuments}
                   />
                 </div>
               )}
@@ -1207,6 +1289,7 @@ export default function SubmissionForm() {
                     documents={kontrakKerjaDocuments}
                     onDocumentsChange={setKontrakKerjaDocuments}
                     disabled={isLoading}
+                    invalidDocumentIds={invalidDocuments}
                   />
                 </div>
               )}
@@ -1237,6 +1320,7 @@ export default function SubmissionForm() {
                     documents={jsaDocuments}
                     onDocumentsChange={setJsaDocuments}
                     disabled={isLoading}
+                    invalidDocumentIds={invalidDocuments}
                   />
                 </div>
               )}
