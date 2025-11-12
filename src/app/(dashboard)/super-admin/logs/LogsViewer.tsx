@@ -81,8 +81,7 @@ export default function LogsViewer() {
   // Auto-fetch on mount
   useEffect(() => {
     fetchLogs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // Only run once on mount
 
   // Download logs as text file
   const handleDownload = () => {

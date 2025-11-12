@@ -241,7 +241,6 @@ export default function SubmissionForm() {
     } catch (e) {
       console.warn('Gagal memulihkan draft:', e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps is intentional - only run on mount
 
   // Prefill vendor/officer dari session
@@ -314,8 +313,7 @@ export default function SubmissionForm() {
 
   useEffect(() => {
     scheduleSave();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, visibleOptionalDocs]);
+  }, [formData, workers, desiredCount, workerCountInput, showBulk, bulkNames, simjaDocuments, sikaDocuments, workOrderDocuments, kontrakKerjaDocuments, jsaDocuments, visibleOptionalDocs, scheduleSave]);
 
   useEffect(() => {
     return () => {

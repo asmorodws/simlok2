@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid date range' }, { status: 400 });
     }
 
-    let logs: string[] = [];
+    const logs: string[] = [];
 
     // Get all dates in range
     const start = new Date(startDate);
