@@ -59,12 +59,32 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if QR/Barcode is valid for current date (simplified check)
-    const now = Date.now();
-    if (qrPayload.timestamp && now > qrPayload.timestamp + (7 * 24 * 60 * 60 * 1000)) { // 7 days validity
+    // Validate QR code is being scanned within implementation period
+    const { isQrValidForDate } = await import('@/lib/qr-security');
+    if (!isQrValidForDate(qrPayload)) {
+      // Provide specific error message based on dates
+      let errorMessage = 'QR code tidak dapat digunakan saat ini.';
+      
+      if (qrPayload.start_date && qrPayload.end_date) {
+        errorMessage = `QR code hanya dapat digunakan dari tanggal ${qrPayload.start_date} sampai ${qrPayload.end_date}.`;
+      } else if (qrPayload.start_date) {
+        errorMessage = `QR code hanya dapat digunakan mulai tanggal ${qrPayload.start_date}.`;
+      } else if (qrPayload.end_date) {
+        errorMessage = `QR code telah kadaluarsa. Periode pelaksanaan berakhir pada ${qrPayload.end_date}.`;
+      }
+      
       return NextResponse.json({ 
         success: false,
-        message: 'QR code/barcode telah kadaluarsa. Silakan buat yang baru.' 
+        message: errorMessage
+      }, { status: 400 });
+    }
+
+    // Validate submission ID format before database query (prevent injection)
+    if (!qrPayload.id || !qrPayload.id.match(/^[a-zA-Z0-9_-]+$/)) {
+      console.error('Invalid submission ID format:', qrPayload.id);
+      return NextResponse.json({ 
+        success: false,
+        message: 'Format ID pengajuan tidak valid' 
       }, { status: 400 });
     }
 
