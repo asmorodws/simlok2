@@ -161,23 +161,31 @@ const ImprovedDateRangePicker: React.FC<ImprovedDateRangePickerProps> = ({
 
   // Handle start date change
   const handleStartChange = useCallback((startDate: string) => {
-    const newRange = { ...localRange, startDate };
-    setLocalRange(newRange);
-
-    if (validateRange(newRange)) {
-      onChange(newRange);
-    }
-  }, [localRange, onChange, validateRange]);
+    setLocalRange(prev => {
+      const newRange = { ...prev, startDate };
+      
+      // Validate and call onChange
+      if (validateRange(newRange)) {
+        onChange(newRange);
+      }
+      
+      return newRange;
+    });
+  }, [onChange, validateRange]);
 
   // Handle end date change
   const handleEndChange = useCallback((endDate: string) => {
-    const newRange = { ...localRange, endDate };
-    setLocalRange(newRange);
-
-    if (validateRange(newRange)) {
-      onChange(newRange);
-    }
-  }, [localRange, onChange, validateRange]);
+    setLocalRange(prev => {
+      const newRange = { ...prev, endDate };
+      
+      // Validate and call onChange
+      if (validateRange(newRange)) {
+        onChange(newRange);
+      }
+      
+      return newRange;
+    });
+  }, [onChange, validateRange]);
 
   // Calculate duration
   const getDuration = useCallback((): number | null => {

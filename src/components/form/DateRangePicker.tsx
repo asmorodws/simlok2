@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getServerDateString } from '@/lib/serverDate';
 
 interface DateRangePickerProps {
@@ -21,6 +21,15 @@ export default function DateRangePicker({
   const [tempEndDate, setTempEndDate] = useState(endDate);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  // Sync tempStartDate and tempEndDate with props when they change
+  useEffect(() => {
+    setTempStartDate(startDate);
+  }, [startDate]);
+
+  useEffect(() => {
+    setTempEndDate(endDate);
+  }, [endDate]);
 
   // Generate year range: 2020 to current year + 5
   const currentYear = new Date().getFullYear();
