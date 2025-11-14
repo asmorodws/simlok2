@@ -19,12 +19,8 @@ const finalApprovalSchema = z.object({
  * Generate SIMLOK number with database transaction and row locking
  * to prevent race conditions and duplicate numbers.
  * 
- * This function uses a database-level approach:
- * 1. Use raw SQL with FOR UPDATE to lock the last submission row
- * 2. Calculate next number based on locked row
- * 3. Return number (will be saved in same transaction by caller)
- * 
- * CRITICAL: Caller MUST use the same transaction to save the number!
+ * Uses a different strategy: Lock ALL existing SIMLOK rows to prevent
+ * concurrent reads, ensuring sequential number generation.
  */
 async function generateSimlokNumberInTransaction(tx: any): Promise<string> {
   // Use Jakarta timezone for year
@@ -32,43 +28,27 @@ async function generateSimlokNumberInTransaction(tx: any): Promise<string> {
   const now = new Date(jakartaNow);
   const year = now.getFullYear();
 
-  // CRITICAL: Query with FOR UPDATE lock to prevent concurrent access
-  // This will lock the row until transaction commits
-  const lastSubmission = await tx.$queryRaw<Array<{ simlok_number: string | null }>>`
-    SELECT simlok_number 
+  // CRITICAL: Use SELECT MAX with table lock to prevent concurrent reads
+  // This ensures only ONE transaction can generate number at a time
+  const result = await tx.$queryRaw<Array<{ max_number: bigint | null }>>`
+    SELECT CAST(SUBSTRING_INDEX(simlok_number, '/', 1) AS UNSIGNED) as max_number
     FROM Submission 
     WHERE simlok_number IS NOT NULL 
-    ORDER BY created_at DESC 
+    ORDER BY max_number DESC 
     LIMIT 1 
     FOR UPDATE
   `;
 
   let nextNumber = 1;
   
-  if (lastSubmission.length > 0 && lastSubmission[0]?.simlok_number) {
-    const simlokNumber = lastSubmission[0].simlok_number;
-    console.log('🔒 Locked last SIMLOK number:', simlokNumber);
-    
-    // Extract auto-increment number from format: number/S00330/YYYY-S0
-    const parts = simlokNumber.split('/');
-    const firstPart = parts[0];
-    
-    if (firstPart) {
-      const currentNumber = parseInt(String(firstPart), 10);
-      if (!isNaN(currentNumber) && currentNumber > 0) {
-        nextNumber = currentNumber + 1;
-        console.log('✅ Next SIMLOK number calculated:', nextNumber);
-      } else {
-        console.warn('⚠️ Invalid SIMLOK format (invalid number):', simlokNumber);
-      }
-    } else {
-      console.warn('⚠️ Invalid SIMLOK format (empty first part):', simlokNumber);
-    }
+  const maxResult = result.length > 0 ? result[0] : null;
+  if (maxResult?.max_number !== null && maxResult?.max_number !== undefined) {
+    nextNumber = Number(maxResult.max_number) + 1;
+    console.log('🔒 Locked max SIMLOK number:', maxResult.max_number, '→ Next:', nextNumber);
   } else {
     console.log('📝 No previous SIMLOK number found, starting from 1');
   }
 
-  // Format: autoincrement/S00330/tahun-S0
   const generatedNumber = `${nextNumber}/S00330/${year}-S0`;
   console.log('🎯 Generated SIMLOK number:', generatedNumber);
   
