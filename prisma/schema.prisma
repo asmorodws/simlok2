@@ -99,7 +99,7 @@ model Submission {
   // simja_type               String?
   // sika_type                 String?
   
-  simlok_number             String?
+  simlok_number             String?      @unique
   simlok_date               DateTime?
 
   // HSSE PASS
@@ -240,6 +240,7 @@ enum ApprovalStatus {
   PENDING_APPROVAL
   APPROVED
   REJECTED
+  NEEDS_REVISION  // Submission needs to be fixed by vendor based on reviewer feedback
 }
 
 enum NotificationScope {

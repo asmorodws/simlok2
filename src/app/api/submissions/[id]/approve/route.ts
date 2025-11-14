@@ -15,50 +15,64 @@ const finalApprovalSchema = z.object({
   simlok_date: z.string().optional(),
 });
 
-// Function to generate simlok number
-async function generateSimlokNumber(): Promise<string> {
+/**
+ * Generate SIMLOK number with database transaction and row locking
+ * to prevent race conditions and duplicate numbers.
+ * 
+ * This function uses a database-level approach:
+ * 1. Use raw SQL with FOR UPDATE to lock the last submission row
+ * 2. Calculate next number based on locked row
+ * 3. Return number (will be saved in same transaction by caller)
+ * 
+ * CRITICAL: Caller MUST use the same transaction to save the number!
+ */
+async function generateSimlokNumberInTransaction(tx: any): Promise<string> {
   // Use Jakarta timezone for year
   const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
   const now = new Date(jakartaNow);
   const year = now.getFullYear();
 
-  // Get the last approved submission (semua tahun, tidak direset)
-  // Nomor SIMLOK terus bertambah secara berurutan tanpa peduli tahun
-  const lastSubmission = await prisma.submission.findFirst({
-    where: {
-      simlok_number: {
-        not: null,
-      }
-    },
-    orderBy: {
-      created_at: 'desc'
-    }
-  });
+  // CRITICAL: Query with FOR UPDATE lock to prevent concurrent access
+  // This will lock the row until transaction commits
+  const lastSubmission = await tx.$queryRaw<Array<{ simlok_number: string | null }>>`
+    SELECT simlok_number 
+    FROM Submission 
+    WHERE simlok_number IS NOT NULL 
+    ORDER BY created_at DESC 
+    LIMIT 1 
+    FOR UPDATE
+  `;
 
   let nextNumber = 1;
   
-  if (lastSubmission?.simlok_number) {
+  if (lastSubmission.length > 0 && lastSubmission[0]?.simlok_number) {
+    const simlokNumber = lastSubmission[0].simlok_number;
+    console.log('🔒 Locked last SIMLOK number:', simlokNumber);
+    
     // Extract auto-increment number from format: number/S00330/YYYY-S0
-    // Ambil substring pertama sebelum karakter '/'
-    const parts = lastSubmission.simlok_number.split('/');
+    const parts = simlokNumber.split('/');
     const firstPart = parts[0];
+    
     if (firstPart) {
       const currentNumber = parseInt(String(firstPart), 10);
-      // Pastikan parsing berhasil dan hasilnya adalah angka valid
       if (!isNaN(currentNumber) && currentNumber > 0) {
         nextNumber = currentNumber + 1;
+        console.log('✅ Next SIMLOK number calculated:', nextNumber);
+      } else {
+        console.warn('⚠️ Invalid SIMLOK format (invalid number):', simlokNumber);
       }
     } else {
-      // fallback
-      console.warn('Invalid SIMLOK format (empty first part):', lastSubmission.simlok_number);
+      console.warn('⚠️ Invalid SIMLOK format (empty first part):', simlokNumber);
     }
-    // Jika parsing gagal atau hasil invalid, tetap gunakan 1 sebagai default
+  } else {
+    console.log('📝 No previous SIMLOK number found, starting from 1');
   }
 
   // Format: autoincrement/S00330/tahun-S0
-  // Contoh: 1/S00330/2025-S0, 2/S00330/2025-S0, 3/S00330/2026-S0 (tetap lanjut increment)
-  // Nomor TIDAK direset per tahun, hanya tahun di format yang berubah
-  return `${nextNumber}/S00330/${year}-S0`;
+  const generatedNumber = `${nextNumber}/S00330/${year}-S0`;
+  console.log('🎯 Generated SIMLOK number:', generatedNumber);
+  
+  return generatedNumber;
 }
 
 import { RouteParams } from '@/types';
@@ -102,7 +116,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 });
     }
 
-    if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL' && 
+        existingSubmission.approval_status !== 'NEEDS_REVISION') {
       return NextResponse.json({ 
         error: 'Submission sudah diproses sebelumnya' 
       }, { status: 400 });
@@ -133,35 +148,53 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       approved_by_final_id: session.user.id,
       // Auto-fill signer info from approver user
       signer_name: approverUser.officer_name,
-      signer_position: approverUser.position || 'Sr Officer Security III', // Default jika belum ada
+      signer_position: approverUser.position || 'Sr Officer Security III',
     };
 
-    // If approved, generate SIMLOK number and QR code
-    if (validatedData.approval_status === 'APPROVED') {
-      const simlokNumber = validatedData.simlok_number || await generateSimlokNumber();
+    // ========== CRITICAL SECTION: USE TRANSACTION ==========
+    // This prevents race conditions when generating SIMLOK numbers
+    const updatedSubmission = await prisma.$transaction(async (tx) => {
+      console.log('🔐 Starting transaction for approval:', id);
+
+      // If approved, generate SIMLOK number and QR code
+      if (validatedData.approval_status === 'APPROVED') {
+        // Generate SIMLOK number within transaction with row locking
+        const simlokNumber = validatedData.simlok_number || await generateSimlokNumberInTransaction(tx);
         const jakartaNow = toJakartaISOString(new Date());
         const simlokDate = validatedData.simlok_date || (jakartaNow ? jakartaNow.split('T')[0] : new Date().toISOString().split('T')[0]);
-      
-      // Generate QR string for the submission
-      const qrString = generateQrString({
-        id,
-        implementation_start_date: existingSubmission.implementation_start_date || new Date(),
-        implementation_end_date: existingSubmission.implementation_end_date || new Date()
-      });
-      
-      updateData = {
-        ...updateData,
-        simlok_number: simlokNumber,
-        simlok_date: new Date(simlokDate!), // Safe because we set default above
-        qrcode: qrString,
-      };
-    }
+        
+        // Generate QR string for the submission
+        const qrString = generateQrString({
+          id,
+          implementation_start_date: existingSubmission.implementation_start_date || new Date(),
+          implementation_end_date: existingSubmission.implementation_end_date || new Date()
+        });
+        
+        updateData = {
+          ...updateData,
+          simlok_number: simlokNumber,
+          simlok_date: new Date(simlokDate!),
+          qrcode: qrString,
+        };
 
-    // Update submission. Return only the updated submission fields (avoid fetching full user object)
-    const updatedSubmission = await prisma.submission.update({
-      where: { id },
-      data: updateData,
+        console.log('💾 Saving SIMLOK number in transaction:', simlokNumber);
+      }
+
+      // Update submission within the same transaction
+      const result = await tx.submission.update({
+        where: { id },
+        data: updateData,
+      });
+
+      console.log('✅ Transaction committed successfully');
+      return result;
+    }, {
+      // Transaction options
+      maxWait: 5000, // Maximum time to wait for transaction to start (5s)
+      timeout: 10000, // Maximum time for transaction to complete (10s)
+      isolationLevel: 'Serializable' // Highest isolation level for maximum safety
     });
+    // ========== END CRITICAL SECTION ==========
 
     // Invalidate cache for approver stats
     cache.delete(CacheKeys.APPROVER_STATS);
