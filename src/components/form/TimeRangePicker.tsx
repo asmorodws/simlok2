@@ -115,9 +115,15 @@ export default function TimeRangePicker({
     }
   };
 
+  // Prevent event bubbling on scroll areas
+  const handleScrollAreaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Don't close if clicking inside the dropdown
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node) &&
@@ -128,12 +134,24 @@ export default function TimeRangePicker({
       }
     };
 
+    // Prevent closing on scroll events
+    const handleScroll = (event: Event) => {
+      // Only prevent if scrolling inside our dropdown
+      if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+        event.stopPropagation();
+      }
+    };
+
     if (isVisible) {
-      document.addEventListener("mousedown", handleClickOutside);
+      // Use 'click' instead of 'mousedown' to avoid closing on scroll
+      document.addEventListener("click", handleClickOutside);
+      // Add scroll listener to prevent closing
+      document.addEventListener("scroll", handleScroll, true);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("scroll", handleScroll, true);
     };
   }, [isVisible]);
 
@@ -263,6 +281,7 @@ export default function TimeRangePicker({
                     
                     <div 
                       ref={startTimeScrollRef}
+                      onClick={handleScrollAreaClick}
                       className="no-scrollbar max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded pt-8 pb-8"
                     >
                       {times.map((time, index) => {
@@ -315,6 +334,7 @@ export default function TimeRangePicker({
                     
                     <div 
                       ref={endTimeScrollRef}
+                      onClick={handleScrollAreaClick}
                       className="no-scrollbar  max-h-[200px] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded pt-8 pb-8"
                     >
                       {times.map((time, index) => {

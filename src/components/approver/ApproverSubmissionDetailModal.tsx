@@ -1334,30 +1334,8 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                             <DocumentTextIcon className="h-5 w-5 text-blue-600 mr-2" />
                             Informasi SIMLOK
                           </h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Nomor SIMLOK
-                                <span className="text-red-500 ml-1">*</span>
-                              </label>
-                              <div className="relative">
-                                <input
-                                  type="text"
-                                  value={approvalData.simlok_number}
-                                  onChange={(e) => setApprovalData({ ...approvalData, simlok_number: e.target.value })}
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
-                                  placeholder="Dibuat otomatis"
-                                  required
-                                />
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                  <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-                                </div>
-                              </div>
-                              <p className="text-xs text-gray-600 mt-2 flex items-center">
-                                <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                                Nomor otomatis dibuat oleh sistem
-                              </p>
-                            </div>
+                          <div className="grid grid-cols-1 gap-6">
+
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Tanggal Penerbitan Simlok
@@ -1377,23 +1355,7 @@ const ApproverSubmissionDetailModal: React.FC<ApproverSubmissionDetailModalProps
                         </div>
                       )}
 
-                      {/* Note for Vendor
-                      <div className="mt-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Catatan untuk Vendor (Opsional)
-                        </label>
-                        <textarea
-                          value={approvalData.note_for_vendor}
-                          onChange={(e) => setApprovalData({ ...approvalData, note_for_vendor: e.target.value })}
-                          rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none bg-white shadow-sm"
-                          placeholder="Tambahkan catatan untuk vendor..."
-                        />
-                        <p className="text-xs text-gray-600 mt-2 flex items-center">
-                          <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                          Catatan ini akan ditampilkan kepada vendor
-                        </p>
-                      </div> */}
+                    
 
                       {/* Submit Button */}
                       <div className="flex justify-end pt-4 border-t border-gray-200">
