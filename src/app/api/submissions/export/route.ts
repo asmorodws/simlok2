@@ -166,7 +166,17 @@ export async function GET(request: NextRequest) {
       row['Deskripsi Pekerjaan'] = safeText(submission.job_description);
       row['Lokasi Kerja'] = safeText(submission.work_location);
       row['Sarana Kerja'] = safeText(submission.work_facilities);
-      row['Jam Kerja'] = safeText(submission.working_hours);
+      
+      // Format jam kerja dengan hari libur (jika ada)
+      const workingHours = safeText(submission.working_hours);
+      const holidayWorkingHours = safeText(submission.holiday_working_hours);
+      
+      if (holidayWorkingHours && holidayWorkingHours !== '-') {
+        row['Jam Kerja'] = `${workingHours} (Hari Kerja)\n${holidayWorkingHours} (Hari Libur)`;
+      } else {
+        row['Jam Kerja'] = workingHours;
+      }
+      
       row['Tanggal Pelaksanaan'] = safeDate(submission.implementation_start_date);
       row['Tanggal Selesai'] = safeDate(submission.implementation_end_date);
       row['Jumlah Pekerja'] = safeNumber(submission.worker_count);
@@ -212,6 +222,7 @@ export async function GET(request: NextRequest) {
     const overrideCols: Record<string, number> = {
       'Deskripsi Pekerjaan': 50,
       'Nama, HSSE dan Berlaku Hingga': 60,
+      'Jam Kerja': 40,
       'Catatan untuk Vendor': 40,
       'Catatan untuk Approver': 35,
     };

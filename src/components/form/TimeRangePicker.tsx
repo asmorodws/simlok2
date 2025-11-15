@@ -88,7 +88,7 @@ export default function TimeRangePicker({
   // Apply time range
   const handleApply = () => {
     if (startTime && endTime) {
-      onChange(`${startTime} - ${endTime}`);
+      onChange(`${startTime} WIB - ${endTime} WIB`);
       setIsVisible(false);
     }
   };
@@ -372,7 +372,7 @@ export default function TimeRangePicker({
               {/* Preview */}
               {startTime && endTime && (
                 <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-sm text-center text-blue-800 dark:text-blue-300">
-                  <strong>Preview:</strong> {startTime} - {endTime}
+                  <strong>Preview:</strong> {startTime} WIB - {endTime} WIB
                 </div>
               )}
 
