@@ -240,7 +240,6 @@ enum ApprovalStatus {
   PENDING_APPROVAL
   APPROVED
   REJECTED
-  NEEDS_REVISION  // Submission needs to be fixed by vendor based on reviewer feedback
 }
 
 enum NotificationScope {

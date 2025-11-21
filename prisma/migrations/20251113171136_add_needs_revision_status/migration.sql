@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Submission` MODIFY `work_location` TEXT NOT NULL,
+    MODIFY `work_facilities` TEXT NOT NULL,
+    MODIFY `approval_status` ENUM('PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'NEEDS_REVISION') NOT NULL DEFAULT 'PENDING_APPROVAL';

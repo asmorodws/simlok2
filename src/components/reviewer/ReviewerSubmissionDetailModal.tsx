@@ -95,7 +95,7 @@ interface SubmissionDetail {
   note_for_vendor?: string;
   reviewed_by?: string;
   reviewed_by_email?: string;
-  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'PENDING_REVIEW';
   final_note?: string;
   approved_by?: string;
   approved_by_email?: string;
@@ -299,6 +299,13 @@ const getFinalStatusBadge = (status: string) => {
         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
           <CalendarIcon className="w-3 h-3 mr-1" />
           Menunggu Persetujuan
+        </span>
+      );
+    case 'PENDING_REVIEW':
+      return (
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+          <CalendarIcon className="w-3 h-3 mr-1" />
+          Menunggu Review Ulang
         </span>
       );
     case 'APPROVED':
@@ -658,21 +665,41 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
     }
   }, [submissionId, isOpen]);
 
+  // Clear unnecessary notes when review status changes
+  useEffect(() => {
+    if (reviewData.review_status === 'MEETS_REQUIREMENTS') {
+      // Clear vendor note when choosing MEETS_REQUIREMENTS
+      setReviewData(prev => ({ ...prev, final_note: '' }));
+    } else if (reviewData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+      // Clear approver note when choosing NOT_MEETS_REQUIREMENTS
+      setReviewData(prev => ({ ...prev, review_note: '' }));
+    }
+  }, [reviewData.review_status]);
+
   // Handle review submission
   const handleSubmitReview = useCallback(async () => {
+    console.log('🔍 Review Data:', reviewData);
+    
     if (!reviewData.review_status) {
       showError('Status Review Belum Dipilih', 'Silakan pilih status review terlebih dahulu sebelum mengirim.');
       return;
     }
 
-    if (!reviewData.review_note.trim()) {
-      showError('Catatan Review Belum Diisi', 'Catatan untuk approver wajib diisi sebelum mengirim review.');
-      return;
+    // Validasi catatan sesuai dengan status yang dipilih
+    if (reviewData.review_status === 'MEETS_REQUIREMENTS') {
+      console.log('✅ Checking MEETS_REQUIREMENTS - review_note:', reviewData.review_note);
+      if (!reviewData.review_note.trim()) {
+        showError('Catatan Approver Belum Diisi', 'Catatan untuk approver wajib diisi ketika pengajuan memenuhi syarat.');
+        return;
+      }
     }
 
-    if (!reviewData.final_note.trim()) {
-      showError('Catatan Vendor Belum Diisi', 'Catatan untuk vendor wajib diisi sebelum mengirim review.');
-      return;
+    if (reviewData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+      console.log('❌ Checking NOT_MEETS_REQUIREMENTS - final_note:', reviewData.final_note);
+      if (!reviewData.final_note.trim()) {
+        showError('Catatan Vendor Belum Diisi', 'Catatan untuk vendor wajib diisi ketika pengajuan tidak memenuhi syarat.');
+        return;
+      }
     }
 
     // Gunakan tanggal dari state lokal (yang diedit reviewer) atau fallback ke hook
@@ -747,10 +774,9 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
       }
 
       // 2. Submit review - Map frontend field names to API expected names
-      const reviewPayload = {
+      // Hanya kirim field yang sesuai dengan status review
+      const reviewPayload: any = {
         review_status: reviewData.review_status,
-        note_for_approver: reviewData.review_note,
-        note_for_vendor: reviewData.final_note,
         // Include editable fields in review payload
         working_hours: workingHours,
         holiday_working_hours: holidayWorkingHours || null,
@@ -759,6 +785,15 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
         implementation_start_date: finalStartDate,
         implementation_end_date: finalEndDate,
       };
+
+      // Tambahkan note sesuai dengan status yang dipilih
+      if (reviewData.review_status === 'MEETS_REQUIREMENTS') {
+        reviewPayload.note_for_approver = reviewData.review_note;
+        reviewPayload.note_for_vendor = ''; // Kosongkan note vendor
+      } else if (reviewData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+        reviewPayload.note_for_vendor = reviewData.final_note;
+        reviewPayload.note_for_approver = ''; // Kosongkan note approver
+      }
 
       console.log('Sending review payload:', reviewPayload);
 
@@ -1223,46 +1258,11 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                     </div>
 
                   </div>
-                  <div className="space-y-4 bg-white rounded-2xl gap-4 p-6 border border-gray-200 shadow-sm">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Catatan untuk Approver <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={reviewData.review_note}
-                        onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
-                        rows={4}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                        placeholder="Berikan penjelasan detail mengenai hasil review..."
-                        readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
-                        required
-                      />
-                    </div>
 
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Catatan untuk Vendor <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={reviewData.final_note}
-                        onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
-                        rows={4}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
-                          }`}
-                        placeholder="Berikan keterangan yang akan ditampilkan kepada vendor..."
-                        readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
-                        required
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Catatan ini akan ditampilkan kepada vendor setelah pengajuan disetujui/ditolak
-                      </p>
-                    </div>
-                  </div>
                   {/* Review Decision */}
                   <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-8 border border-gray-200">
                     <h3 className="text-xl font-bold text-gray-900 mb-6 text-center">Keputusan Review</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${reviewData.review_status === 'MEETS_REQUIREMENTS'
                         ? 'border-green-500 bg-green-50'
                         : 'border-gray-200 bg-white hover:border-green-300'
@@ -1272,7 +1272,14 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           name="review_status"
                           value="MEETS_REQUIREMENTS"
                           checked={reviewData.review_status === 'MEETS_REQUIREMENTS'}
-                          onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+                            setReviewData({ 
+                              ...reviewData, 
+                              review_status: newStatus,
+                              final_note: '' // Clear vendor note saat pilih MEETS_REQUIREMENTS
+                            });
+                          }}
                           className="sr-only"
                           disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                         />
@@ -1283,6 +1290,7 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             <div className="text-sm text-gray-500">Sesuai persyaratan</div>
                           </div>
                         </div>
+ 
                       </label>
 
                       <label className={`relative flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'
@@ -1294,7 +1302,14 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                           name="review_status"
                           value="NOT_MEETS_REQUIREMENTS"
                           checked={reviewData.review_status === 'NOT_MEETS_REQUIREMENTS'}
-                          onChange={(e) => setReviewData({ ...reviewData, review_status: e.target.value as any })}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+                            setReviewData({ 
+                              ...reviewData, 
+                              review_status: newStatus,
+                              review_note: '' // Clear approver note saat pilih NOT_MEETS_REQUIREMENTS
+                            });
+                          }}
                           className="sr-only"
                           disabled={submission.approval_status !== 'PENDING_APPROVAL'}
                         />
@@ -1305,8 +1320,54 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                             <div className="text-sm text-gray-500">Perlu perbaikan</div>
                           </div>
                         </div>
+
                       </label>
                     </div>
+
+                    {/* Conditional Notes Fields */}
+                    {reviewData.review_status === 'MEETS_REQUIREMENTS' && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">
+                            Catatan untuk Approver <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            value={reviewData.review_note}
+                            onChange={(e) => setReviewData({ ...reviewData, review_note: e.target.value })}
+                            rows={4}
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                              }`}
+                            placeholder="Berikan penjelasan detail mengenai hasil review untuk approver..."
+                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
+                          />
+                          <p className="text-xs text-gray-500 mt-2">
+                            Catatan ini akan dikirim ke approver untuk proses persetujuan
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' && (
+                      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">
+                            Catatan untuk Vendor <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            value={reviewData.final_note}
+                            onChange={(e) => setReviewData({ ...reviewData, final_note: e.target.value })}
+                            rows={4}
+                            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${submission.approval_status !== 'PENDING_APPROVAL' ? 'bg-gray-50' : ''
+                              }`}
+                            placeholder="Jelaskan bagian mana yang perlu diperbaiki oleh vendor..."
+                            readOnly={submission.approval_status !== 'PENDING_APPROVAL'}
+                          />
+                          <p className="text-xs text-gray-500 mt-2">
+                            Catatan ini akan ditampilkan kepada vendor untuk melakukan perbaikan
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Submit Button - Available while final status is PENDING_APPROVAL */}
                     {submission.approval_status === 'PENDING_APPROVAL' && (
@@ -1314,7 +1375,12 @@ const ReviewerSubmissionDetailModal: React.FC<ReviewerSubmissionDetailModalProps
                         <Button
                           onClick={handleSubmitReview}
                           variant="primary"
-                          disabled={!reviewData.review_status || !reviewData.review_note.trim() || !reviewData.final_note.trim() || saving}
+                          disabled={
+                            saving ||
+                            !reviewData.review_status || 
+                            (reviewData.review_status === 'MEETS_REQUIREMENTS' && !reviewData.review_note.trim()) ||
+                            (reviewData.review_status === 'NOT_MEETS_REQUIREMENTS' && !reviewData.final_note.trim())
+                          }
                           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold py-4 text-base"
                         >
                           {saving ? (

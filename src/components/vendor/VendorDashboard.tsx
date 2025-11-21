@@ -69,7 +69,7 @@ export default function VendorDashboard() {
     };
   }, [socket, session?.user?.id, fetchVendorStats, fetchVendorSubmissions]);
 
-  const formatDate = (date: string) =>
+  const formatDate = (date: string | Date) =>
     new Date(date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 
   const handleDelete = useCallback(async (id: string) => {
@@ -107,6 +107,10 @@ export default function VendorDashboard() {
       console.error('VendorDashboard: Could not find full submission data for ID:', submissionRow.id);
     }
   }, [submissions]);
+
+  const handleEdit = useCallback((id: string) => {
+    window.location.href = `/vendor/submissions/edit/${id}`;
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -190,6 +194,7 @@ export default function VendorDashboard() {
               loading={false}
               onView={handleViewDetail}
               onDelete={handleDelete}
+              onEdit={handleEdit}
               formatDate={formatDate}
             />
             </div>
@@ -210,6 +215,7 @@ export default function VendorDashboard() {
                 loading={false}
                 onView={handleViewDetail}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
                 formatDate={formatDate}
               />
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Card from '@/components/ui/Card';
@@ -8,31 +8,48 @@ import Button from '@/components/ui/button/Button';
 import Input from '@/components/form/Input';
 import Label from '@/components/form/Label';
 import DatePicker from '@/components/form/DatePicker';
+import DateRangePicker from '@/components/form/DateRangePicker';
 import TimeRangePicker from '@/components/form/TimeRangePicker';
-import FileUpload from '@/components/form/FileUpload';
+import EnhancedFileUpload from '@/components/form/EnhancedFileUpload';
 import Alert from '@/components/ui/alert/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { Badge } from '@/components/ui/Badge';
+import SupportDocumentList, { SupportDoc } from '@/components/submissions/SupportDocumentList';
 import { useToast } from '@/hooks/useToast';
 import { hasWeekendInRange } from '@/utils/dateHelpers';
 
 // Define Worker interface for dynamic inputs
 interface Worker {
   id: string;
-  nama_pekerja: string;
-  foto_pekerja: string;
+  worker_name: string;
+  worker_photo: string;
+  hsse_pass_number?: string;
+  hsse_pass_valid_thru?: string;
+  hsse_pass_document_upload?: string;
 }
 
 interface WorkerAPIResponse {
   id: string;
-  worker_name?: string;
-  nama_pekerja?: string;
-  worker_photo?: string;
-  foto_pekerja?: string;
+  worker_name: string;
+  worker_photo: string;
+  hsse_pass_number?: string;
+  hsse_pass_valid_thru?: string | Date;
+  hsse_pass_document_upload?: string;
+}
+
+interface SupportDocumentAPI {
+  id: string;
+  document_type: string;
+  document_subtype?: string;
+  document_number: string;
+  document_date: string | Date;
+  document_upload: string;
 }
 
 interface Submission {
   id: string;
   approval_status: string;
+  review_status?: string;
   vendor_name: string;
   based_on: string;
   officer_name: string;
@@ -54,33 +71,116 @@ interface Submission {
   simja_document_upload?: string | null;
   implementation_start_date?: Date | null;
   implementation_end_date?: Date | null;
+  note_for_vendor?: string | null;  // Reviewer notes for revision
 }
 
 interface EditSubmissionFormProps {
   submissionId: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function EditSubmissionForm({ submissionId }: EditSubmissionFormProps) {
+export default function EditSubmissionForm({ submissionId, isOpen = true, onClose }: EditSubmissionFormProps) {
   const router = useRouter();
   const { data: session, status: _status } = useSession();
   const { showSuccess, showError } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [alert, setAlert] = useState<{ variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string } | null>(null);
   const [submission, setSubmission] = useState<Submission | null>(null);
-  
+
   // State for implementation dates and weekend detection
   const [implementationDates, setImplementationDates] = useState({
     startDate: '',
     endDate: ''
   });
   const [hasWeekend, setHasWeekend] = useState(false);
-  
+
   // State for dynamic workers
   const [workers, setWorkers] = useState<Worker[]>([
-    { id: '1', nama_pekerja: '', foto_pekerja: '' }
+    {
+      id: '1',
+      worker_name: '',
+      worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
+    }
   ]);
-  
+
+  // Worker count management
+  const [desiredCount, setDesiredCount] = useState<number>(1);
+  const [workerCountInput, setWorkerCountInput] = useState<string>('1');
+
+  // Bulk add workers
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkNames, setBulkNames] = useState('');
+
+  // Ref for autofocus
+  const lastAddedRef = useRef<HTMLInputElement | null>(null);
+
+  // Support Documents state
+  const [simjaDocuments, setSimjaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_simja`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [sikaDocuments, setSikaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_sika`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [workOrderDocuments, setWorkOrderDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_work_order`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [kontrakKerjaDocuments, setKontrakKerjaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_kontrak_kerja`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  const [jsaDocuments, setJsaDocuments] = useState<SupportDoc[]>([
+    {
+      id: `${Date.now()}_jsa`,
+      document_subtype: '',
+      document_number: '',
+      document_date: '',
+      document_upload: '',
+    },
+  ]);
+
+  // Visible optional documents state
+  const [visibleOptionalDocs, setVisibleOptionalDocs] = useState<Set<string>>(new Set());
+  const [selectedOptionalDoc, setSelectedOptionalDoc] = useState<string>('');
+
+  // Track invalid documents (untuk future use)
+  const [invalidDocuments] = useState<Map<string, string>>(new Map());
+
+  // Prevent double submission
+  const isSubmittingRef = useRef(false);
+
   // Load submission data
   useEffect(() => {
     const fetchSubmission = async () => {
@@ -88,20 +188,98 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       try {
         const response = await fetch(`/api/submissions/${submissionId}`);
         if (response.ok) {
-          const data = await response.json();
+          const responseData = await response.json();
+          console.log('📋 Full API response:', responseData);
+
+          // Extract submission from response
+          const data = responseData.submission || responseData;
+
+          console.log('📋 Loaded submission data:', {
+            id: data.id,
+            approval_status: data.approval_status,
+            review_status: data.review_status,
+            note_for_vendor: data.note_for_vendor
+          });
           setSubmission(data);
-          
-          // Also fetch workers data
+
+          // Fetch workers data
           const workersResponse = await fetch(`/api/submissions/${submissionId}/workers`);
           if (workersResponse.ok) {
             const workersData = await workersResponse.json();
             if (workersData.workers && workersData.workers.length > 0) {
-              setWorkers(workersData.workers.map((worker: WorkerAPIResponse) => ({
+              const loadedWorkers = workersData.workers.map((worker: WorkerAPIResponse) => ({
                 id: worker.id,
-                nama_pekerja: worker.worker_name || worker.nama_pekerja || '',
-                foto_pekerja: worker.worker_photo || worker.foto_pekerja || ''
-              })));
+                worker_name: worker.worker_name || '',
+                worker_photo: worker.worker_photo || '',
+                hsse_pass_number: worker.hsse_pass_number || '',
+                hsse_pass_valid_thru: worker.hsse_pass_valid_thru ? (() => {
+                  const date = new Date(worker.hsse_pass_valid_thru);
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })() : '',
+                hsse_pass_document_upload: worker.hsse_pass_document_upload || ''
+              }));
+              setWorkers(loadedWorkers);
+              // Update worker count to match loaded workers
+              setWorkerCountInput(String(loadedWorkers.length));
+              setDesiredCount(loadedWorkers.length);
             }
+          }
+
+          // Fetch support documents
+          if (data.support_documents && data.support_documents.length > 0) {
+            const simja: SupportDoc[] = [];
+            const sika: SupportDoc[] = [];
+            const workOrder: SupportDoc[] = [];
+            const kontrak: SupportDoc[] = [];
+            const jsa: SupportDoc[] = [];
+            const visibleOpt = new Set<string>();
+
+            data.support_documents.forEach((doc: SupportDocumentAPI) => {
+              const formatted: SupportDoc = {
+                id: doc.id,
+                document_subtype: doc.document_subtype || '',
+                document_number: doc.document_number || '',
+                document_date: doc.document_date ? (() => {
+                  const date = new Date(doc.document_date);
+                  const year = date.getFullYear();
+                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                  const day = String(date.getDate()).padStart(2, '0');
+                  return `${year}-${month}-${day}`;
+                })() : '',
+                document_upload: doc.document_upload || '',
+              };
+
+              switch (doc.document_type) {
+                case 'SIMJA':
+                  simja.push(formatted);
+                  break;
+                case 'SIKA':
+                  sika.push(formatted);
+                  break;
+                case 'WORK_ORDER':
+                  workOrder.push(formatted);
+                  visibleOpt.add('WORK_ORDER');
+                  break;
+                case 'KONTRAK_KERJA':
+                  kontrak.push(formatted);
+                  visibleOpt.add('KONTRAK_KERJA');
+                  break;
+                case 'JSA':
+                  jsa.push(formatted);
+                  visibleOpt.add('JSA');
+                  break;
+              }
+            });
+
+            if (simja.length > 0) setSimjaDocuments(simja);
+            if (sika.length > 0) setSikaDocuments(sika);
+            if (workOrder.length > 0) setWorkOrderDocuments(workOrder);
+            if (kontrak.length > 0) setKontrakKerjaDocuments(kontrak);
+            if (jsa.length > 0) setJsaDocuments(jsa);
+            setVisibleOptionalDocs(visibleOpt);
           }
         } else {
           setAlert({
@@ -121,7 +299,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         setIsInitialLoading(false);
       }
     };
-    
+
     if (submissionId) {
       fetchSubmission();
     }
@@ -160,7 +338,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       })() : '';
-      
+
       const endDate = submission.implementation_end_date ? (() => {
         const date = new Date(submission.implementation_end_date);
         const year = date.getFullYear();
@@ -168,9 +346,9 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       })() : '';
-      
+
       setImplementationDates({ startDate, endDate });
-      
+
       setFormData({
         nama_vendor: submission.vendor_name || '',
         berdasarkan: submission.based_on || '',
@@ -206,7 +384,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       });
     }
   }, [submission]);
-  
+
   // Auto-fill form data when session is available (for readonly fields)
   useEffect(() => {
     if (session?.user && submission) {
@@ -231,26 +409,11 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }
   }, [implementationDates]);
 
-  // Handle file upload from FileUpload component
-  const handleFileUpload = (fieldName: string) => (url: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: url
-    }));
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'number' ? (value === '' ? 0 : Number(value)) : value
-    }));
-  };
-
-  const handleDateChange = (name: string) => (value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
     }));
   };
 
@@ -261,12 +424,19 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }));
   };
 
+  const handleHolidayTimeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, jam_kerja_libur: value }));
+  };
+
   // Functions for managing dynamic workers
   const addWorker = () => {
     const newWorker: Worker = {
       id: Date.now().toString(),
-      nama_pekerja: '',
-      foto_pekerja: ''
+      worker_name: '',
+      worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
     };
     setWorkers(prev => [...prev, newWorker]);
   };
@@ -277,21 +447,154 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
     }
   };
 
-  const updateWorkerName = (id: string, nama: string) => {
+  const updateWorkerName = (id: string, name: string) => {
     setWorkers(prev => prev.map(worker =>
-      worker.id === id ? { ...worker, nama_pekerja: nama } : worker
+      worker.id === id ? { ...worker, worker_name: name } : worker
     ));
   };
 
-  const updateWorkerPhoto = (id: string, foto: string) => {
+  const updateWorkerPhoto = (id: string, url: string) => {
     setWorkers(prev => prev.map(worker =>
-      worker.id === id ? { ...worker, foto_pekerja: foto } : worker
+      worker.id === id ? { ...worker, worker_photo: url } : worker
     ));
+  };
+
+  const updateWorkerHsseNumber = (id: string, value: string) => {
+    setWorkers(prev => prev.map(worker =>
+      worker.id === id ? { ...worker, hsse_pass_number: value } : worker
+    ));
+  };
+
+  const updateWorkerHsseValidThru = (id: string, value: string) => {
+    setWorkers(prev => prev.map(worker =>
+      worker.id === id ? { ...worker, hsse_pass_valid_thru: value } : worker
+    ));
+  };
+
+  const updateWorkerHsseDocument = (id: string, url: string) => {
+    setWorkers(prev => prev.map(worker =>
+      worker.id === id ? { ...worker, hsse_pass_document_upload: url } : worker
+    ));
+  };
+
+  // Focus on last added worker
+  const focusLastAdded = () => {
+    setTimeout(() => {
+      lastAddedRef.current?.focus();
+    }, 100);
+  };
+
+  // Apply desired worker count (add or remove workers to match count)
+  const applyDesiredCount = () => {
+    const count =
+      workerCountInput === ''
+        ? workers.length
+        : Math.max(1, Math.min(9999, Number(desiredCount || 1)));
+
+    if (count > workers.length) {
+      const delta = count - workers.length;
+      const toAdd: Worker[] = Array.from({ length: delta }).map(() => ({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        worker_name: '',
+        worker_photo: '',
+        hsse_pass_number: '',
+        hsse_pass_valid_thru: '',
+        hsse_pass_document_upload: ''
+      }));
+      setWorkers((prev) => [...prev, ...toAdd]);
+      focusLastAdded();
+    } else if (count < workers.length) {
+      setWorkers((prev) => prev.slice(0, count));
+    }
+
+    setDesiredCount(count);
+    setWorkerCountInput(String(count));
+  };
+
+  // Add multiple workers from bulk input
+  const addBulkWorkers = () => {
+    const lines = bulkNames
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) return;
+
+    const toAdd: Worker[] = lines.map((name) => ({
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      worker_name: name,
+      worker_photo: '',
+      hsse_pass_number: '',
+      hsse_pass_valid_thru: '',
+      hsse_pass_document_upload: ''
+    }));
+
+    setWorkers((prev) => [...prev, ...toAdd]);
+    setDesiredCount((n) => {
+      const next = n + toAdd.length;
+      setWorkerCountInput(String(next));
+      return next;
+    });
+    setBulkNames('');
+    setShowBulk(false);
+    focusLastAdded();
+  };
+
+  // Check if worker count matches input
+  const rowsMismatch = workerCountInput !== '' && workers.length !== Number(workerCountInput);
+
+  // Optional Documents Handlers
+  const addOptionalDocument = () => {
+    if (!selectedOptionalDoc) return;
+    setVisibleOptionalDocs(prev => new Set(prev).add(selectedOptionalDoc));
+    setSelectedOptionalDoc('');
+  };
+
+  const removeOptionalDocument = (documentType: string) => {
+    setVisibleOptionalDocs(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(documentType);
+      return newSet;
+    });
+
+    // Reset document data when removed
+    if (documentType === 'WORK_ORDER') {
+      setWorkOrderDocuments([{
+        id: `${Date.now()}_work_order`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    } else if (documentType === 'KONTRAK_KERJA') {
+      setKontrakKerjaDocuments([{
+        id: `${Date.now()}_kontrak_kerja`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    } else if (documentType === 'JSA') {
+      setJsaDocuments([{
+        id: `${Date.now()}_jsa`,
+        document_subtype: '',
+        document_number: '',
+        document_date: '',
+        document_upload: '',
+      }]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Tampilkan modal konfirmasi
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
+
     // Check if submission is loaded
     if (!submission) {
       setAlert({
@@ -301,9 +604,22 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       });
       return;
     }
-    
+
     // Check if submission is still editable
-    if (submission.approval_status !== 'PENDING_APPROVAL') {
+    // Allow edit if:
+    // 1. PENDING_APPROVAL (belum direview)
+    // 2. PENDING_APPROVAL + NOT_MEETS_REQUIREMENTS (perlu perbaikan)
+    const isEditable = submission.approval_status === 'PENDING_APPROVAL' &&
+      (submission.review_status === 'PENDING_REVIEW' ||
+        submission.review_status === 'NOT_MEETS_REQUIREMENTS');
+
+    // console.log('🔍 Editable check:', {
+    //   approval_status: submission.approval_status,
+    //   review_status: submission.review_status,
+    //   isEditable: isEditable
+    // });
+
+    if (!isEditable) {
       setAlert({
         variant: 'warning',
         title: 'Peringatan!',
@@ -311,87 +627,259 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       });
       return;
     }
-    
-    // Client-side validation
-    const requiredFields = [
-      'nama_vendor', 'berdasarkan', 'nama_petugas', 'pekerjaan', 
-      'lokasi_kerja', 'jam_kerja', 'sarana_kerja', 'nama_pekerja'
-    ];
 
-    for (const field of requiredFields) {
-      const value = formData[field as keyof typeof formData];
-      if (!value || (typeof value === 'string' && value.trim() === '')) {
-        setAlert({
-          variant: 'error',
-          title: 'Error!',
-          message: `Field ${field} harus diisi!`
-        });
-        return;
-      }
+    // PREVENT DOUBLE SUBMISSION
+    if (isSubmittingRef.current) {
+      console.warn('⚠️ Submission already in progress');
+      return;
     }
-    
+    isSubmittingRef.current = true;
     setIsLoading(true);
 
+    const resetSubmission = () => {
+      isSubmittingRef.current = false;
+      setIsLoading(false);
+    };
+
     try {
-      // Validate workers
-      const validWorkers = workers.filter(worker => worker.nama_pekerja.trim() !== '');
-      if (validWorkers.length === 0) {
-        setAlert({
-          variant: 'error',
-          title: 'Error!',
-          message: 'Minimal harus ada satu pekerja yang diisi'
-        });
-        setIsLoading(false);
+      // ========== VALIDASI TANGGAL PELAKSANAAN ==========
+      if (!implementationDates.startDate?.trim()) {
+        showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Mulai Pelaksanaan wajib diisi.');
+        resetSubmission();
         return;
       }
 
-      // Check if all workers have photos
-      const workersWithoutPhoto = validWorkers.filter(worker => !worker.foto_pekerja.trim());
-      if (workersWithoutPhoto.length > 0) {
-        setAlert({
-          variant: 'error',
-          title: 'Error!',
-          message: 'Semua pekerja harus memiliki foto. Silakan upload foto untuk semua pekerja.'
-        });
-        setIsLoading(false);
+      if (!implementationDates.endDate?.trim()) {
+        showError('Tanggal Pelaksanaan Tidak Lengkap', 'Tanggal Selesai Pelaksanaan wajib diisi.');
+        resetSubmission();
         return;
       }
 
-      // Format worker names for database
-      const workerNames = validWorkers.map(worker => worker.nama_pekerja.trim()).join('\n');
+      const startDate = new Date(implementationDates.startDate);
+      const endDate = new Date(implementationDates.endDate);
 
-      // Prepare submission data - transform Indonesian field names to English for API
+      if (endDate < startDate) {
+        showError('Tanggal Tidak Valid', 'Tanggal selesai tidak boleh lebih awal dari tanggal mulai.');
+        resetSubmission();
+        return;
+      }
+
+      // ========== VALIDASI JAM KERJA HARI LIBUR (CONDITIONAL) ==========
+      if (hasWeekend && !formData.jam_kerja_libur?.trim()) {
+        showError('Jam Kerja Hari Libur Wajib', 'Rentang tanggal mencakup Sabtu/Minggu. Silakan isi Jam Kerja Hari Libur.');
+        resetSubmission();
+        return;
+      }
+
+      // ========== VALIDASI DOKUMEN SIMJA ==========
+      const filledSimjaDocs = simjaDocuments.filter(doc =>
+        doc && (doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim())
+      );
+
+      if (filledSimjaDocs.length === 0) {
+        showError('Dokumen SIMJA Wajib', 'Minimal harus ada 1 dokumen SIMJA yang lengkap.');
+        resetSubmission();
+        return;
+      }
+
+      for (let i = 0; i < simjaDocuments.length; i++) {
+        const doc = simjaDocuments[i];
+        if (!doc) continue;
+
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+
+        if (hasData) {
+          const missingFields = [];
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError('Dokumen SIMJA Tidak Lengkap', `SIMJA #${i + 1}: ${missingFields.join(', ')} belum diisi.`);
+            resetSubmission();
+            return;
+          }
+        }
+      }
+
+      // ========== VALIDASI DOKUMEN SIKA ==========
+      const filledSikaDocs = sikaDocuments.filter(doc =>
+        doc && (doc.document_subtype?.trim() || doc.document_number?.trim() ||
+          doc.document_date?.trim() || doc.document_upload?.trim())
+      );
+
+      if (filledSikaDocs.length === 0) {
+        showError('Dokumen SIKA Wajib', 'Minimal harus ada 1 dokumen SIKA yang lengkap.');
+        resetSubmission();
+        return;
+      }
+
+      for (let i = 0; i < sikaDocuments.length; i++) {
+        const doc = sikaDocuments[i];
+        if (!doc) continue;
+
+        const hasData = doc.document_subtype?.trim() || doc.document_number?.trim() ||
+          doc.document_date?.trim() || doc.document_upload?.trim();
+
+        if (hasData) {
+          const missingFields = [];
+          if (!doc.document_subtype?.trim()) missingFields.push('Jenis SIKA');
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+
+          if (missingFields.length > 0) {
+            showError('Dokumen SIKA Tidak Lengkap', `SIKA #${i + 1}: ${missingFields.join(', ')} belum diisi.`);
+            resetSubmission();
+            return;
+          }
+        }
+      }
+
+      // ========== VALIDASI DOKUMEN OPSIONAL ==========
+      for (let i = 0; i < workOrderDocuments.length; i++) {
+        const doc = workOrderDocuments[i];
+        if (!doc) continue;
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        if (hasData) {
+          const missingFields = [];
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+          if (missingFields.length > 0) {
+            showError('Dokumen Work Order Tidak Lengkap', `Work Order #${i + 1}: ${missingFields.join(', ')} belum diisi.`);
+            resetSubmission();
+            return;
+          }
+        }
+      }
+
+      for (let i = 0; i < kontrakKerjaDocuments.length; i++) {
+        const doc = kontrakKerjaDocuments[i];
+        if (!doc) continue;
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        if (hasData) {
+          const missingFields = [];
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+          if (missingFields.length > 0) {
+            showError('Dokumen Kontrak Kerja Tidak Lengkap', `Kontrak Kerja #${i + 1}: ${missingFields.join(', ')} belum diisi.`);
+            resetSubmission();
+            return;
+          }
+        }
+      }
+
+      for (let i = 0; i < jsaDocuments.length; i++) {
+        const doc = jsaDocuments[i];
+        if (!doc) continue;
+        const hasData = doc.document_number?.trim() || doc.document_date?.trim() || doc.document_upload?.trim();
+        if (hasData) {
+          const missingFields = [];
+          if (!doc.document_number?.trim()) missingFields.push('Nomor Dokumen');
+          if (!doc.document_date?.trim()) missingFields.push('Tanggal Dokumen');
+          if (!doc.document_upload?.trim()) missingFields.push('Upload Dokumen');
+          if (missingFields.length > 0) {
+            showError('Dokumen JSA Tidak Lengkap', `JSA #${i + 1}: ${missingFields.join(', ')} belum diisi.`);
+            resetSubmission();
+            return;
+          }
+        }
+      }
+
+      // ========== VALIDASI WORKERS ==========
+      if (workers.length === 0) {
+        showError('Data Pekerja Tidak Lengkap', 'Minimal harus ada satu pekerja.');
+        resetSubmission();
+        return;
+      }
+
+      for (let i = 0; i < workers.length; i++) {
+        const worker = workers[i];
+        if (!worker) continue;
+
+        const missingFields = [];
+
+        if (!worker.worker_name?.trim()) missingFields.push('Nama Pekerja');
+        if (!worker.worker_photo?.trim()) missingFields.push('Foto Pekerja');
+        if (!worker.hsse_pass_number?.trim()) missingFields.push('Nomor HSSE Pass');
+        if (!worker.hsse_pass_valid_thru?.trim()) missingFields.push('Tanggal Berlaku HSSE Pass');
+        if (!worker.hsse_pass_document_upload?.trim()) missingFields.push('Dokumen HSSE Pass');
+
+        if (missingFields.length > 0) {
+          showError('Data Pekerja Tidak Lengkap',
+            `Pekerja ${i + 1} (${worker.worker_name || 'Tanpa Nama'}): ${missingFields.join(', ')} belum diisi.`);
+          resetSubmission();
+          return;
+        }
+      }
+
+      const workerNames = workers.map((w) => w.worker_name.trim()).join('\n');
+
+      const validSimjaDocuments = simjaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
+        doc.document_upload?.trim()
+      );
+
+      const validSikaDocuments = sikaDocuments.filter(doc =>
+        doc.document_subtype?.trim() &&
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
+        doc.document_upload?.trim()
+      );
+
+      const validWorkOrderDocuments = workOrderDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
+        doc.document_upload?.trim()
+      );
+
+      const validKontrakKerjaDocuments = kontrakKerjaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
+        doc.document_upload?.trim()
+      );
+
+      const validJsaDocuments = jsaDocuments.filter(doc =>
+        doc.document_number?.trim() &&
+        doc.document_date?.trim() &&
+        doc.document_upload?.trim()
+      );
+
+      // Prepare payload
       const formattedData = {
         vendor_name: formData.nama_vendor,
-        based_on: formData.berdasarkan,
         officer_name: formData.nama_petugas,
         job_description: formData.pekerjaan,
         work_location: formData.lokasi_kerja,
-        implementation: formData.pelaksanaan,
+        implementation_start_date: implementationDates.startDate,
+        implementation_end_date: implementationDates.endDate,
         working_hours: formData.jam_kerja,
         holiday_working_hours: formData.jam_kerja_libur || null,
-        other_notes: formData.lain_lain,
         work_facilities: formData.sarana_kerja,
-        worker_count: formData.jumlah_pekerja,
-        simja_number: formData.nomor_simja,
-        simja_date: formData.tanggal_simja ? new Date(formData.tanggal_simja) : null,
-        sika_number: formData.nomor_sika,
-        sika_date: formData.tanggal_sika ? new Date(formData.tanggal_sika) : null,
+        worker_count: workers.length,
         worker_names: workerNames,
-        content: formData.content,
-        sika_document_upload: formData.upload_doc_sika,
-        simja_document_upload: formData.upload_doc_simja,
-        workers: validWorkers.map(worker => ({
-          worker_name: worker.nama_pekerja.trim(),
-          worker_photo: worker.foto_pekerja
-        }))
+        workers: workers.map(worker => ({
+          worker_name: worker.worker_name.trim(),
+          worker_photo: worker.worker_photo,
+          hsse_pass_number: worker.hsse_pass_number?.trim(),
+          hsse_pass_valid_thru: worker.hsse_pass_valid_thru,
+          hsse_pass_document_upload: worker.hsse_pass_document_upload
+        })),
+        simjaDocuments: validSimjaDocuments,
+        sikaDocuments: validSikaDocuments,
+        workOrderDocuments: validWorkOrderDocuments,
+        kontrakKerjaDocuments: validKontrakKerjaDocuments,
+        jsaDocuments: validJsaDocuments
       };
 
-      console.log('Sending update request:', {
-        url: `/api/submissions/${submission.id}`,
-        method: 'PUT',
-        data: formattedData
-      });
+      // console.log('Sending update request:', {
+      //   url: `/api/submissions/${submission.id}`,
+      //   method: 'PUT',
+      //   data: formattedData
+      // });
 
       const response = await fetch(`/api/submissions/${submission.id}`, {
         method: 'PUT',
@@ -401,13 +889,13 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         body: JSON.stringify(formattedData),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      // console.log('Response status:', response.status);
+      // console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Error response:', errorText);
-        
+
         let errorMessage;
         try {
           const errorJson = JSON.parse(errorText);
@@ -415,7 +903,7 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         } catch {
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
-        
+
         setAlert({
           variant: 'error',
           title: 'Error!',
@@ -425,22 +913,51 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
         return;
       }
 
-      const result = await response.json();
-      console.log('Update successful:', result);
-      
-      // Show success toast and redirect immediately
-      showSuccess('Berhasil!', 'Perubahan berhasil disimpan!');
-      
-      // Redirect immediately without delay
-      router.push('/vendor/submissions');
+      await response.json();
+      // console.log('Update successful:', result);
+
+      // If submission needs revision (NOT_MEETS_REQUIREMENTS), call resubmit endpoint
+      if (submission.review_status === 'NOT_MEETS_REQUIREMENTS' && submission.approval_status === 'PENDING_APPROVAL') {
+        // console.log('Submission needs revision, calling resubmit endpoint...');
+
+        try {
+          const resubmitResponse = await fetch(`/api/submissions/${submission.id}/resubmit`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          if (resubmitResponse.ok) {
+            // console.log('Resubmit successful');
+            showSuccess('Berhasil!', 'Pengajuan telah diperbaiki dan dikirim ulang untuk direview!');
+          } else {
+            console.error('Resubmit failed:', await resubmitResponse.text());
+            showSuccess('Berhasil!', 'Perubahan berhasil disimpan!');
+          }
+        } catch (resubmitError) {
+          console.error('Resubmit error:', resubmitError);
+          showSuccess('Berhasil!', 'Perubahan berhasil disimpan!');
+        }
+      } else {
+        // Normal update for PENDING_REVIEW
+        showSuccess('Berhasil!', 'Perubahan berhasil disimpan!');
+      }
+
+      // If modal mode, call onClose, otherwise redirect
+      if (onClose) {
+        onClose();
+      } else {
+        router.push('/vendor/submissions');
+      }
     } catch (error) {
       console.error('Network/unexpected error:', error);
-      
+
       let errorMessage = 'Terjadi kesalahan tidak terduga';
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       setAlert({
         variant: 'error',
         title: 'Error!',
@@ -448,12 +965,15 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
       });
       showError('Error!', `Gagal menyimpan perubahan: ${errorMessage}`);
     } finally {
-      setIsLoading(false);
+      resetSubmission();
     }
   };
 
+  // Don't render if modal is closed
+  if (!isOpen) return null;
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="mx-auto p-6 max-w-7xl">
       {isInitialLoading ? (
         <Card>
           <div className="p-6 text-center">
@@ -468,450 +988,690 @@ export default function EditSubmissionForm({ submissionId }: EditSubmissionFormP
           </div>
         </Card>
       ) : (
-        <Card>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <div className="text-sm text-gray-500">
-                Status: <span className={`font-medium ${
-                  submission.approval_status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
-                  submission.approval_status === 'APPROVED' ? 'text-green-600' :
-                  'text-red-600'
-                }`}>{
-                  submission.approval_status === 'PENDING_APPROVAL' ? 'Menunggu Review' :
-                  submission.approval_status === 'APPROVED' ? 'Disetujui' :
-                  submission.approval_status === 'REJECTED' ? 'Ditolak' :
-                  submission.approval_status
-                }</span>
+        <div className="flex gap-6 items-start">
+          {/* Main Form - Left Side */}
+          <Card className="flex-1">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div className="text-sm text-gray-500">
+                  Status: <span className={`font-medium ${submission.approval_status === 'PENDING_APPROVAL' && submission.review_status === 'NOT_MEETS_REQUIREMENTS' ? 'text-orange-600' :
+                      submission.approval_status === 'PENDING_APPROVAL' ? 'text-yellow-600' :
+                        submission.approval_status === 'APPROVED' ? 'text-green-600' :
+                          'text-red-600'
+                    }`}>{
+                      submission.approval_status === 'PENDING_APPROVAL' && submission.review_status === 'NOT_MEETS_REQUIREMENTS' ? 'Tidak Memenuhi Syarat - Perlu Perbaikan' :
+                        submission.approval_status === 'PENDING_APPROVAL' ? 'Menunggu Review' :
+                          submission.approval_status === 'APPROVED' ? 'Disetujui' :
+                            submission.approval_status === 'REJECTED' ? 'Ditolak' :
+                              submission.approval_status
+                    }</span>
+                </div>
               </div>
-            </div>
-            
-            {submission.approval_status !== 'PENDING_APPROVAL' && (
-              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-yellow-800 text-sm">
-                  <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
-                  Anda hanya dapat melihat detailnya saja.
-                </p>
-              </div>
-            )}
-            
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <fieldset disabled={submission.approval_status !== 'PENDING_APPROVAL'} className={submission.approval_status !== 'PENDING_APPROVAL' ? 'opacity-60' : ''}>
-            
-            {/* Informasi Vendor */}
-            <div className="p-6 rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="nama_vendor">Nama vendor</Label>
-                  <Input
-                    id="nama_vendor"
-                    name="nama_vendor"
-                    value={session?.user?.vendor_name || formData.nama_vendor || ''}
-                    onChange={handleChange}
-                    type="text"
-                    required
-                    disabled={!!session?.user?.vendor_name}
-                    placeholder="PT. Nama Perusahaan"
-                    className={session?.user?.vendor_name ? "cursor-not-allowed" : ""}
-                  />
-                </div>
 
-                <div>
-                  <Label htmlFor="nama_petugas">Nama petugas</Label>
-                  <Input
-                    id="nama_petugas"
-                    name="nama_petugas"
-                    value={formData.nama_petugas}
-                    onChange={handleChange}
-                    type="text"
-                    required
-                    placeholder="Nama petugas yang bertanggung jawab"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Label htmlFor="berdasarkan">Berdasarkan</Label>
-                  <Input
-                    id="berdasarkan"
-                    name="berdasarkan"
-                    value={formData.berdasarkan}
-                    onChange={handleChange}
-                    type='text'
-                    required
-                  />
-                </div>
-
-                {/* Document Numbers */}
-                <div>
-                  <Label htmlFor="nomor_simja">Nomor SIMJA</Label>
-                  <Input
-                    id="nomor_simja"
-                    name="nomor_simja"
-                    value={formData.nomor_simja}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIMJA/2024/001"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="nomor_sika">Nomor SIKA</Label>
-                  <Input
-                    id="nomor_sika"
-                    name="nomor_sika"
-                    value={formData.nomor_sika}
-                    onChange={handleChange}
-                    placeholder="Contoh: SIKA/2024/001"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tanggal_simja">Tanggal SIMJA</Label>
-                  <DatePicker
-                    id="tanggal_simja"
-                    name="tanggal_simja"
-                    value={formData.tanggal_simja}
-                    onChange={handleDateChange('tanggal_simja')}
-                    placeholder="Pilih tanggal SIMJA"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="tanggal_sika">Tanggal SIKA</Label>
-                  <DatePicker
-                    id="tanggal_sika"
-                    name="tanggal_sika"
-                    value={formData.tanggal_sika}
-                    onChange={handleDateChange('tanggal_sika')}
-                    placeholder="Pilih tanggal SIKA"
-                    required
-                  />
-                </div>
-
-                {/* File Upload Areas */}
-                <div className="space-y-2">
-                  <Label htmlFor="upload_doc_simja">UPLOAD DOKUMEN SIMJA</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <FileUpload
-                      id="upload_doc_simja"
-                      name="upload_doc_simja"
-                      label=""
-                      description="Upload dokumen SIMJA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
-                      value={formData.upload_doc_simja}
-                      onChange={handleFileUpload('upload_doc_simja')}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={8}
-                      required={false}
-                    />
+              {/* Warning jika tidak bisa diedit */}
+              {!(submission.approval_status === 'PENDING_APPROVAL' &&
+                (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS')) && (
+                  <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-yellow-800 text-sm">
+                      <span className="font-medium">Peringatan:</span> Pengajuan ini sudah diproses oleh admin dan tidak dapat diubah.
+                      Anda hanya dapat melihat detailnya saja.
+                    </p>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="upload_doc_sika">UPLOAD DOKUMEN SIKA</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                    <FileUpload
-                      id="upload_doc_sika"
-                      name="upload_doc_sika"
-                      label=""
-                      description="Upload dokumen SIKA dalam format PDF, DOC, DOCX, atau gambar (JPG, PNG) maksimal 8MB"
-                      value={formData.upload_doc_sika}
-                      onChange={handleFileUpload('upload_doc_sika')}
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      maxSize={8}
-                      required={false}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Informasi Pekerjaan */}
-            <div className="p-6 rounded-lg">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="pekerjaan">Pekerjaan</Label>
-                  <Input
-                    id="pekerjaan"
-                    name="pekerjaan"
-                    value={formData.pekerjaan}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="lokasi_kerja">Lokasi kerja</Label>
-                  <Input
-                    id="lokasi_kerja"
-                    name="lokasi_kerja"
-                    value={formData.lokasi_kerja}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-
-              <div>
-                <Label htmlFor="jam_kerja">Jam kerja</Label>
-                <TimeRangePicker
-                  id="jam_kerja"
-                  name="jam_kerja"
-                  value={formData.jam_kerja}
-                  onChange={handleTimeChange}
-                  required
-                  placeholder="Pilih jam kerja"
-                />
-              </div>
-
-              {/* Conditional field for holiday working hours */}
-              {hasWeekend && (
-                <div>
-                  <Label htmlFor="jam_kerja_libur">
-                    Jam kerja hari libur (Sabtu/Minggu)
-                    <span className="text-sm text-gray-500 ml-2">(Opsional)</span>
-                  </Label>
-                  <TimeRangePicker
-                    id="jam_kerja_libur"
-                    name="jam_kerja_libur"
-                    value={formData.jam_kerja_libur}
-                    onChange={handleTimeChange}
-                    placeholder="Pilih jam kerja untuk hari libur"
-                  />                  </div>
                 )}
 
-                <div>
-                  <Label htmlFor="sarana_kerja">Sarana kerja</Label>
-                  <Input
-                    id="sarana_kerja"
-                    name="sarana_kerja"
-                    value={formData.sarana_kerja}
-                    onChange={handleChange}
-                    placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
-                    required
-                  />
-                </div>
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <fieldset
+                  disabled={!(submission.approval_status === 'PENDING_APPROVAL' &&
+                    (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                  className={!(submission.approval_status === 'PENDING_APPROVAL' &&
+                    (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS')) ? 'opacity-60' : ''}
+                >
 
-                <div>
-                  <Label htmlFor="jumlah_pekerja">Jumlah Pekerja</Label>
-                  <Input
-                    id="jumlah_pekerja"
-                    name="jumlah_pekerja"
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.jumlah_pekerja || ''}
-                    onChange={handleChange}
-                    placeholder="Masukkan jumlah pekerja"
-                    required
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Jumlah total pekerja yang akan bekerja di lokasi ini
-                  </p>
-                </div>
-
-                <div className="flex items-end">
-                  <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg w-full">
-                    <div className="font-medium mb-1">Info:</div>
-                    <div>Pekerja yang diinput: {workers.length}</div>
-                    <div>Jumlah pekerja: {formData.jumlah_pekerja || 0}</div>
-                    {formData.jumlah_pekerja && workers.length !== Number(formData.jumlah_pekerja) && (
-                      <div className="text-orange-600 mt-1">
-                        ⚠️ Jumlah tidak sesuai dengan daftar pekerja
+                  {/* Informasi Vendor */}
+                  <div className="p-6 rounded-lg">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Vendor</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="nama_vendor">Nama vendor</Label>
+                        <Input
+                          id="nama_vendor"
+                          name="nama_vendor"
+                          value={session?.user?.vendor_name || formData.nama_vendor || ''}
+                          onChange={handleChange}
+                          type="text"
+                          required
+                          disabled={!!session?.user?.vendor_name}
+                          placeholder="PT. Nama Perusahaan"
+                          className={session?.user?.vendor_name ? "cursor-not-allowed" : ""}
+                        />
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Daftar nama pekerja */}
-            <div className="p-6 rounded-lg">
-              <div className="flex justify-between items-center mb-6 border-b border-gray-300 ">
-                <div className='flex justify-between'>
-                  <h2 className="text-lg font-semibold text-gray-900 pb-2">Daftar Nama Pekerja</h2>
-                  <p className="text-sm text-gray-500 mt-2">Total: {workers.length} pekerja</p>
-                </div>
-               
-              </div>
-              
-              {/* Workers Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {workers.map((worker, _index) => (
-                  <div key={worker.id} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md">
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-2">
-                        {/* <div className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-medium">
-                          {index + 1}
-                        </div>
-                        <span className="text-sm font-medium text-gray-700">Pekerja {index + 1}</span> */}
-                      </div>
-                      {workers.length > 1 && (
-                        <Button
-                          type="button"
-                          onClick={() => removeWorker(worker.id)}
-                          variant="outline"
-                          className="text-red-500 hover:bg-red-50 border-red-200 w-8 h-8 p-0 rounded-full"
-                          title="Hapus pekerja"
-                          disabled={submission.approval_status !== 'PENDING_APPROVAL'}
-                        >
-                          ✕
-                        </Button>
-                      )}
-                    </div>
-                    
-                    {/* Photo Preview */}
-                    <div className="mb-4">
-
-                      <div className="relative">
-                        {worker.foto_pekerja ? (
-                          <div className="relative group">
-                            <img 
-                              src={worker.foto_pekerja} 
-                              alt={`Foto ${worker.nama_pekerja || 'pekerja'}`}
-                              className="w-full h-50 object-cover rounded-lg border-2 border-gray-300"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg flex items-center justify-center">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
-                                className="bg-white text-gray-800 hover:bg-gray-100 text-xs px-3 py-1"
-                                disabled={submission.approval_status !== 'PENDING_APPROVAL'}
-                              >
-                                Ganti Foto
-                              </Button>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => updateWorkerPhoto(worker.id, '')}
-                              className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                              title="Hapus foto"
-                              disabled={submission.approval_status !== 'PENDING_APPROVAL'}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <div 
-                            onClick={() => submission.approval_status === 'PENDING_APPROVAL' && document.getElementById(`foto_pekerja_${worker.id}`)?.click()}
-                            className={`w-full h-50 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center transition-all duration-200 bg-gray-50 ${
-                              submission.approval_status === 'PENDING_APPROVAL' 
-                                ? 'cursor-pointer hover:border-blue-400 hover:bg-blue-50' 
-                                : 'cursor-not-allowed opacity-60'
-                            }`}
-                          >
-                           
-                            <p className="text-sm font-medium text-gray-600">Upload Foto Pekerja</p>
-                            <p className="text-xs text-gray-500 mt-1">Klik atau drag & drop foto</p>
-   
-                          </div>
-                        )}
-                        <FileUpload
-                          id={`foto_pekerja_${worker.id}`}
-                          name={`foto_pekerja_${worker.id}`}
-                          label=""
-                          description=""
-                          value={worker.foto_pekerja}
-                          onChange={(url) => updateWorkerPhoto(worker.id, url)}
-                          accept=".jpg,.jpeg,.png"
-                          maxSize={8}
-                          required={false}
-                          className="sr-only"
+                      <div>
+                        <Label htmlFor="nama_petugas">Nama petugas</Label>
+                        <Input
+                          id="nama_petugas"
+                          name="nama_petugas"
+                          value={formData.nama_petugas}
+                          onChange={handleChange}
+                          type="text"
+                          required
+                          placeholder="Nama petugas yang bertanggung jawab"
                         />
                       </div>
                     </div>
-                    
-                    {/* Name Input */}
-                    <div>
-                      <Label htmlFor={`nama_pekerja_${worker.id}`} className="text-sm font-medium text-gray-700">
-                        Nama Lengkap
-                      </Label>
-                      <Input
-                        id={`nama_pekerja_${worker.id}`}
-                        name={`nama_pekerja_${worker.id}`}
-                        value={worker.nama_pekerja}
-                        onChange={(e) => updateWorkerName(worker.id, e.target.value)}
-                        type="text"
-                        placeholder="Masukkan nama lengkap"
-                        required
-                        className="mt-1"
+                  </div>
+
+                  {/* ================= Dokumen Pendukung ================= */}
+                  <div className="p-6 rounded-lg space-y-8">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">
+                      Dokumen Pendukung
+                    </h2>
+
+                    {/* SIMJA Documents */}
+                    <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                      <SupportDocumentList
+                        title="Dokumen SIMJA"
+                        documentType="SIMJA"
+                        documents={simjaDocuments}
+                        onDocumentsChange={setSimjaDocuments}
+                        disabled={isLoading || !(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                        invalidDocumentIds={invalidDocuments}
                       />
                     </div>
-                    
-                    {/* Status Indicator */}
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
-                          ? 'bg-green-400' 
-                          : 'bg-red-400'
-                      }`}></div>
-                      <span className={`text-xs ${
-                        worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
-                          ? 'text-green-600' 
-                          : 'text-red-600'
-                      }`}>
-                        {worker.nama_pekerja.trim() && worker.foto_pekerja.trim()
-                          ? 'Lengkap' 
-                          : worker.nama_pekerja.trim() 
-                            ? 'Perlu foto' 
-                            : 'Belum lengkap'}
-                      </span>
+
+                    {/* SIKA Documents */}
+                    <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                      <SupportDocumentList
+                        title="Dokumen SIKA"
+                        documentType="SIKA"
+                        documents={sikaDocuments}
+                        onDocumentsChange={setSikaDocuments}
+                        disabled={isLoading || !(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                        invalidDocumentIds={invalidDocuments}
+                      />
+                    </div>
+
+                    {/* Add Optional Document Selector */}
+                    {(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS')) && (
+                      <div className="border border-gray-200 p-6 rounded-lg bg-blue-50">
+                        <h3 className="text-base font-semibold text-gray-900 mb-4">Tambah Dokumen Opsional</h3>
+                        <div className="flex gap-3 items-end">
+                          <div className="flex-1">
+                            <Label htmlFor="optional_doc_select">Pilih Jenis Dokumen</Label>
+                            <select
+                              id="optional_doc_select"
+                              value={selectedOptionalDoc}
+                              onChange={(e) => setSelectedOptionalDoc(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              disabled={isLoading}
+                            >
+                              <option value="">-- Pilih Dokumen Opsional --</option>
+                              <option value="WORK_ORDER" disabled={visibleOptionalDocs.has('WORK_ORDER')}>
+                                Work Order {visibleOptionalDocs.has('WORK_ORDER') ? '(Sudah ditambahkan)' : ''}
+                              </option>
+                              <option value="KONTRAK_KERJA" disabled={visibleOptionalDocs.has('KONTRAK_KERJA')}>
+                                Kontrak Kerja {visibleOptionalDocs.has('KONTRAK_KERJA') ? '(Sudah ditambahkan)' : ''}
+                              </option>
+                              <option value="JSA" disabled={visibleOptionalDocs.has('JSA')}>
+                                JSA {visibleOptionalDocs.has('JSA') ? '(Sudah ditambahkan)' : ''}
+                              </option>
+                            </select>
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={addOptionalDocument}
+                            disabled={!selectedOptionalDoc || isLoading}
+                          >
+                            + Tambah Dokumen
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Work Order Documents */}
+                    {visibleOptionalDocs.has('WORK_ORDER') && (
+                      <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                        <div className="mb-4 flex justify-between items-center">
+                          <Badge variant="warning">Dokumen Work Order (Opsional)</Badge>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => removeOptionalDocument('WORK_ORDER')}
+                            disabled={isLoading}
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                        <SupportDocumentList
+                          title="Dokumen Work Order"
+                          documentType="WORK_ORDER"
+                          documents={workOrderDocuments}
+                          onDocumentsChange={setWorkOrderDocuments}
+                          disabled={isLoading}
+                          invalidDocumentIds={invalidDocuments}
+                        />
+                      </div>
+                    )}
+
+                    {/* Kontrak Kerja Documents */}
+                    {visibleOptionalDocs.has('KONTRAK_KERJA') && (
+                      <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                        <div className="mb-4 flex justify-between items-center">
+                          <Badge variant="warning">Dokumen Kontrak Kerja (Opsional)</Badge>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => removeOptionalDocument('KONTRAK_KERJA')}
+                            disabled={isLoading}
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                        <SupportDocumentList
+                          title="Dokumen Kontrak Kerja"
+                          documentType="KONTRAK_KERJA"
+                          documents={kontrakKerjaDocuments}
+                          onDocumentsChange={setKontrakKerjaDocuments}
+                          disabled={isLoading}
+                          invalidDocumentIds={invalidDocuments}
+                        />
+                      </div>
+                    )}
+
+                    {/* JSA Documents */}
+                    {visibleOptionalDocs.has('JSA') && (
+                      <div className="border border-gray-200 p-6 rounded-lg bg-white">
+                        <div className="mb-4 flex justify-between items-center">
+                          <Badge variant="warning">Dokumen JSA (Opsional)</Badge>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => removeOptionalDocument('JSA')}
+                            disabled={isLoading}
+                          >
+                            Hapus
+                          </Button>
+                        </div>
+                        <SupportDocumentList
+                          title="Dokumen Job Safety Analysis"
+                          documentType="JSA"
+                          documents={jsaDocuments}
+                          onDocumentsChange={setJsaDocuments}
+                          disabled={isLoading}
+                          invalidDocumentIds={invalidDocuments}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informasi Pekerjaan */}
+                  <div className="p-6 rounded-lg">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b border-gray-300 pb-2">Informasi Pekerjaan</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="pekerjaan">Pekerjaan</Label>
+                        <Input
+                          id="pekerjaan"
+                          name="pekerjaan"
+                          value={formData.pekerjaan}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="lokasi_kerja">Lokasi kerja</Label>
+                        <Input
+                          id="lokasi_kerja"
+                          name="lokasi_kerja"
+                          value={formData.lokasi_kerja}
+                          onChange={handleChange}
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="implementation_dates">Tanggal Pelaksanaan <span className="text-red-500">*</span></Label>
+                        <DateRangePicker
+                          startDate={implementationDates.startDate}
+                          endDate={implementationDates.endDate}
+                          onStartDateChange={(value) =>
+                            setImplementationDates(prev => ({ ...prev, startDate: value }))
+                          }
+                          onEndDateChange={(value) =>
+                            setImplementationDates(prev => ({ ...prev, endDate: value }))
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="jam_kerja">Jam kerja <span className="text-red-500">*</span></Label>
+                        <TimeRangePicker
+                          id="jam_kerja"
+                          name="jam_kerja"
+                          value={formData.jam_kerja}
+                          onChange={handleTimeChange}
+                          required
+                          placeholder="Pilih jam kerja"
+                          disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                        />
+                      </div>
+
+                      {/* Conditional field for holiday working hours */}
+                      {hasWeekend && (
+                        <div>
+                          <Label htmlFor="jam_kerja_libur">
+                            Jam kerja hari libur (Sabtu/Minggu)
+                            <span className="text-red-500 ml-1">*</span>
+                          </Label>
+                          <TimeRangePicker
+                            id="jam_kerja_libur"
+                            name="jam_kerja_libur"
+                            value={formData.jam_kerja_libur || ''}
+                            onChange={handleHolidayTimeChange}
+                            required
+                            placeholder="Pilih jam kerja untuk hari libur"
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <Label htmlFor="sarana_kerja">Sarana kerja</Label>
+                        <Input
+                          id="sarana_kerja"
+                          name="sarana_kerja"
+                          value={formData.sarana_kerja}
+                          onChange={handleChange}
+                          placeholder="Contoh: Toolkit lengkap, APD standar, crane mobile"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
-                ))}
-                
-                {/* Add New Worker Card */}
-                {submission.approval_status === 'PENDING_APPROVAL' && (
-                  <div 
-                    onClick={addWorker}
-                    className="border-2 border-dashed border-gray-300 rounded-xl p-4 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[280px] text-gray-500 hover:text-blue-600"
-                  >
-                    <div className="text-4xl mb-2">➕</div>
-                    <p className="text-sm font-medium">Tambah Pekerja Baru</p>
-                    <p className="text-xs mt-1">Klik untuk menambah</p>
+
+                  {/* Daftar Pekerja */}
+                  <div className="p-6 rounded-lg">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-3">
+                      <div>
+                        <h2 className="text-lg font-semibold text-gray-900">Daftar Pekerja</h2>
+
+                        {rowsMismatch ? (
+                          <p className="text-[11px] text-amber-600 mt-1">
+                            Baris saat ini: {workers.length}. Klik <b>Sesuaikan</b> untuk menambah/mengurangi.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Lengkapi Nama dan Foto. Anda bisa tambah satu per satu atau tempel banyak nama.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-end gap-2 flex-wrap sm:flex-nowrap">
+                        <div className="flex-1 min-w-[180px]">
+                          <Label htmlFor="worker_count">Jumlah Pekerja <span className="ml-1 text-red-500">*</span></Label>
+
+                          <input
+                            id="worker_count"
+                            name="worker_count"
+                            type="text"
+                            value={workerCountInput}
+                            onChange={(e) => {
+                              const inputValue = e.target.value;
+                              if (inputValue === '') {
+                                setWorkerCountInput('');
+                                return;
+                              }
+                              const clean = inputValue.replace(/\D/g, '');
+                              if (clean === '') {
+                                setWorkerCountInput('');
+                                return;
+                              }
+                              const num = Math.max(1, Math.min(9999, parseInt(clean, 10)));
+                              setWorkerCountInput(clean);
+                              setDesiredCount(num);
+                            }}
+                            onKeyDown={(e) => {
+                              const allowed = [
+                                'Backspace', 'Delete', 'Tab', 'Enter', 'Escape',
+                                'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                                'Home', 'End'
+                              ];
+                              if (allowed.includes(e.key)) return;
+                              if ((e.ctrlKey || e.metaKey) && ['a', 'c', 'v', 'x', 'z'].includes(e.key.toLowerCase())) return;
+                              if (!/[0-9]/.test(e.key)) e.preventDefault();
+                            }}
+                            onBlur={() => {
+                              if (workerCountInput === '') {
+                                const fallback = workers.length || 1;
+                                setDesiredCount(fallback);
+                                setWorkerCountInput(String(fallback));
+                              }
+                            }}
+                            placeholder="Masukkan jumlah pekerja"
+                            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${rowsMismatch ? 'border-amber-300' : 'border-gray-300'
+                              }`}
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          />
+                        </div>
+
+                        <div className="flex gap-2 flex-shrink-0 whitespace-nowrap">
+                          <Button
+                            type="button"
+                            onClick={() => addWorker()}
+                            className="whitespace-nowrap"
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          >
+                            + Tambah
+                          </Button>
+                          {rowsMismatch && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={applyDesiredCount}
+                              className="whitespace-nowrap"
+                              disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                            >
+                              Sesuaikan
+                            </Button>
+                          )}
+                          <Button
+                            type="button"
+                            variant={showBulk ? 'destructive' : 'outline'}
+                            onClick={() => setShowBulk((s) => !s)}
+                            className="whitespace-nowrap"
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          >
+                            {showBulk ? 'Tutup Tambah Cepat' : 'Tambah Cepat'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Tambah Cepat */}
+                    {showBulk && (
+                      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <Label htmlFor="bulk_names">Tempel banyak nama (satu per baris)</Label>
+                        <textarea
+                          id="bulk_names"
+                          className="mt-1 w-full rounded-md border border-blue-200 bg-white p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                          rows={4}
+                          placeholder={`Contoh:\nBudi Santoso\nSari Dewi\nAndi Wijaya`}
+                          value={bulkNames}
+                          onChange={(e) => setBulkNames(e.target.value)}
+                          disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                        />
+                        <div className="mt-2 flex items-center gap-2">
+                          <Button
+                            type="button"
+                            onClick={addBulkWorkers}
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          >
+                            Tambahkan
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setBulkNames('')}
+                            disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                          >
+                            Bersihkan
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Daftar Pekerja - Compact Layout */}
+                    <div className="space-y-3">
+                      {workers.map((w, idx) => {
+                        const allFieldsComplete = !!w.worker_name.trim() &&
+                          !!w.worker_photo.trim() &&
+                          !!w.hsse_pass_number?.trim() &&
+                          !!w.hsse_pass_valid_thru?.trim() &&
+                          !!w.hsse_pass_document_upload?.trim();
+
+                        return (
+                          <div key={w.id} className="border border-gray-200 rounded-lg p-4 bg-white hover:border-gray-300 transition-colors">
+                            {/* Header dengan Nomor dan Tombol Hapus */}
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-700 font-semibold text-xs">
+                                  {idx + 1}
+                                </span>
+                                <span className="text-sm font-medium text-gray-700">
+                                  {w.worker_name || `Pekerja ${idx + 1}`}
+                                </span>
+                                {allFieldsComplete && (
+                                  <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">✓ Lengkap</span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 border-red-200 hover:bg-red-50 text-xs h-7"
+                                onClick={() => removeWorker(w.id)}
+                                disabled={workers.length <= 1 || !(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                title={workers.length <= 1 ? 'Minimal 1 pekerja' : 'Hapus pekerja'}
+                              >
+                                Hapus
+                              </Button>
+                            </div>
+
+                            {/* Grid 2 Kolom: Kiri (Nama & HSSE) | Kanan (Upload Foto & Dokumen) */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Kolom Kiri - Input Text */}
+                              <div className="space-y-3">
+                                {/* Nama Pekerja */}
+                                <div>
+                                  <Label htmlFor={`worker_name_${w.id}`}>Nama Pekerja <span className="ml-1 text-red-500">*</span></Label>
+                                  <Input
+                                    id={`worker_name_${w.id}`}
+                                    name={`worker_name_${w.id}`}
+                                    type="text"
+                                    value={w.worker_name}
+                                    onChange={(e) => updateWorkerName(w.id, e.target.value)}
+                                    placeholder="Nama lengkap pekerja"
+                                    required
+                                    validationMode='letters'
+                                    disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                  />
+                                </div>
+
+                                {/* Nomor HSSE Pass */}
+                                <div>
+                                  <Label htmlFor={`hsse_number_${w.id}`}>Nomor HSSE Pass <span className="ml-1 text-red-500">*</span></Label>
+                                  <Input
+                                    id={`hsse_number_${w.id}`}
+                                    name={`hsse_number_${w.id}`}
+                                    type="text"
+                                    value={w.hsse_pass_number || ''}
+                                    onChange={(e) => updateWorkerHsseNumber(w.id, e.target.value)}
+                                    placeholder="Contoh: 2024/V (angka romawi)/001"
+                                    required
+                                    disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                  />
+                                </div>
+
+                                {/* Tanggal Berlaku HSSE */}
+                                <div>
+                                  <Label htmlFor={`hsse_valid_${w.id}`}>Masa Berlaku HSSE Pass Sampai Dengan<span className="ml-1 text-red-500">*</span></Label>
+                                  <DatePicker
+                                    id={`hsse_valid_${w.id}`}
+                                    name={`hsse_valid_${w.id}`}
+                                    value={w.hsse_pass_valid_thru || ''}
+                                    onChange={(value) => updateWorkerHsseValidThru(w.id, value)}
+                                    placeholder="Pilih tanggal"
+                                    required
+                                    disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Kolom Kanan - Upload Files */}
+                              <div className="flex gap-3">
+                                {/* Upload Foto Pekerja */}
+                                <div className="flex-1 min-w-0">
+                                  <Label htmlFor={`worker_photo_${w.id}`}>Foto Pekerja <span className="ml-1 text-red-500">*</span></Label>
+                                  <div className="text-xs text-gray-500 mb-1">Wajib diisi</div>
+                                  <EnhancedFileUpload
+                                    id={`worker_photo_${w.id}`}
+                                    name={`worker_photo_${w.id}`}
+                                    value={w.worker_photo}
+                                    onChange={(url) => updateWorkerPhoto(w.id, url)}
+                                    uploadType="worker-photo"
+                                    workerName={w.worker_name || `Pekerja ${idx + 1}`}
+                                    required={false}
+                                    disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                  />
+                                </div>
+
+                                {/* Upload Dokumen HSSE Pass */}
+                                <div className="flex-1 min-w-0">
+                                  <Label htmlFor={`hsse_doc_${w.id}`}>Dokumen HSSE Pass <span className="ml-1 text-red-500">*</span></Label>
+                                  <div className="text-xs text-gray-500 mb-1">Wajib diisi</div>
+                                  <EnhancedFileUpload
+                                    id={`hsse_doc_${w.id}`}
+                                    name={`hsse_doc_${w.id}`}
+                                    value={w.hsse_pass_document_upload || ''}
+                                    onChange={(url) => updateWorkerHsseDocument(w.id, url)}
+                                    uploadType="hsse-worker"
+                                    maxFileNameLength={15}
+                                    required={false}
+                                    disabled={!(submission.approval_status === 'PENDING_APPROVAL' && (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS'))}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="mt-3 text-xs text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="font-medium text-blue-900 mb-1"> Petunjuk Pengisian:</p>
+                      <ul className="list-disc list-inside space-y-0.5 text-blue-800">
+                        <li><b>Semua field wajib diisi</b> untuk setiap pekerja (Nama, Foto, HSSE Pass)</li>
+                        <li>Pastikan dokumen HSSE Pass masih berlaku</li>
+                      </ul>
+                    </div>
                   </div>
-                )}
-              </div>
-              
-           
-             
+
+                </fieldset>
+
+                <div className="flex justify-end space-x-4 pt-6 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    disabled={isLoading}
+                  >
+                    Batal
+                  </Button>
+                  {(submission.approval_status === 'PENDING_APPROVAL' &&
+                    (submission.review_status === 'PENDING_REVIEW' || submission.review_status === 'NOT_MEETS_REQUIREMENTS')) && (
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? 'Menyimpan...' :
+                          submission.review_status === 'NOT_MEETS_REQUIREMENTS' ? 'Submit perubahan' :
+                            'Simpan Perubahan'}
+                      </Button>
+                    )}
+                </div>
+              </form>
+
+              {/* Alert */}
+              {alert && (
+                <Alert
+                  variant={alert.variant}
+                  title={alert.title}
+                  message={alert.message}
+                />
+              )}
             </div>
+          </Card>
 
-            </fieldset>
+          {/* Sticky Notes Panel - Right Side */}
+          {submission.review_status === 'NOT_MEETS_REQUIREMENTS' && submission.note_for_vendor && (
+            <div className="hidden lg:block w-80 flex-shrink-0">
+              <div className="sticky top-6">
+                <div className="bg-white border border-blue-200 rounded-lg shadow-lg overflow-hidden">
+                  {/* Header with blue accent */}
+                  <div className="bg-blue-500 px-4 py-3 flex items-center gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-white">
+                        Catatan dari Reviewer
+                      </h3>
+                    </div>
+                  </div>
 
-            <div className="flex justify-end space-x-4 pt-6 border-t">
+                  {/* Content area */}
+                  <div className="p-4">
+                    <div className="mb-3">
+                    </div>
+                    <div className="text-gray-700 text-sm whitespace-pre-wrap bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3 max-h-96 overflow-y-auto">
+                      {submission.note_for_vendor}
+                    </div>
+
+                    <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-900">
+                      <svg className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="leading-relaxed">
+                        Perbaiki sesuai catatan
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modal Konfirmasi */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Konfirmasi Perbaikan SIMLOK
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Apakah perbaikan sudah sesuai dengan catatan?
+            </p>
+            <div className="flex justify-end space-x-3">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.back()}
+                onClick={() => setShowConfirmModal(false)}
                 disabled={isLoading}
               >
                 Batal
               </Button>
-              {submission.approval_status === 'PENDING_APPROVAL' && (
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="primary"
+                onClick={handleConfirmSubmit}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Mengirim...' : 'Ya, Kirim Ulang'}
+              </Button>
             </div>
-          </form>
-
-          {/* Alert */}
-          {alert && (
-            <Alert
-              variant={alert.variant}
-              title={alert.title}
-              message={alert.message}
-            />
-          )}
+          </div>
         </div>
-      </Card>
       )}
     </div>
   );

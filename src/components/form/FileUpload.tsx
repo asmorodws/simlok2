@@ -236,9 +236,7 @@ export default function FileUpload({
       )}
 
       {/* Compression help text */}
-      <div className="text-xs text-gray-500 bg-blue-50 border border-blue-200 rounded-md p-2">
-        💡 <strong>Tip:</strong> Gambar akan otomatis dikompresi saat upload untuk menghemat ruang penyimpanan dan mempercepat upload.
-      </div>
+
 
       <div
         className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${

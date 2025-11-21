@@ -117,7 +117,7 @@ export default function VendorSubmissionsContent() {
     };
   }, [socket, forceRefresh]);
 
-  const formatDate = (date: string) =>
+  const formatDate = (date: string | Date) =>
     new Date(date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 
     const handleDelete = useCallback(async (id: string) => {
@@ -155,6 +155,11 @@ export default function VendorSubmissionsContent() {
       console.error('VendorSubmissions: Could not find full submission data for ID:', submissionRow.id);
     }
   }, [submissions]);
+
+  const handleEdit = useCallback((id: string) => {
+    console.log('🔧 handleEdit called with id:', id);
+    window.location.href = `/vendor/submissions/edit/${id}`;
+  }, []);
 
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
@@ -385,6 +390,7 @@ export default function VendorSubmissionsContent() {
         <>
           {/* Desktop / tablet: show table; Mobile: hide table and show card view */}
           <div className="hidden sm:block">
+            {console.log('🚀 About to render SubmissionsTable with onEdit:', !!handleEdit, typeof handleEdit)}
             <SubmissionsTable
               submissions={submissions.map((s: Submission) => ({
                 id: s.id,
@@ -400,6 +406,7 @@ export default function VendorSubmissionsContent() {
               loading={loading}
               onView={handleViewDetail}
               onDelete={handleDelete}
+              onEdit={handleEdit}
               formatDate={formatDate}
             />
           </div>
@@ -420,6 +427,7 @@ export default function VendorSubmissionsContent() {
               loading={loading}
               onView={handleViewDetail}
               onDelete={handleDelete}
+              onEdit={handleEdit}
               formatDate={formatDate}
             />
           </div>

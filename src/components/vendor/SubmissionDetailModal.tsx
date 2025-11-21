@@ -451,11 +451,12 @@ export default function SubmissionDetailModal({
                     </span>
                   </Button>
                 )}
+                
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={onClose}
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm ml-auto"
                 >
                   Tutup
                 </Button>

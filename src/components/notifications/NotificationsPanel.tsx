@@ -87,6 +87,29 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
 
   const handleViewDetail = async (notification: Notification) => {
     try {
+      // Redirect to edit form for submission_needs_revision
+      if (notification.type === 'submission_needs_revision') {
+        let submissionId: string | null = null;
+        if (notification.data) {
+          try {
+            const parsed = typeof notification.data === 'string'
+              ? JSON.parse(notification.data)
+              : notification.data;
+            submissionId = parsed.submissionId || parsed.submission_id || null;
+          } catch {}
+        }
+        if (submissionId) {
+          window.location.href = `/vendor/submissions/edit/${submissionId}`;
+          if (!notification.isRead) {
+            try {
+              const { scope, vendorId } = getScopeAndVendor();
+              await markAsRead(notification.id, { scope, vendorId });
+            } catch {}
+          }
+        }
+        return;
+      }
+
       // Vendor detail types
       if (
         notification.type === 'user_registered' ||
@@ -94,6 +117,29 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
         notification.type === 'new_user_verification'
       ) {
         await handleVendorDetail(notification);
+        return;
+      }
+
+      // Redirect to edit form for submission_needs_revision
+      if (notification.type === 'submission_needs_revision') {
+        let submissionId: string | null = null;
+        if (notification.data) {
+          try {
+            const parsed = typeof notification.data === 'string'
+              ? JSON.parse(notification.data)
+              : notification.data;
+            submissionId = parsed.submissionId || parsed.submission_id || null;
+          } catch {}
+        }
+        if (submissionId) {
+          window.location.href = `/vendor/submissions/edit/${submissionId}`;
+          if (!notification.isRead) {
+            try {
+              const { scope, vendorId } = getScopeAndVendor();
+              await markAsRead(notification.id, { scope, vendorId });
+            } catch {}
+          }
+        }
         return;
       }
 
@@ -229,6 +275,14 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       case 'submission_approved':
         return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
       
+      // ⚠️ Needs Revision - Orange
+      case 'submission_needs_revision':
+        return <XCircleIcon className={`${iconClass} text-orange-600`} />;
+      
+      // 🔄 Resubmitted - Blue
+      case 'submission_resubmitted':
+        return <ClockIcon className={`${iconClass} text-blue-600`} />;
+      
       // ❌ Rejected - Red
       case 'submission_rejected':
       case 'reviewed_submission_rejection':
@@ -332,6 +386,21 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
           action: 'Lihat detail'
         };
       
+      case 'submission_needs_revision':
+        return {
+          title: 'Pengajuan Perlu Diperbaiki',
+          message: truncateText('Pengajuan Simlok Anda perlu diperbaiki. Silakan periksa catatan reviewer dan perbaiki pengajuan Anda.'),
+          action: 'Edit pengajuan',
+          redirectToEdit: true
+        };
+      
+      case 'submission_resubmitted':
+        return {
+          title: 'Pengajuan Dikirim Ulang',
+          message: truncateText('Vendor telah memperbaiki dan mengirim ulang pengajuan. Silakan review kembali.'),
+          action: 'Review ulang'
+        };
+      
       default:
         return {
           title: truncateText(title, 50),
@@ -349,6 +418,7 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
     ) {
       return true;
     }
+    // All submission-related notifications can be clicked
     const hasSubmissionType = notification.type.includes('submission') || notification.type === 'status_change';
     let hasSubmissionId = false;
     if (notification.data) {

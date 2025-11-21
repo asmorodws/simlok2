@@ -206,7 +206,8 @@ interface SubmissionsTableProps {
   loading: boolean;
   onView: (submission: SubmissionRow) => void;
   onDelete?: (id: string) => void;
-  formatDate?: (date: string) => string;
+  onEdit?: (id: string) => void;
+  formatDate: (date: string | Date) => string;
 }
 
 export function SubmissionsTable({
@@ -214,8 +215,15 @@ export function SubmissionsTable({
   loading,
   onView,
   onDelete,
-  formatDate = (date: string) => new Date(date).toLocaleDateString('id-ID')
+  onEdit,
+  formatDate = (date: string | Date) => new Date(date).toLocaleDateString('id-ID')
 }: SubmissionsTableProps) {
+  // console.log('📊 SubmissionsTable rendered with:', {
+  //   submissionsCount: submissions.length,
+  //   onEdit_exists: !!onEdit,
+  //   onEdit_type: typeof onEdit
+  // });
+  // console.trace('📍 SubmissionsTable called from:');
   const getVendorStatusBadge = (reviewStatus: string, approvalStatus: string) => {
     if (approvalStatus === 'APPROVED') {
       return <Badge variant="success">Disetujui</Badge>;
@@ -223,14 +231,14 @@ export function SubmissionsTable({
     if (approvalStatus === 'REJECTED') {
       return <Badge variant="destructive">Ditolak</Badge>;
     }
+    if (reviewStatus === 'NOT_MEETS_REQUIREMENTS') {
+      return <Badge variant="destructive">Tidak Memenuhi Syarat</Badge>;
+    }
     if (reviewStatus === 'PENDING_REVIEW') {
       return <Badge variant="warning">Menunggu Review</Badge>;
     }
     if (reviewStatus === 'MEETS_REQUIREMENTS') {
       return <Badge variant="warning">Menunggu Persetujuan</Badge>;
-    }
-    if (reviewStatus === 'NEEDS_REVISION') {
-      return <Badge variant="warning">Perlu Revisi</Badge>;
     }
     return <Badge variant="warning">Menunggu Review</Badge>;
   };
@@ -287,18 +295,41 @@ export function SubmissionsTable({
     {
       key: 'actions',
       header: 'Aksi',
-      cell: (row) => (
-        <div className="flex gap-2 whitespace-nowrap">
-          <Button size="sm" variant="info" onClick={() => onView(row)}>
-            Lihat
-          </Button>
-          {onDelete && (row.approval_status === "PENDING_APPROVAL" && row.review_status === "PENDING_REVIEW") && (
-            <Button size="sm" variant="destructive" onClick={() => onDelete(row.id)}>
-              Hapus
+      cell: (row) => {
+        // Debug logging - tambahkan detail lebih lengkap
+        const canEdit = onEdit && 
+                       row.review_status === "NOT_MEETS_REQUIREMENTS" && 
+                       row.approval_status === "PENDING_APPROVAL";
+        
+        // console.log('🔍 Row action check:', {
+        //   id: row.id,
+        //   job: row.job_description?.substring(0, 30),
+        //   review_status: row.review_status,
+        //   approval_status: row.approval_status,
+        //   onEdit_exists: !!onEdit,
+        //   review_match: row.review_status === "NOT_MEETS_REQUIREMENTS",
+        //   approval_match: row.approval_status === "PENDING_APPROVAL",
+        //   canEdit: canEdit
+        // });
+        
+        return (
+          <div className="flex gap-2 whitespace-nowrap">
+            <Button size="sm" variant="info" onClick={() => onView(row)}>
+              Lihat
             </Button>
-          )}
-        </div>
-      ),
+            {canEdit && (
+              <Button size="sm" variant="warning" onClick={() => onEdit(row.id)}>
+                Edit
+              </Button>
+            )}
+            {onDelete && (row.approval_status === "PENDING_APPROVAL" && row.review_status === "PENDING_REVIEW") && (
+              <Button size="sm" variant="destructive" onClick={() => onDelete(row.id)}>
+                Hapus
+              </Button>
+            )}
+          </div>
+        );
+      },
     },
   ];
 

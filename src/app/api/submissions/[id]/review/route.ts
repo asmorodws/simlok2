@@ -98,32 +98,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       content: updateData.content?.substring(0, 50),
     });
 
-    // ========== AUTO-REJECT LOGIC ==========
-    // If reviewer marks as NOT_MEETS_REQUIREMENTS, automatically set approval_status to REJECTED
-    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
-      updateData.approval_status = 'REJECTED';
-      updateData.approved_at = new Date();
-      updateData.approved_by = session.user.officer_name;
-      updateData.approved_by_final_id = session.user.id;
-      
-      console.log(`🚫 Auto-rejecting submission ${id} - Reviewer marked as NOT_MEETS_REQUIREMENTS`);
-      
-      // Notify vendor about rejection
-      await notifyVendorSubmissionRejected(existingSubmission, session.user.officer_name || 'Reviewer');
-    }
-    // If changing from NOT_MEETS_REQUIREMENTS to MEETS_REQUIREMENTS, 
-    // reset approval status back to PENDING_APPROVAL so approver can review again
-    else if (validatedData.review_status === 'MEETS_REQUIREMENTS') {
-      if (existingSubmission.review_status === 'NOT_MEETS_REQUIREMENTS' && 
-          existingSubmission.approval_status === 'REJECTED') {
-        updateData.approval_status = 'PENDING_APPROVAL';
-        updateData.approved_at = null;
-        updateData.approved_by = null;
-        updateData.approved_by_final_id = null;
-        
-        console.log(`✅ Resetting submission ${id} to PENDING_APPROVAL - Reviewer changed to MEETS_REQUIREMENTS`);
-      }
-    }
+    // Keep approval_status as PENDING_APPROVAL regardless of review_status
+    // Approver will decide final approval_status (APPROVED/REJECTED)
 
     // Update submission with review status
     const updatedSubmission = await prisma.submission.update({
@@ -144,12 +120,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     cache.delete(CacheKeys.APPROVER_STATS);
     console.log('🗑️ Cache invalidated: APPROVER_STATS after review');
 
-    // Always notify approver that reviewer has saved a review (both MEETS and NOT_MEETS)
-    // This ensures approver sees the review even when reviewer marks NOT_MEETS_REQUIREMENTS.
+    // Notify approver that reviewer has completed review
     await notifyApproverReviewedSubmission(id);
 
-    // Do NOT notify vendor on reviewer NOT_MEETS_REQUIREMENTS. Vendor will only be notified
-    // when approver changes the final approval_status to REJECTED.
+    // Notify vendor if submission does not meet requirements
+    if (validatedData.review_status === 'NOT_MEETS_REQUIREMENTS') {
+      await notifyVendorSubmissionRejected(
+        {
+          id: updatedSubmission.id,
+          vendor_name: updatedSubmission.vendor_name,
+          officer_name: updatedSubmission.officer_name,
+          job_description: updatedSubmission.job_description,
+          user_id: updatedSubmission.user_id,
+          note_for_vendor: validatedData.note_for_vendor || null,
+        },
+        session.user.officer_name || 'Reviewer'
+      );
+      console.log('📧 Vendor notified: submission needs revision');
+    }
 
     return NextResponse.json({
       message: 'Review berhasil disimpan',

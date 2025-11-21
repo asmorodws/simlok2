@@ -58,10 +58,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (existingSubmission.review_status === 'PENDING_REVIEW')
       return NextResponse.json({ error: 'Submission belum direview' }, { status: 400 });
-    if (
-      existingSubmission.approval_status !== 'PENDING_APPROVAL' &&
-      existingSubmission.approval_status !== 'NEEDS_REVISION'
-    )
+    if (existingSubmission.approval_status !== 'PENDING_APPROVAL')
       return NextResponse.json({ error: 'Submission sudah diproses sebelumnya' }, { status: 400 });
 
     const approverUser = await prisma.user.findUnique({

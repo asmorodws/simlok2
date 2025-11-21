@@ -69,7 +69,7 @@ export default function VendorDashboard() {
     };
   }, [socket, session?.user?.id, fetchVendorStats, fetchVendorSubmissions]);
 
-  const formatDate = (date: string) =>
+  const formatDate = (date: string | Date) =>
     new Date(date).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
 
   const handleDelete = useCallback(async (id: string) => {

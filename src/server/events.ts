@@ -538,15 +538,15 @@ export async function notifyVendorSubmissionRejected(
       return;
     }
 
-    const notificationTitle = 'Pengajuan Simlok Ditolak';
-    const notificationMessage = `Pengajuan Simlok Anda ditolak oleh ${rejectedBy}. Silakan periksa catatan untuk informasi lebih lanjut.`;
+    const notificationTitle = 'Pengajuan Simlok Perlu Diperbaiki';
+    const notificationMessage = `Pengajuan Simlok Anda perlu diperbaiki. ${rejectedBy} meminta Anda untuk memperbaiki beberapa hal. Silakan periksa catatan dan perbaiki pengajuan Anda.`;
 
     // Create notification record for vendor
     const notification = await prisma.notification.create({
       data: {
         scope: 'vendor',
         vendor_id: submission.user_id,
-        type: 'submission_rejected',
+        type: 'submission_needs_revision',
         title: notificationTitle,
         message: notificationMessage,
         data: JSON.stringify({
@@ -554,13 +554,14 @@ export async function notifyVendorSubmissionRejected(
           vendorName: submission.vendor_name,
           officerName: submission.officer_name,
           jobDescription: submission.job_description,
-          rejectedBy: rejectedBy,
-          note: submission.note_for_vendor || 'Tidak ada catatan khusus'
+          reviewedBy: rejectedBy,
+          note: submission.note_for_vendor || 'Tidak ada catatan khusus',
+          action: 'Silakan edit dan kirim ulang pengajuan Anda setelah diperbaiki'
         })
       }
     });
 
-    console.log(`✅ Notified vendor about rejected submission: ${submission.id}`);
+    console.log(`✅ Notified vendor about submission needing revision: ${submission.id}`);
     
     try {
       const channel = `notifications:vendor:${submission.user_id}`;
@@ -593,5 +594,78 @@ export async function notifyVendorSubmissionRejected(
 
   } catch (error) {
     console.error('Error notifying vendor about rejected submission:', error);
+  }
+}
+
+/**
+ * Notify reviewer when vendor resubmits a submission after fixing issues
+ * This allows reviewer to re-review the corrected submission
+ */
+export async function notifyReviewerSubmissionResubmitted(
+  submissionId: string,
+  vendorName: string
+) {
+  try {
+    // Get submission details
+    const submission = await prisma.submission.findUnique({
+      where: { id: submissionId }
+    });
+
+    if (!submission) {
+      throw new Error('Submission not found');
+    }
+
+    const notificationTitle = 'Pengajuan Diperbaiki dan Dikirim Ulang';
+    const notificationMessage = `${vendorName} telah memperbaiki dan mengirim ulang pengajuan Simlok. Silakan review kembali.`;
+
+    // Create notification for reviewer scope
+    const notification = await prisma.notification.create({
+      data: {
+        scope: 'reviewer',
+        type: 'submission_resubmitted',
+        title: notificationTitle,
+        message: notificationMessage,
+        data: JSON.stringify({
+          submissionId,
+          vendorName: submission.vendor_name,
+          officerName: submission.officer_name,
+          jobDescription: submission.job_description,
+          previousNote: submission.note_for_vendor || 'Tidak ada catatan sebelumnya',
+          resubmittedBy: vendorName
+        })
+      }
+    });
+
+    console.log(`✅ Notified reviewer about resubmitted submission: ${submissionId}`);
+
+    try {
+      const channel = 'notifications:reviewer';
+      const payload = {
+        type: 'notification:new',
+        data: {
+          id: notification.id,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          data: notification.data,
+          scope: notification.scope,
+          vendorId: notification.vendor_id,
+          createdAt: notification.created_at ? (toJakartaISOString(notification.created_at) || notification.created_at.toISOString()) : (toJakartaISOString(new Date()) || new Date().toISOString()),
+        }
+      };
+      await redisPub.publish(channel, JSON.stringify(payload));
+      emitNotificationNew('reviewer', undefined, payload.data as any);
+
+      // Publish unread count for reviewer
+      const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
+      const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: total, count: total } };
+      await redisPub.publish(channel, JSON.stringify(unreadPayload));
+      emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: total, count: total });
+    } catch (err) {
+      console.warn('Failed to publish reviewer resubmission notification to Redis/socket:', err);
+    }
+
+  } catch (error) {
+    console.error('Error notifying reviewer about resubmitted submission:', error);
   }
 }

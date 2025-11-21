@@ -10,6 +10,7 @@ interface Props {
   loading: boolean;
   onView: (submission: SubmissionRow) => void;
   onDelete: (id: string) => void;
+  onEdit?: (id: string) => void;
   formatDate: (date: string) => string;
 }
 
@@ -18,6 +19,7 @@ export default function SubmissionsCardView({
   loading,
   onView,
   onDelete,
+  onEdit,
   formatDate
 }: Props) {
   const getVendorStatus = (reviewStatus: string, approvalStatus: string) => {
@@ -38,6 +40,15 @@ export default function SubmissionsCardView({
       };
     }
 
+    // Status perlu perbaikan
+    if (reviewStatus === 'NOT_MEETS_REQUIREMENTS') {
+      return {
+        label: 'Tidak Memenuhi Syarat',
+        color: 'bg-red-100 text-red-800',
+        description: 'Pengajuan tidak memenuhi syarat dan perlu diperbaiki'
+      };
+    }
+
     // Status dalam proses
     if (reviewStatus === 'PENDING_REVIEW') {
       return {
@@ -52,14 +63,6 @@ export default function SubmissionsCardView({
         label: 'Menunggu Persetujuan',
         color: 'bg-yellow-100 text-yellow-800',
         description: 'Review selesai, Menunggu Persetujuan'
-      };
-    }
-
-    if (reviewStatus === 'NEEDS_REVISION') {
-      return {
-        label: 'Perlu Revisi',
-        color: 'bg-orange-100 text-orange-800',
-        description: 'Pengajuan perlu diperbaiki'
       };
     }
 
@@ -102,6 +105,9 @@ export default function SubmissionsCardView({
               <div className="mt-1 text-xs text-gray-500">{formatDate(s.created_at)}</div>
               <div className="mt-3 flex gap-2">
                 <Button onClick={() => onView(s)} variant="info" size="sm" className="text-xs">Lihat</Button>
+                {onEdit && s.review_status === "NOT_MEETS_REQUIREMENTS" && s.approval_status === "PENDING_APPROVAL" && (
+                  <Button onClick={() => onEdit(s.id)} variant="warning" size="sm" className="text-xs">Edit</Button>
+                )}
                 {(s.approval_status === "PENDING_APPROVAL" && s.review_status === "PENDING_REVIEW") && (
                   <Button onClick={() => onDelete(s.id)} variant="destructive" size="sm" className="text-xs">Hapus</Button>
                 )}
