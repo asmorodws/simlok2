@@ -285,7 +285,6 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
       
       // ❌ Rejected - Red
       case 'submission_rejected':
-      case 'reviewed_submission_rejection':
         return <XCircleIcon className={`${iconClass} text-red-600`} />;
       
       // ⏱️ Pending/Review - Amber
@@ -331,7 +330,6 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
         };
       
       case 'submission_rejected':
-      case 'reviewed_submission_rejection':
         return {
           title: 'Pengajuan Ditolak',
           message: truncateText('Pengajuan Simlok Anda ditolak. Silakan periksa catatan dan lakukan perbaikan.'),

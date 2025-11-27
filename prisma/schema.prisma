@@ -16,7 +16,7 @@ model User {
   position                 String?            // for approver position
   address                  String?
   created_at               DateTime           @default(now())
-  profile_photo            String?
+  profile_photo            String?            @db.Text
   officer_name             String
   vendor_name              String?
   phone_number             String?
@@ -151,10 +151,10 @@ model Submission {
 model WorkerList {
   id            String     @id @default(cuid())
   worker_name   String
-  worker_photo  String?
+  worker_photo  String?    @db.Text
   hsse_pass_number String?
   hsse_pass_valid_thru DateTime?
-  hsse_pass_document_upload String?
+  hsse_pass_document_upload String? @db.Text
   submission_id String
   created_at    DateTime   @default(now())
   submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
@@ -169,7 +169,7 @@ model SupportDocument {
   document_subtype String?
   document_number String?
   document_date   DateTime?
-  document_upload String
+  document_upload String     @db.Text
   submission_id   String
   uploaded_at     DateTime   @default(now())
   uploaded_by     String

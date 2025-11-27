@@ -356,22 +356,18 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
       throw new Error('Submission not found');
     }
 
-    // Determine notification message and type based on review status
-    let notificationMessage: string;
-    let notificationType: string;
-    let notificationTitle: string;
-    
-    if (submission.review_status === 'MEETS_REQUIREMENTS') {
-      notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan perlu persetujuan final`;
-      notificationType = 'reviewed_submission_approval';
-      notificationTitle = 'Pengajuan Simlok Perlu Persetujuan';
-    } else {
-      notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan tidak memenuhi syarat`;
-      notificationType = 'reviewed_submission_rejection';
-      notificationTitle = 'Pengajuan Simlok Sudah Direview';
+    // Only notify approver if submission MEETS_REQUIREMENTS
+    // If NOT_MEETS_REQUIREMENTS, it should only be sent back to vendor (handled elsewhere)
+    if (submission.review_status !== 'MEETS_REQUIREMENTS') {
+      console.log(`⏭️ Skipping approver notification - submission does not meet requirements: ${submissionId}`);
+      return;
     }
 
-    // Create notification record for approvers (for both meets and doesn't meet requirements)
+    const notificationMessage = `Pengajuan dari ${submission.vendor_name} - ${submission.officer_name} sudah direview dan perlu persetujuan final`;
+    const notificationType = 'reviewed_submission_approval';
+    const notificationTitle = 'Pengajuan Simlok Perlu Persetujuan';
+
+    // Create notification record for approvers (only for MEETS_REQUIREMENTS)
     await prisma.notification.create({
       data: {
         scope: 'approver',
@@ -390,7 +386,7 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
       }
     });
 
-    console.log(`✅ Notified approvers about reviewed submission: ${submissionId}`);
+    console.log(`✅ Notified approvers about reviewed submission that meets requirements: ${submissionId}`);
     try {
       const channel = 'notifications:approver';
       const lastCreated = await prisma.notification.findFirst({ where: { scope: 'approver' }, orderBy: { created_at: 'desc' } });

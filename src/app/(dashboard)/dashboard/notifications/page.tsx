@@ -199,7 +199,6 @@ export default function NotificationsPage() {
       
       // ❌ Rejected - Red
       case 'submission_rejected':
-      case 'reviewed_submission_rejection':
         return <XCircleIcon className={`${iconClass} text-red-600`} />;
       
       // ⏱️ Pending/Review - Amber
@@ -239,7 +238,6 @@ export default function NotificationsPage() {
     'new_submission',
     'new_submission_review',
     'reviewed_submission_approval',
-    'reviewed_submission_rejection',
     'status_change'
   ];
   const vendorTypes = ['user_registered', 'new_vendor', 'new_user_verification', 'vendor_verified', 'vendor_registered'];
