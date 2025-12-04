@@ -144,10 +144,10 @@ export async function GET(request: NextRequest) {
         break;
         
       case 'APPROVER':
-        // Approvers see all reviewed submissions (both MEETS and NOT_MEETS requirements)
-        // They need to see NOT_MEETS to make final rejection decision
+        // Approvers only see submissions that meet requirements
+        // NOT_MEETS_REQUIREMENTS submissions are sent back to vendor, not to approver
         if (!status) {
-          whereClause.review_status = { in: ['MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
+          whereClause.review_status = 'MEETS_REQUIREMENTS';
           whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
         }
         break;

@@ -28,6 +28,11 @@ export default function LogsPage() {
   const [selectedLevel, setSelectedLevel] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [daysBack, setDaysBack] = useState(7);
+
+  // Set document title
+  useEffect(() => {
+    document.title = 'System Logs - SIMLOK';
+  }, []);
   const [total, setTotal] = useState(0);
 
   // Check authorization

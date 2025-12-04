@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ApproverPage() {
   return (
     <RoleGate allowedRoles={["APPROVER" , "SUPER_ADMIN"]}>
-      <SidebarLayout title="Approver Panel" titlePage="Dashboard Persetujuan">
+      <SidebarLayout title="Dashboard Persetujuan" titlePage="Approver">
         <ApproverDashboard />
       </SidebarLayout>
     </RoleGate>

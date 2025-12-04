@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function VendorPage() {
   return (
     <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Vendor Panel" titlePage="Dashboard">
+      <SidebarLayout title="Dashboard Vendor" titlePage="Vendor">
         <VendorDashboard />
       </SidebarLayout>
     </RoleGate>

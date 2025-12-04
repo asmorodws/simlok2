@@ -19,7 +19,8 @@ export async function GET() {
     } else if (session.user.role === 'REVIEWER') {
       whereClause = {}; // Reviewers can see all submissions
     } else if (session.user.role === 'APPROVER') {
-      whereClause = {}; // Approvers can see all submissions
+      // Approvers only see submissions that meet requirements
+      whereClause = { review_status: 'MEETS_REQUIREMENTS' };
     } else if (['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
       whereClause = {}; // Admins can see all submissions
     } else if (session.user.role === 'VERIFIER') {

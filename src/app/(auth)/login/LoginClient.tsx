@@ -16,6 +16,11 @@ export default function LoginClient() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'Masuk - SIMLOK';
+  }, []);
+
   // Check for session expired message and disable auto-redirect if present
   useEffect(() => {
     // Read query params directly from window.location to avoid Suspense/renderer issues

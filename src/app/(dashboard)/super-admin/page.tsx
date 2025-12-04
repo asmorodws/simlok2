@@ -97,7 +97,7 @@ export default function SuperAdminDashboard() {
 
   return (
     <RoleGate allowedRoles={["SUPER_ADMIN"]}>
-      <SidebarLayout title="Super Admin Panel" titlePage="Dashboard">
+      <SidebarLayout title="Dashboard Admin" titlePage="Super Admin">
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">

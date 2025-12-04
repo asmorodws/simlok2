@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import VerificationPendingClient from './VerificationPendingClient';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Menunggu Verifikasi - SIMLOK',
+  description: 'Akun Anda sedang dalam proses verifikasi oleh admin',
+};
 
 export default async function VerificationPendingPage() {
   // OPTIMIZED: Trust middleware validation

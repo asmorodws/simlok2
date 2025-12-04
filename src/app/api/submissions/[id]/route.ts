@@ -83,8 +83,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         // Vendors can only see their own submissions
         whereClause.user_id = session.user.id;
         break;
-      case 'REVIEWER':
       case 'APPROVER':
+        // Approvers can only see submissions that meet requirements
+        whereClause.review_status = 'MEETS_REQUIREMENTS';
+        break;
+      case 'REVIEWER':
       case 'VERIFIER':
       case 'ADMIN':
       case 'SUPER_ADMIN':
@@ -301,6 +304,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ 
           error: 'Can only edit pending submissions' 
         }, { status: 400 });
+      }
+      
+      // Approvers can only edit submissions that meet requirements
+      if (session.user.role === 'APPROVER' && existingSubmission.review_status !== 'MEETS_REQUIREMENTS') {
+        console.log('PUT /api/submissions/[id] - Approver cannot edit submission that does not meet requirements');
+        return NextResponse.json({ 
+          error: 'Can only edit submissions that meet requirements' 
+        }, { status: 403 });
       }
     }
 

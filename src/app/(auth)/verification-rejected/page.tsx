@@ -21,6 +21,11 @@ export default function VerificationRejectedPage() {
   const [countdown, setCountdown] = useState(15);
   const [autoRedirect, setAutoRedirect] = useState(true);
 
+  // Set document title
+  useEffect(() => {
+    document.title = 'Verifikasi Ditolak - SIMLOK';
+  }, []);
+
   // Auto redirect to login after 15 seconds if not logged in
   useEffect(() => {
     if (status === 'unauthenticated' && autoRedirect && countdown > 0) {

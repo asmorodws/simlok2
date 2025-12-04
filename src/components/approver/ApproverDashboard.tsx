@@ -18,7 +18,6 @@ import ApproverTable, { type ApproverSubmission } from '@/components/approver/Ap
 interface DashboardStats {
   total: number;
   pending_approval_meets: number;
-  pending_approval_not_meets: number;
   approved: number;
   rejected: number;
 }
@@ -28,7 +27,6 @@ export default function ApproverDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     total: 0,
     pending_approval_meets: 0,
-    pending_approval_not_meets: 0,
     approved: 0,
     rejected: 0,
   });
@@ -62,7 +60,6 @@ export default function ApproverDashboard() {
       setStats({
         total: dashboardStats.total || 0,
         pending_approval_meets: dashboardStats.pending_approval_meets || 0,
-        pending_approval_not_meets: dashboardStats.pending_approval_not_meets || 0,
         approved: dashboardStats.approved || 0,
         rejected: dashboardStats.rejected || 0,
       });
@@ -173,7 +170,7 @@ export default function ApproverDashboard() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Menunggu Persetujuan</h3>
                 <p className="text-2xl font-bold text-amber-600 mt-1">
-                  {stats.pending_approval_meets + stats.pending_approval_not_meets}
+                  {stats.pending_approval_meets}
                 </p>
               </div>
               <div className="p-3 bg-amber-100 rounded-full">

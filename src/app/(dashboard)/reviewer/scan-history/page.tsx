@@ -4,14 +4,14 @@ import SidebarLayout from "@/components/layout/SidebarLayout";
 import ReviewerScanHistoryContent from '@/components/reviewer/ReviewerScanHistoryContent';
 
 export const metadata: Metadata = {
-  title: 'Scan History - Reviewer Dashboard',
-  description: 'Monitor submission scan activities by verifiers',
+  title: 'Riwayat Scan - Reviewer SIMLOK',
+  description: 'Monitor aktivitas scan pengajuan oleh verifier',
 };
 
 export default function ReviewerScanHistoryPage() {
   return (
     <RoleGate allowedRoles={["REVIEWER" , "SUPER_ADMIN"]}>
-      <SidebarLayout title="Reviewer Panel" titlePage="Scan History">
+      <SidebarLayout title="Riwayat Scan" titlePage="Reviewer">
         <ReviewerScanHistoryContent />
       </SidebarLayout>
     </RoleGate>

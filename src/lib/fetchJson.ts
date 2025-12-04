@@ -1,4 +1,15 @@
 // src/lib/fetchJSON.ts
+
+export class FetchError extends Error {
+  status: number;
+  
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'FetchError';
+    this.status = status;
+  }
+}
+
 export async function fetchJSON<T>(
   url: string,
   init: RequestInit = {},
@@ -17,7 +28,7 @@ export async function fetchJSON<T>(
       const j = await res.json();
       msg = j?.error || msg;
     } catch {}
-    throw new Error(msg);
+    throw new FetchError(msg, res.status);
   }
   return res.json() as Promise<T>;
 }

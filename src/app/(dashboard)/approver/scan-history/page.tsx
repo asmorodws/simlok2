@@ -4,14 +4,14 @@ import SidebarLayout from "@/components/layout/SidebarLayout";
 import ApproverScanHistoryContent from '@/components/approver/ApproverScanHistoryContent';
 
 export const metadata: Metadata = {
-  title: 'Scan History - Approver Dashboard',
-  description: 'Monitor submission scan activities by verifiers',
+  title: 'Riwayat Scan - Approver SIMLOK',
+  description: 'Monitor aktivitas scan pengajuan oleh verifier',
 };
 
 export default function ApproverScanHistoryPage() {
   return (
     <RoleGate allowedRoles={["APPROVER", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Approver Panel" titlePage="Scan History">
+      <SidebarLayout title="Riwayat Scan" titlePage="Approver">
         <ApproverScanHistoryContent />
       </SidebarLayout>
     </RoleGate>

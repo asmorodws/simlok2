@@ -25,7 +25,7 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
   const { id } = await params;
 
   return (
-    <SidebarLayout title="Vendor Panel" titlePage="Ubah Pengajuan SIMLOK">
+    <SidebarLayout title="Edit Pengajuan" titlePage="Vendor">
       <div className="space-y-6">
         <EditSubmissionForm submissionId={id} />
       </div>

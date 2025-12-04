@@ -1,7 +1,7 @@
 // src/app/(auth)/signup/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import AuthRedirect from "@/components/auth/AuthRedirect";
@@ -22,6 +22,11 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  // Set document title
+  useEffect(() => {
+    document.title = 'Daftar Akun - SIMLOK';
+  }, []);
 
   const validateForm = () => {
     if (!nama_petugas.trim()) {

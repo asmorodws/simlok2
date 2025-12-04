@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function ReviewerPage() {
   return (
     <RoleGate allowedRoles={["REVIEWER" , "SUPER_ADMIN"]}>
-      <SidebarLayout title="Reviewer Panel" titlePage="Dashboard Review">
+      <SidebarLayout title="Dashboard Review" titlePage="Reviewer">
         <ReviewerDashboard />
       </SidebarLayout>
     </RoleGate>

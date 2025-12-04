@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function VerifierPage() {
   return (
     <RoleGate allowedRoles={["VERIFIER"]}>
-      <SidebarLayout title="Verifier Panel" titlePage="Dashboard">
+      <SidebarLayout title="Dashboard Verifier" titlePage="Verifier">
         <VerifierDashboard />
       </SidebarLayout>
     </RoleGate>

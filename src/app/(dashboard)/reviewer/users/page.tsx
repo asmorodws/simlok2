@@ -27,7 +27,7 @@ export default function UserVerificationPage() {
 
   return (
     <RoleGate allowedRoles={["REVIEWER", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Reviewer Panel" titlePage="Verifikasi User">
+      <SidebarLayout title="Verifikasi User" titlePage="Reviewer">
         <div className="space-y-6">
           {/* Header Section */}
           <div className="bg-white shadow-sm rounded-xl border border-gray-200/70">

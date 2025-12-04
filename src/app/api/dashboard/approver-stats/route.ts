@@ -40,8 +40,10 @@ export async function GET() {
 }
 
 async function fetchApproverStats() {
-  // Get submissions stats (role-based filtering)
-  const submissionWhereClause = {};
+  // Approvers only see submissions that meet requirements
+  const submissionWhereClause = {
+    review_status: 'MEETS_REQUIREMENTS'
+  };
 
     // Get submission statistics
     const totalSubmissions = await prisma.submission.count({
@@ -75,8 +77,7 @@ async function fetchApproverStats() {
       return acc;
     }, {} as Record<string, number>);
 
-    // Count pending approvals - ONLY submissions with PENDING_APPROVAL status
-    // Split by review status for detailed tracking
+    // Count pending approvals - ONLY submissions that meet requirements
     const pendingApprovalMeetsCount = await prisma.submission.count({
       where: {
         ...submissionWhereClause,
@@ -85,19 +86,11 @@ async function fetchApproverStats() {
       }
     });
 
-    const pendingApprovalNotMeetsCount = await prisma.submission.count({
-      where: {
-        ...submissionWhereClause,
-        approval_status: 'PENDING_APPROVAL',
-        review_status: 'NOT_MEETS_REQUIREMENTS'
-      }
-    });
-
   // Return dashboard stats
   return {
     total: totalSubmissions,
     pending_approval_meets: pendingApprovalMeetsCount,
-    pending_approval_not_meets: pendingApprovalNotMeetsCount,
+    pending_approval_not_meets: 0, // Approvers don't see NOT_MEETS submissions
     approved: approvalStatusStats.APPROVED || 0,
     rejected: approvalStatusStats.REJECTED || 0,
     // Additional detailed stats
@@ -109,9 +102,9 @@ async function fetchApproverStats() {
       REVISION_REQUIRED: approvalStatusStats.REVISION_REQUIRED || 0,
     },
     byReviewStatus: {
-      PENDING_REVIEW: reviewStatusStats.PENDING_REVIEW || 0,
+      PENDING_REVIEW: 0, // Approvers don't see pending review
       MEETS_REQUIREMENTS: reviewStatusStats.MEETS_REQUIREMENTS || 0,
-      NOT_MEETS_REQUIREMENTS: reviewStatusStats.NOT_MEETS_REQUIREMENTS || 0,
+      NOT_MEETS_REQUIREMENTS: 0, // Approvers don't see NOT_MEETS
     }
   };
 }

@@ -21,7 +21,9 @@ import {
 import Button from '@/components/ui/button/Button';
 import PageLoader from '@/components/ui/PageLoader';
 import SubmissionDetailModal from '@/components/vendor/SubmissionDetailModal';
-import { fetchJSON } from '@/lib/fetchJson';
+import ApproverSubmissionDetailModal from '@/components/approver/ApproverSubmissionDetailModal';
+import ReviewerSubmissionDetailModal from '@/components/reviewer/ReviewerSubmissionDetailModal';
+import { fetchJSON, FetchError } from '@/lib/fetchJson';
 
 // ---- Types ----
 interface Notification {
@@ -99,6 +101,8 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const version = useVersion();
@@ -152,6 +156,21 @@ export default function NotificationsPage() {
         return s;
       });
     }
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedSubmission(null);
+    setSelectedSubmissionId(null);
+  };
+
+  const handleSubmissionUpdated = () => {
+    handleCloseDetailModal();
+    // Refresh notifications after submission is updated
+    let scope = session?.user?.role?.toLowerCase() || 'vendor';
+    if (session?.user?.role === 'SUPER_ADMIN') scope = 'admin';
+    version.bump();
+    refetch(scope);
   };
 
   const markAllAsRead = async () => {
@@ -310,11 +329,42 @@ export default function NotificationsPage() {
           showError('Error', 'ID submission tidak ditemukan dalam notifikasi ini');
           return;
         }
-        const submission = await fetchJSON<Submission>(`/api/submissions/${submissionId}`);
+        
+        // For APPROVER and REVIEWER, use ID-based modal (no need to fetch full data)
+        if (session?.user?.role === 'APPROVER' || session?.user?.role === 'REVIEWER') {
+          setSelectedSubmissionId(submissionId);
+          setIsDetailModalOpen(true);
+          return;
+        }
+        
+        // For VENDOR and others, fetch submission detail for SubmissionDetailModal
+        const response = await fetchJSON<{ submission?: Submission } | Submission>(`/api/submissions/${submissionId}`);
+        
+        // Handle both response formats: direct submission or wrapped in { submission }
+        const submission = 'submission' in response ? response.submission : response;
+        
+        if (!submission) {
+          showError('Error', 'Data submission tidak ditemukan');
+          return;
+        }
+        
         setSelectedSubmission(submission);
-      } catch (error) {
+        setIsDetailModalOpen(true);
+      } catch (error: unknown) {
         console.error('Error loading submission detail:', error);
-        showError('Error', 'Terjadi kesalahan saat memuat detail submission');
+        
+        // Handle FetchError with status codes
+        if (error instanceof FetchError) {
+          if (error.status === 404) {
+            showError('Tidak Ditemukan', 'Pengajuan tidak ditemukan atau sudah dihapus');
+          } else if (error.status === 403) {
+            showError('Akses Ditolak', 'Anda tidak memiliki akses untuk melihat pengajuan ini');
+          } else {
+            showError('Error', error.message || 'Terjadi kesalahan saat memuat detail submission');
+          }
+        } else {
+          showError('Error', 'Terjadi kesalahan saat memuat detail submission');
+        }
       }
       return;
     }
@@ -338,7 +388,7 @@ export default function NotificationsPage() {
 
   if (status === 'loading') {
     return (
-      <SidebarLayout title="Notifikasi" titlePage="Memuat...">
+      <SidebarLayout title="Memuat Notifikasi" titlePage="Notifikasi">
         <div className="max-w-5xl mx-auto px-3 md:px-6">
           <PageLoader message="Memuat notifikasi..." fullScreen={false} />
         </div>
@@ -348,7 +398,7 @@ export default function NotificationsPage() {
 
   return (
     <RoleGate allowedRoles={["SUPER_ADMIN", "VENDOR", "APPROVER", "REVIEWER", "VISITOR"]}>
-      <SidebarLayout title="Notifikasi" titlePage="Semua Notifikasi">
+      <SidebarLayout title="Semua Notifikasi" titlePage="Notifikasi">
         <div className="max-w-5xl mx-auto space-y-4 md:space-y-6 px-3 md:px-6">
           {/* Header */}
           <div className="flex items-center justify-between rounded-xl border bg-white p-3 md:p-4 shadow-sm">
@@ -551,11 +601,30 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {selectedSubmission && (
+        {/* Modals - Different modal for each role */}
+        {session?.user?.role === 'APPROVER' && selectedSubmissionId && (
+          <ApproverSubmissionDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={handleCloseDetailModal}
+            submissionId={selectedSubmissionId}
+            onApprovalSubmitted={handleSubmissionUpdated}
+          />
+        )}
+
+        {session?.user?.role === 'REVIEWER' && selectedSubmissionId && (
+          <ReviewerSubmissionDetailModal
+            isOpen={isDetailModalOpen}
+            onClose={handleCloseDetailModal}
+            submissionId={selectedSubmissionId}
+            onReviewSubmitted={handleSubmissionUpdated}
+          />
+        )}
+
+        {(session?.user?.role === 'VENDOR' || session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'VISITOR') && selectedSubmission && (
           <SubmissionDetailModal
             submission={selectedSubmission}
-            isOpen={!!selectedSubmission}
-            onClose={() => setSelectedSubmission(null)}
+            isOpen={isDetailModalOpen}
+            onClose={handleCloseDetailModal}
           />
         )}
       </SidebarLayout>
