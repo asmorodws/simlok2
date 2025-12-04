@@ -500,6 +500,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (body.sika_date) {
         updateData.sika_date = new Date(body.sika_date);
       }
+      
+      // 🔧 FIX: Handle implementation dates for vendor
+      if (body.implementation_start_date) {
+        updateData.implementation_start_date = new Date(body.implementation_start_date);
+      }
+      if (body.implementation_end_date) {
+        updateData.implementation_end_date = new Date(body.implementation_end_date);
+      }
 
     }
 
@@ -545,6 +553,121 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             submission_id: id
           }))
         });
+      }
+    }
+
+    // 🔧 FIX: Handle support documents if provided (for vendor updates)
+    if (session.user.role === 'VENDOR') {
+      const {
+        simjaDocuments,
+        sikaDocuments,
+        workOrderDocuments,
+        kontrakKerjaDocuments,
+        jsaDocuments
+      } = body;
+
+      // If any document arrays are provided, update them
+      if (simjaDocuments || sikaDocuments || workOrderDocuments || kontrakKerjaDocuments || jsaDocuments) {
+        // Delete existing support documents for this submission
+        await prisma.supportDocument.deleteMany({
+          where: {
+            submission_id: id
+          }
+        });
+
+        const allDocuments = [];
+
+        // SIMJA documents
+        if (simjaDocuments && Array.isArray(simjaDocuments) && simjaDocuments.length > 0) {
+          const simjaDocs = simjaDocuments
+            .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+            .map((doc: any) => ({
+              document_subtype: doc.document_subtype || 'Ast. Man. Facility Management',
+              document_type: 'SIMJA',
+              document_number: doc.document_number,
+              document_date: doc.document_date ? new Date(doc.document_date) : null,
+              document_upload: doc.document_upload,
+              submission_id: id,
+              uploaded_by: session.user.id,
+              uploaded_at: new Date(),
+            }));
+          allDocuments.push(...simjaDocs);
+        }
+
+        // SIKA documents
+        if (sikaDocuments && Array.isArray(sikaDocuments) && sikaDocuments.length > 0) {
+          const sikaDocs = sikaDocuments
+            .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+            .map((doc: any) => ({
+              document_subtype: doc.document_subtype || null,
+              document_type: 'SIKA',
+              document_number: doc.document_number,
+              document_date: doc.document_date ? new Date(doc.document_date) : null,
+              document_upload: doc.document_upload,
+              submission_id: id,
+              uploaded_by: session.user.id,
+              uploaded_at: new Date(),
+            }));
+          allDocuments.push(...sikaDocs);
+        }
+
+        // Work Order documents (optional)
+        if (workOrderDocuments && Array.isArray(workOrderDocuments) && workOrderDocuments.length > 0) {
+          const workOrderDocs = workOrderDocuments
+            .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+            .map((doc: any) => ({
+              document_subtype: null,
+              document_type: 'WORK_ORDER',
+              document_number: doc.document_number,
+              document_date: doc.document_date ? new Date(doc.document_date) : null,
+              document_upload: doc.document_upload,
+              submission_id: id,
+              uploaded_by: session.user.id,
+              uploaded_at: new Date(),
+            }));
+          allDocuments.push(...workOrderDocs);
+        }
+
+        // Kontrak Kerja documents (optional)
+        if (kontrakKerjaDocuments && Array.isArray(kontrakKerjaDocuments) && kontrakKerjaDocuments.length > 0) {
+          const kontrakDocs = kontrakKerjaDocuments
+            .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+            .map((doc: any) => ({
+              document_subtype: null,
+              document_type: 'KONTRAK_KERJA',
+              document_number: doc.document_number,
+              document_date: doc.document_date ? new Date(doc.document_date) : null,
+              document_upload: doc.document_upload,
+              submission_id: id,
+              uploaded_by: session.user.id,
+              uploaded_at: new Date(),
+            }));
+          allDocuments.push(...kontrakDocs);
+        }
+
+        // JSA documents (optional)
+        if (jsaDocuments && Array.isArray(jsaDocuments) && jsaDocuments.length > 0) {
+          const jsaDocs = jsaDocuments
+            .filter((doc: any) => doc.document_upload && doc.document_upload.trim())
+            .map((doc: any) => ({
+              document_subtype: null,
+              document_type: 'JSA',
+              document_number: doc.document_number,
+              document_date: doc.document_date ? new Date(doc.document_date) : null,
+              document_upload: doc.document_upload,
+              submission_id: id,
+              uploaded_by: session.user.id,
+              uploaded_at: new Date(),
+            }));
+          allDocuments.push(...jsaDocs);
+        }
+
+        // Save all documents at once
+        if (allDocuments.length > 0) {
+          await prisma.supportDocument.createMany({
+            data: allDocuments,
+          });
+        }
       }
     }
 
