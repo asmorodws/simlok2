@@ -114,6 +114,41 @@ function normalizeInline(s?: string | null) {
   return s.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * Sanitize Unicode characters yang tidak bisa di-encode dengan WinAnsi font
+ * Mengganti character problematic dengan ASCII equivalent
+ */
+function sanitizeForPDF(text: string): string {
+  if (!text) return text;
+  
+  // Replace common Unicode characters yang tidak support di WinAnsi
+  const sanitized = text
+    // Minus sign (U+2212) → hyphen (-)
+    .replace(/−/g, '-')
+    // En dash (U+2013) → hyphen (-)
+    .replace(/–/g, '-')
+    // Em dash (U+2014) → hyphen (-)
+    .replace(/—/g, '-')
+    // Left single quote (U+2018) → apostrophe (')
+    .replace(/'/g, "'")
+    // Right single quote (U+2019) → apostrophe (')
+    .replace(/'/g, "'")
+    // Left double quote (U+201C) → quote (")
+    .replace(/"/g, '"')
+    // Right double quote (U+201D) → quote (")
+    .replace(/"/g, '"')
+    // Bullet (U+2022) → asterisk (*)
+    .replace(/•/g, '*')
+    // Ellipsis (U+2026) → three dots (...)
+    .replace(/…/g, '...')
+    // Multiplication sign (U+00D7) → x
+    .replace(/×/g, 'x')
+    // Division sign (U+00F7) → forward slash (/)
+    .replace(/÷/g, '/');
+  
+  return sanitized;
+}
+
 class PDFKit {
   doc!: PDFDocument;
   page: any;
@@ -246,7 +281,9 @@ class PDFKit {
     y: number,
     o?: { size?: number; bold?: boolean; color?: RGB }
   ) {
-    this.page.drawText(t, {
+    // Sanitize text untuk menghindari Unicode encoding error
+    const sanitizedText = sanitizeForPDF(t);
+    this.page.drawText(sanitizedText, {
       x,
       y,
       size: o?.size ?? this.fs,
@@ -267,9 +304,11 @@ class PDFKit {
     maxW: number,
     o?: { size?: number; bold?: boolean }
   ) {
+    // Sanitize text untuk menghindari Unicode encoding error
+    const sanitizedText = sanitizeForPDF(t);
     const size = o?.size ?? this.fs;
     const f = o?.bold ? this.bold : this.font;
-    const words = t.split(/\s+/);
+    const words = sanitizedText.split(/\s+/);
     let line = "";
     const lines: string[] = [];
     for (const w of words) {
@@ -302,7 +341,7 @@ class PDFKit {
     rawValue?: string | null,
     opts?: { valueBold?: boolean }
   ) {
-    const value = (rawValue ?? "").toString();
+    const value = sanitizeForPDF((rawValue ?? "").toString());
     await this.pageBreak();
 
     // Minimal spacing between rows for compactness

@@ -60,7 +60,7 @@ export const MarkAllAsReadSchema = z.object({
 });
 
 // Submission schemas
-export const SubmissionStatusSchema = z.enum(['PENDING', 'APPROVED', 'REJECTED']);
+export const SubmissionStatusSchema = z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED']);
 
 export const CreateSubmissionSchema = z.object({
   vendor_name: z.string().min(1),
