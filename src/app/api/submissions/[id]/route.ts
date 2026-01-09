@@ -221,15 +221,22 @@ async function generatePDF(submission: any) {
     
     console.log('PDF Generation: Setting filename:', filename);
     
+    // 🎯 PERFORMANCE: Cache approved PDFs aggressively (they don't change)
+    // Draft PDFs should not be cached as they may change
+    const isApproved = pdfData.simlok_number && !pdfData.simlok_number.startsWith('[DRAFT]');
+    const cacheControl = isApproved 
+      ? 'public, max-age=86400' // Cache for 24 hours if approved
+      : 'no-store, no-cache, must-revalidate'; // Don't cache drafts
+    
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         // Use 'inline' to show in browser, but filename still applies when user clicks download
         'Content-Disposition': `inline; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
+        'Cache-Control': cacheControl,
+        'Pragma': isApproved ? 'public' : 'no-cache',
+        'Expires': isApproved ? new Date(Date.now() + 86400000).toUTCString() : '0',
         // Add custom header for debugging (can be removed in production)
         'X-PDF-Filename': filename,
       },

@@ -454,29 +454,27 @@ export async function preloadWorkerPhotos(
     .filter(w => w.worker_photo && !imageCache.has(w.worker_photo))
     .map(w => w.worker_photo as string);
 
-  // 🔧 FIX: Also preload HSSE documents
-  const documentsToLoad = workerList
-    .filter(w => w.hsse_pass_document_upload && !imageCache.has(w.hsse_pass_document_upload))
-    .map(w => w.hsse_pass_document_upload as string);
+  // 🎯 PERFORMANCE FIX: SKIP HSSE documents during preload (they're heavy PDFs)
+  // Documents will be loaded on-demand when rendering the document section
+  // This significantly speeds up PDF generation since most documents aren't visible in preview
 
-  const totalItems = photosToLoad.length + documentsToLoad.length;
+  const totalItems = photosToLoad.length;
 
   if (totalItems === 0) {
-    console.log('PreloadWorkerPhotos: All photos and documents already cached or empty');
+    console.log('PreloadWorkerPhotos: All photos already cached or empty');
     return;
   }
 
-  console.log(`PreloadWorkerPhotos: Loading ${photosToLoad.length} worker photos and ${documentsToLoad.length} HSSE documents in batches of ${MAX_BATCH_SIZE}...`);
+  console.log(`PreloadWorkerPhotos: Loading ${photosToLoad.length} worker photos in batches of ${MAX_BATCH_SIZE}...`);
   const startTime = Date.now();
 
-  // 🎯 PERFORMANCE FIX: Process photos and documents together
-  const allItemsToLoad = [...photosToLoad, ...documentsToLoad];
+  // 🎯 PERFORMANCE FIX: Only load photos, not documents
 
   // 🎯 PERFORMANCE FIX: Process in larger batches with Promise.allSettled
-  for (let i = 0; i < allItemsToLoad.length; i += MAX_BATCH_SIZE) {
-    const batch = allItemsToLoad.slice(i, i + MAX_BATCH_SIZE);
+  for (let i = 0; i < photosToLoad.length; i += MAX_BATCH_SIZE) {
+    const batch = photosToLoad.slice(i, i + MAX_BATCH_SIZE);
     const batchNumber = Math.floor(i / MAX_BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(allItemsToLoad.length / MAX_BATCH_SIZE);
+    const totalBatches = Math.ceil(photosToLoad.length / MAX_BATCH_SIZE);
     
     console.log(`PreloadWorkerPhotos: Processing batch ${batchNumber}/${totalBatches} (${batch.length} items)`);
     
@@ -485,11 +483,7 @@ export async function preloadWorkerPhotos(
       const results = await Promise.allSettled(
         batch.map(async (item) => {
           try {
-            // Check if this is a photo or document and load accordingly
-            const isDocument = documentsToLoad.includes(item);
-            const loadPromise = isDocument 
-              ? loadWorkerDocument(pdfDoc, item) 
-              : loadWorkerPhoto(pdfDoc, item);
+            const loadPromise = loadWorkerPhoto(pdfDoc, item);
             
             // Add timeout to prevent hanging on slow images
             const timeoutPromise = new Promise((_, reject) => 
@@ -497,7 +491,7 @@ export async function preloadWorkerPhotos(
             );
             await Promise.race([loadPromise, timeoutPromise]);
           } catch (error) {
-            console.warn(`PreloadWorkerPhotos: Failed to load item: ${item}`, error);
+            console.warn(`PreloadWorkerPhotos: Failed to load photo: ${item}`, error);
             // Don't throw - continue with other items
           }
         })
@@ -508,7 +502,7 @@ export async function preloadWorkerPhotos(
       console.log(`PreloadWorkerPhotos: Batch ${batchNumber} complete - ${successful} successful, ${failed} failed`);
       
       // Reduced delay between batches for better performance
-      if (i + MAX_BATCH_SIZE < allItemsToLoad.length) {
+      if (i + MAX_BATCH_SIZE < photosToLoad.length) {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     } catch (error) {
@@ -518,7 +512,7 @@ export async function preloadWorkerPhotos(
   }
 
   const elapsed = Date.now() - startTime;
-  console.log(`PreloadWorkerPhotos: Completed loading ${allItemsToLoad.length} items in ${elapsed}ms (avg ${Math.round(elapsed / allItemsToLoad.length)}ms per item)`);
+  console.log(`PreloadWorkerPhotos: Completed loading ${photosToLoad.length} photos in ${elapsed}ms (avg ${Math.round(elapsed / photosToLoad.length)}ms per item)`);
   console.log(`PreloadWorkerPhotos: Cache size: ${imageCache.size} images`);
 }
 

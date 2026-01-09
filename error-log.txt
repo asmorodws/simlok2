@@ -1,0 +1,1000 @@
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     }
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   ]
+Jan 09 07:12:49 srv1098267 start.sh[15016]: }
+Jan 09 07:12:49 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:12:49 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:12:49 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     },
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     {
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:12:49 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     }
+Jan 09 07:12:49 srv1098267 start.sh[15016]:   ]
+Jan 09 07:12:49 srv1098267 start.sh[15016]: }
+Jan 09 07:12:49 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:12:49 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:12:49 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:13:32 srv1098267 start.sh[15016]: Auth authorize - returning user: {
+Jan 09 07:13:32 srv1098267 start.sh[15016]:   id: 'cmhihlb6t0000l6tgwlzj3igc',
+Jan 09 07:13:32 srv1098267 start.sh[15016]:   email: 'default-super_admin@c2corpsec.com',
+Jan 09 07:13:32 srv1098267 start.sh[15016]:   role: 'SUPER_ADMIN'
+Jan 09 07:13:32 srv1098267 start.sh[15016]: }
+Jan 09 07:13:32 srv1098267 start.sh[15016]: ✅ Created new session for user cmhihlb6t0000l6tgwlzj3igc: 64f008f416...
+Jan 09 07:13:32 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:13:32 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:13:32 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:13:57 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhk1lknr007ol6a4fv8tjedx' }
+Jan 09 07:13:57 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:13:58 srv1098267 start.sh[15016]: SocketProvider: Socket.IO disabled, using Server-Sent Events instead
+Jan 09 07:14:19 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlbj70006l6tgwfiir8c6' }
+Jan 09 07:14:19 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:14:23 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:14:23 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:14:23 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:14:26 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhvlxps601p8l6a4o8w8b53q' }
+Jan 09 07:14:26 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:15:37 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:15:37 srv1098267 start.sh[15016]: ✅ Session valid for user: sanlingpmc@yahoo.co.id
+Jan 09 07:15:37 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (sanlingpmc@yahoo.co.id)
+Jan 09 07:15:37 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:15:37 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:15:37 srv1098267 start.sh[15016]:   vendorId: 'cmhvlxps601p8l6a4o8w8b53q',
+Jan 09 07:15:37 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:15:37 srv1098267 start.sh[15016]: }
+Jan 09 07:15:37 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhvlxps601p8l6a4o8w8b53q (1 channels)
+Jan 09 07:15:47 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhvlxps601p8l6a4o8w8b53q' }
+Jan 09 07:15:47 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:15:47 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:15:47 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:15:47 srv1098267 start.sh[15016]:   vendorId: 'cmhvlxps601p8l6a4o8w8b53q',
+Jan 09 07:15:47 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:15:47 srv1098267 start.sh[15016]: }
+Jan 09 07:15:48 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhvlxps601p8l6a4o8w8b53q (1 channels)
+Jan 09 07:16:33 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:16:33 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:16:33 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:18:05 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:18:05 srv1098267 start.sh[15016]: ✅ Session valid for user: mailtoinfo@aaslaboratory.com
+Jan 09 07:18:05 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (mailtoinfo@aaslaboratory.com)
+Jan 09 07:18:06 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:18:06 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:18:06 srv1098267 start.sh[15016]:   vendorId: 'cmhk1lknr007ol6a4fv8tjedx',
+Jan 09 07:18:06 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:18:06 srv1098267 start.sh[15016]: }
+Jan 09 07:18:06 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhk1lknr007ol6a4fv8tjedx (1 channels)
+Jan 09 07:19:06 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhk1lknr007ol6a4fv8tjedx' }
+Jan 09 07:19:06 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:19:47 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhvlxps601p8l6a4o8w8b53q' }
+Jan 09 07:19:47 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:20:07 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:20:07 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:20:07 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:20:14 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:20:14 srv1098267 start.sh[15016]: ✅ Session valid for user: mailtoinfo@aaslaboratory.com
+Jan 09 07:20:14 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (mailtoinfo@aaslaboratory.com)
+Jan 09 07:20:14 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:20:14 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:20:14 srv1098267 start.sh[15016]:   vendorId: 'cmhk1lknr007ol6a4fv8tjedx',
+Jan 09 07:20:14 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:20:14 srv1098267 start.sh[15016]: }
+Jan 09 07:20:14 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhk1lknr007ol6a4fv8tjedx (1 channels)
+Jan 09 07:20:20 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:20:20 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:20:20 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:20:20 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:20:20 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:20:20 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:20:20 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:20:20 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:20:20 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:20:20 srv1098267 start.sh[15016]: }
+Jan 09 07:20:20 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:20:20 srv1098267 start.sh[15016]: prisma:error
+Jan 09 07:20:20 srv1098267 start.sh[15016]: Invalid `prisma.session.update()` invocation:
+Jan 09 07:20:20 srv1098267 start.sh[15016]: Error occurred during query execution:
+Jan 09 07:20:20 srv1098267 start.sh[15016]: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(Server(MysqlError { code: 1020, message: "Record has changed since last read in table 'Session'", state: "HY000" })), transient: false })
+Jan 09 07:20:20 srv1098267 start.sh[15016]: Error updating session activity: Error [PrismaClientUnknownRequestError]:
+Jan 09 07:20:20 srv1098267 start.sh[15016]: Invalid `prisma.session.update()` invocation:
+Jan 09 07:20:20 srv1098267 start.sh[15016]: Error occurred during query execution:
+Jan 09 07:20:20 srv1098267 start.sh[15016]: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(Server(MysqlError { code: 1020, message: "Record has changed since last read in table 'Session'", state: "HY000" })), transient: false })
+Jan 09 07:20:20 srv1098267 start.sh[15016]:     at async g.updateSessionActivity (.next/server/chunks/4050.js:2:5972) {
+Jan 09 07:20:20 srv1098267 start.sh[15016]:   clientVersion: '6.16.2'
+Jan 09 07:20:20 srv1098267 start.sh[15016]: }
+Jan 09 07:20:21 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:20:21 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:20:22 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:20:22 srv1098267 start.sh[15016]: }
+Jan 09 07:20:22 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:20:22 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:20:22 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:20:22 srv1098267 start.sh[15016]: }
+Jan 09 07:20:22 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:20:44 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:20:44 srv1098267 start.sh[15016]: ✅ Session valid for user: thantri@c2corpsec.com
+Jan 09 07:20:44 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (thantri@c2corpsec.com)
+Jan 09 07:20:45 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:20:45 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:20:45 srv1098267 start.sh[15016]:   vendorId: 'cmhihlbj70006l6tgwfiir8c6',
+Jan 09 07:20:45 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:20:45 srv1098267 start.sh[15016]: }
+Jan 09 07:20:45 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:20:50 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:20:50 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:20:50 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:21:45 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlbj70006l6tgwfiir8c6' }
+Jan 09 07:21:45 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:22:02 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:22:02 srv1098267 start.sh[15016]: ✅ Session valid for user: sanlingpmc@yahoo.co.id
+Jan 09 07:22:02 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (sanlingpmc@yahoo.co.id)
+Jan 09 07:22:02 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:22:02 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:22:02 srv1098267 start.sh[15016]:   vendorId: 'cmhvlxps601p8l6a4o8w8b53q',
+Jan 09 07:22:02 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:22:02 srv1098267 start.sh[15016]: }
+Jan 09 07:22:02 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhvlxps601p8l6a4o8w8b53q (1 channels)
+Jan 09 07:22:09 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhvlxps601p8l6a4o8w8b53q' }
+Jan 09 07:22:09 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:22:09 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:22:09 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:22:09 srv1098267 start.sh[15016]:   vendorId: 'cmhvlxps601p8l6a4o8w8b53q',
+Jan 09 07:22:09 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:22:09 srv1098267 start.sh[15016]: }
+Jan 09 07:22:09 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhvlxps601p8l6a4o8w8b53q (1 channels)
+Jan 09 07:22:16 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:22:16 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:22:16 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:22:16 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:22:16 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:22:16 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:22:16 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:22:16 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:22:16 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:22:16 srv1098267 start.sh[15016]: }
+Jan 09 07:22:16 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:23:53 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhvlxps601p8l6a4o8w8b53q' }
+Jan 09 07:23:53 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:24:14 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'vendor', vendorId: 'cmhk1lknr007ol6a4fv8tjedx' }
+Jan 09 07:24:14 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:29:17 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:29:17 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:29:18 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:29:18 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:29:18 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:29:18 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:29:18 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:29:18 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:29:18 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:29:18 srv1098267 start.sh[15016]: }
+Jan 09 07:29:18 srv1098267 start.sh[15016]: prisma:error
+Jan 09 07:29:18 srv1098267 start.sh[15016]: Invalid `prisma.session.update()` invocation:
+Jan 09 07:29:18 srv1098267 start.sh[15016]: Error occurred during query execution:
+Jan 09 07:29:18 srv1098267 start.sh[15016]: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(Server(MysqlError { code: 1020, message: "Record has changed since last read in table 'Session'", state: "HY000" })), transient: false })
+Jan 09 07:29:18 srv1098267 start.sh[15016]: Error updating session activity: Error [PrismaClientUnknownRequestError]:
+Jan 09 07:29:18 srv1098267 start.sh[15016]: Invalid `prisma.session.update()` invocation:
+Jan 09 07:29:18 srv1098267 start.sh[15016]: Error occurred during query execution:
+Jan 09 07:29:18 srv1098267 start.sh[15016]: ConnectorError(ConnectorError { user_facing_error: None, kind: QueryError(Server(MysqlError { code: 1020, message: "Record has changed since last read in table 'Session'", state: "HY000" })), transient: false })
+Jan 09 07:29:18 srv1098267 start.sh[15016]:     at async g.updateSessionActivity (.next/server/chunks/4050.js:2:5972) {
+Jan 09 07:29:18 srv1098267 start.sh[15016]:   clientVersion: '6.16.2'
+Jan 09 07:29:18 srv1098267 start.sh[15016]: }
+Jan 09 07:29:18 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:29:24 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     }
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   ]
+Jan 09 07:29:24 srv1098267 start.sh[15016]: }
+Jan 09 07:29:24 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:29:24 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:29:24 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     },
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     {
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:29:24 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     }
+Jan 09 07:29:24 srv1098267 start.sh[15016]:   ]
+Jan 09 07:29:24 srv1098267 start.sh[15016]: }
+Jan 09 07:29:24 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:29:24 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:29:24 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:31:18 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:31:18 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:36:04 srv1098267 start.sh[15016]: Auth authorize - returning user: {
+Jan 09 07:36:04 srv1098267 start.sh[15016]:   id: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:36:04 srv1098267 start.sh[15016]:   email: 'default-reviewer@c2corpsec.com',
+Jan 09 07:36:04 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:36:04 srv1098267 start.sh[15016]: }
+Jan 09 07:36:04 srv1098267 start.sh[15016]: ✅ Created new session for user cmhihlb8w0001l6tgc5k9dcia: 66a0400715...
+Jan 09 07:36:05 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:36:05 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:36:05 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:36:06 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:36:06 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:36:06 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:36:06 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:36:06 srv1098267 start.sh[15016]: }
+Jan 09 07:36:06 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:36:42 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:36:42 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:36:42 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:36:44 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     }
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   ]
+Jan 09 07:36:44 srv1098267 start.sh[15016]: }
+Jan 09 07:36:44 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:36:44 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:36:44 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     },
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     {
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:36:44 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     }
+Jan 09 07:36:44 srv1098267 start.sh[15016]:   ]
+Jan 09 07:36:44 srv1098267 start.sh[15016]: }
+Jan 09 07:36:44 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:36:44 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:36:44 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:39:24 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:39:24 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:39:24 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:39:36 srv1098267 start.sh[15016]: SocketProvider: Socket.IO disabled, using Server-Sent Events instead
+Jan 09 07:40:11 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:40:11 srv1098267 start.sh[15016]: ✅ Session valid for user: default-super_admin@c2corpsec.com
+Jan 09 07:40:11 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-super_admin@c2corpsec.com)
+Jan 09 07:40:16 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:40:16 srv1098267 start.sh[15016]: ✅ Session valid for user: default-reviewer@c2corpsec.com
+Jan 09 07:40:16 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (default-reviewer@c2corpsec.com)
+Jan 09 07:40:16 srv1098267 start.sh[15016]: API: Cleared image cache for fresh PDF generation
+Jan 09 07:40:16 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:16 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     }
+Jan 09 07:40:16 srv1098267 start.sh[15016]:   ]
+Jan 09 07:40:16 srv1098267 start.sh[15016]: }
+Jan 09 07:40:16 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:40:16 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:40:16 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:40:18 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:18 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     }
+Jan 09 07:40:18 srv1098267 start.sh[15016]:   ]
+Jan 09 07:40:18 srv1098267 start.sh[15016]: }
+Jan 09 07:40:18 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:40:18 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:40:18 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:40:18 srv1098267 start.sh[15016]: 🔌 SSE connection closed for: { scope: 'reviewer', vendorId: 'cmhihlb8w0001l6tgc5k9dcia' }
+Jan 09 07:40:18 srv1098267 start.sh[15016]: ✅ SSE Redis subscriber cleaned up
+Jan 09 07:40:21 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:40:21 srv1098267 start.sh[15016]:   scope: 'reviewer',
+Jan 09 07:40:21 srv1098267 start.sh[15016]:   vendorId: 'cmhihlb8w0001l6tgc5k9dcia',
+Jan 09 07:40:21 srv1098267 start.sh[15016]:   role: 'REVIEWER'
+Jan 09 07:40:21 srv1098267 start.sh[15016]: }
+Jan 09 07:40:21 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:reviewer (1 channels)
+Jan 09 07:40:40 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     }
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   ]
+Jan 09 07:40:40 srv1098267 start.sh[15016]: }
+Jan 09 07:40:40 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:40:40 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:40:40 srv1098267 start.sh[15016]: PDF Generation Debug: {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   submissionId: 'cmk6dciaw00lkl6l4rr27p2gc',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   approval_status: 'PENDING_APPROVAL',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   simlok_number: null,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   has_simlok_number: false,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   worker_list_count: 11,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   worker_list_data: [
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lll6l4fxv2gmli',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Pahlevi',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lml6l4ynpq0gu7',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Sriyanto',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lnl6l4ncyz5nxh',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Malik Mustakim',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lol6l4i70j1u2s',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Arip',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lpl6l4dwcihtp8',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Rafli',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lql6l45b0brgzt',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Kusnandar',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lrl6l480omh3nl',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Endra Saputra',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lsl6l4jv0exsic',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Sugimin',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500ltl6l45clkwanu',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Asep Widiono',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lul6l47s1ca8f8',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Fajar Fuad Abdillah',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     },
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     {
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       id: 'cmk6dcib500lvl6l40hjgo1a5',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       name: 'Dimas Faturrahman',
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_photo: true,
+Jan 09 07:40:40 srv1098267 start.sh[15016]:       has_hsse_doc: true
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     }
+Jan 09 07:40:40 srv1098267 start.sh[15016]:   ]
+Jan 09 07:40:40 srv1098267 start.sh[15016]: }
+Jan 09 07:40:40 srv1098267 start.sh[15016]: PDF Generation: Using placeholder simlok_number
+Jan 09 07:40:40 srv1098267 start.sh[15016]: Error generating PDF: Error: WinAnsi cannot encode "−" (0x2212)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at aW.encodeUnicodeCodePoint (.next/server/chunks/8249.js:1:175326)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.encodeTextAsGlyphs (.next/server/chunks/8249.js:1:224222)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:223257)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at a.widthOfTextAtSize (.next/server/chunks/8249.js:1:348941)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at H.wrap (.next/server/app/api/submissions/[id]/route.js:1:9453)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at H.numberedRow (.next/server/app/api/submissions/[id]/route.js:1:9989)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at async I (.next/server/app/api/submissions/[id]/route.js:1:17138)
+Jan 09 07:40:40 srv1098267 start.sh[15016]:     at async U (.next/server/app/api/submissions/[id]/route.js:1:34649)
+Jan 09 07:41:04 srv1098267 start.sh[15016]: 🔍 Cache miss - querying database for session validation
+Jan 09 07:41:04 srv1098267 start.sh[15016]: ✅ Session valid for user: mailtoinfo@aaslaboratory.com
+Jan 09 07:41:04 srv1098267 start.sh[15016]: ⚡ Cache hit for session validation (mailtoinfo@aaslaboratory.com)
+Jan 09 07:41:04 srv1098267 start.sh[15016]: 🔥 SSE connection established for: {
+Jan 09 07:41:04 srv1098267 start.sh[15016]:   scope: 'vendor',
+Jan 09 07:41:04 srv1098267 start.sh[15016]:   vendorId: 'cmhk1lknr007ol6a4fv8tjedx',
+Jan 09 07:41:04 srv1098267 start.sh[15016]:   role: 'VENDOR'
+Jan 09 07:41:04 srv1098267 start.sh[15016]: }
+Jan 09 07:41:04 srv1098267 start.sh[15016]: 📡 SSE Subscribed to Redis channel: notifications:vendor:cmhk1lknr007ol6a4fv8tjedx (1 channels)
