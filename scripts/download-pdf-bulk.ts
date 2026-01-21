@@ -77,6 +77,7 @@ async function downloadPDFs() {
     if (options.all) {
       // No filter, download all
     } else if (options.approved) {
+      // Hanya download yang sudah approved oleh reviewer DAN approver
       where.approval_status = ApprovalStatus.APPROVED;
       where.review_status = ReviewStatus.MEETS_REQUIREMENTS;
     } else if (options.pending) {
