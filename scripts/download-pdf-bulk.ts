@@ -136,7 +136,6 @@ async function downloadPDFs() {
 
     // Create output directory
     const outputDir = options.output || './public/downloads/simlok-pdfs';
-    mkdirSync(outputDir, { recursive: true });
 
     // Download each PDF
     let successCount = 0;
@@ -152,9 +151,19 @@ async function downloadPDFs() {
         // Generate PDF
         const pdfBuffer = await generateSIMLOKPDF(submission as any);
         
+        // Determine folder based on approved_at date (YYYY-MM format)
+        const approvedDate = new Date(submission.approved_at!);
+        const year = approvedDate.getFullYear();
+        const month = String(approvedDate.getMonth() + 1).padStart(2, '0');
+        const monthFolder = `${year}-${month}`;
+        
+        // Create month-specific directory
+        const monthDir = join(outputDir, monthFolder);
+        mkdirSync(monthDir, { recursive: true });
+        
         // Save to file with format: SIMLOK_396_S00330_2026-S0.pdf
         const filename = `SIMLOK_${submission.simlok_number.replace(/\//g, '_')}.pdf`;
-        const filepath = join(outputDir, filename);
+        const filepath = join(monthDir, filename);
         writeFileSync(filepath, pdfBuffer);
         
         console.log(`✅ Saved: ${filepath}`);
