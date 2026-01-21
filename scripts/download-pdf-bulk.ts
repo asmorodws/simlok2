@@ -1,6 +1,6 @@
 import { PrismaClient, ApprovalStatus, ReviewStatus } from '@prisma/client';
 import { generateSIMLOKPDF } from '../src/utils/pdf/simlokTemplate';
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
 const prisma = new PrismaClient();
@@ -140,6 +140,8 @@ async function downloadPDFs() {
     // Download each PDF
     let successCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
+    const failedSubmissions: Array<{ simlok_number: string; error: string }> = [];
 
     for (let i = 0; i < submissions.length; i++) {
       const submission = submissions[i];
@@ -147,9 +149,6 @@ async function downloadPDFs() {
       
       try {
         console.log(`\n[${i + 1}/${submissions.length}] Processing: ${submission.simlok_number}`);
-        
-        // Generate PDF
-        const pdfBuffer = await generateSIMLOKPDF(submission as any);
         
         // Determine folder based on approved_at date (YYYY-MM format)
         const approvedDate = new Date(submission.approved_at!);
@@ -161,15 +160,31 @@ async function downloadPDFs() {
         const monthDir = join(outputDir, monthFolder);
         mkdirSync(monthDir, { recursive: true });
         
-        // Save to file with format: SIMLOK_396_S00330_2026-S0.pdf
+        // Check if file already exists
         const filename = `SIMLOK_${submission.simlok_number.replace(/\//g, '_')}.pdf`;
         const filepath = join(monthDir, filename);
+        
+        if (existsSync(filepath)) {
+          console.log(`⏭️  Skipped (already exists): ${filepath}`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Generate PDF
+        const pdfBuffer = await generateSIMLOKPDF(submission as any);
+        
+        // Save to file
         writeFileSync(filepath, pdfBuffer);
         
         console.log(`✅ Saved: ${filepath}`);
         successCount++;
       } catch (error) {
-        console.error(`❌ Error processing ${submission?.simlok_number || 'unknown'}:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Error processing ${submission?.simlok_number || 'unknown'}:`, errorMessage);
+        failedSubmissions.push({
+          simlok_number: submission?.simlok_number || 'unknown',
+          error: errorMessage
+        });
         errorCount++;
       }
     }
@@ -178,8 +193,18 @@ async function downloadPDFs() {
     console.log('📊 Download Summary:');
     console.log(`   Total: ${submissions.length}`);
     console.log(`   ✅ Success: ${successCount}`);
+    console.log(`   ⏭️  Skipped: ${skippedCount}`);
     console.log(`   ❌ Failed: ${errorCount}`);
     console.log(`   📁 Output: ${outputDir}`);
+    
+    if (failedSubmissions.length > 0) {
+      console.log('\n❌ Failed Submissions:');
+      failedSubmissions.forEach((failed, idx) => {
+        console.log(`   ${idx + 1}. ${failed.simlok_number}`);
+        console.log(`      Error: ${failed.error}`);
+      });
+    }
+    
     console.log('='.repeat(50));
 
   } catch (error) {
