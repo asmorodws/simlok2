@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-import { formatScansDates } from '@/lib/timezone';
-
-const prisma = new PrismaClient();
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { formatScansDates } from '@/lib/helpers/timezone';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
 
 export async function GET(
   _request: NextRequest,
@@ -13,14 +12,12 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only allow REVIEWER, APPROVER, ADMIN, SUPER_ADMIN to access scan history
-    if (!['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // Check session and role in one call
+    const userOrError = requireSessionWithRole(
+      session,
+      RoleGroups.SCAN_VIEWERS
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const resolvedParams = await params;
     const submissionId = resolvedParams.id;
@@ -30,7 +27,13 @@ export async function GET(
       where: {
         submission_id: submissionId
       },
-      include: {
+      select: {
+        id: true,
+        submission_id: true,
+        scanned_by: true,
+        scanner_name: true,
+        scan_location: true,
+        scanned_at: true,
         user: {
           select: {
             id: true,

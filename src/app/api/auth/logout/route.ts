@@ -4,10 +4,11 @@
  * Database is the single source of truth - clean it first
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { SessionService } from '@/services/session.service';
-import { TokenManager } from '@/utils/token-manager';
+import { TokenManager } from '@/utils/security/tokenManager';
+import { successResponse } from '@/lib/api/apiResponse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,9 +40,8 @@ export async function POST(request: NextRequest) {
       deletedCount = 1;
     }
 
-    // Create response
-    const response = NextResponse.json({
-      success: true,
+    // Create response with cookies cleared
+    const response = successResponse({
       message: 'Berhasil logout',
       sessionsDeleted: deletedCount,
     });
@@ -61,8 +61,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ Logout error:', error);
     
     // Still clear cookies even on error (fail-safe)
-    const response = NextResponse.json({
-      success: true,
+    const response = successResponse({
       message: 'Berhasil logout',
       warning: 'Some cleanup operations failed',
     });

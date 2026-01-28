@@ -3,9 +3,10 @@
  * Validates the current session and returns session status
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { SessionService } from '@/services/session.service';
+import { successResponse, unauthorizedResponse, internalErrorResponse } from '@/lib/api/apiResponse';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,42 +16,29 @@ export async function GET(request: NextRequest) {
     });
 
     if (!token || !token.sub) {
-      return NextResponse.json(
-        {
-          isValid: false,
-          reason: 'No authentication token found',
-        },
-        { status: 401 }
-      );
+      return unauthorizedResponse('No authentication token found');
     }
 
     const sessionToken = (token as any).sessionToken as string | undefined;
 
     if (!sessionToken) {
-      return NextResponse.json(
-        {
-          isValid: false,
-          reason: 'No session token found',
-        },
-        { status: 401 }
-      );
+      return unauthorizedResponse('No session token found');
     }
 
     // Validate session
     const validation = await SessionService.validateSession(sessionToken);
 
     if (!validation.isValid) {
-      return NextResponse.json(
-        {
-          isValid: false,
-          reason: validation.reason,
-          shouldLogout: true,
-        },
-        { status: 401 }
-      );
+      return successResponse({
+        isValid: false,
+        reason: validation.reason,
+        shouldLogout: true,
+      }, {
+        headers: { 'X-Should-Logout': 'true' },
+      });
     }
 
-    return NextResponse.json({
+    return successResponse({
       isValid: true,
       user: {
         id: validation.user!.id,
@@ -65,13 +53,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Session validation error:', error);
-    return NextResponse.json(
-      {
-        isValid: false,
-        reason: 'Session validation failed',
-      },
-      { status: 500 }
-    );
+    return internalErrorResponse('SESSION_VALIDATION', error);
   }
 }

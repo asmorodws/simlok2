@@ -1,34 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { PrismaClient } from '@prisma/client';
-import { formatScansDates, formatSubmissionDates } from '@/lib/timezone';
-
-const prisma = new PrismaClient();
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { formatScansDates, formatSubmissionDates } from '@/lib/helpers/timezone';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { parsePagination, createPaginationMeta } from '@/lib/api/paginationHelpers';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only allow REVIEWER, APPROVER, ADMIN, SUPER_ADMIN to access scan history
-    if (!['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    // Check session and role in one call
+    const userOrError = requireSessionWithRole(
+      session, 
+      RoleGroups.SCAN_VIEWERS,
+      'Only reviewers, approvers, admins, and super admins can access scan history'
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const { page, limit, skip } = parsePagination(searchParams, { defaultLimit: 20 });
+    
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
     const verifier = searchParams.get('verifier');
     const submissionId = searchParams.get('submissionId');
     const search = searchParams.get('search');
-
-    const skip = (page - 1) * limit;
 
     // Build filter conditions
     const where: any = {};
@@ -100,7 +97,13 @@ export async function GET(request: NextRequest) {
     // Get scan history with related data
     const scans = await prisma.qrScan.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        submission_id: true,
+        scanned_by: true,
+        scanner_name: true,
+        scan_location: true,
+        scanned_at: true,
         submission: {
           select: {
             id: true,
@@ -153,7 +156,8 @@ export async function GET(request: NextRequest) {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
+      pagination: createPaginationMeta(page, limit, total),
     });
 
   } catch (error) {

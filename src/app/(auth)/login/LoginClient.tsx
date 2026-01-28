@@ -3,8 +3,8 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import SignInForm from "@/components/auth/SignInForm";
-import { clearOldSessions } from "@/utils/session-utils";
+import SignInForm from "@/components/features/auth/SignInForm";
+import { clearOldSessions } from "@/utils/security/sessionUtils";
 
 export default function LoginClient() {
   const [email, setEmail] = useState("");

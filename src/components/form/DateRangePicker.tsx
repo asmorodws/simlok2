@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getServerDateString } from '@/lib/serverDate';
+import { getServerDateString } from '@/lib/helpers/serverDate';
 
 interface DateRangePickerProps {
   startDate: string;

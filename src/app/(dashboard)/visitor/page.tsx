@@ -1,19 +1,12 @@
 import { Metadata } from "next";
-import RoleGate from "@/components/security/RoleGate";
-import SidebarLayout from "@/components/layout/SidebarLayout";
-import VisitorDashboard from "@/components/visitor/VisitorDashboard";
+import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
 
-export const metadata: Metadata = {
-  title: "Dashboard Visitor - SIMLOK",
-  description: "Halaman dashboard untuk visitor melihat statistik dan informasi sistem SIMLOK",
-};
+export const metadata: Metadata = createDashboardMetadata(
+  "Dashboard Visitor",
+  "Halaman dashboard untuk visitor melihat statistik dan informasi sistem SIMLOK"
+);
 
 export default function VisitorPage() {
-  return (
-    <RoleGate allowedRoles={["VISITOR", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Dashboard Visitor" titlePage="Visitor">
-        <VisitorDashboard />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.visitor(<RoleDashboard role="VISITOR" />);
 }

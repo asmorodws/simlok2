@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/lib/auth/auth';
 import { createReadStream, statSync, existsSync } from 'fs';
 import { join } from 'path';
 import { Readable } from 'stream';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 /**
  * Convert Node.js Readable stream to Web ReadableStream
@@ -34,9 +35,8 @@ export async function GET(
   try {
     // Get session to check authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Await params for Next.js 15 compatibility
     const { userId, category, filename } = await params;
@@ -44,16 +44,16 @@ export async function GET(
     // Check if user can access this file
     // Users can only access their own files, unless they're super admin, reviewer, or approver
     const canAccess = 
-      session.user.role === 'SUPER_ADMIN' || 
-      session.user.role === 'REVIEWER' || 
-      session.user.role === 'APPROVER' ||
-      session.user.id === userId;
+      userOrError.role === 'SUPER_ADMIN' || 
+      userOrError.role === 'REVIEWER' || 
+      userOrError.role === 'APPROVER' ||
+      userOrError.id === userId;
 
     // Debug logging
     console.log('File access check:', {
       requestedUserId: userId,
-      sessionUserId: session.user.id,
-      userRole: session.user.role,
+      sessionUserId: userOrError.id,
+      userRole: userOrError.role,
       category,
       filename,
       canAccess,

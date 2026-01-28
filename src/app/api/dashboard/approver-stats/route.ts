@@ -1,22 +1,27 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { withCache } from "@/lib/api-cache";
-import { CacheKeys, CacheTTL } from "@/lib/cache";
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
+import { withCache } from "@/lib/cache/apiCache";
+import { CacheKeys, CacheTTL } from "@/lib/cache/cache";
+import { ReviewStatus, ApprovalStatus } from "@prisma/client";
+import { 
+  successResponse, 
+  internalErrorResponse 
+} from "@/lib/api/apiResponse";
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // Check if user has appropriate privileges for approver dashboard
-    if (!['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+    // Use helper for session and role validation
+    const userOrError = requireSessionWithRole(
+      session,
+      RoleGroups.APPROVERS,
+      'Only approvers, admins, and super admins can access this dashboard'
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Use cache for dashboard stats
     const { data: dashboardStats, cached } = await withCache(
@@ -27,64 +32,65 @@ export async function GET() {
       }
     );
 
-    return NextResponse.json(dashboardStats, {
-      headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
-      }
-    });
+    return successResponse(dashboardStats, { cached });
 
   } catch (error) {
-    console.error("[APPROVER_DASHBOARD_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return internalErrorResponse('APPROVER_DASHBOARD_STATS', error);
   }
 }
 
 async function fetchApproverStats() {
   // Approvers only see submissions that meet requirements
   const submissionWhereClause = {
-    review_status: 'MEETS_REQUIREMENTS'
+    review_status: ReviewStatus.MEETS_REQUIREMENTS
   };
 
+  // Parallelize all statistics queries for better performance
+  const [
+    totalSubmissions,
+    submissionsByApprovalStatus,
+    submissionsByReviewStatus,
+    pendingApprovalMeetsCount
+  ] = await Promise.all([
     // Get submission statistics
-    const totalSubmissions = await prisma.submission.count({
+    prisma.submission.count({
       where: submissionWhereClause
-    });
-
-    const submissionsByApprovalStatus = await prisma.submission.groupBy({
+    }),
+    prisma.submission.groupBy({
       by: ['approval_status'],
       where: submissionWhereClause,
       _count: {
         id: true
       }
-    });
-
-    const submissionsByReviewStatus = await prisma.submission.groupBy({
+    }),
+    prisma.submission.groupBy({
       by: ['review_status'],
       where: submissionWhereClause,
       _count: {
         id: true
       }
-    });
+    }),
+    // Count pending approvals - ONLY submissions that meet requirements
+    prisma.submission.count({
+      where: {
+        ...submissionWhereClause,
+        approval_status: ApprovalStatus.PENDING_APPROVAL,
+        review_status: ReviewStatus.MEETS_REQUIREMENTS
+      }
+    })
+  ]);
 
-    // Process submission stats
+  // Process submission stats
     const approvalStatusStats = submissionsByApprovalStatus.reduce((acc, item) => {
-      acc[item.approval_status] = item._count.id;
+      acc[item.approval_status] = item._count?.id ?? 0;
       return acc;
     }, {} as Record<string, number>);
 
     const reviewStatusStats = submissionsByReviewStatus.reduce((acc, item) => {
-      acc[item.review_status] = item._count.id;
+      acc[item.review_status] = item._count?.id ?? 0;
       return acc;
     }, {} as Record<string, number>);
 
-    // Count pending approvals - ONLY submissions that meet requirements
-    const pendingApprovalMeetsCount = await prisma.submission.count({
-      where: {
-        ...submissionWhereClause,
-        approval_status: 'PENDING_APPROVAL',
-        review_status: 'MEETS_REQUIREMENTS'
-      }
-    });
 
   // Return dashboard stats
   return {

@@ -1,29 +1,28 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redisSub } from '@/lib/singletons';
-import { toJakartaISOString } from '@/lib/timezone';
+import { authOptions } from '@/lib/auth/auth';
+import { redisSub } from '@/lib/database/singletons';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  
-  if (!session?.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const userOrError = requireSessionWithRole(session, ['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+  if (userOrError instanceof NextResponse) return new Response('Unauthorized', { status: 401 });
 
   const searchParams = request.nextUrl.searchParams;
   const scope = searchParams.get('scope') || 
-    ( session.user.role === 'SUPER_ADMIN' ? 'admin' :
-     session.user.role === 'REVIEWER' ? 'reviewer' :
-     session.user.role === 'APPROVER' ? 'approver' : 'vendor');
-  const vendorId = searchParams.get('vendorId') || session.user.id;
+    ( userOrError.role === 'SUPER_ADMIN' ? 'admin' :
+     userOrError.role === 'REVIEWER' ? 'reviewer' :
+     userOrError.role === 'APPROVER' ? 'approver' : 'vendor');
+  const vendorId = searchParams.get('vendorId') || userOrError.id;
 
   // Create Server-Sent Events stream
   const stream = new ReadableStream({
     start(controller) {
-      console.log('🔥 SSE connection established for:', { scope, vendorId, role: session.user.role });
+      console.log('🔥 SSE connection established for:', { scope, vendorId, role: userOrError.role });
 
       // Send initial connection message
       const encoder = new TextEncoder();
@@ -32,7 +31,7 @@ export async function GET(request: NextRequest) {
         message: 'Real-time notifications connected',
         scope,
         vendorId,
-        role: session.user.role
+        role: userOrError.role
       })}\n\n`));
 
       // Subscribe to Redis channels for real-time updates

@@ -1,10 +1,10 @@
-import UserInfoCard from "@/components/user-profile/UserInfoCard";
-import ChangePasswordCard from "@/components/user-profile/ChangePasswordCard";
+import UserInfoCard from "@/components/features/user/profile/UserInfoCard";
+import ChangePasswordCard from "@/components/features/user/profile/ChangePasswordCard";
 import { Metadata } from "next";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {

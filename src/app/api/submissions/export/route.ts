@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import * as XLSX from 'xlsx';
-import { toJakartaISOString } from '@/lib/timezone';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
+import { buildSubmissionRoleFilter } from '@/lib/database/queryHelpers';
 
 // Fungsi util aman untuk tanggal
 const safeDate = (d?: Date | string | null): string =>
@@ -18,13 +20,8 @@ const safeNumber = (n?: number | null): number => (typeof n === 'number' ? n : 0
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (!['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Export access required' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, ['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN'], 'Export access required');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { searchParams } = new URL(request.url);
     const reviewStatus = searchParams.get('reviewStatus');
@@ -33,17 +30,9 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const whereClause: any = {};
-
-    switch (session.user.role) {
-      case 'REVIEWER':
-        whereClause.review_status = { in: ['PENDING_REVIEW', 'MEETS_REQUIREMENTS', 'NOT_MEETS_REQUIREMENTS'] };
-        break;
-      case 'APPROVER':
-        whereClause.review_status = 'MEETS_REQUIREMENTS';
-        whereClause.approval_status = { in: ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'] };
-        break;
-    }
+    // Build role-based filter
+    const roleFilter = buildSubmissionRoleFilter(userOrError.role, userOrError.id);
+    const whereClause: any = { ...roleFilter };
 
     if (reviewStatus) whereClause.review_status = reviewStatus;
     if (approvalStatus) whereClause.approval_status = approvalStatus;
@@ -62,9 +51,48 @@ export async function GET(request: NextRequest) {
 
     const submissions = await prisma.submission.findMany({
       where: whereClause,
-      include: {
-        support_documents: true,
-        worker_list: true,
+      select: {
+        id: true,
+        simlok_number: true,
+        simlok_date: true,
+        vendor_name: true,
+        vendor_phone: true,
+        officer_name: true,
+        job_description: true,
+        work_location: true,
+        work_facilities: true,
+        working_hours: true,
+        holiday_working_hours: true,
+        worker_count: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
+        review_status: true,
+        approval_status: true,
+        reviewed_by: true,
+        approved_by: true,
+        signer_position: true,
+        note_for_approver: true,
+        note_for_vendor: true,
+        created_at: true,
+        reviewed_at: true,
+        approved_at: true,
+        // Only include essential document fields for export
+        support_documents: {
+          select: {
+            id: true,
+            document_type: true,
+            document_subtype: true,
+            document_number: true,
+            document_date: true,
+          },
+        },
+        // Only include essential worker fields for export
+        worker_list: {
+          select: {
+            id: true,
+            worker_name: true,
+          },
+        },
       },
       orderBy: { created_at: 'desc' },
     });
@@ -99,7 +127,7 @@ export async function GET(request: NextRequest) {
       JSA: 'JSA',
     };
 
-    const excelData = submissions.map((submission, idx) => {
+    const excelData = submissions.map((submission: any, idx) => {
       const support: Record<string, string> = {};
       for (const h of orderedSupportDocsHeaders) support[h] = '-';
 

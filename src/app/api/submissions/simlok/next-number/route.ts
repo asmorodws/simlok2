@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/singletons';
+import { prisma } from '@/lib/database/singletons';
 
 /**
  * GET /api/submissions/simlok/next-number

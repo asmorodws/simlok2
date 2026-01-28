@@ -1,19 +1,12 @@
 import { Metadata } from "next";
-import RoleGate from "@/components/security/RoleGate";
-import SidebarLayout from "@/components/layout/SidebarLayout";
-import VerifierDashboard from "@/components/verifier/VerifierDashboard";
+import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
 
-export const metadata: Metadata = {
-  title: "Dashboard Verifikator - SIMLOK",
-  description: "Halaman dashboard untuk verifikator mengelola dan memverifikasi pengajuan",
-};
+export const metadata: Metadata = createDashboardMetadata(
+  "Dashboard Verifikator",
+  "Halaman dashboard untuk verifikator mengelola dan memverifikasi pengajuan"
+);
 
 export default function VerifierPage() {
-  return (
-    <RoleGate allowedRoles={["VERIFIER"]}>
-      <SidebarLayout title="Dashboard Verifier" titlePage="Verifier">
-        <VerifierDashboard />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.verifier(<RoleDashboard role="VERIFIER" />);
 }

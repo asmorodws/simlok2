@@ -1,18 +1,12 @@
-import SubmissionForm from '@/components/submissions/SubmissionForm';
-import RoleGate from '@/components/security/RoleGate';
-import SidebarLayout from '@/components/layout/SidebarLayout';
 import { Metadata } from 'next';
+import { DashboardPageHelpers, createDashboardMetadata } from '@/lib/helpers/dashboardPageHelper';
+import UnifiedSubmissionForm from '@/components/features/submission/form/UnifiedSubmissionForm';
 
-export const metadata: Metadata = {
-  title: 'Buat Pengajuan Baru - SIMLOK',
-};
+export const metadata: Metadata = createDashboardMetadata(
+  'Buat Pengajuan Baru',
+  'Halaman untuk membuat pengajuan baru'
+);
 
 export default function CreateSubmissionPage() {
-  return (
-    <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Buat Pengajuan Baru" titlePage="Vendor">
-        <SubmissionForm />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.vendor(<UnifiedSubmissionForm mode="create" />);
 }

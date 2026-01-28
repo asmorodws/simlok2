@@ -1,4 +1,6 @@
 // Conditional import for server-side only
+import type { ImageDimensions } from '@/types';
+
 let sharp: any = null;
 
 // Only import sharp on server-side
@@ -13,11 +15,6 @@ if (typeof window === 'undefined') {
 
 const MAX_IMAGE_SIZE = 500; // Maximum dimension in pixels
 const JPEG_QUALITY = 70;   // JPEG compression quality (0-100)
-
-interface ImageDimensions {
-  width: number;
-  height: number;
-}
 
 /**
  * Compress and optimize image for PDF embedding

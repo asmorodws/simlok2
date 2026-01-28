@@ -1,29 +1,33 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import cache, { CacheKeys, CacheTTL } from "@/lib/cache";
-import { toJakartaISOString } from '@/lib/timezone';
+import { prisma } from "@/lib/database/singletons";
+import cache, { CacheKeys, CacheTTL } from "@/lib/cache/cache";
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { 
+  successResponse
+} from "@/lib/api/apiResponse";
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user has appropriate privileges for visitor dashboard
-    if (!['VISITOR', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // Use helper for session and role validation
+    // Note: VISITOR role not in standard groups, so check individually
+    const userOrError = requireSessionWithRole(
+      session,
+      ['VISITOR', 'SUPER_ADMIN'],
+      'Only visitors and super admins can access this dashboard'
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Check cache first
     const cachedData = cache.get(CacheKeys.VISITOR_STATS);
     if (cachedData) {
-      return NextResponse.json(cachedData, {
+      return successResponse(cachedData, { 
+        cached: true,
         headers: {
-          'X-Cache': 'HIT',
           'Cache-Control': 'private, max-age=60',
         }
       });

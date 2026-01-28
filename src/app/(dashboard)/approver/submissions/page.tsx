@@ -1,19 +1,12 @@
 import { Metadata } from "next";
-import RoleGate from "@/components/security/RoleGate";
-import SidebarLayout from "@/components/layout/SidebarLayout";
-import ApproverSubmissionsManagement from "@/components/approver/ApproverSubmissionsManagement";
+import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import RoleSubmissionsManagement from "@/components/features/submission/management/RoleSubmissionsManagement";
 
-export const metadata: Metadata = {
-  title: "Daftar Pengajuan - Approver SIMLOK",
-  description: "Halaman untuk approver melihat dan menyetujui pengajuan Simlok",
-};
+export const metadata: Metadata = createDashboardMetadata(
+  "Daftar Pengajuan - Approver",
+  "Halaman untuk approver melihat dan menyetujui pengajuan Simlok"
+);
 
 export default function ApproverSubmissionsPage() {
-  return (
-    <RoleGate allowedRoles={["APPROVER", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Daftar Pengajuan" titlePage="Approver">
-        <ApproverSubmissionsManagement />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.approver(<RoleSubmissionsManagement role="APPROVER" />);
 }

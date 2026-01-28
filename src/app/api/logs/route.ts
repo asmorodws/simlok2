@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { logger, LogLevel } from '@/lib/logger';
+import { authOptions } from '@/lib/auth/auth';
+import { logger, LogLevel } from '@/lib/logging/logger';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
 import fs from 'fs';
 import path from 'path';
 
@@ -9,11 +10,8 @@ import path from 'path';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Only SUPER_ADMIN can view logs
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.SUPER_ADMINS, 'Only super admins can view logs');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
@@ -89,11 +87,8 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Only SUPER_ADMIN can delete logs
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.SUPER_ADMINS, 'Only super admins can delete logs');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { startDate, endDate } = await request.json();
     const logDir = path.join(process.cwd(), 'logs');
@@ -107,8 +102,8 @@ export async function DELETE(request: NextRequest) {
         }
       });
 
-      logger.info('API:Logs', `All logs cleared by ${session.user.email}`, {
-        userId: session.user.id,
+      logger.info('API:Logs', `All logs cleared by ${userOrError.email}`, {
+        userId: userOrError.id,
       });
 
       return NextResponse.json({ message: 'All logs cleared successfully' });
@@ -133,8 +128,8 @@ export async function DELETE(request: NextRequest) {
         }
       });
 
-      logger.info('API:Logs', `Logs cleared for range ${startDate} to ${endDate} by ${session.user.email}`, {
-        userId: session.user.id,
+      logger.info('API:Logs', `Logs cleared for range ${startDate} to ${endDate} by ${userOrError.email}`, {
+        userId: userOrError.id,
         deletedFiles,
       });
 
@@ -153,11 +148,8 @@ export async function DELETE(request: NextRequest) {
 export async function POST(_request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
-    // Only SUPER_ADMIN can view log files
-    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.SUPER_ADMINS, 'Only super admins can view log files');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const logDir = path.join(process.cwd(), 'logs');
     

@@ -8,7 +8,7 @@ import {
   type PDFImage,
 } from "pdf-lib";
 import * as QRCode from 'qrcode';
-import { numberToBahasa } from "@/lib/parseNumber";
+import { numberToBahasa } from "@/lib/helpers/parseNumber";
 // 🎯 PERFORMANCE: Cache logo to avoid reloading it for every PDF
 let cachedLogoBuffer: Buffer | null = null;
 

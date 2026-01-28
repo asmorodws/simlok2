@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
-import { toJakartaISOString } from '@/lib/timezone';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
 import { z } from 'zod';
-import { generateQrString } from '@/lib/qr-security';
-import cache, { CacheKeys } from '@/lib/cache';
+import { generateQrString } from '@/lib/auth/qrSecurity';
+import cache, { CacheKeys } from '@/lib/cache/cache';
 import { RouteParams } from '@/types';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
 
 /* -------------- SCHEMA -------------- */
 const finalApprovalSchema = z.object({
@@ -43,16 +44,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!['APPROVER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role))
-      return NextResponse.json({ error: 'Approver access required' }, { status: 403 });
+    const userOrError = requireSessionWithRole(session, RoleGroups.APPROVERS);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await request.json();
     const validatedData = finalApprovalSchema.parse(body);
 
     const existingSubmission = await prisma.submission.findUnique({
       where: { id },
-      include: { user: true },
+      select: {
+        id: true,
+        user_id: true,
+        review_status: true,
+        approval_status: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
+        user: {
+          select: {
+            id: true,
+            officer_name: true,
+            email: true,
+            vendor_name: true,
+          }
+        },
+      },
     });
     if (!existingSubmission) return NextResponse.json({ error: 'Submission tidak ditemukan' }, { status: 404 });
 
@@ -62,7 +77,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Submission sudah diproses sebelumnya' }, { status: 400 });
 
     const approverUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userOrError.id },
       select: { id: true, officer_name: true, position: true, email: true },
     });
     if (!approverUser)
@@ -72,8 +87,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       approval_status: validatedData.approval_status,
       note_for_vendor: validatedData.note_for_vendor || '',
       approved_at: new Date(),
-      approved_by: session.user.officer_name,
-      approved_by_final_id: session.user.id,
+      approved_by: userOrError.officer_name,
+      approved_by_final_id: userOrError.id,
       signer_name: approverUser.officer_name,
       signer_position: approverUser.position || 'Sr Officer Security III',
     };
@@ -151,7 +166,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // format dates to Jakarta TZ before responding
     try {
-      const { formatSubmissionDates } = await import('@/lib/timezone');
+      const { formatSubmissionDates } = await import('@/lib/helpers/timezone');
       return NextResponse.json({
         message: validatedData.approval_status === 'APPROVED' ? 'Submission berhasil disetujui' : 'Submission berhasil ditolak',
         submission: formatSubmissionDates(updatedSubmission),

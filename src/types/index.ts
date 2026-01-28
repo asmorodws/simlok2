@@ -21,6 +21,18 @@ export * from './notification';
 // Image types
 export * from './image';
 
+// Stats types
+export * from './stats';
+
+// Logs types
+export * from './logs';
+
+// Scan types
+export * from './scan';
+
+// API Response types (re-export from lib)
+export type { ApiResponse } from '@/lib/api/apiResponse';
+
 // Re-export frequently used Prisma types
 export type {
   User_role,

@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
-import { authOptions } from '@/lib/auth';
-import EditSubmissionForm from '../../../../../../components/vendor/EditSubmissionForm';
+import { authOptions } from '@/lib/auth/auth';
+import UnifiedSubmissionForm from '@/components/features/submission/form/UnifiedSubmissionForm';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 
 interface EditSubmissionPageProps {
@@ -27,7 +27,7 @@ export default async function EditSubmissionPage({ params }: EditSubmissionPageP
   return (
     <SidebarLayout title="Edit Pengajuan" titlePage="Vendor">
       <div className="space-y-6">
-        <EditSubmissionForm submissionId={id} />
+        <UnifiedSubmissionForm mode="edit" submissionId={id} />
       </div>
     </SidebarLayout>
   );

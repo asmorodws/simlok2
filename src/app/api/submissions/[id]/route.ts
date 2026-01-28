@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import { generateSIMLOKPDF } from '@/utils/pdf/simlokTemplate';
-import { formatSubmissionDates } from '@/lib/timezone';
+import { formatSubmissionDates } from '@/lib/helpers/timezone';
 import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
-import { cleanupSubmissionNotifications } from '@/lib/notificationCleanup';
-import { generateQrString } from '@/lib/qr-security';
+import { cleanupSubmissionNotifications } from '@/lib/notification/notificationCleanup';
+import { generateQrString } from '@/lib/auth/qrSecurity';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { buildSubmissionRoleFilter } from '@/lib/database/queryHelpers';
 
 // Function to generate auto SIMLOK number
 async function generateSimlokNumber(): Promise<string> {
@@ -53,10 +55,8 @@ import { RouteParams } from '@/types';
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.SCAN_VIEWERS);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -75,31 +75,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch submission with user and approved by user details
-    const whereClause: any = { id };
-    
-    // Apply role-based access control
-    switch (session.user.role) {
-      case 'VENDOR':
-        // Vendors can only see their own submissions
-        whereClause.user_id = session.user.id;
-        break;
-      case 'APPROVER':
-        // Approvers can only see submissions that meet requirements
-        whereClause.review_status = 'MEETS_REQUIREMENTS';
-        break;
-      case 'REVIEWER':
-      case 'VERIFIER':
-      case 'ADMIN':
-      case 'SUPER_ADMIN':
-        // These roles can see all submissions (no additional filter)
-        break;
-      default:
-        return NextResponse.json({ error: 'Invalid role' }, { status: 403 });
-    }
+    const roleFilter = buildSubmissionRoleFilter(userOrError.role, userOrError.id);
+    const whereClause: any = { id, ...roleFilter };
     
     const submission = await prisma.submission.findFirst({
       where: whereClause,
-      include: {
+      select: {
+        // Use all submission fields for detail view
+        id: true,
+        simlok_number: true,
+        simlok_date: true,
+        vendor_name: true,
+        officer_name: true,
+        job_description: true,
+        work_location: true,
+        working_hours: true,
+        work_facilities: true,
+        worker_names: true,
+        worker_count: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
+        implementation: true,
+        based_on: true,
+        review_status: true,
+        approval_status: true,
+
+        qrcode: true,
+        created_at: true,
+        reviewed_at: true,
+        approved_at: true,
+        user_id: true,
+        user_email: true,
+        user_phone_number: true,
+        user_address: true,
+        user_vendor_name: true,
+        user_officer_name: true,
+        // Include related data with optimized selects
         user: {
           select: {
             id: true,
@@ -109,6 +120,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           }
         },
         worker_list: {
+          select: {
+            id: true,
+            worker_name: true,
+            worker_photo: true,
+            hsse_pass_number: true,
+            hsse_pass_valid_thru: true,
+            created_at: true,
+          },
           orderBy: {
             created_at: 'asc'
           }
@@ -133,11 +152,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!submission) {
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
-    }
-
-    // Check permissions
-    if (session.user.role === 'VENDOR' && submission.user_id !== session.user.id) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // If PDF is requested, generate and return PDF
@@ -255,17 +269,14 @@ async function generatePDF(submission: any) {
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'VERIFIER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
     
     console.log('PUT /api/submissions/[id] - Session:', {
-      userId: session?.user?.id,
-      role: session?.user?.role,
-      email: session?.user?.email
+      userId: userOrError.id,
+      role: userOrError.role,
+      email: userOrError.email
     });
-    
-    if (!session?.user) {
-      console.log('PUT /api/submissions/[id] - No session found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { id } = await params;
     console.log('PUT /api/submissions/[id] - Submission ID:', id);
@@ -275,7 +286,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       where: { 
         id,
         // Vendors can only edit their own submissions
-        ...(session.user.role === 'VENDOR' ? { user_id: session.user.id } : {})
+        ...(userOrError.role === 'VENDOR' ? { user_id: userOrError.id } : {})
       }
     });
 
@@ -291,9 +302,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check permissions based on role
-    if (session.user.role === 'VENDOR') {
+    if (userOrError.role === 'VENDOR') {
       // Vendors can only edit PENDING submissions and only their own
-      if (existingSubmission.user_id !== session.user.id) {
+      if (existingSubmission.user_id !== userOrError.id) {
         console.log('PUT /api/submissions/[id] - Access denied: not owner');
         return NextResponse.json({ error: 'Access denied' }, { status: 403 });
       }
@@ -304,7 +315,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           error: 'Can only edit pending submissions' 
         }, { status: 400 });
       }
-    } else if (session.user.role === 'REVIEWER' || session.user.role === 'APPROVER') {
+    } else if (userOrError.role === 'REVIEWER' || userOrError.role === 'APPROVER') {
       // Reviewers and Approvers can edit submissions in PENDING_APPROVAL status
       if (existingSubmission.approval_status !== 'PENDING_APPROVAL') {
         console.log('PUT /api/submissions/[id] - Cannot edit non-pending submission');
@@ -314,7 +325,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
       
       // Approvers can only edit submissions that meet requirements
-      if (session.user.role === 'APPROVER' && existingSubmission.review_status !== 'MEETS_REQUIREMENTS') {
+      if (userOrError.role === 'APPROVER' && existingSubmission.review_status !== 'MEETS_REQUIREMENTS') {
         console.log('PUT /api/submissions/[id] - Approver cannot edit submission that does not meet requirements');
         return NextResponse.json({ 
           error: 'Can only edit submissions that meet requirements' 
@@ -330,7 +341,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     let newStatus: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | undefined;
 
     // Handle different types of updates based on user role
-    if (session.user.role === 'REVIEWER') {
+    if (userOrError.role === 'REVIEWER') {
       // Reviewer updating implementation dates and template data
       console.log('PUT /api/submissions/[id] - Reviewer update');
       
@@ -387,7 +398,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
       }
       
-    } else if (session.user.role === 'APPROVER') {
+    } else if (userOrError.role === 'APPROVER') {
       // Approver can update similar fields as reviewer plus approval status
       console.log('PUT /api/submissions/[id] - Approver update');
       
@@ -409,12 +420,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
       console.log('PUT /api/submissions/[id] - Approver update data:', updateData);
       
-    } else if (session.user.role === 'VERIFIER') {
+    } else if (userOrError.role === 'VERIFIER') {
       // Admin/Verifier updating approval status
       if (body.status_approval_admin && ['APPROVED', 'REJECTED'].includes(body.status_approval_admin)) {
         console.log('PUT /api/submissions/[id] - Admin/Verifier approval update');
-        console.log('PUT /api/submissions/[id] - Session user ID:', session.user.id);
-        console.log('PUT /api/submissions/[id] - Session user role:', session.user.role);
+        console.log('PUT /api/submissions/[id] - Session user ID:', userOrError.id);
+        console.log('PUT /api/submissions/[id] - Session user role:', userOrError.role);
         
         const approvalData: any = {
           approval_status: body.status_approval_admin,
@@ -463,13 +474,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           
           // Verify the user exists before setting approved_by
           const adminUser = await prisma.user.findUnique({
-            where: { id: session.user.id }
+            where: { id: userOrError.id }
           });
           
           if (adminUser) {
-            updateData.approved_by = session.user.id;
+            updateData.approved_by = userOrError.id;
           } else {
-            console.log('PUT /api/submissions/[id] - Admin user not found:', session.user.id);
+            console.log('PUT /api/submissions/[id] - Admin user not found:', userOrError.id);
             return NextResponse.json({ 
               error: 'Your session is no longer valid. Please log out and log back in to continue.',
               code: 'INVALID_SESSION'
@@ -482,7 +493,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           error: 'Invalid approval status. Must be APPROVED or REJECTED' 
         }, { status: 400 });
       }
-    } else if (session.user.role === 'VENDOR') {
+    } else if (userOrError.role === 'VENDOR') {
       // Vendor updating their submission
       console.log('PUT /api/submissions/[id] - Vendor update');
       
@@ -522,7 +533,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const updatedSubmission = await prisma.submission.update({
       where: { id },
       data: updateData,
-      include: {
+      select: {
+        id: true,
+        simlok_number: true,
+        vendor_name: true,
+        officer_name: true,
+        job_description: true,
+        review_status: true,
+        approval_status: true,
+        created_at: true,
         user: {
           select: {
             id: true,
@@ -535,7 +554,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     // Handle workers if provided (only for vendor updates)
-    if (session.user.role === 'VENDOR' && body.workers && Array.isArray(body.workers)) {
+    if (userOrError.role === 'VENDOR' && body.workers && Array.isArray(body.workers)) {
       // Delete existing workers for this submission
       await prisma.workerList.deleteMany({
         where: {
@@ -564,7 +583,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // 🔧 FIX: Handle support documents if provided (for vendor updates)
-    if (session.user.role === 'VENDOR') {
+    if (userOrError.role === 'VENDOR') {
       const {
         simjaDocuments,
         sikaDocuments,
@@ -595,7 +614,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               document_date: doc.document_date ? new Date(doc.document_date) : null,
               document_upload: doc.document_upload,
               submission_id: id,
-              uploaded_by: session.user.id,
+              uploaded_by: userOrError.id,
               uploaded_at: new Date(),
             }));
           allDocuments.push(...simjaDocs);
@@ -612,7 +631,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               document_date: doc.document_date ? new Date(doc.document_date) : null,
               document_upload: doc.document_upload,
               submission_id: id,
-              uploaded_by: session.user.id,
+              uploaded_by: userOrError.id,
               uploaded_at: new Date(),
             }));
           allDocuments.push(...sikaDocs);
@@ -629,7 +648,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               document_date: doc.document_date ? new Date(doc.document_date) : null,
               document_upload: doc.document_upload,
               submission_id: id,
-              uploaded_by: session.user.id,
+              uploaded_by: userOrError.id,
               uploaded_at: new Date(),
             }));
           allDocuments.push(...workOrderDocs);
@@ -646,7 +665,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               document_date: doc.document_date ? new Date(doc.document_date) : null,
               document_upload: doc.document_upload,
               submission_id: id,
-              uploaded_by: session.user.id,
+              uploaded_by: userOrError.id,
               uploaded_at: new Date(),
             }));
           allDocuments.push(...kontrakDocs);
@@ -663,7 +682,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               document_date: doc.document_date ? new Date(doc.document_date) : null,
               document_upload: doc.document_upload,
               submission_id: id,
-              uploaded_by: session.user.id,
+              uploaded_by: userOrError.id,
               uploaded_at: new Date(),
             }));
           allDocuments.push(...jsaDocs);
@@ -699,10 +718,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { id } = await params;
 
@@ -716,9 +733,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Permission checks based on role
-    if (session.user.role === 'VENDOR') {
+    if (userOrError.role === 'VENDOR') {
       // Vendors can only delete their own PENDING submissions
-      if (existingSubmission.user_id !== session.user.id) {
+      if (existingSubmission.user_id !== userOrError.id) {
         return NextResponse.json({ 
           error: 'Access denied. You can only delete your own submissions.' 
         }, { status: 403 });
@@ -729,7 +746,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
           error: 'Can only delete pending submissions. Approved or rejected submissions cannot be deleted.' 
         }, { status: 400 });
       }
-    } else  if (session.user.role === 'VERIFIER') {
+    } else  if (userOrError.role === 'VERIFIER') {
       // Verifiers can delete pending and rejected submissions
       if (existingSubmission.approval_status === 'APPROVED') {
         return NextResponse.json({ 

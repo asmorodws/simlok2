@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/singletons";
 import bcrypt from "bcryptjs";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await req.json();
     const { currentPassword, newPassword } = body;
@@ -17,7 +17,7 @@ export async function PUT(req: Request) {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: {
-        id: session.user.id,
+        id: userOrError.id,
       },
     });
 
@@ -37,7 +37,7 @@ export async function PUT(req: Request) {
     // Update password in database
     await prisma.user.update({
       where: {
-        id: session.user.id,
+        id: userOrError.id,
       },
       data: {
         password: hashedPassword,

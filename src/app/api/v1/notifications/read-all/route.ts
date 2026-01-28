@@ -1,9 +1,9 @@
 // src/app/api/v1/notifications/read-all/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { resolveAudience } from "@/lib/notificationAudience";
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
+import { resolveAudience } from "@/lib/notification/notificationAudience";
 
 export async function POST(req: NextRequest) {
   try {

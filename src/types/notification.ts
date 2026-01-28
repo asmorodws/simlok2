@@ -4,6 +4,21 @@
 
 import { NotificationScope } from '@prisma/client';
 
+/**
+ * Notification interface for client-side usage
+ */
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  data?: any;
+  isRead: boolean;
+  createdAt: string;
+  scope: string;
+  vendorId?: string;
+}
+
 export interface NotificationData {
   id: string;
   scope: NotificationScope;

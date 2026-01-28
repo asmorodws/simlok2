@@ -1,19 +1,12 @@
 import { Metadata } from "next";
-import RoleGate from "@/components/security/RoleGate";
-import SidebarLayout from "@/components/layout/SidebarLayout";
-import VendorDashboard from "@/components/vendor/VendorDashboard";
+import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
 
-export const metadata: Metadata = {
-  title: "Dashboard Vendor - SIMLOK",
-  description: "Halaman dashboard untuk vendor mengelola pengajuan dan melihat status pengajuan",
-};
+export const metadata: Metadata = createDashboardMetadata(
+  "Dashboard Vendor",
+  "Halaman dashboard untuk vendor mengelola pengajuan dan melihat status pengajuan"
+);
 
 export default function VendorPage() {
-  return (
-    <RoleGate allowedRoles={["VENDOR"]}>
-      <SidebarLayout title="Dashboard Vendor" titlePage="Vendor">
-        <VendorDashboard />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.vendor(<RoleDashboard role="VENDOR" />);
 }

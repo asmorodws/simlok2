@@ -2,7 +2,7 @@
  * Submission related types and interfaces
  */
 
-import { ReviewStatus } from '@prisma/client';
+import { ReviewStatus, ApprovalStatus } from '@prisma/client';
 
 // Support Document Interface
 export interface SupportDocument {
@@ -60,6 +60,27 @@ export interface SubmissionReviewData {
   note_for_vendor?: string;
 }
 
+// Worker types - consolidated from multiple files
+export interface Worker {
+  id: string;
+  worker_name: string;
+  worker_photo: string | null;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | Date | null;
+  hsse_pass_document_upload?: string | null;
+  submission_id?: string;
+  created_at?: string | Date;
+}
+
+export interface WorkerAPIResponse {
+  id: string;
+  worker_name: string;
+  worker_photo: string;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | Date | null;
+  hsse_pass_document_upload?: string | null;
+}
+
 export interface WorkerList {
   id: string;
   worker_name: string;
@@ -69,6 +90,16 @@ export interface WorkerList {
   hsse_pass_document_upload?: string | null;
   submission_id: string;
   created_at: Date;
+}
+
+// Support Document types - consolidated
+export interface SupportDocumentAPI {
+  id: string;
+  document_type: string;
+  document_subtype?: string;
+  document_number: string;
+  document_date: string | Date;
+  document_upload: string;
 }
 
 // Support Document for submissions
@@ -233,4 +264,89 @@ export interface QrScanData {
     officer_name: string;
     email: string;
   };
+}
+
+/**
+ * Worker photo with additional metadata
+ */
+export interface WorkerPhoto {
+  id: string;
+  worker_name: string;
+  worker_photo: string | null;
+  hsse_pass_number?: string | null;
+  hsse_pass_valid_thru?: string | null;
+  hsse_pass_document_upload?: string | null;
+  created_at: string;
+}
+
+/**
+ * Base submission type for table/list views
+ */
+export interface BaseSubmission extends Record<string, unknown> {
+  id: string;
+  review_status: ReviewStatus;
+  vendor_name: string;
+  based_on: string;
+  work_location: string;
+  job_description: string;
+  approval_status: ApprovalStatus;
+  created_at: string | Date;
+  simlok_number?: string | null;
+  implementation_start_date?: string | null;
+  implementation_end_date?: string | null;
+  officer_name: string;
+  implementation: string | null;
+  working_hours: string;
+  work_facilities: string;
+  worker_count?: number | null;
+  holiday_working_hours?: string | null;
+  worker_names?: string | null;
+  content?: string | null;
+}
+
+/**
+ * Approver-specific submission extension
+ */
+export interface ApproverSubmission extends BaseSubmission {
+  approval_status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  approved_by?: string;
+  approved_at?: string;
+  approval_notes?: string | null;
+  approver?: { username: string; name: string } | null;
+  note_for_approver?: string;
+  note_for_vendor?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
+  qrcode?: string;
+  updated_at?: string;
+  reviewed_by?: string | null;
+  workers?: Array<{
+    id: string;
+    worker_name: string;
+    worker_photo: string | null;
+  }>;
+}
+
+/**
+ * Reviewer-specific submission extension
+ */
+export interface ReviewerSubmission extends BaseSubmission {
+  review_status: 'PENDING_REVIEW' | 'MEETS_REQUIREMENTS' | 'NOT_MEETS_REQUIREMENTS';
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string | null;
+  scan_count?: number;
+  last_scanned_at?: string | null;
+  reviewer?: { username: string; name: string } | null;
+  user?: { name: string; username: string };
+  user_email?: string | null;
+  user_officer_name?: string | null;
+  user_vendor_name?: string | null;
+  user_phone_number?: string | null;
+  user_address?: string | null;
+  note_for_approver?: string;
+  note_for_vendor?: string;
+  sika_document_upload?: string;
+  simja_document_upload?: string;
+  qrcode?: string;
 }

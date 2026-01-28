@@ -3,22 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Download, Trash2, X, Search, Filter } from 'lucide-react';
 import DateRangePicker from '@/components/form/DateRangePicker';
-
-interface LogEntry {
-  timestamp?: string;
-  level?: string;
-  context?: string;
-  message?: string;
-  raw: string;
-}
-
-interface LogsResponse {
-  startDate: string;
-  endDate: string;
-  level: string;
-  total: number;
-  logs: LogEntry[];
-}
+import type { LogEntry, LogsResponse } from '@/types';
 
 type LogLevel = 'ALL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
 

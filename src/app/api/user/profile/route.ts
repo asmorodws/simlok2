@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/singletons";
-import { toJakartaISOString } from '@/lib/timezone';
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 // GET /api/user/profile - Get current user profile
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Get user profile
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userOrError.id },
       select: {
         id: true,
         email: true,
@@ -52,16 +51,14 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'VERIFIER', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await request.json();
     const { officer_name, vendor_name, address, phone_number, email, position } = body;
 
     // Check if email is being changed and already exists
-    if (email && email !== session.user.email) {
+    if (email && email !== userOrError.email) {
       const emailExists = await prisma.user.findUnique({
         where: { email }
       });
@@ -73,7 +70,7 @@ export async function PUT(request: NextRequest) {
 
     // Update user profile
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userOrError.id },
       data: {
         email: email || undefined,
         officer_name: officer_name || undefined,

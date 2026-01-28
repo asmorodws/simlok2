@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import { SubmissionData } from '@/types';
 import { notifyAdminNewSubmission } from '@/server/events';
-import { formatSubmissionDates } from '@/lib/timezone';
-import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
-import { logger, getRequestMetadata } from '@/lib/logger';
+import { formatSubmissionDates } from '@/lib/helpers/timezone';
+import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/api/rateLimiter';
+import { logger, getRequestMetadata } from '@/lib/logging/logger';
 import { Session } from 'next-auth';
 
 // Helper function to normalize document number
@@ -215,7 +215,18 @@ export async function GET(request: NextRequest) {
     const [submissions, total] = await Promise.all([
       prisma.submission.findMany({
         where: whereClause,
-        include: {
+        select: {
+          id: true,
+          simlok_number: true,
+          vendor_name: true,
+          officer_name: true,
+          job_description: true,
+          work_location: true,
+          implementation: true,
+          based_on: true,
+          review_status: true,
+          approval_status: true,
+          created_at: true,
           user: {
             select: {
               id: true,
@@ -271,9 +282,9 @@ export async function GET(request: NextRequest) {
 
       response.statistics = {
         total: total,
-        pending: statistics.find(s => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
-        approved: statistics.find(s => s.approval_status === 'APPROVED')?._count.approval_status || 0,
-        rejected: statistics.find(s => s.approval_status === 'REJECTED')?._count.approval_status || 0,
+        pending: statistics.find((s: any) => s.approval_status === 'PENDING_APPROVAL')?._count.approval_status || 0,
+        approved: statistics.find((s: any) => s.approval_status === 'APPROVED')?._count.approval_status || 0,
+        rejected: statistics.find((s: any) => s.approval_status === 'REJECTED')?._count.approval_status || 0,
       };
     }
 
@@ -475,7 +486,20 @@ export async function POST(request: NextRequest) {
           // Note: simja_number, simja_date, sika_number, sika_date, dll 
           // sudah tidak ada di schema karena sekarang menggunakan SupportDocument table
         },
-        include: {
+        select: {
+          id: true,
+          simlok_number: true,
+          vendor_name: true,
+          officer_name: true,
+          job_description: true,
+          work_location: true,
+          implementation: true,
+          based_on: true,
+          review_status: true,
+          approval_status: true,
+          qrcode: true,
+          created_at: true,
+          user_id: true,
           user: {
             select: {
               id: true,
@@ -621,7 +645,7 @@ export async function POST(request: NextRequest) {
 
       // Convert date fields to Asia/Jakarta before returning
       try {
-        const { formatSubmissionDates } = await import('@/lib/timezone');
+        const { formatSubmissionDates } = await import('@/lib/helpers/timezone');
         const formatted = formatSubmissionDates(submission);
         return NextResponse.json(formatted, { status: 201 });
       } catch (err) {

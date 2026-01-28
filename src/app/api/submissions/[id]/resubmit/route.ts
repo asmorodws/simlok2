@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import { notifyReviewerSubmissionResubmitted } from '@/server/events';
-import cache, { CacheKeys } from '@/lib/cache';
+import cache, { CacheKeys } from '@/lib/cache/cache';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 import { RouteParams } from '@/types';
 
@@ -18,21 +19,25 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only VENDOR can resubmit their own submissions
-    if (session.user.role !== 'VENDOR') {
-      return NextResponse.json({ error: 'Hanya vendor yang dapat mengirim ulang pengajuan' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Check if submission exists and belongs to this vendor
     const existingSubmission = await prisma.submission.findUnique({
       where: { id },
-      include: {
-        user: true
+      select: {
+        id: true,
+        user_id: true,
+        review_status: true,
+        approval_status: true,
+        note_for_vendor: true,
+        user: {
+          select: {
+            id: true,
+            officer_name: true,
+            email: true,
+          }
+        }
       }
     });
 
@@ -41,7 +46,7 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify ownership
-    if (existingSubmission.user_id !== session.user.id) {
+    if (existingSubmission.user_id !== userOrError.id) {
       return NextResponse.json({ 
         error: 'Anda tidak memiliki akses untuk mengirim ulang submission ini' 
       }, { status: 403 });
@@ -71,12 +76,40 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
         note_for_vendor: null,
         // Clear vendor note to remove "tidak memenuhi syarat" status indication
       },
-      include: {
-        user: true,
+      select: {
+        id: true,
+        simlok_number: true,
+        vendor_name: true,
+        officer_name: true,
+        job_description: true,
+        review_status: true,
+        approval_status: true,
+        user_id: true,
+        user: {
+          select: {
+            id: true,
+            officer_name: true,
+            email: true,
+            vendor_name: true,
+          }
+        },
         worker_list: {
+          select: {
+            id: true,
+            worker_name: true,
+            worker_photo: true,
+          },
           orderBy: { created_at: 'asc' }
         },
         support_documents: {
+          select: {
+            id: true,
+            document_type: true,
+            document_subtype: true,
+            document_number: true,
+            document_date: true,
+            uploaded_at: true,
+          },
           orderBy: { uploaded_at: 'asc' }
         }
       }
@@ -88,7 +121,7 @@ export async function PATCH(_request: NextRequest, { params }: RouteParams) {
     console.log('🗑️ Cache invalidated: REVIEWER_STATS, VENDOR_STATS after resubmission');
 
     // Notify reviewer that vendor has resubmitted after fixing issues
-    await notifyReviewerSubmissionResubmitted(id, session.user.vendor_name || 'Vendor');
+    await notifyReviewerSubmissionResubmitted(id, userOrError.vendor_name || 'Vendor');
 
     console.log(`✅ Submission ${id} resubmitted successfully, awaiting re-review`);
 

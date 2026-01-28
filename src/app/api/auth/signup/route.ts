@@ -1,11 +1,11 @@
 // app/api/auth/signup/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/singletons";
-import { toJakartaISOString } from '@/lib/timezone';
+import { prisma } from "@/lib/database/singletons";
+import { toJakartaISOString } from '@/lib/helpers/timezone';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { notifyAdminNewVendor } from "@/server/events";
-import { verifyTurnstileToken } from "@/utils/turnstile-middleware";
+import { verifyTurnstileToken } from "@/utils/security/turnstileMiddleware";
 
 // Validation schema for vendor registration
 const vendorRegistrationSchema = z.object({

@@ -1,28 +1,33 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/singletons";
+import { 
+  successResponse,
+  internalErrorResponse 
+} from "@/lib/api/apiResponse";
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { PAGINATION } from '@/lib/constants';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // Check if user has appropriate privileges
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(session.user.role)) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+    // Use helper for session and role validation
+    const userOrError = requireSessionWithRole(
+      session,
+      RoleGroups.ADMINS,
+      'Only admins and super admins can access recent submissions'
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Get recent submissions based on user role
     let whereClause = {};
     
-    if (session.user.role === 'ADMIN') {
+    if (userOrError.role === 'ADMIN') {
       // ADMIN can see all submissions
       whereClause = {};
-    } else if (session.user.role === 'SUPER_ADMIN') {
+    } else if (userOrError.role === 'SUPER_ADMIN') {
       // SUPER_ADMIN can see all submissions
       whereClause = {};
     }
@@ -32,7 +37,7 @@ export async function GET() {
       orderBy: {
         created_at: 'desc'
       },
-      take: 10,
+      take: PAGINATION.DASHBOARD_RECENT_LIMIT,
       select: {
         id: true,
         simlok_number: true,
@@ -49,10 +54,9 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json(recentSubmissions);
+    return successResponse(recentSubmissions);
 
   } catch (error) {
-    console.error("[DASHBOARD_RECENT_SUBMISSIONS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return internalErrorResponse('DASHBOARD_RECENT_SUBMISSIONS', error);
   }
 }

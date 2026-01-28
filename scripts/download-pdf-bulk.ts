@@ -16,13 +16,57 @@ interface DownloadOptions {
   pending?: boolean;
   rejected?: boolean;
   today?: boolean;
+  from?: string; // Format: YYYY-MM-DD
+  to?: string;   // Format: YYYY-MM-DD
+  dateField?: 'created_at' | 'approved_at'; // Field to filter by date
 }
 
 async function parseArgs(): Promise<DownloadOptions> {
   const args = process.argv.slice(2);
+  
+  // Show help
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+📥 SIMLOK PDF Bulk Download CLI
+
+Usage: npm run download-pdf-bulk -- [options]
+
+Status Filters:
+  --approved          Download approved submissions (default)
+  --pending           Download pending submissions
+  --rejected          Download rejected submissions
+  --all               Download all submissions
+
+Date Filters:
+  --today             Download submissions created today
+  --from YYYY-MM-DD   Download from date (inclusive)
+  --to YYYY-MM-DD     Download to date (inclusive)
+  --date-field <field>  Date field to filter (created_at or approved_at, default: approved_at)
+
+Advanced Filters:
+  --approval-status <status>   Filter by approval status
+  --review-status <status>     Filter by review status
+  --vendor <id>                Filter by vendor ID
+  --limit <number>             Limit number of downloads
+
+Output:
+  --output <path>     Custom output directory (default: ./public/downloads/simlok-pdfs)
+
+Examples:
+  npm run download-pdf-bulk -- --today
+  npm run download-pdf-bulk -- --from 2026-01-01 --to 2026-01-31
+  npm run download-pdf-bulk -- --approved --vendor cm123 --limit 50
+  npm run download-pdf-bulk -- --all --from 2026-01-01
+
+For more info, see: docs/PDF_DOWNLOAD_CLI.md
+    `);
+    process.exit(0);
+  }
+  
   const options: DownloadOptions = {
-    // Default: download yang approved
+    // Default: download yang approved, filter by approved_at
     approved: true,
+    dateField: 'approved_at',
     output: './public/downloads/simlok-pdfs'
   };
 
@@ -45,6 +89,20 @@ async function parseArgs(): Promise<DownloadOptions> {
       options.all = false;
     } else if (arg === '--today') {
       options.today = true;
+    } else if (arg === '--from' && i + 1 < args.length) {
+      const fromDate = args[++i];
+      if (fromDate) options.from = fromDate;
+    } else if (arg === '--to' && i + 1 < args.length) {
+      const toDate = args[++i];
+      if (toDate) options.to = toDate;
+    } else if (arg === '--date-field' && i + 1 < args.length) {
+      const field = args[++i];
+      if (field === 'created_at' || field === 'approved_at') {
+        options.dateField = field;
+      } else {
+        console.error(`❌ Invalid --date-field: ${field}. Use 'created_at' or 'approved_at'`);
+        process.exit(1);
+      }
     } else if (arg === '--approval-status' && i + 1 < args.length) {
       options.approvalStatus = args[++i] as ApprovalStatus;
       options.approved = false; // Override default
@@ -94,11 +152,9 @@ async function downloadPDFs() {
       where.user_id = options.vendorId;
     }
 
-    if (options.vendorId) {
-      where.user_id = options.vendorId;
-    }
-
-    // Filter by today if requested
+    // Filter by date
+    const dateField = options.dateField || 'approved_at'; // Default to approved_at
+    
     if (options.today) {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -106,10 +162,33 @@ async function downloadPDFs() {
       const endOfDay = new Date();
       endOfDay.setHours(23, 59, 59, 999);
       
-      where.created_at = {
+      where[dateField] = {
         gte: startOfDay,
         lte: endOfDay,
       };
+    } else if (options.from || options.to) {
+      // Date range filter
+      where[dateField] = {};
+      
+      if (options.from) {
+        const fromDate = new Date(options.from);
+        if (isNaN(fromDate.getTime())) {
+          console.error(`❌ Invalid --from date format: ${options.from}. Use YYYY-MM-DD`);
+          process.exit(1);
+        }
+        fromDate.setHours(0, 0, 0, 0);
+        where[dateField].gte = fromDate;
+      }
+      
+      if (options.to) {
+        const toDate = new Date(options.to);
+        if (isNaN(toDate.getTime())) {
+          console.error(`❌ Invalid --to date format: ${options.to}. Use YYYY-MM-DD`);
+          process.exit(1);
+        }
+        toDate.setHours(23, 59, 59, 999);
+        where[dateField].lte = toDate;
+      }
     }
 
     // Fetch submissions

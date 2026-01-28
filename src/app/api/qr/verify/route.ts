@@ -1,43 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
-import { parseQrString, type QrPayload } from '@/lib/qr-security';
-import { toJakartaISOString } from '@/lib/timezone';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { parseQrString, type QrPayload } from '@/lib/auth/qrSecurity';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/api/rateLimiter';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 // POST /api/qr/verify - Verify QR code and return submission data
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Tidak terotorisasi' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VERIFIER', 'ADMIN'], 'Hanya verifikator dan admin yang dapat melakukan scan QR code/barcode.');
+    if (userOrError instanceof NextResponse) return userOrError;
 
-    // Only VERIFIER and ADMIN can scan QR codes/barcodes
-    if (!['VERIFIER', 'ADMIN'].includes(session.user.role)) {
+    // ========== RATE LIMITING ==========
+    const rateLimitResult = rateLimiter.check(
+      userOrError.id,
+      RateLimitPresets.qrVerification
+    );
+
+    if (!rateLimitResult.allowed) {
+      const headers = getRateLimitHeaders(rateLimitResult);
       return NextResponse.json({ 
-        error: 'Akses ditolak. Hanya verifikator dan admin yang dapat melakukan scan QR code/barcode.' 
-      }, { status: 403 });
+        success: false,
+        error: RateLimitPresets.qrVerification.message,
+        retryAfter: rateLimitResult.retryAfter 
+      }, { status: 429, headers });
     }
 
     const body = await request.json();
-    const { qrData, qr_data, scanLocation, scanner_type } = body;
+    const { qrData, qr_data, scanLocation } = body;
 
     // Support both qrData and qr_data parameter names for compatibility
     const qrString = qr_data || qrData;
 
-    console.log('=== QR VERIFY API ===');
-    console.log('Received qrString:', qrString);
-    console.log('qrString length:', qrString?.length);
-    console.log('scanner_type:', scanner_type);
-    console.log('session.user:', session.user);
-    console.log('session.user.id:', session.user.id);
-    console.log('session.user.role:', session.user.role);
-    console.log('====================');
-
     if (!qrString) {
-      console.log('ERROR: No QR/Barcode string provided');
       return NextResponse.json({ 
         success: false,
         message: 'String QR/Barcode diperlukan' 
@@ -47,12 +45,7 @@ export async function POST(request: NextRequest) {
     // Parse and verify QR code or barcode
     const qrPayload: QrPayload | null = parseQrString(qrString);
     
-    console.log('=== QR PARSING RESULT ===');
-    console.log('Parsed payload:', qrPayload);
-    console.log('========================');
-    
     if (!qrPayload) {
-      console.log('ERROR: Failed to parse QR/Barcode');
       return NextResponse.json({ 
         success: false,
         message: 'QR code/barcode tidak valid atau data telah diubah. Pastikan Anda melakukan scan QR code atau barcode SIMLOK yang valid yang dihasilkan oleh sistem.' 
@@ -60,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate QR code is being scanned within implementation period
-    const { isQrValidForDate } = await import('@/lib/qr-security');
+    const { isQrValidForDate } = await import('@/lib/auth/qrSecurity');
     if (!isQrValidForDate(qrPayload)) {
       // Provide specific error message based on dates
       let errorMessage = 'QR code tidak dapat digunakan saat ini.';
@@ -81,7 +74,6 @@ export async function POST(request: NextRequest) {
 
     // Validate submission ID format before database query (prevent injection)
     if (!qrPayload.id || !qrPayload.id.match(/^[a-zA-Z0-9_-]+$/)) {
-      console.error('Invalid submission ID format:', qrPayload.id);
       return NextResponse.json({ 
         success: false,
         message: 'Format ID pengajuan tidak valid' 
@@ -91,7 +83,27 @@ export async function POST(request: NextRequest) {
     // Fetch submission data
     const submission = await prisma.submission.findUnique({
       where: { id: qrPayload.id },
-      include: {
+      select: {
+        id: true,
+        simlok_number: true,
+        simlok_date: true,
+        vendor_name: true,
+        vendor_phone: true,
+        officer_name: true,
+        job_description: true,
+        work_location: true,
+        work_facilities: true,
+        working_hours: true,
+        holiday_working_hours: true,
+        worker_names: true,
+        implementation: true,
+        based_on: true,
+        implementation_start_date: true,
+        implementation_end_date: true,
+        worker_count: true,
+        review_status: true,
+        approval_status: true,
+        created_at: true,
         user: {
           select: {
             id: true,
@@ -136,20 +148,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // DEBUG: Check user session and database
-    console.log('=== USER SESSION DEBUG ===');
-    console.log('session.user:', JSON.stringify(session.user, null, 2));
-    console.log('session.user.id:', session.user.id);
-    
     // Check if this user exists in database
     const userExists = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userOrError.id },
       select: { id: true, email: true, role: true, officer_name: true, address: true }
     });
-    console.log('userExists in DB:', userExists);
     
     if (!userExists) {
-      console.log('ERROR: User not found in database');
       return NextResponse.json({ 
         success: false,
         message: 'Sesi pengguna tidak valid. Silakan login kembali.' 
@@ -157,10 +162,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate scans - only prevent same verifier scanning same SIMLOK on same day
-    console.log('=== CHECKING FOR DUPLICATE SCAN BY SAME VERIFIER ON SAME DAY ===');
-    console.log('submission_id:', qrPayload.id);
-    console.log('scanned_by:', session.user.id);
-    
     // Get today's date range (start and end of day) using Jakarta timezone
     const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
     const today = new Date(jakartaNow);
@@ -171,13 +172,15 @@ export async function POST(request: NextRequest) {
     const existingTodayScanByUser = await prisma.qrScan.findFirst({
       where: {
         submission_id: qrPayload.id,
-        scanned_by: session.user.id,
+        scanned_by: userOrError.id,
         scanned_at: {
           gte: startOfDay,
           lte: endOfDay,
         }
       },
-      include: {
+      select: {
+        id: true,
+        scanned_at: true,
         user: {
           select: {
             officer_name: true,
@@ -186,10 +189,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log('existingTodayScanByUser found:', !!existingTodayScanByUser);
-
     if (existingTodayScanByUser) {
-      console.log('=== DUPLICATE SCAN BY SAME USER TODAY DETECTED ===');
       const scanDate = new Date(existingTodayScanByUser.scanned_at);
       const formattedDate = scanDate.toLocaleDateString('id-ID', {
         day: '2-digit',
@@ -214,20 +214,20 @@ export async function POST(request: NextRequest) {
     // Note: Different verifiers CAN scan the same SIMLOK on the same day
     // This is allowed per the new requirements
 
-    console.log('=== NO DUPLICATE FOUND, PROCEEDING TO CREATE SCAN RECORD ===');
-
-    console.log('User verified for scan record creation:', userExists);
-
     // Record the scan in database
     try {
       const scanRecord = await prisma.qrScan.create({
         data: {
           submission_id: qrPayload.id,
-          scanned_by: session.user.id,
-          scanner_name: userExists.officer_name || session.user.officer_name,
+          scanned_by: userOrError.id,
+          scanner_name: userExists.officer_name || userOrError.officer_name,
           scan_location: scanLocation || userExists.address || 'Lokasi tidak tersedia',
         },
-        include: {
+        select: {
+          id: true,
+          scanned_at: true,
+          scanner_name: true,
+          scan_location: true,
           user: {
             select: {
               id: true,
@@ -239,13 +239,10 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      console.log('=== SCAN RECORD CREATED SUCCESSFULLY ===');
-      console.log('scanRecord.id:', scanRecord.id);
-
       // Extract support documents by type
-      const simjaDoc = submission.support_documents?.find((d: any) => d.document_type === 'SIMJA');
-      const sikaDoc = submission.support_documents?.find((d: any) => d.document_type === 'SIKA');
-      const hsseDoc = submission.support_documents?.find((d: any) => d.document_type === 'HSSE_PASS');
+      const simjaDoc = (submission as any).support_documents?.find((d: any) => d.document_type === 'SIMJA');
+      const sikaDoc = (submission as any).support_documents?.find((d: any) => d.document_type === 'SIKA');
+      const hsseDoc = (submission as any).support_documents?.find((d: any) => d.document_type === 'HSSE_PASS');
 
       // Return verification result with complete submission data in the format expected by the modal
       return NextResponse.json({
@@ -253,7 +250,7 @@ export async function POST(request: NextRequest) {
         message: 'QR code/barcode berhasil diverifikasi',
         scan_id: scanRecord.id,
         scanned_at: toJakartaISOString(scanRecord.scanned_at) || scanRecord.scanned_at,
-        scanned_by: scanRecord.user?.officer_name || session.user.officer_name,
+        scanned_by: scanRecord.user?.officer_name || userOrError.officer_name,
         data: {
           submission: {
             // Basic Info
@@ -299,7 +296,7 @@ export async function POST(request: NextRequest) {
             // Workers
             worker_count: submission.worker_count,
             worker_names: submission.worker_names,
-            workers: submission.worker_list?.map((w: any) => ({
+            workers: (submission as any).worker_list?.map((w: any) => ({
               id: w.id,
               worker_name: w.worker_name,
               name: w.worker_name,
@@ -315,11 +312,9 @@ export async function POST(request: NextRequest) {
       });
 
     } catch (createError: any) {
-      console.error('Error creating scan record:', createError);
       
       // Check if it's a unique constraint violation (in case of race condition)
       if (createError?.code === 'P2002') {
-        console.log('=== UNIQUE CONSTRAINT VIOLATION DETECTED (RACE CONDITION) ===');
         
         // Check again for today's scans by same user only (race condition handling) - use Jakarta time
         const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
@@ -330,13 +325,15 @@ export async function POST(request: NextRequest) {
         const raceConditionScan = await prisma.qrScan.findFirst({
           where: {
             submission_id: qrPayload.id,
-            scanned_by: session.user.id, // Only check for same user
+            scanned_by: userOrError.id, // Only check for same user
             scanned_at: {
               gte: startOfDay,
               lte: endOfDay,
             }
           },
-          include: {
+          select: {
+            id: true,
+            scanned_at: true,
             user: {
               select: {
                 officer_name: true,
@@ -385,17 +382,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Tidak terotorisasi' }, { status: 401 });
-    }
-
-    // Only VERIFIER and ADMIN can view scan history
-    if (!['VERIFIER', 'ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ 
-        error: 'Akses ditolak. Hanya verifikator dan admin yang dapat melihat riwayat scan.' 
-      }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VERIFIER', 'ADMIN'], 'Hanya verifikator dan admin yang dapat melihat riwayat scan.');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { searchParams } = new URL(request.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
@@ -415,8 +403,8 @@ export async function GET(request: NextRequest) {
     }
 
     // For verifiers, only show their own scans
-    if (session.user.role === 'VERIFIER') {
-      whereClause.scanned_by = session.user.id;
+    if (userOrError.role === 'VERIFIER') {
+      whereClause.scanned_by = userOrError.id;
     }
 
     // Add search filter
@@ -475,7 +463,13 @@ export async function GET(request: NextRequest) {
     // Fetch scan history
     const scans = await prisma.qrScan.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        submission_id: true,
+        scanned_by: true,
+        scanner_name: true,
+        scan_location: true,
+        scanned_at: true,
         user: {
           select: {
             id: true,
@@ -509,7 +503,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Format timestamps and nested submission dates to Jakarta
-    const { formatScansDates, formatSubmissionDates } = await import('@/lib/timezone');
+    const { formatScansDates, formatSubmissionDates } = await import('@/lib/helpers/timezone');
     const formattedScans = scans.map(s => ({
       ...s,
       scanned_at: (s.scanned_at ? new Date(s.scanned_at) : null) ? formatScansDates([s])[0].scanned_at : s.scanned_at,

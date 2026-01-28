@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import cache, { CacheKeys, CacheTTL } from '@/lib/cache';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import cache, { CacheKeys, CacheTTL } from '@/lib/cache/cache';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VISITOR', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Check cache first
     const cachedData = cache.get(CacheKeys.VISITOR_CHARTS);

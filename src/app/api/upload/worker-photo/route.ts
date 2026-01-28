@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { fileManager } from '@/lib/fileManager';
+import { authOptions } from '@/lib/auth/auth';
+import { fileManager } from '@/lib/file/fileManager';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 // Maksimum ukuran file (8MB)
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
@@ -14,11 +15,10 @@ const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png'];
 
 export async function POST(request: NextRequest) {
   try {
-    // Cek autentikasi
+    // Cek autentikasi (all authenticated users can upload worker photos)
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Akses tidak diizinkan. Silakan login terlebih dahulu.' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Ambil data form
     const formData = await request.formData();
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const fileInfo = await fileManager.saveWorkerPhoto(
       buffer,
       file.name,
-      session.user.id,
+      userOrError.id,
       workerName || 'tidak_ada_nama'
     );
 

@@ -18,17 +18,8 @@ export interface Pagination {
   limit: number;
 }
 
-// API Response wrappers
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
-
-export interface ApiListResponse<T = any> extends ApiResponse<T[]> {
-  pagination?: Pagination;
-}
+// NOTE: ApiResponse moved to lib/api-response.ts to avoid duplication
+// Import from there or re-export through index.ts
 
 // User reference for relations
 export interface UserReference {

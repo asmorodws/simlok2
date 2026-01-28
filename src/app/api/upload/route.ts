@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { fileManager } from '@/lib/fileManager';
-import { PDFCompressor } from '@/utils/pdf-compressor-server';
-import { DocumentCompressor } from '@/utils/document-compressor-server';
-import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/rate-limiter';
+import { authOptions } from '@/lib/auth/auth';
+import { fileManager } from '@/lib/file/fileManager';
+import { PDFCompressor } from '@/utils/file/compression/pdfCompressor';
+import { DocumentCompressor } from '@/utils/file/compression/documentCompressor';
+import { rateLimiter, RateLimitPresets, getRateLimitHeaders } from '@/lib/api/rateLimiter';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 // Configure maximum file size (8MB before compression)
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
@@ -25,16 +26,15 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.
 
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
+    // Check authentication (all authenticated users can upload)
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER', 'VISITOR']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // ========== RATE LIMITING ==========
     // Prevent abuse: 20 uploads per minute per user
     const rateLimitResult = rateLimiter.check(
-      `upload:${session.user.id}`,
+      `upload:${userOrError.id}`,
       RateLimitPresets.upload
     );
 
@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
     const fileInfo = await fileManager.saveFile(
       buffer,
       file.name,
-      session.user.id,
+      userOrError.id,
       fieldName || undefined
     );
 

@@ -1,10 +1,12 @@
 // src/app/api/v1/notifications/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { toJakartaISOString } from '@/lib/timezone';
-import { resolveAudience } from "@/lib/notificationAudience";
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
+import { toJakartaISOString } from '@/lib/helpers/timezone';
+import { resolveAudience } from "@/lib/notification/notificationAudience";
+import { parsePagination, createPaginationMeta } from '@/lib/api/paginationHelpers';
+import { PAGINATION } from '@/lib/constants';
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,8 +21,7 @@ export async function GET(req: NextRequest) {
     const audience = resolveAudience(req, role, userId);
 
     const sp = new URL(req.url).searchParams;
-    const page     = Math.max(1, parseInt(sp.get("page") || "1", 10));
-    const pageSize = Math.min(100, Math.max(1, parseInt(sp.get("pageSize") || "20", 10)));
+    const { page, limit } = parsePagination(sp, { defaultLimit: PAGINATION.DEFAULT_LIMIT, maxLimit: PAGINATION.MAX_LIMIT });
     const search   = sp.get("search") || undefined;
     const filter   = (sp.get("filter") as "all" | "unread" | "read") || "all";
 
@@ -64,8 +65,8 @@ export async function GET(req: NextRequest) {
       prisma.notification.findMany({
         where,
         orderBy: { created_at: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
+        skip: (page - 1) * limit,
+        take: limit,
         select: {
           id: true,
           scope: true,
@@ -100,12 +101,7 @@ export async function GET(req: NextRequest) {
 
     const result = {
       data,
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages: Math.ceil(total / pageSize) || 1,
-      },
+      pagination: createPaginationMeta(page, limit, total),
     };
 
     // Disable caching to prevent stale data

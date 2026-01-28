@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 interface Params {
   id: string;
@@ -14,9 +15,8 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER', 'VENDOR']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { id, workerId } = await params;
 
@@ -26,13 +26,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Submission not found' }, { status: 404 });
     }
 
-    // Permission: allow REVIEWER, APPROVER, ADMIN, SUPER_ADMIN, VENDOR (owner) and VERIFIER
-    const allowedRoles = ['REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER', 'VENDOR'];
-    if (!allowedRoles.includes(session.user.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
-    if (session.user.role === 'VENDOR' && submission.user_id !== session.user.id) {
+    // VENDOR can only delete workers from their own submissions
+    if (userOrError.role === 'VENDOR' && submission.user_id !== userOrError.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

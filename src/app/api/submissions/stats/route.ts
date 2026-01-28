@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth/auth";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/singletons";
 
 export async function GET() {
   try {
@@ -29,55 +29,60 @@ export async function GET() {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Get total submissions count
-    const totalSubmissions = await prisma.submission.count({
-      where: whereClause
-    });
+    // Parallelize all statistics queries for better performance
+    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
+    const thirtyDaysAgo = new Date(jakartaNow);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const today = new Date(jakartaNow);
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Get submissions by status
-    const submissionsByStatus = await prisma.submission.groupBy({
-      by: ['approval_status'],
-      where: whereClause,
-      _count: {
-        id: true
-      }
-    });
+    const [
+      totalSubmissions,
+      submissionsByStatus,
+      recentActivity,
+      todaySubmissions
+    ] = await Promise.all([
+      // Get total submissions count
+      prisma.submission.count({
+        where: whereClause
+      }),
+      // Get submissions by status
+      prisma.submission.groupBy({
+        by: ['approval_status'],
+        where: whereClause,
+        _count: {
+          id: true
+        }
+      }),
+      // Get recent activity (submissions from last 30 days)
+      prisma.submission.count({
+        where: {
+          ...whereClause,
+          created_at: {
+            gte: thirtyDaysAgo
+          }
+        }
+      }),
+      // Get today's submissions
+      prisma.submission.count({
+        where: {
+          ...whereClause,
+          created_at: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      })
+    ]);
 
     // Convert to more readable format
     const statusStats = submissionsByStatus.reduce((acc, item) => {
       acc[item.approval_status] = item._count.id;
       return acc;
     }, {} as Record<string, number>);
-
-    // Get recent activity (submissions from last 30 days) - use Jakarta timezone
-    const jakartaNow = new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' });
-    const thirtyDaysAgo = new Date(jakartaNow);
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const recentActivity = await prisma.submission.count({
-      where: {
-        ...whereClause,
-        created_at: {
-          gte: thirtyDaysAgo
-        }
-      }
-    });
-
-    // Get today's submissions (Jakarta timezone)
-    const today = new Date(jakartaNow);
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const todaySubmissions = await prisma.submission.count({
-      where: {
-        ...whereClause,
-        created_at: {
-          gte: today,
-          lt: tomorrow
-        }
-      }
-    });
 
     const statistics = {
       total: totalSubmissions,

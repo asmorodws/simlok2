@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
+import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
 
 interface Params {
   id: string;
@@ -13,17 +14,15 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, ['VENDOR', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN']);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const { id } = await params;
 
     // Get submission - allow admin/reviewer/approver to access any submission, vendor only their own
     let submission;
     
-    if (['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'APPROVER'].includes(session.user.role)) {
+    if (['ADMIN', 'SUPER_ADMIN', 'REVIEWER', 'APPROVER'].includes(userOrError.role)) {
       submission = await prisma.submission.findUnique({
         where: { id: id }
       });
@@ -31,7 +30,7 @@ export async function GET(
       submission = await prisma.submission.findFirst({
         where: {
           id: id,
-          user_id: session.user.id
+          user_id: userOrError.id
         }
       });
     }

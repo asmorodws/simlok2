@@ -1,19 +1,12 @@
 import { Metadata } from 'next';
-import RoleGate from "@/components/security/RoleGate";
-import SidebarLayout from "@/components/layout/SidebarLayout";
-import ApproverScanHistoryContent from '@/components/approver/ApproverScanHistoryContent';
+import { DashboardPageHelpers, createDashboardMetadata } from '@/lib/helpers/dashboardPageHelper';
+import ScanHistoryContent from '@/components/features/scan/history/ScanHistoryContent';
 
-export const metadata: Metadata = {
-  title: 'Riwayat Scan - Approver SIMLOK',
-  description: 'Monitor aktivitas scan pengajuan oleh verifier',
-};
+export const metadata: Metadata = createDashboardMetadata(
+  'Riwayat Scan - Approver',
+  'Monitor aktivitas scan pengajuan oleh verifier'
+);
 
 export default function ApproverScanHistoryPage() {
-  return (
-    <RoleGate allowedRoles={["APPROVER", "SUPER_ADMIN"]}>
-      <SidebarLayout title="Riwayat Scan" titlePage="Approver">
-        <ApproverScanHistoryContent />
-      </SidebarLayout>
-    </RoleGate>
-  );
+  return DashboardPageHelpers.approver(<ScanHistoryContent role="APPROVER" />);
 }

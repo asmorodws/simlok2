@@ -3,21 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-
-interface LogEntry {
-  timestamp: string;
-  level: string;
-  context: string;
-  message: string;
-  raw: string;
-}
-
-interface LogsResponse {
-  date: string;
-  level: string;
-  total: number;
-  logs: LogEntry[];
-}
+import type { LogEntry, LogsResponse } from '@/types';
 
 export default function LogsPage() {
   const { data: session, status } = useSession();
@@ -260,10 +246,10 @@ export default function LogsPage() {
                     {/* Level Badge */}
                     <span
                       className={`inline-block px-2 py-1 text-xs font-semibold rounded ${getLevelColor(
-                        log.level
+                        log.level || 'INFO'
                       )}`}
                     >
-                      {log.level}
+                      {log.level || 'INFO'}
                     </span>
 
                     {/* Log Details */}

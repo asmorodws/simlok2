@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import RoleGate from "@/components/security/RoleGate";
+import RoleGate from "@/components/shared/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge/Badge";
 import { UserData } from "@/types/user";
 import { UserIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import ReviewerUserVerificationModal from "@/components/reviewer/ReviewerUserVerificationModal";
-import EditUserModal from "@/components/admin/EditUserModal";
-import DeleteUserModal from "@/components/admin/DeleteUserModal";
-import { DashboardLoadingSkeleton } from "@/components/ui/LoadingSpinner";
+import UserVerificationModal from "@/components/features/user/modal/UserVerificationModal";
+import UserFormModal from "@/components/features/user/modal/UserFormModal";
+import DeleteUserModal from "@/components/features/user/modal/DeleteUserModal";
+import { DashboardLoadingSkeleton } from "@/components/ui/loading/LoadingSpinner";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -258,17 +259,11 @@ export default function SuperAdminDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {user.verified_at || user.verification_status === 'VERIFIED' ? (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
-                              Terverifikasi
-                            </span>
+                            <Badge variant="success">Terverifikasi</Badge>
                           ) : user.rejection_reason || user.verification_status === 'REJECTED' ? (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-rose-100 text-rose-800">
-                              Ditolak
-                            </span>
+                            <Badge variant="destructive">Ditolak</Badge>
                           ) : (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                              Menunggu
-                            </span>
+                            <Badge variant="warning">Menunggu</Badge>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -376,7 +371,7 @@ export default function SuperAdminDashboard() {
         </div>
 
         {/* Modal User Verification */}
-        <ReviewerUserVerificationModal
+        <UserVerificationModal
           user={selectedUser}
           isOpen={showUserVerificationModal}
           onClose={() => {
@@ -384,10 +379,12 @@ export default function SuperAdminDashboard() {
             setSelectedUser(null);
           }}
           onUserUpdate={handleUserUpdate}
+          allowVerificationActions={true}
         />
 
         {/* Modal Edit User */}
-        <EditUserModal
+        <UserFormModal
+          mode="edit"
           user={selectedUser}
           isOpen={showEditUserModal}
           onClose={() => {
@@ -395,6 +392,7 @@ export default function SuperAdminDashboard() {
             setSelectedUser(null);
           }}
           onUserUpdate={handleUserUpdate}
+          allowRoleEdit={true}
         />
 
         {/* Modal Delete User */}

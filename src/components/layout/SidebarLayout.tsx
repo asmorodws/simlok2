@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import NotificationsBell from "@/components/notifications/NotificationsBell";
+import NotificationsBell from "@/components/features/notification/NotificationsBell";
 
 import {
   HomeIcon,
@@ -73,6 +73,7 @@ export default function SidebarLayout({ children, title, titlePage}: Props) {
     ],
     VERIFIER: [
       { label: "Dashboard", href: "/verifier", icon: HomeIcon },
+      { label: "Scan QR Code", href: "/verifier/scan", icon: QrCodeIcon },
       { label: "Riwayat Scan", href: "/verifier/history", icon: ClockIcon },
     ],
     VISITOR: [

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import { z } from 'zod';
-import { toJakartaISOString } from '@/lib/timezone';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
 import bcrypt from 'bcryptjs';
+import type { RouteParams } from '@/types';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { buildUserRoleFilter } from '@/lib/database/queryHelpers';
 
 // Schema for validating user update data
 const updateUserSchema = z.object({
@@ -25,40 +28,20 @@ const verificationSchema = z.object({
   rejection_reason: z.string().optional(),
 });
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
 // GET /api/users/[id] - Get user details (REVIEWER, ADMIN, SUPER_ADMIN)
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.USER_MANAGERS, 'Only reviewers and admins can view user details');
+    if (userOrError instanceof NextResponse) return userOrError;
 
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
-
+    // Build role-based filter and add id constraint
+    const roleFilter = buildUserRoleFilter(userOrError.role);
     const whereClause: any = { 
-      id
+      id,
+      ...roleFilter
     };
-
-    // Role-based access control
-    if (session.user.role === 'REVIEWER') {
-      // Reviewers can only see vendor users
-      whereClause.role = 'VENDOR';
-    } else if (session.user.role === 'ADMIN') {
-      // Admins cannot see SUPER_ADMIN users
-      whereClause.NOT = { role: 'SUPER_ADMIN' };
-    }
-    // SUPER_ADMIN can see all users (no additional filter)
 
     const user = await prisma.user.findFirst({
       where: whereClause,
@@ -105,10 +88,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.USER_MANAGERS, 'Only reviewers and admins can update users');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await request.json();
     const validatedData = updateUserSchema.parse(body);
@@ -119,9 +100,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Permission check:
     // - SUPER_ADMIN/ADMIN: Can update everything
     // - REVIEWER: Can update VENDOR users (full data edit or isActive only)
-    if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'ADMIN') {
+    if (userOrError.role === 'SUPER_ADMIN' || userOrError.role === 'ADMIN') {
       // SUPER_ADMIN and ADMIN can update everything
-    } else if (session.user.role === 'REVIEWER') {
+    } else if (userOrError.role === 'REVIEWER') {
       // REVIEWER can update VENDOR users
       const targetUser = await prisma.user.findUnique({
         where: { id },
@@ -211,7 +192,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Handle verification_status field (SUPER_ADMIN and REVIEWER only)
     if (validatedData.verification_status) {
-      if (session.user.role === 'SUPER_ADMIN' || session.user.role === 'REVIEWER') {
+      if (userOrError.role === 'SUPER_ADMIN' || userOrError.role === 'REVIEWER') {
         updateData.verification_status = validatedData.verification_status;
         
         // Update timestamps based on status
@@ -295,31 +276,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can verify/reject users
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.USER_MANAGERS, 'Only reviewers and admins can verify/reject users');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await request.json();
     const validatedData = verificationSchema.parse(body);
 
     // Check if user exists and is accessible by current role
+    const roleFilter = buildUserRoleFilter(userOrError.role);
     const whereClause: any = { 
-      id
+      id,
+      ...roleFilter
       // Allow verification of both active and inactive users
     };
-    if (session.user.role === 'REVIEWER') {
-      // Reviewers can only verify vendor users
-      whereClause.role = 'VENDOR';
-    } else if (session.user.role === 'ADMIN') {
-      // Admins cannot verify SUPER_ADMIN users
-      whereClause.NOT = { role: 'SUPER_ADMIN' };
-    }
 
     const existingUser = await prisma.user.findFirst({
       where: whereClause
@@ -335,14 +304,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (validatedData.action === 'VERIFY') {
       updateData.verification_status = 'VERIFIED';
       updateData.verified_at = new Date();
-      updateData.verified_by = session.user.id;
+      updateData.verified_by = userOrError.id;
       updateData.rejected_at = null;
       updateData.rejected_by = null;
       updateData.rejection_reason = null;
     } else if (validatedData.action === 'REJECT') {
       updateData.verification_status = 'REJECTED';
       updateData.rejected_at = new Date();
-      updateData.rejected_by = session.user.id;
+      updateData.rejected_by = userOrError.id;
       updateData.rejection_reason = validatedData.rejection_reason || 'No reason provided';
       updateData.verified_at = null;
       updateData.verified_by = null;
@@ -399,15 +368,8 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only SUPER_ADMIN can delete users
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Super Admin access required' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.SUPER_ADMINS, 'Only super admins can delete users');
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -419,7 +381,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     // Prevent deleting yourself
-    if (id === session.user.id) {
+    if (id === userOrError.id) {
       return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 });
     }
 

@@ -1,41 +1,40 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { withCache } from "@/lib/api-cache";
-import { CacheKeys, CacheTTL } from "@/lib/cache";
+import { authOptions } from "@/lib/auth/auth";
+import { prisma } from "@/lib/database/singletons";
+import { withCache } from "@/lib/cache/apiCache";
+import { CacheKeys, CacheTTL } from "@/lib/cache/cache";
+import { 
+  successResponse, 
+  internalErrorResponse 
+} from "@/lib/api/apiResponse";
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
-
-    // Check if user has appropriate privileges for reviewer dashboard
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+    // Use helper for session and role validation
+    const userOrError = requireSessionWithRole(
+      session,
+      RoleGroups.REVIEWERS,
+      'Only reviewers, admins, and super admins can access this dashboard'
+    );
+    if (userOrError instanceof NextResponse) return userOrError;
 
     // Use cache for dashboard stats
     const { data: dashboardStats, cached } = await withCache(
       CacheKeys.REVIEWER_STATS,
       CacheTTL.ONE_MINUTE,
       async () => {
-        return await fetchReviewerStats(session.user.role);
+        return await fetchReviewerStats(userOrError.role);
       }
     );
 
-    return NextResponse.json(dashboardStats, {
-      headers: {
-        'X-Cache': cached ? 'HIT' : 'MISS'
-      }
-    });
+    return successResponse(dashboardStats, { cached });
 
   } catch (error) {
-    console.error("[REVIEWER_DASHBOARD_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    return internalErrorResponse('REVIEWER_DASHBOARD_STATS', error);
   }
 }
 
@@ -60,52 +59,57 @@ async function fetchReviewerStats(userRole: string) {
     userWhereClause = {};
   }
 
-    // Get submission statistics
-    const totalSubmissions = await prisma.submission.count({
-      where: submissionWhereClause
-    });
-
-    const submissionsByReviewStatus = await prisma.submission.groupBy({
-      by: ['review_status'],
-      where: submissionWhereClause,
-      _count: {
-        id: true
-      }
-    });
-
-    const submissionsByApprovalStatus = await prisma.submission.groupBy({
-      by: ['approval_status'],
-      where: submissionWhereClause,
-      _count: {
-        id: true
-      }
-    });
-
-    // Get user verification statistics
-    const pendingUserVerifications = await prisma.user.count({
-      where: {
-        AND: [
-          { verified_at: null },
-          { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
-          { rejection_reason: null },
-          userWhereClause
-        ]
-      }
-    });
-
-    const totalVerifiedUsers = await prisma.user.count({
-      where: {
-        AND: [
-          {
-            OR: [
-              { verified_at: { not: null } },
-              { verification_status: 'VERIFIED' }
-            ]
-          },
-          userWhereClause
-        ]
-      }
-    });
+    // Parallelize all statistics queries for better performance
+    const [
+      totalSubmissions,
+      submissionsByReviewStatus,
+      submissionsByApprovalStatus,
+      pendingUserVerifications,
+      totalVerifiedUsers
+    ] = await Promise.all([
+      // Get submission statistics
+      prisma.submission.count({
+        where: submissionWhereClause
+      }),
+      prisma.submission.groupBy({
+        by: ['review_status'],
+        where: submissionWhereClause,
+        _count: {
+          id: true
+        }
+      }),
+      prisma.submission.groupBy({
+        by: ['approval_status'],
+        where: submissionWhereClause,
+        _count: {
+          id: true
+        }
+      }),
+      // Get user verification statistics
+      prisma.user.count({
+        where: {
+          AND: [
+            { verified_at: null },
+            { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
+            { rejection_reason: null },
+            userWhereClause
+          ]
+        }
+      }),
+      prisma.user.count({
+        where: {
+          AND: [
+            {
+              OR: [
+                { verified_at: { not: null } },
+                { verification_status: 'VERIFIED' }
+              ]
+            },
+            userWhereClause
+          ]
+        }
+      })
+    ]);
 
     // Process submission stats
     const reviewStatusStats = submissionsByReviewStatus.reduce((acc, item) => {

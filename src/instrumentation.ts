@@ -8,7 +8,7 @@ export async function register() {
   // Only run on server side
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // Import singletons to trigger graceful shutdown setup
-    const { redisPub, redisSub } = await import('./lib/singletons');
+    const { redisPub, redisSub } = await import('./lib/database/singletons');
     
     console.log('🚀 Server instrumentation registered');
     console.log('🛡️  Graceful shutdown handlers active');

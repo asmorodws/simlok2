@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 // Import role types
 import { redirect } from "next/navigation";
-import RoleGate from "@/components/security/RoleGate";
+import RoleGate from "@/components/shared/security/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import UserVerificationManagement from "@/components/admin/UserVerificationManagement";
-import PageLoader from "@/components/ui/PageLoader";
+import UserVerificationManagement from "@/components/features/user/management/AdminUserVerificationManagement";
+import PageLoader from "@/components/ui/loading/PageLoader";
 
 export default function UserVerificationPage() {
   const { data: session, status } = useSession();

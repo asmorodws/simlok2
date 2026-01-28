@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/singletons';
+import { authOptions } from '@/lib/auth/auth';
+import { prisma } from '@/lib/database/singletons';
 import { z } from 'zod';
 import { notifyApproverReviewedSubmission, notifyVendorSubmissionRejected } from '@/server/events';
-import cache, { CacheKeys } from '@/lib/cache';
+import cache, { CacheKeys } from '@/lib/cache/cache';
+import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
 
 // Schema for validating review data
 const reviewSchema = z.object({
@@ -27,15 +28,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only REVIEWER, ADMIN, or SUPER_ADMIN can access this endpoint
-    if (!['REVIEWER', 'ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Reviewer access required' }, { status: 403 });
-    }
+    const userOrError = requireSessionWithRole(session, RoleGroups.REVIEWERS);
+    if (userOrError instanceof NextResponse) return userOrError;
 
     const body = await request.json();
     const validatedData = reviewSchema.parse(body);
@@ -66,7 +60,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       note_for_approver: validatedData.note_for_approver || '',
       note_for_vendor: validatedData.note_for_vendor || '',
       reviewed_at: new Date(),
-      reviewed_by: session.user.officer_name,
+      reviewed_by: userOrError.officer_name,
     };
 
     // Update editable fields if provided by reviewer
@@ -105,12 +99,42 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const updatedSubmission = await prisma.submission.update({
       where: { id },
       data: updateData,
-      include: {
-        user: true,
+      select: {
+        id: true,
+        simlok_number: true,
+        vendor_name: true,
+        officer_name: true,
+        job_description: true,
+        review_status: true,
+        approval_status: true,
+        note_for_vendor: true,
+        user_id: true,
+        created_at: true,
+        user: {
+          select: {
+            id: true,
+            officer_name: true,
+            email: true,
+            vendor_name: true,
+          }
+        },
         worker_list: {
+          select: {
+            id: true,
+            worker_name: true,
+            worker_photo: true,
+          },
           orderBy: { created_at: 'asc' }
         },
         support_documents: {
+          select: {
+            id: true,
+            document_type: true,
+            document_subtype: true,
+            document_number: true,
+            document_date: true,
+            uploaded_at: true,
+          },
           orderBy: { uploaded_at: 'asc' }
         }
       }
@@ -134,7 +158,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           user_id: updatedSubmission.user_id,
           note_for_vendor: validatedData.note_for_vendor || null,
         },
-        session.user.officer_name || 'Reviewer'
+        userOrError.officer_name || 'Reviewer'
       );
       console.log('📧 Vendor notified: submission needs revision');
     }

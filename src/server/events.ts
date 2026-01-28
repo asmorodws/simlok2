@@ -1,6 +1,5 @@
-import { prisma, redisPub } from '@/lib/singletons';
-import { emitNotificationNew, emitNotificationUnreadCount } from './socket';
-import { toJakartaISOString } from '@/lib/timezone';
+import { prisma, redisPub } from '@/lib/database/singletons';
+import { toJakartaISOString } from '@/lib/helpers/timezone';
 
 export async function notifyAdminNewSubmission(submissionId: string) {
   try {
@@ -49,7 +48,6 @@ export async function notifyAdminNewSubmission(submissionId: string) {
 
       await redisPub.publish(channel, JSON.stringify(payload));
       // Also emit via websocket in-memory if socket server is initialized
-      emitNotificationNew('admin', undefined, payload.data as any);
     } catch (err) {
       console.warn('Failed to publish new admin notification to Redis/socket:', err);
     }
@@ -106,7 +104,6 @@ export async function notifyAdminNewVendor(vendorId: string) {
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
-      emitNotificationNew('admin', undefined, payload.data as any);
     } catch (err) {
       console.warn('Failed to publish new vendor notification to Redis/socket:', err);
     }
@@ -183,7 +180,6 @@ export async function notifyVendorStatusChange(
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
-      emitNotificationNew('vendor', vendorId, payload.data as any);
 
       // Publish unread count for vendor channel
       const total = await prisma.notification.count({ where: { scope: 'vendor', vendor_id: vendorId } });
@@ -191,7 +187,6 @@ export async function notifyVendorStatusChange(
       const unread = Math.max(0, total - read);
       const unreadPayload = { type: 'notification:unread_count', data: { vendorId, scope: 'vendor', unreadCount: unread, count: unread } };
       await redisPub.publish(`notifications:vendor:${vendorId}`, JSON.stringify(unreadPayload));
-      emitNotificationUnreadCount('vendor', vendorId, { vendorId, scope: 'vendor', unreadCount: unread, count: unread });
     } catch (err) {
       console.warn('Failed to publish vendor status change notification to Redis/socket:', err);
     }
@@ -257,7 +252,6 @@ export async function notifyReviewerNewUser(userId: string) {
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
-        emitNotificationNew('reviewer', undefined, payload.data as any);
 
         // publish unread count for reviewer
         const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
@@ -265,7 +259,6 @@ export async function notifyReviewerNewUser(userId: string) {
         const unread = Math.max(0, total - read);
         const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: unread, count: unread } };
         await redisPub.publish('notifications:reviewer', JSON.stringify(unreadPayload));
-        emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: unread, count: unread } as any);
       }
     } catch (err) {
       console.warn('Failed to publish reviewer new user notification to Redis/socket:', err);
@@ -323,7 +316,6 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
-        emitNotificationNew('reviewer', undefined, payload.data as any);
 
         // publish simple unread count for reviewer scope (global)
         const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
@@ -331,7 +323,6 @@ export async function notifyReviewerNewSubmission(submissionId: string) {
         const unread = Math.max(0, total - read);
         const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: unread, count: unread } };
         await redisPub.publish('notifications:reviewer', JSON.stringify(unreadPayload));
-        emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: unread, count: unread } as any);
       }
     } catch (err) {
       console.warn('Failed to publish reviewer notification/new-count to Redis/socket:', err);
@@ -405,7 +396,6 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
-        emitNotificationNew('approver', undefined, payload.data as any);
 
         // publish unread count for approver
         const total = await prisma.notification.count({ where: { scope: 'approver' } });
@@ -413,7 +403,6 @@ export async function notifyApproverReviewedSubmission(submissionId: string) {
         const unread = Math.max(0, total - read);
         const unreadPayload = { type: 'notification:unread_count', data: { scope: 'approver', unreadCount: unread, count: unread } };
         await redisPub.publish('notifications:approver', JSON.stringify(unreadPayload));
-        emitNotificationUnreadCount('approver', undefined, { scope: 'approver', unreadCount: unread, count: unread } as any);
       }
     } catch (err) {
       console.warn('Failed to publish approver reviewed notification to Redis/socket:', err);
@@ -512,7 +501,6 @@ export async function notifyReviewerSubmissionApproved(submissionId: string) {
           }
         };
         await redisPub.publish(channel, JSON.stringify(payload));
-        emitNotificationNew('reviewer', undefined, payload.data as any);
       }
     } catch (err) {
       console.warn('Failed to publish reviewer approved notification to Redis/socket:', err);
@@ -575,7 +563,6 @@ export async function notifyVendorSubmissionRejected(
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
-      emitNotificationNew('vendor', submission.user_id, payload.data as any);
 
       // Publish unread count for vendor
       const total = await prisma.notification.count({ where: { scope: 'vendor', vendor_id: submission.user_id } });
@@ -583,7 +570,6 @@ export async function notifyVendorSubmissionRejected(
       const unread = Math.max(0, total - read);
       const unreadPayload = { type: 'notification:unread_count', data: { vendorId: submission.user_id, scope: 'vendor', unreadCount: unread, count: unread } };
       await redisPub.publish(channel, JSON.stringify(unreadPayload));
-      emitNotificationUnreadCount('vendor', submission.user_id, { vendorId: submission.user_id, scope: 'vendor', unreadCount: unread, count: unread });
     } catch (err) {
       console.warn('Failed to publish vendor rejection notification to Redis/socket:', err);
     }
@@ -650,13 +636,11 @@ export async function notifyReviewerSubmissionResubmitted(
         }
       };
       await redisPub.publish(channel, JSON.stringify(payload));
-      emitNotificationNew('reviewer', undefined, payload.data as any);
 
       // Publish unread count for reviewer
       const total = await prisma.notification.count({ where: { scope: 'reviewer' } });
       const unreadPayload = { type: 'notification:unread_count', data: { scope: 'reviewer', unreadCount: total, count: total } };
       await redisPub.publish(channel, JSON.stringify(unreadPayload));
-      emitNotificationUnreadCount('reviewer', undefined, { scope: 'reviewer', unreadCount: total, count: total });
     } catch (err) {
       console.warn('Failed to publish reviewer resubmission notification to Redis/socket:', err);
     }

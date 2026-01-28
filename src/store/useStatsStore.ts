@@ -1,28 +1,5 @@
 import { create } from 'zustand';
-
-interface AdminStats {
-  totalSubmissions: number;
-  pendingSubmissions: number;
-  approvedSubmissions: number;
-  rejectedSubmissions: number;
-  totalUsers: number;
-  pendingUsers: number;
-  totalVendors: number;
-  totalVerifiers: number;
-  pendingVerificationVendors: number;
-  pendingVerificationSubmissions: number;
-}
-
-interface VendorStats {
-  totalSubmissions: number;
-  pendingSubmissions: number;
-  approvedSubmissions: number;
-  rejectedSubmissions: number;
-  draftSubmissions: number;
-  totalApproved: number;
-  totalPending: number;
-  totalRejected: number;
-}
+import type { AdminStats, VendorStats } from '@/types';
 
 interface StatsStore {
   adminStats: AdminStats | null;
