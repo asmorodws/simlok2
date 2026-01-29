@@ -57,10 +57,13 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
         background: { r: 255, g: 255, b: 255, alpha: 1 } // White background for transparency
       })
       // Convert to JPEG with compression
+      // 🎯 CRITICAL FIX: Use baseline JPEG without mozjpeg to prevent "Unknown compression method" errors
+      // pdf-lib has issues with mozjpeg and certain compression settings when re-embedding cached buffers
       .jpeg({ 
         quality: JPEG_QUALITY,
-        mozjpeg: true, // Use mozjpeg for better compression
-        chromaSubsampling: '4:2:0' // Further reduce file size
+        mozjpeg: false, // Disabled: causes compression errors in pdf-lib
+        progressive: false, // Use baseline JPEG for maximum compatibility
+        chromaSubsampling: '4:2:0' // Standard subsampling for smaller size
       })
       // Optimize for web/pdf
       .toBuffer();

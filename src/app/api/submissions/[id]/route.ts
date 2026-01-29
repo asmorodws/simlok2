@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/singletons';
 import { generateSIMLOKPDF } from '@/utils/pdf/simlokTemplate';
+import { clearImageCache } from '@/utils/pdf/imageLoader';
 import { formatSubmissionDates } from '@/lib/timezone';
 import type { SubmissionPDFData } from '@/types';
 import { notifyVendorStatusChange } from '@/server/events';
@@ -244,6 +245,14 @@ async function generatePDF(submission: any) {
 
   } catch (error) {
     console.error('Error generating PDF:', error);
+    
+    // 🎯 CRITICAL FIX: Clear image cache on compression errors
+    // This ensures corrupted or incompatible cached images are removed
+    if (error instanceof Error && error.message.includes('compression method')) {
+      console.warn('⚠️ Compression error detected, clearing image cache...');
+      clearImageCache();
+    }
+    
     return NextResponse.json(
       { error: 'Failed to generate PDF' },
       { status: 500 }

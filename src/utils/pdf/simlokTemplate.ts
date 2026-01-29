@@ -16,34 +16,71 @@ let cachedLogoBuffer: Buffer | null = null;
  * Load logo image for PDF generation
  * Works both on client-side (fetch) and server-side (fs)
  * 🎯 OPTIMIZED: Cache logo buffer for reuse
+ * 🎯 CRITICAL FIX: Optimize PNG to use baseline compression compatible with pdf-lib
  */
 async function loadLogo(pdfDoc: PDFDocument): Promise<PDFImage | null> {
   try {
     const logoPath = '/assets/logo_pertamina.png';
     
-    // Return cached buffer embed if available
+    // Try to embed cached buffer with error handling
     if (cachedLogoBuffer) {
-      return await pdfDoc.embedPng(cachedLogoBuffer);
+      try {
+        return await pdfDoc.embedPng(cachedLogoBuffer);
+      } catch (embedError) {
+        console.warn('Failed to embed cached logo, reloading:', embedError);
+        cachedLogoBuffer = null; // Clear bad cache
+      }
     }
+    
+    let rawBuffer: Buffer;
     
     if (typeof window !== 'undefined') {
       // Client-side: use fetch
       const response = await fetch(logoPath);
-      if (response.ok) {
-        const logoBytes = await response.arrayBuffer();
-        cachedLogoBuffer = Buffer.from(logoBytes);
-        return await pdfDoc.embedPng(new Uint8Array(logoBytes));
-      }
+      if (!response.ok) return null;
+      const logoBytes = await response.arrayBuffer();
+      rawBuffer = Buffer.from(logoBytes);
     } else {
       // Server-side: use file system
       const fs = await import('fs');
       const path = await import('path');
       const logoFilePath = path.join(process.cwd(), 'public', logoPath);
       
-      if (fs.existsSync(logoFilePath)) {
-        cachedLogoBuffer = fs.readFileSync(logoFilePath);
-        return await pdfDoc.embedPng(cachedLogoBuffer);
+      if (!fs.existsSync(logoFilePath)) return null;
+      rawBuffer = fs.readFileSync(logoFilePath);
+    }
+    
+    // 🎯 CRITICAL FIX: Optimize PNG to baseline compression for pdf-lib compatibility
+    // This prevents "Unknown compression method" errors
+    if (typeof window === 'undefined') {
+      try {
+        const sharp = (await import('sharp')).default;
+        // Convert to baseline PNG with compatible compression
+        cachedLogoBuffer = await sharp(rawBuffer)
+          .png({
+            compressionLevel: 6, // Balanced compression
+            progressive: false,  // Baseline PNG for compatibility
+            adaptiveFiltering: false // Disable advanced features
+          })
+          .toBuffer();
+        
+        console.log(`✅ Logo optimized: ${rawBuffer.length} → ${cachedLogoBuffer.length} bytes`);
+      } catch (optimizeError) {
+        console.warn('Logo optimization failed, using raw buffer:', optimizeError);
+        cachedLogoBuffer = rawBuffer;
       }
+    } else {
+      cachedLogoBuffer = rawBuffer;
+    }
+    
+    // Try to embed optimized buffer
+    try {
+      return await pdfDoc.embedPng(cachedLogoBuffer);
+    } catch (embedError) {
+      console.error('Failed to embed logo as PNG:', embedError);
+      // Clear cache and return null to skip logo
+      cachedLogoBuffer = null;
+      return null;
     }
   } catch (error) {
     console.warn('Failed to load logo:', error);
