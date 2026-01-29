@@ -16,19 +16,18 @@ import {
 
 import Button from '@/components/ui/button/Button';
 import { useToast } from '@/hooks/useToast';
-import ApproverSubmissionDetailModal from '@/components/features/submission/modal/ApproverSubmissionDetailModal';
-import ReviewerSubmissionDetailModal from '@/components/features/submission/modal/ReviewerSubmissionDetailModal';
-import ExportFilterModal, { ExportFilters } from '@/components/features/document/modal/ExportFilterModal';
-import UnifiedSubmissionTable from '@/components/features/submission/table/UnifiedSubmissionTable';
-import { ApproverTableSkeleton, ReviewerTableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
-import PageSkeleton from '@/components/ui/skeleton/PageSkeleton';
+import { UnifiedSubmissionDetailModal } from '@/components/features/submission';
+import ExportFilterModal from '@/components/features/document/ExportFilterModal';
+import UnifiedSubmissionTable from '@/components/features/submission/UnifiedSubmissionTable';
+import { ApproverTableSkeleton, ReviewerTableSkeleton } from '@/components/ui/loading';
+import { PageSkeleton } from '@/components/ui/loading';
 import type { ApproverSubmission, ReviewerSubmission, BaseSubmission } from '@/types';
 import {
   EmptyState,
   type SubmissionsResponse,
   type FilterState,
   buildSubmissionsParams,
-} from '../shared/SubmissionsManagementShared';
+} from '../SubmissionsManagementShared';
 
 // Extended submission types for each role
 type RoleSubmission = ApproverSubmission | ReviewerSubmission;
@@ -67,7 +66,6 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
 
   // Modal state
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
-  const [selectedSubmission, setSelectedSubmission] = useState<RoleSubmission | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Reviewer-specific export state
@@ -103,7 +101,13 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
       const data: SubmissionsResponse<RoleSubmission> = await response.json();
       setSubmissions(data.submissions ?? []);
       if (data.pagination) {
-        setPagination(data.pagination);
+        // Map PaginationMeta to local pagination state
+        setPagination({
+          page: data.pagination.currentPage,
+          pages: data.pagination.totalPages,
+          limit: data.pagination.pageSize,
+          total: data.pagination.totalItems,
+        });
       }
     } catch (err) {
       console.error('Error fetching submissions:', err);
@@ -123,7 +127,7 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
     const eventName = role === 'APPROVER' ? 'approver-dashboard-refresh' : 'reviewer-dashboard-refresh';
     
     const handleSubmissionsRefresh = () => {
-      console.log(`🔄 ${role} submissions list received refresh event`);
+      // Refresh submissions list
       fetchSubmissions();
     };
 
@@ -136,13 +140,10 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
   // Note: fetchSubmissions tidak perlu di deps karena handleSubmissionsRefresh selalu memanggil versi terbaru
 
   // Reviewer-specific export handler
-  const handleExportToExcel = async (filters: ExportFilters) => {
+  const handleExportToExcel = async (filters: { startDate: string; endDate: string }) => {
     try {
       setExportLoading(true);
       const params = new URLSearchParams();
-      if (filters.search) params.append('search', filters.search);
-      if (filters.reviewStatus) params.append('reviewStatus', filters.reviewStatus);
-      if (filters.finalStatus) params.append('finalStatus', filters.finalStatus);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
@@ -214,7 +215,6 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
   const handleCloseModal = () => {
     setShowDetailModal(false);
     setSelectedSubmissionId(null);
-    setSelectedSubmission(null);
   };
 
   const handleSubmissionAction = () => {
@@ -381,8 +381,6 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
             onPageChange={(p) => setFilters({ ...filters, currentPage: p })}
             onOpenDetail={(id) => {
               setSelectedSubmissionId(id);
-              const s = submissions.find((x) => x.id === id);
-              if (s) setSelectedSubmission(s);
               setShowDetailModal(true);
             }}
             showScanColumn={currentConfig.showScanColumn}
@@ -400,25 +398,14 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
         </div>
       )}
 
-      {/* Role-specific Detail Modals */}
-      {role === 'APPROVER' ? (
-        <ApproverSubmissionDetailModal
-          isOpen={showDetailModal}
-          onClose={handleCloseModal}
-          submissionId={selectedSubmissionId ?? ''}
-          onApprovalSubmitted={handleSubmissionAction}
-        />
-      ) : (
-        showDetailModal && selectedSubmission && (
-          <ReviewerSubmissionDetailModal
-            key={selectedSubmission.id}
-            isOpen={showDetailModal}
-            onClose={handleCloseModal}
-            submissionId={selectedSubmission.id}
-            onReviewSubmitted={handleSubmissionAction}
-          />
-        )
-      )}
+      {/* Unified Detail Modal */}
+      <UnifiedSubmissionDetailModal
+        isOpen={showDetailModal}
+        onClose={handleCloseModal}
+        submissionId={selectedSubmissionId ?? ''}
+        userRole={role}
+        onSuccess={handleSubmissionAction}
+      />
 
       {/* Reviewer Export Modal */}
       {role === 'REVIEWER' && (
@@ -427,9 +414,6 @@ export default function RoleSubmissionsManagement({ role }: RoleSubmissionsManag
           onClose={() => setShowExportModal(false)}
           onExport={handleExportToExcel}
           currentFilters={{
-            search: filters.searchTerm,
-            reviewStatus: filters.reviewStatusFilter,
-            finalStatus: filters.finalStatusFilter,
             startDate: '',
             endDate: '',
           }}

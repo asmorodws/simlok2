@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  
+  // Image optimization
   images: {
     remotePatterns: [
       {
@@ -10,7 +12,29 @@ const nextConfig: NextConfig = {
         pathname: '/howto/**',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
+  
+  // Production optimizations
+  reactStrictMode: true,
+  swcMinify: true,
+  
+  // Disable ESLint during builds (console.log warnings)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  
+  // Compression
+  compress: true,
+  
+  // Logging
+  logging: {
+    fetches: {
+      fullUrl: false,
+    },
+  },
+  
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if
@@ -18,7 +42,8 @@ const nextConfig: NextConfig = {
     // !! WARN !!
     ignoreBuildErrors: true,
   },
-  // Optional: Add bundle analyzer support
+  
+  // Bundle analyzer (optional)
   ...(process.env.ANALYZE === 'true' && {
     webpack: (config: any) => {
       if (typeof require !== 'undefined') {

@@ -9,12 +9,12 @@ type ModalProps = {
   className?: string;
 };
 
-export const Modal: React.FC<ModalProps> = ({
+export default function Modal({
   children,
   isOpen,
   onClose,
   className,
-}) => {
+}: ModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -33,4 +33,6 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </>
   );
-};
+}
+
+export { Modal };

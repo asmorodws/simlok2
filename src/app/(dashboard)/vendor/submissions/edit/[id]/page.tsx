@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth/auth';
-import UnifiedSubmissionForm from '@/components/features/submission/form/UnifiedSubmissionForm';
+import UnifiedSubmissionForm from '@/components/features/submission/UnifiedSubmissionForm';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 
 interface EditSubmissionPageProps {

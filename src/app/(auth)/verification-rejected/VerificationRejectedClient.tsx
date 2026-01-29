@@ -13,7 +13,7 @@ import {
   PhoneIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline';
-import PageLoader from '@/components/ui/loading/PageLoader';
+import { PageLoader } from '@/components/ui/loading';
 
 export default function VerificationRejectedClient() {
   const { data: session, status } = useSession();

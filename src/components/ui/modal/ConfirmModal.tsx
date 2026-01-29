@@ -2,14 +2,15 @@
 
 import { XMarkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Button from '../button/Button';
-import LoadingSpinner from '../loading/LoadingSpinner';
+import { LoadingSpinner } from '../loading';
+import { ReactNode } from 'react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message: string | ReactNode;
   confirmText?: string;
   cancelText?: string;
   showCancel?: boolean;

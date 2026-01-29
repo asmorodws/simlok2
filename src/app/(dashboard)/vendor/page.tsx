@@ -1,6 +1,7 @@
 import { Metadata } from "next";
-import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import { createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
 import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
+import DashboardPageTemplate from "@/components/templates/DashboardPageTemplate";
 
 export const metadata: Metadata = createDashboardMetadata(
   "Dashboard Vendor",
@@ -8,5 +9,13 @@ export const metadata: Metadata = createDashboardMetadata(
 );
 
 export default function VendorPage() {
-  return DashboardPageHelpers.vendor(<RoleDashboard role="VENDOR" />);
+  return (
+    <DashboardPageTemplate
+      allowedRoles={['VENDOR']}
+      sidebarTitle="Dashboard Vendor"
+      titlePage="Vendor"
+    >
+      <RoleDashboard role="VENDOR" />
+    </DashboardPageTemplate>
+  );
 }

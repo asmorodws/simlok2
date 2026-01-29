@@ -1,6 +1,7 @@
 import { Metadata } from "next";
-import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import { createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
 import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
+import DashboardPageTemplate from "@/components/templates/DashboardPageTemplate";
 
 export const metadata: Metadata = createDashboardMetadata(
   "Dashboard Reviewer",
@@ -8,5 +9,13 @@ export const metadata: Metadata = createDashboardMetadata(
 );
 
 export default function ReviewerPage() {
-  return DashboardPageHelpers.reviewer(<RoleDashboard role="REVIEWER" />);
+  return (
+    <DashboardPageTemplate
+      allowedRoles={['REVIEWER', 'SUPER_ADMIN']}
+      sidebarTitle="Dashboard Review"
+      titlePage="Reviewer"
+    >
+      <RoleDashboard role="REVIEWER" />
+    </DashboardPageTemplate>
+  );
 }

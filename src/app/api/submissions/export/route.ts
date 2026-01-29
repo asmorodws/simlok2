@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth/auth';
-import { prisma } from '@/lib/database/singletons';
 import * as XLSX from 'xlsx';
 import { toJakartaISOString } from '@/lib/helpers/timezone';
 import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
-import { buildSubmissionRoleFilter } from '@/lib/database/queryHelpers';
+import { submissionService } from '@/services/SubmissionService';
 
 // Fungsi util aman untuk tanggal
 const safeDate = (d?: Date | string | null): string =>
@@ -24,78 +23,33 @@ export async function GET(request: NextRequest) {
     if (userOrError instanceof NextResponse) return userOrError;
 
     const { searchParams } = new URL(request.url);
+    
+    // Build filters object
+    const filters: {
+      reviewStatus?: string | undefined;
+      approvalStatus?: string | undefined;
+      search?: string | undefined;
+      startDate?: string | undefined;
+      endDate?: string | undefined;
+    } = {};
+    
     const reviewStatus = searchParams.get('reviewStatus');
     const approvalStatus = searchParams.get('approvalStatus');
     const search = searchParams.get('search');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-
-    // Build role-based filter
-    const roleFilter = buildSubmissionRoleFilter(userOrError.role, userOrError.id);
-    const whereClause: any = { ...roleFilter };
-
-    if (reviewStatus) whereClause.review_status = reviewStatus;
-    if (approvalStatus) whereClause.approval_status = approvalStatus;
-    if (search) {
-      whereClause.OR = [
-        { vendor_name: { contains: search } },
-        { job_description: { contains: search } },
-        { officer_name: { contains: search } },
-      ];
-    }
-    if (startDate || endDate) {
-      whereClause.created_at = {};
-      if (startDate) whereClause.created_at.gte = new Date(startDate);
-      if (endDate) whereClause.created_at.lte = new Date(endDate);
-    }
-
-    const submissions = await prisma.submission.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        simlok_number: true,
-        simlok_date: true,
-        vendor_name: true,
-        vendor_phone: true,
-        officer_name: true,
-        job_description: true,
-        work_location: true,
-        work_facilities: true,
-        working_hours: true,
-        holiday_working_hours: true,
-        worker_count: true,
-        implementation_start_date: true,
-        implementation_end_date: true,
-        review_status: true,
-        approval_status: true,
-        reviewed_by: true,
-        approved_by: true,
-        signer_position: true,
-        note_for_approver: true,
-        note_for_vendor: true,
-        created_at: true,
-        reviewed_at: true,
-        approved_at: true,
-        // Only include essential document fields for export
-        support_documents: {
-          select: {
-            id: true,
-            document_type: true,
-            document_subtype: true,
-            document_number: true,
-            document_date: true,
-          },
-        },
-        // Only include essential worker fields for export
-        worker_list: {
-          select: {
-            id: true,
-            worker_name: true,
-          },
-        },
-      },
-      orderBy: { created_at: 'desc' },
-    });
+    
+    if (reviewStatus) filters.reviewStatus = reviewStatus;
+    if (approvalStatus) filters.approvalStatus = approvalStatus;
+    if (search) filters.search = search;
+    if (startDate) filters.startDate = startDate;
+    if (endDate) filters.endDate = endDate;
+    
+    // Get submissions via service
+    const submissions = await submissionService.getSubmissionsForExport(
+      userOrError,
+      filters
+    );
 
     if (!submissions || submissions.length === 0) {
       return NextResponse.json({ error: 'NO_DATA', message: 'Tidak ada data ditemukan.' }, { status: 404 });

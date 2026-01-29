@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { notifyNotificationsRemoved } from '@/server/events';
+import { notifyNotificationsRemoved } from '@/lib/notification/events';
 
 const prisma = new PrismaClient();
 

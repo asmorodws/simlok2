@@ -1,40 +1,21 @@
-import { FC, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { FC } from "react";
+import BaseModal from './BaseModal';
 
 const TermsModal: FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "auto";
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [open]);
-
-  if (!open) return null;
-
   // Fungsi helper untuk memberi <strong> pada angka seperti 1.1.
   const formatNumbers = (text: string) => {
     return text.replace(/(^|\s)(\d+\.\d+\.)(?=\s)/g, '$1<strong>$2</strong>');
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
-
-      {/* Modal */}
-      <div className="relative z-10 w-full max-w-3xl max-h-[90vh] bg-white rounded-lg shadow-lg ring-1 ring-black/5 flex flex-col">
-        {/* Header */}
-        <div className="sticky top-0 flex items-start justify-between p-4 border-b bg-white z-10">
-          <h2 className="text-lg font-semibold">
-            Syarat dan Ketentuan & Kebijakan Privasi - SIMLOK
-          </h2>
-          <button onClick={onClose} aria-label="Tutup modal" className="p-1 rounded hover:bg-gray-100">
-            <XMarkIcon className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-
-        {/* Scrollable Content */}
-        <div className="overflow-y-auto p-6 text-sm text-gray-700 space-y-6 leading-relaxed">
+    <BaseModal 
+      isOpen={open} 
+      onClose={onClose} 
+      title="Syarat dan Ketentuan & Kebijakan Privasi - SIMLOK"
+      size="xl"
+      contentClassName="max-h-[70vh]"
+    >
+      <div className="text-sm text-gray-700 space-y-6 leading-relaxed">
           <section>
             <h3 className="font-bold text-base mb-4">Syarat dan Ketentuan Penggunaan Sistem SIMLOK</h3>
             
@@ -157,11 +138,8 @@ const TermsModal: FC<{ open: boolean; onClose: () => void }> = ({ open, onClose 
               Kebijakan Privasi ini dapat diperbarui sewaktu-waktu oleh PT Pertamina (Persero) untuk menyesuaikan dengan perubahan kebijakan internal atau peraturan yang berlaku. Versi terbaru akan diumumkan melalui sistem SIMLOK atau kanal resmi lainnya.
             </p>
           </section>
-
-
         </div>
-      </div>
-    </div>
+      </BaseModal>
   );
 };
 

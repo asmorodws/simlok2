@@ -70,7 +70,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   fetchAdminStats: async () => {
     try {
       // Fetch statistics without any filters
-      const response = await fetch('/api/submissions/stats');
+      const response = await fetch('/api/dashboard/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch admin stats');
       }
@@ -153,7 +153,7 @@ export const useSubmissionStore = create<SubmissionStore>((set, get) => ({
   fetchVendorStats: async () => {
     try {
       // Fetch statistics without any filters
-      const response = await fetch('/api/vendor/dashboard/stats');
+      const response = await fetch('/api/dashboard/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch vendor stats');
       }

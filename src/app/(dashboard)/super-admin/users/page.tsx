@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 // Import role types
 import { redirect } from "next/navigation";
-import RoleGate from "@/components/shared/security/RoleGate";
+import RoleGate from "@/components/layout/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
-import UserVerificationManagement from "@/components/features/user/management/AdminUserVerificationManagement";
-import PageLoader from "@/components/ui/loading/PageLoader";
+import UnifiedUserVerificationManagement from "@/components/features/user/UnifiedUserVerificationManagement";
+import { PageLoader } from "@/components/ui/loading";
 
 export default function UserVerificationPage() {
   const { data: session, status } = useSession();
@@ -46,7 +46,7 @@ export default function UserVerificationPage() {
 
             {/* User Verification Management Component */}
             <div className="p-6">
-              <UserVerificationManagement refreshTrigger={refreshTrigger} />
+              <UnifiedUserVerificationManagement role="SUPER_ADMIN" refreshTrigger={refreshTrigger} />
             </div>
           </div>
         </div>

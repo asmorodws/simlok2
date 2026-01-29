@@ -1,10 +1,10 @@
 "use client";
 
-import Checkbox from "@/components/form/Checkbox";
-import Label from "@/components/form/Label";
+import Checkbox from "@/components/ui/form/Checkbox";
+import Label from "@/components/ui/form/Label";
 import Button from "@/components/ui/button/Button";
-import Input from "@/components/form/Input";
-import PhoneInput from "@/components/form/PhoneInput";
+import Input from "@/components/ui/input/Input";
+import PhoneInput from "@/components/ui/input/PhoneInput";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 import TermsModal from "@/components/ui/modal/TermsModal";
 import Link from "next/link";

@@ -6,8 +6,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Turnstile } from "next-turnstile";
 
-import Input from "@/components/form/Input";
-import Label from "@/components/form/Label";
+import Input from "@/components/ui/input/Input";
+import Label from "@/components/ui/form/Label";
 import Button from "@/components/ui/button/Button";
 import { useToast } from "@/hooks/useToast";
 

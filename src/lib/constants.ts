@@ -336,7 +336,6 @@ export const STORAGE_KEYS = {
 // TYPE EXPORTS FOR TYPE SAFETY
 // ============================================
 
-export type PaginationKey = keyof typeof PAGINATION;
 export type TimeoutKey = keyof typeof TIMEOUTS;
 export type FileUploadKey = keyof typeof FILE_UPLOAD;
 export type ValidationKey = keyof typeof VALIDATION;
@@ -348,4 +347,3 @@ export type DateFormatKey = keyof typeof DATE_FORMAT;
 export type ErrorMessageKey = keyof typeof ERROR_MESSAGES;
 export type SuccessMessageKey = keyof typeof SUCCESS_MESSAGES;
 export type HttpStatusKey = keyof typeof HTTP_STATUS;
-export type StorageKey = keyof typeof STORAGE_KEYS;

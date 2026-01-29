@@ -1,136 +1,138 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth";
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/database/singletons";
-import { requireSessionWithRole, RoleGroups } from '@/lib/auth/roleHelpers';
-import { PAGINATION } from '@/lib/constants';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/auth';
+import { NextResponse } from 'next/server';
+import { withCache, withUserCache } from '@/lib/cache/apiCache';
+import { CacheKeys, CacheTTL } from '@/lib/cache/cache';
+import { dashboardService } from '@/services/DashboardService';
 
+/**
+ * Unified Dashboard Stats API
+ * Returns appropriate statistics based on user role
+ * 
+ * Supports: VISITOR, VENDOR, REVIEWER, APPROVER, VERIFIER, ADMIN, SUPER_ADMIN
+ */
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    // Use helper for session and role validation
-    const userOrError = requireSessionWithRole(
-      session,
-      RoleGroups.ADMINS,
-      'Only admins and super admins can access dashboard stats'
-    );
-    if (userOrError instanceof NextResponse) return userOrError;
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    // Get total users count (excluding SUPER_ADMIN for ADMIN role)
-    const userWhereClause = userOrError.role === 'ADMIN' 
-      ? { role: { not: 'SUPER_ADMIN' as const } }
-      : {};
+    const { role, id: userId } = session.user;
 
-    // Parallelize all database queries for better performance
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Route to appropriate stats based on role
+    switch (role) {
+      case 'VISITOR':
+        return await getVisitorStats();
 
-    const [
-      totalUsers,
-      totalPending,
-      totalVerified,
-      totalRejected,
-      todayRegistrations,
-      recentUsers
-    ] = await Promise.all([
-      // Get total users count
-      prisma.user.count({
-        where: userWhereClause
-      }),
-      // Get pending verifications count
-      prisma.user.count({
-        where: {
-          AND: [
-            { verified_at: null },
-            { verification_status: { notIn: ['VERIFIED', 'REJECTED'] } },
-            { rejection_reason: null },
-            userWhereClause
-          ]
-        }
-      }),
-      // Get verified users count
-      prisma.user.count({
-        where: {
-          AND: [
-            {
-              OR: [
-                { verified_at: { not: null } },
-                { verification_status: 'VERIFIED' }
-              ]
-            },
-            userWhereClause
-          ]
-        }
-      }),
-      // Get rejected users count
-      prisma.user.count({
-        where: {
-          AND: [
-            {
-              OR: [
-                { rejection_reason: { not: null } },
-                { verification_status: 'REJECTED' }
-              ]
-            },
-            userWhereClause
-          ]
-        }
-      }),
-      // Get today's registrations
-      prisma.user.count({
-        where: {
-          AND: [
-            {
-              created_at: {
-                gte: today,
-                lt: tomorrow
-              }
-            },
-            userWhereClause
-          ]
-        }
-      }),
-      // Get recent users (latest 5)
-      prisma.user.findMany({
-        where: userWhereClause,
-        orderBy: {
-          created_at: 'desc'
-        },
-        take: PAGINATION.DASHBOARD_STATS_TOP_LIMIT,
-        select: {
-          id: true,
-          email: true,
-          officer_name: true,
-          vendor_name: true,
-          phone_number: true,
-          address: true,
-          role: true,
-          verified_at: true,
-          verification_status: true,
-          rejection_reason: true,
-          rejected_at: true,
-          created_at: true,
-          isActive: true
-        }
-      })
-    ]);
+      case 'VENDOR':
+        return await getVendorStats(userId);
 
-    return NextResponse.json({
-      totalUsers,
-      totalPending,
-      totalVerified, 
-      totalRejected,
-      todayRegistrations,
-      recentUsers,
-      // Legacy compatibility
-      pendingVerifications: totalPending
-    });
+      case 'REVIEWER':
+        return await getReviewerStats(role);
 
+      case 'APPROVER':
+        return await getApproverStats();
+
+      case 'VERIFIER':
+        return await getVerifierStats(userId);
+
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        return await getAdminStats(role);
+
+      default:
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
   } catch (error) {
-    console.error("[DASHBOARD_STATS]", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error('[DASHBOARD_STATS]', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
+}
+
+async function getVisitorStats() {
+  const { data: stats, cached } = await withCache(
+    CacheKeys.VISITOR_STATS,
+    CacheTTL.FIVE_MINUTES,
+    async () => {
+      return await dashboardService.getVisitorStats();
+    }
+  );
+
+  return NextResponse.json(stats, {
+    headers: { 'X-Cache': cached ? 'HIT' : 'MISS' }
+  });
+}
+
+async function getVendorStats(userId: string) {
+  const { data: stats, cached } = await withUserCache(
+    'vendor:stats',
+    userId,
+    CacheTTL.ONE_MINUTE,
+    async () => {
+      return await dashboardService.getSubmissionStats(userId, 'VENDOR');
+    }
+  );
+
+  return NextResponse.json({ statistics: stats }, {
+    headers: { 'X-Cache': cached ? 'HIT' : 'MISS' }
+  });
+}
+
+async function getReviewerStats(role: string) {
+  const { data: stats, cached } = await withCache(
+    CacheKeys.REVIEWER_STATS,
+    CacheTTL.ONE_MINUTE,
+    async () => {
+      return await dashboardService.getReviewerStats(role);
+    }
+  );
+
+  return NextResponse.json(stats, {
+    headers: { 'X-Cache': cached ? 'HIT' : 'MISS' }
+  });
+}
+
+async function getApproverStats() {
+  const { data: stats, cached } = await withCache(
+    CacheKeys.APPROVER_STATS,
+    CacheTTL.ONE_MINUTE,
+    async () => {
+      return await dashboardService.getApproverStats();
+    }
+  );
+
+  return NextResponse.json(stats, {
+    headers: { 'X-Cache': cached ? 'HIT' : 'MISS' }
+  });
+}
+
+async function getVerifierStats(userId: string) {
+  const { data: stats, cached } = await withUserCache(
+    'verifier:stats',
+    userId,
+    CacheTTL.ONE_MINUTE * 2,
+    async () => {
+      return await dashboardService.getVerifierStats(userId);
+    }
+  );
+
+  return NextResponse.json(stats, {
+    headers: { 'X-Cache': cached ? 'HIT' : 'MISS' }
+  });
+}
+
+async function getAdminStats(role: string) {
+  const stats = await dashboardService.getAdminStats(role);
+
+  return NextResponse.json({
+    totalUsers: stats.users.total,
+    totalPending: stats.users.pending,
+    totalVerified: stats.users.verified,
+    totalRejected: stats.users.rejected,
+    todayRegistrations: stats.users.todayRegistrations,
+    recentUsers: stats.recentUsers,
+    pendingVerifications: stats.users.pending,
+  });
 }

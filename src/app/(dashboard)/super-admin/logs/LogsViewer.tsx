@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Download, Trash2, X, Search, Filter } from 'lucide-react';
-import DateRangePicker from '@/components/form/DateRangePicker';
+import DateRangePicker from '@/components/ui/input/DateRangePicker';
 import type { LogEntry, LogsResponse } from '@/types';
 
 type LogLevel = 'ALL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';

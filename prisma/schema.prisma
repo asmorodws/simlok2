@@ -9,31 +9,31 @@ datasource db {
 
 /// ----------  USER  ----------
 model User {
-  id                       String             @id @default(cuid())
-  email                    String             @unique
-  password                 String
-  role                     User_role          @default(VENDOR)
-  position                 String?            // for approver position
-  address                  String?
-  created_at               DateTime           @default(now())
-  profile_photo            String?            @db.Text
-  officer_name             String
-  vendor_name              String?
-  phone_number             String?
-  verified_at              DateTime?
-  verified_by              String?
-  isActive                 Boolean            @default(true)
-  lastActiveAt             DateTime?
-  sessionExpiry            DateTime?
-  rejected_at              DateTime?
-  rejected_by              String?
-  rejection_reason         String?
-  verification_status      VerificationStatus @default(PENDING)
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  password            String
+  role                User_role          @default(VENDOR)
+  position            String? // for approver position
+  address             String?
+  created_at          DateTime           @default(now())
+  profile_photo       String?            @db.Text
+  officer_name        String
+  vendor_name         String?
+  phone_number        String?
+  verified_at         DateTime?
+  verified_by         String?
+  isActive            Boolean            @default(true)
+  lastActiveAt        DateTime?
+  sessionExpiry       DateTime?
+  rejected_at         DateTime?
+  rejected_by         String?
+  rejection_reason    String?
+  verification_status VerificationStatus @default(PENDING)
 
-  qrScans                  QrScan[]           @relation("QrScannedBy")
+  qrScans                  QrScan[]       @relation("QrScannedBy")
   refreshTokens            RefreshToken[]
   sessions                 Session[]
-  finalApprovedSubmissions Submission[]       @relation("FinalApprovedSubmissions")
+  finalApprovedSubmissions Submission[]   @relation("FinalApprovedSubmissions")
   submissions              Submission[]
 }
 
@@ -50,17 +50,16 @@ model RefreshToken {
 
 /// ----------  NEXTAUTH LEGACY (bisa dihapus jika tidak dipakai)  ----------
 
-
 model Session {
-  id             String    @id @default(cuid())
-  sessionToken   String    @unique
+  id             String   @id @default(cuid())
+  sessionToken   String   @unique
   userId         String
   expires        DateTime
-  createdAt      DateTime  @default(now())
-  lastActivityAt DateTime  @default(now())
+  createdAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
   ipAddress      String?
-  userAgent      String?   @db.Text
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent      String?  @db.Text
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId], map: "Session_userId_fkey")
   @@index([expires], map: "Session_expires_idx")
@@ -77,19 +76,19 @@ model VerificationToken {
 
 /// ----------  SUBMISSION  ----------
 model Submission {
-  id                        String       @id @default(cuid())
-  reviewed_by               String?
-  approved_by               String?
-  vendor_name               String
-  based_on                  String
-  officer_name              String
-  job_description           String
-  work_location             String       @db.Text
-  implementation            String?      @db.Text
-  working_hours             String
-  holiday_working_hours     String?
-  work_facilities           String       @db.Text
-  
+  id                    String  @id @default(cuid())
+  reviewed_by           String?
+  approved_by           String?
+  vendor_name           String
+  based_on              String
+  officer_name          String
+  job_description       String
+  work_location         String  @db.Text
+  implementation        String? @db.Text
+  working_hours         String
+  holiday_working_hours String?
+  work_facilities       String  @db.Text
+
   // simja_number              String?
   // simja_date                DateTime?
   // sika_number               String?
@@ -98,20 +97,20 @@ model Submission {
   // simja_document_upload     String?
   // simja_type               String?
   // sika_type                 String?
-  
-  simlok_number             String?      @unique
-  simlok_date               DateTime?
+
+  simlok_number String?   @unique
+  simlok_date   DateTime?
 
   // HSSE PASS
   // hsse_pass_document_upload String?
   // hsse_pass_number          String?
   // hsse_pass_valid_thru     DateTime?
-  
-  worker_names              String       @db.Text
-  content                   String?      @db.Text
-  qrcode                    String?      @db.LongText
-  created_at                DateTime     @default(now())
-  user_id                   String?      // Made optional for deleted users
+
+  worker_names              String            @db.Text
+  content                   String?           @db.Text
+  qrcode                    String?           @db.LongText
+  created_at                DateTime          @default(now())
+  user_id                   String? // Made optional for deleted users
   // Denormalized user data - preserved when user is deleted
   user_email                String?
   user_officer_name         String?
@@ -124,16 +123,16 @@ model Submission {
   implementation_start_date DateTime?
   approved_at               DateTime?
   approved_by_final_id      String?
-  note_for_vendor           String?      @db.Text
-  approval_status           ApprovalStatus  @default(PENDING_APPROVAL)
-  note_for_approver         String?      @db.Text
-  review_status             ReviewStatus @default(PENDING_REVIEW)
+  note_for_vendor           String?           @db.Text
+  approval_status           ApprovalStatus    @default(PENDING_APPROVAL)
+  note_for_approver         String?           @db.Text
+  review_status             ReviewStatus      @default(PENDING_REVIEW)
   reviewed_at               DateTime?
   worker_count              Int?
   vendor_phone              String?
-  qrScans                   QrScan[]     @relation("SubmissionQrScans")
-  approved_by_final_user    User?        @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id], onDelete: SetNull)
-  user                      User?        @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  qrScans                   QrScan[]          @relation("SubmissionQrScans")
+  approved_by_final_user    User?             @relation("FinalApprovedSubmissions", fields: [approved_by_final_id], references: [id], onDelete: SetNull)
+  user                      User?             @relation(fields: [user_id], references: [id], onDelete: SetNull)
   worker_list               WorkerList[]
   support_documents         SupportDocument[]
 
@@ -142,40 +141,41 @@ model Submission {
   @@index([approval_status])
   @@index([created_at])
   @@index([approved_by_final_id])
-  @@index([user_id], map: "Submission_user_id_perf_idx")              // For vendor filtering
-  @@index([vendor_name], map: "Submission_vendor_name_search_idx")    // For vendor search
+  @@index([user_id], map: "Submission_user_id_perf_idx") // For vendor filtering
+  @@index([vendor_name], map: "Submission_vendor_name_search_idx") // For vendor search
   @@index([review_status, approval_status], map: "Submission_review_approval_compound_idx") // Compound index for approver queries
 }
 
 /// ----------  WORKER LIST  ----------
 model WorkerList {
-  id            String     @id @default(cuid())
-  worker_name   String
-  worker_photo  String?    @db.Text
-  hsse_pass_number String?
-  hsse_pass_valid_thru DateTime?
-  hsse_pass_document_upload String? @db.Text
-  submission_id String
-  created_at    DateTime   @default(now())
-  submission    Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  id                        String     @id @default(cuid())
+  worker_name               String
+  worker_photo              String?    @db.Text
+  hsse_pass_number          String?
+  hsse_pass_valid_thru      DateTime?
+  hsse_pass_document_upload String?    @db.Text
+  submission_id             String
+  created_at                DateTime   @default(now())
+  submission                Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
 
   @@index([submission_id])
 }
 
 //// ------------ Support Document ---------
 model SupportDocument {
-  id              String     @id @default(cuid())
-  document_type   String?
+  id               String     @id @default(cuid())
+  document_type    String?
   document_subtype String?
-  document_number String?
-  document_date   DateTime?
-  document_upload String     @db.Text
-  submission_id   String
-  uploaded_at     DateTime   @default(now())
-  uploaded_by     String
-  submission      Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+  document_number  String?
+  document_date    DateTime?
+  document_upload  String     @db.Text
+  submission_id    String
+  uploaded_at      DateTime   @default(now())
+  uploaded_by      String
+  submission       Submission @relation(fields: [submission_id], references: [id], onDelete: Cascade)
+
   @@index([uploaded_by])
-} 
+}
 
 /// ----------  NOTIFICATION  ----------
 model Notification {
@@ -205,8 +205,6 @@ model NotificationRead {
   @@index([user_id])
   @@index([vendor_id])
 }
-
-
 
 /// ----------  QR SCAN TRACKING  ----------
 model QrScan {

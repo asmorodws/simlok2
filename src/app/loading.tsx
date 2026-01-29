@@ -1,4 +1,4 @@
-import PageLoader from '@/components/ui/loading/PageLoader';
+import { PageLoader } from '@/components/ui/loading';
 
 export default function Loading() {
   return <PageLoader message="Memuat..." />;

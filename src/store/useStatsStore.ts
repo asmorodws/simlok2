@@ -47,7 +47,7 @@ export const useStatsStore = create<StatsStore>((set) => ({
   fetchVendorStats: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await fetch('/api/vendor/dashboard/stats');
+      const response = await fetch('/api/dashboard/stats');
       if (!response.ok) {
         throw new Error('Failed to fetch vendor stats');
       }

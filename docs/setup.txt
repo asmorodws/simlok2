@@ -1,0 +1,11 @@
+#Copy .env, config redis & db
+
+cp env.example .env
+
+npm i
+
+npx prisma generate deploy
+
+npm run build
+
+npm run start

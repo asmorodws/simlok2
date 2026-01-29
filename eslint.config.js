@@ -14,20 +14,25 @@ const eslintConfig = [
       "react/jsx-sort-props": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/consistent-type-imports": "off",
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "warn",
       "react/no-unescaped-entities": "off",
       "react/self-closing-comp": "off",
       "@next/next/no-img-element": "off",
       "jsx-a11y/alt-text": "off",
-      "no-console": "off",
-      "react-hooks/exhaustive-deps": "off",
+      "no-console": "warn", // Warn about console statements
+      "react-hooks/exhaustive-deps": "warn",
       
       // Keep important rules
       "react/prop-types": "off",
       "react/react-in-jsx-scope": "off",
       "prefer-const": "error",
       "no-var": "error",
-      "no-debugger": "error"
+      "no-debugger": "error",
+      
+      // Production best practices
+      "no-alert": "warn",
+      "no-eval": "error",
+      "no-implied-eval": "error",
     },
   },
   {

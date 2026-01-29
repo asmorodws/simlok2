@@ -5,7 +5,7 @@
 
 import { Metadata } from 'next';
 import { ReactNode } from 'react';
-import RoleGate from '@/components/shared/security/RoleGate';
+import RoleGate from '@/components/layout/RoleGate';
 import SidebarLayout from '@/components/layout/SidebarLayout';
 
 type UserRole = 'VENDOR' | 'VERIFIER' | 'SUPER_ADMIN' | 'REVIEWER' | 'APPROVER' | 'VISITOR';

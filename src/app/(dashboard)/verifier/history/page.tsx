@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { DashboardPageHelpers, createDashboardMetadata } from '@/lib/helpers/dashboardPageHelper';
-import VerifierScanHistory from '@/components/features/scan/history/VerifierScanHistory';
+import VerifierScanHistory from '@/components/features/qr-scan/VerifierScanHistory';
 
 export const metadata: Metadata = createDashboardMetadata(
   'Riwayat Scan - Verifier',

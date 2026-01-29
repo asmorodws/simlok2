@@ -15,27 +15,25 @@ import {
   XCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useToast } from '@/hooks/useToast';
-import { SkeletonDashboardCard, SkeletonTable, SkeletonChart } from '@/components/ui/skeleton';
+import { SkeletonDashboardCard, SkeletonTable, SkeletonChart } from '@/components/ui/loading';
 import Card from '@/components/ui/card/Card';
 import Button from '@/components/ui/button/Button';
-import UnifiedSubmissionTable from '@/components/features/submission/table/UnifiedSubmissionTable';
-import { ApproverTableSkeleton, ReviewerTableSkeleton } from '@/components/ui/skeleton/TableSkeleton';
-import { SubmissionsTable } from '@/components/features/submission/table/SubmissionsTable';
-import SubmissionsCardView from '@/components/features/submission/card/SubmissionsCardView';
+import UnifiedSubmissionTable from '@/components/features/submission/UnifiedSubmissionTable';
+import { ApproverTableSkeleton, ReviewerTableSkeleton } from '@/components/ui/loading';
+import { SubmissionsTable } from '@/components/features/submission/SubmissionTable';
+import SubmissionsCardView from '@/components/features/submission/SubmissionsCardView';
 import { Badge } from '@/components/ui/badge/Badge';
 import LineChartOne from '@/components/ui/chart/LineChart';
 import BarChartOne from '@/components/ui/chart/BarChart';
-import CameraQRScanner from '@/components/features/scan/camera/CameraQRScanner';
+import CameraQRScanner from '@/components/features/qr-scan/CameraQRScanner';
 import ConfirmModal from '@/components/ui/modal/ConfirmModal';
 import StatCard from '@/components/ui/card/StatCard';
 import { useStatsStore } from '@/store/useStatsStore';
 import { useSubmissionStore } from '@/store/useSubmissionStore';
 
-// Import role-specific modals
-import ApproverSubmissionDetailModal from '@/components/features/submission/modal/ApproverSubmissionDetailModal';
-import ReviewerSubmissionDetailModal from '@/components/features/submission/modal/ReviewerSubmissionDetailModal';
-import SubmissionDetailModal from '@/components/features/submission/modal/VendorSubmissionDetailModal';
-import ScanDetailModal from '@/components/features/scan/modal/ScanDetailModal';
+// Import unified modal
+import { UnifiedSubmissionDetailModal } from '@/components/features/submission';
+import ScanDetailModal from '@/components/features/qr-scan/ScanDetailModal';
 import type { QrScan, ApproverSubmission, ReviewerSubmission } from '@/types';
 
 type UserRole = 'APPROVER' | 'REVIEWER' | 'VENDOR' | 'VERIFIER' | 'VISITOR';
@@ -92,7 +90,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
       if (role === 'APPROVER') {
         const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
           fetch('/api/submissions?page=1&limit=10&sortBy=reviewed_at&sortOrder=desc'),
-          fetch('/api/dashboard/approver-stats')
+          fetch('/api/dashboard/stats')
         ]);
 
         if (submissionsResponse.ok && dashboardStatsResponse.ok) {
@@ -109,7 +107,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
       } else if (role === 'REVIEWER') {
         const [submissionsResponse, dashboardStatsResponse] = await Promise.all([
           fetch('/api/submissions?page=1&limit=10&sortBy=created_at&sortOrder=desc'),
-          fetch('/api/dashboard/reviewer-stats')
+          fetch('/api/dashboard/stats')
         ]);
 
         if (submissionsResponse.ok && dashboardStatsResponse.ok) {
@@ -132,7 +130,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
       } else if (role === 'VERIFIER') {
         const [scansRes, statsRes] = await Promise.all([
           fetch('/api/qr/verify?limit=5&offset=0&search='),
-          fetch('/api/verifier/stats')
+          fetch('/api/dashboard/stats')
         ]);
 
         if (scansRes.ok) {
@@ -145,7 +143,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
           setVerifierStats(statsData);
         }
       } else if (role === 'VISITOR') {
-        const response = await fetch('/api/dashboard/visitor-stats', {
+        const response = await fetch('/api/dashboard/stats', {
           headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
         });
 
@@ -452,7 +450,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
           </div>
 
           {submissionsLoading ? (
-            <SkeletonTable rows={10} cols={6} />
+            <SkeletonTable rows={10} columns={6} />
           ) : (
             <UnifiedSubmissionTable
               data={role === 'APPROVER' ? approverSubmissions : reviewerSubmissions}
@@ -495,7 +493,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
 
           {vendorSubmissionsLoading ? (
             <div className="p-6">
-              <SkeletonTable rows={5} cols={6} />
+              <SkeletonTable rows={5} columns={6} />
             </div>
           ) : vendorSubmissions.length === 0 ? (
             <div className="p-12 text-center">
@@ -573,7 +571,7 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
               </Button>
             </div>
             {statsLoading ? (
-              <SkeletonTable rows={5} cols={3} />
+              <SkeletonTable rows={5} columns={3} />
             ) : (
               <div className="space-y-3">
                 {recentScans.map((scan) => (
@@ -652,31 +650,14 @@ export default function RoleDashboard({ role }: RoleDashboardProps) {
         {renderContent()}
       </div>
 
-      {/* Modals */}
-      {selectedSubmission && role === 'APPROVER' && (
-        <ApproverSubmissionDetailModal
+      {/* Unified Submission Detail Modal */}
+      {selectedSubmission && (role === 'APPROVER' || role === 'REVIEWER' || role === 'VENDOR') && (
+        <UnifiedSubmissionDetailModal
           submissionId={selectedSubmission}
           isOpen={isModalOpen}
           onClose={handleCloseModal}
-          onApprovalSubmitted={handleActionSubmitted}
-        />
-      )}
-
-      {selectedSubmission && role === 'REVIEWER' && (
-        <ReviewerSubmissionDetailModal
-          key={selectedSubmission}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          submissionId={selectedSubmission}
-          onReviewSubmitted={handleActionSubmitted}
-        />
-      )}
-
-      {selectedSubmission && role === 'VENDOR' && (
-        <SubmissionDetailModal
-          submission={vendorSubmissions.find(s => s.id === selectedSubmission)!}
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
+          userRole={role}
+          onSuccess={handleActionSubmitted}
         />
       )}
 

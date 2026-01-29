@@ -6,6 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
+import { type PaginationMeta, createPaginationMeta as createPaginationMetaHelper } from './paginationHelpers';
+
+// Re-export for convenience
+export type { PaginationMeta };
+export { createPaginationMetaHelper as createPaginationMeta };
 
 /**
  * Standard API Success Response Interface
@@ -35,18 +40,6 @@ export interface ApiErrorResponse {
     timestamp: string;
     requestId?: string;
   };
-}
-
-/**
- * Pagination Metadata Interface
- */
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext?: boolean;
-  hasPrev?: boolean;
 }
 
 /**
@@ -179,31 +172,6 @@ export const CommonErrors = {
   internal: (message = 'Internal server error', details?: any) =>
     errorResponse(ErrorCodes.INTERNAL_ERROR, message, 500, details),
 };
-
-/**
- * Create pagination metadata
- * 
- * @param page - Current page number
- * @param limit - Items per page
- * @param total - Total items count
- * @returns Pagination metadata object
- */
-export function createPaginationMeta(
-  page: number,
-  limit: number,
-  total: number
-): PaginationMeta {
-  const totalPages = Math.ceil(total / limit);
-  
-  return {
-    page,
-    limit,
-    total,
-    totalPages,
-    hasNext: page < totalPages,
-    hasPrev: page > 1,
-  };
-}
 
 /**
  * Parse and validate pagination parameters from URL

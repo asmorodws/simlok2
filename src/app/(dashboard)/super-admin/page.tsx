@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import RoleGate from "@/components/shared/security/RoleGate";
+import RoleGate from "@/components/layout/RoleGate";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge/Badge";
 import { UserData } from "@/types/user";
 import { UserIcon, CheckCircleIcon, ClockIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import UserVerificationModal from "@/components/features/user/modal/UserVerificationModal";
-import UserFormModal from "@/components/features/user/modal/UserFormModal";
-import DeleteUserModal from "@/components/features/user/modal/DeleteUserModal";
-import { DashboardLoadingSkeleton } from "@/components/ui/loading/LoadingSpinner";
+import UserVerificationModal from "@/components/features/user/UserVerificationModal";
+import UserFormModal from "@/components/features/user/UserFormModal";
+import DeleteUserModal from "@/components/features/user/DeleteUserModal";
+import Skeleton from "@/components/ui/loading/Skeleton";
 
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState({
@@ -112,7 +112,12 @@ export default function SuperAdminDashboard() {
           {/* Statistik Dashboard */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {loading ? (
-              <DashboardLoadingSkeleton type="stats" count={5} />
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-xl border shadow-sm p-6">
+                  <Skeleton className="h-8 w-20 mb-2" />
+                  <Skeleton className="h-12 w-24" />
+                </div>
+              ))
             ) : (
               <>
                 <div className="bg-white rounded-xl border shadow-sm p-6">
@@ -199,7 +204,11 @@ export default function SuperAdminDashboard() {
             </div>
 
             {loading ? (
-              <DashboardLoadingSkeleton type="table" count={5} />
+              <div className="p-6 space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
             ) : error ? (
               <div className="p-6 text-center text-red-500">{error}</div>
             ) : stats.recentUsers.length === 0 ? (

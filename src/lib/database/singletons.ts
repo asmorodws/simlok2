@@ -1,18 +1,15 @@
 /**
- * Singletons for Prisma, Redis, and Socket.IO Server
+ * Singletons for Prisma and Redis
  * Safe for Hot Module Replacement in development
  */
 
 import { PrismaClient } from '@prisma/client';
 import Redis from 'ioredis';
-import { Server as SocketIOServer } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
 
 declare global {
   var __prisma: PrismaClient | undefined;
   var __redis_pub: Redis | undefined;
   var __redis_sub: Redis | undefined;
-  var __socket_io: SocketIOServer | undefined;
   var __shutdown_setup: boolean | undefined;
 }
 
@@ -81,49 +78,6 @@ if (!globalThis.__shutdown_setup) {
 }
 
 /**
- * Socket.IO Server Singleton
- * Will be initialized when HTTP server is available
- */
-export function getSocketIO(): SocketIOServer | null {
-  return globalThis.__socket_io || null;
-}
-
-export function setSocketIO(io: SocketIOServer): void {
-  globalThis.__socket_io = io;
-}
-
-/**
- * Initialize Socket.IO with Redis adapter
- */
-export function initializeSocketIO(httpServer: any): SocketIOServer {
-  if (globalThis.__socket_io) {
-    return globalThis.__socket_io;
-  }
-
-  const io = new SocketIOServer(httpServer, {
-    path: '/api/socket',
-    addTrailingSlash: false,
-    cors: {
-      origin: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-      methods: ['GET', 'POST'],
-    },
-    transports: ['websocket', 'polling'],
-  });
-
-  // Setup Redis adapter
-  try {
-    io.adapter(createAdapter(redisPub, redisSub));
-    console.log('Socket.IO Redis adapter initialized');
-  } catch (error) {
-    console.warn('Socket.IO Redis adapter failed, using memory adapter:', error);
-  }
-
-  setSocketIO(io);
-  
-  return io;
-}
-
-/**
  * Setup graceful shutdown handlers
  */
 function setupGracefulShutdownHandlers() {
@@ -143,19 +97,7 @@ function setupGracefulShutdownHandlers() {
     }, 5000); // Reduced to 5 seconds for faster shutdown
 
     try {
-      // 1. Close Socket.IO
-      const io = getSocketIO();
-      if (io) {
-        console.log('📡 Closing Socket.IO...');
-        await new Promise<void>((resolve) => {
-          io.close(() => {
-            console.log('✅ Socket.IO closed');
-            resolve();
-          });
-        });
-      }
-
-      // 2. Disconnect Redis clients
+      // 1. Disconnect Redis clients
       console.log('🔴 Disconnecting Redis...');
       const redisClosePromises = [];
       
@@ -173,7 +115,7 @@ function setupGracefulShutdownHandlers() {
 
       await Promise.all(redisClosePromises);
 
-      // 3. Disconnect Prisma
+      // 2. Disconnect Prisma
       console.log('🗄️  Disconnecting Prisma...');
       await prisma.$disconnect();
       console.log('✅ Prisma disconnected');

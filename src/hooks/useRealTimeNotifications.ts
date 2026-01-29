@@ -58,22 +58,21 @@ export function useRealTimeNotifications() {
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
-      console.log('SSE connection opened');
+      // Connection established
     };
 
     eventSource.onmessage = (event) => {
       try {
         const message: SSEMessage = JSON.parse(event.data);
-        console.log('SSE message received:', message);
 
         switch (message.type) {
           case 'connected':
-            console.log('Real-time notifications connected:', message.message);
+            // Real-time notifications connected
             break;
 
           case 'notification:new':
             if (message.data) {
-              console.log('New notification via SSE:', message.data);
+
               
               // Add notification to store with proper data
               addItem({
@@ -97,13 +96,13 @@ export function useRealTimeNotifications() {
 
           case 'notification:removed':
             if (message.data?.submissionId) {
-              console.log('Notification removal via SSE for submission:', message.data.submissionId);
+
               removeNotifications(message.data.submissionId);
             }
             break;
 
           case 'stats:update':
-            console.log('Stats update via SSE:', message.data);
+
             // You can emit this to stats store if needed
             break;
 
@@ -126,7 +125,6 @@ export function useRealTimeNotifications() {
       // but we can add custom logic here if needed
       
       if (eventSource.readyState === EventSource.CLOSED) {
-        console.log('SSE connection closed');
         eventSourceRef.current = null;
       }
     };

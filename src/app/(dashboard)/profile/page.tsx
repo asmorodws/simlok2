@@ -1,5 +1,5 @@
-import UserInfoCard from "@/components/features/user/profile/UserInfoCard";
-import ChangePasswordCard from "@/components/features/user/profile/ChangePasswordCard";
+import UserInfoCard from "@/components/features/user/UserInfoCard";
+import ChangePasswordCard from "@/components/features/user/ChangePasswordCard";
 import { Metadata } from "next";
 import SidebarLayout from "@/components/layout/SidebarLayout";
 import { getServerSession } from "next-auth";

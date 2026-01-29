@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/auth';
-import { createReadStream, statSync, existsSync } from 'fs';
-import { join } from 'path';
+import { createReadStream } from 'fs';
 import { Readable } from 'stream';
 import { requireSessionWithRole } from '@/lib/auth/roleHelpers';
+import { fileService } from '@/services/FileService';
 
 /**
  * Convert Node.js Readable stream to Web ReadableStream
@@ -33,164 +33,86 @@ export async function GET(
   { params }: { params: Promise<{ userId: string; category: string; filename: string }> }
 ) {
   try {
-    // Get session to check authentication
+    // Get session
     const session = await getServerSession(authOptions);
-    const userOrError = requireSessionWithRole(session, ['VENDOR', 'REVIEWER', 'APPROVER', 'ADMIN', 'SUPER_ADMIN', 'VERIFIER']);
+    const userOrError = requireSessionWithRole(session, [
+      'VENDOR',
+      'REVIEWER',
+      'APPROVER',
+      'ADMIN',
+      'SUPER_ADMIN',
+      'VERIFIER',
+    ]);
     if (userOrError instanceof NextResponse) return userOrError;
 
-    // Await params for Next.js 15 compatibility
     const { userId, category, filename } = await params;
 
-    // Check if user can access this file
-    // Users can only access their own files, unless they're super admin, reviewer, or approver
-    const canAccess = 
-      userOrError.role === 'SUPER_ADMIN' || 
-      userOrError.role === 'REVIEWER' || 
-      userOrError.role === 'APPROVER' ||
-      userOrError.id === userId;
-
-    // Debug logging
-    console.log('File access check:', {
-      requestedUserId: userId,
-      sessionUserId: userOrError.id,
-      userRole: userOrError.role,
-      category,
-      filename,
-      canAccess,
-      isPdfGenerationContext: _request.headers.get('x-pdf-generation') === 'true'
-    });
-      
-    if (!canAccess) {
+    // Check access permissions
+    if (!fileService.canAccessFile(userOrError.id, userOrError.role, userId)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
-    // Map category to folder name
-    const categoryFolders = {
-      sika: 'dokumen-sika',
-      simja: 'dokumen-simja',
-      'work-order': 'dokumen-work-order',
-      'kontrak-kerja': 'dokumen-kontrak-kerja',
-      jsa: 'dokumen-jsa',
-      'hsse-worker': 'dokumen-hsse-pekerja',
-      'worker-photo': 'foto-pekerja'
-    };
+    // Get file metadata
+    const { filePath, fileSize, contentType, fileStats } = fileService.getFileForServing(
+      userId,
+      category,
+      filename
+    );
 
-    const folderName = categoryFolders[category as keyof typeof categoryFolders];
-    if (!folderName) {
-      console.error('Invalid category:', category);
-      return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
-    }
-
-    // Construct file path
-    const filePath = join(process.cwd(), 'public', 'uploads', userId, folderName, filename);
-
-    // Check if file exists
-    if (!existsSync(filePath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
-    }
-
-    // Get file stats for size and range support
-    const fileStats = statSync(filePath);
-    const fileSize = fileStats.size;
-
-    // Determine content type based on file extension
-    const extension = filename.split('.').pop()?.toLowerCase();
-    let contentType = 'application/octet-stream';
-    
-    switch (extension) {
-      case 'pdf':
-        contentType = 'application/pdf';
-        break;
-      case 'jpg':
-      case 'jpeg':
-        contentType = 'image/jpeg';
-        break;
-      case 'png':
-        contentType = 'image/png';
-        break;
-      case 'gif':
-        contentType = 'image/gif';
-        break;
-      case 'doc':
-        contentType = 'application/msword';
-        break;
-      case 'docx':
-        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        break;
-    }
-
-    // ========== RANGE REQUEST SUPPORT (for partial content) ==========
-    // This allows browsers to request only part of the file (great for PDF preview)
+    // Handle range requests (for PDF preview, video streaming, etc.)
     const range = _request.headers.get('range');
-    
     if (range) {
-      // Parse range header: "bytes=start-end"
       const parts = range.replace(/bytes=/, '').split('-');
       const start = parseInt(parts[0] || '0', 10);
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
       const chunkSize = end - start + 1;
 
-      // Create read stream for the requested range
       const stream = createReadStream(filePath, { start, end });
       const webStream = nodeStreamToWebStream(stream);
 
-      console.log('📄 Serving partial content (range request):', {
-        filename,
-        fileSize,
-        range: `${start}-${end}`,
-        chunkSize,
-        contentType
-      });
-
-      // Return partial content (206)
       return new NextResponse(webStream, {
-        status: 206, // Partial Content
+        status: 206,
         headers: {
           'Content-Type': contentType,
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
           'Content-Length': chunkSize.toString(),
           'Content-Disposition': `inline; filename="${filename}"`,
-          'Cache-Control': 'public, max-age=31536000, immutable', // Cache for 1 year (files are immutable)
+          'Cache-Control': 'public, max-age=31536000, immutable',
         },
       });
     }
 
-    // ========== FULL FILE STREAMING (for complete download) ==========
-    // Use streaming instead of loading entire file to memory
+    // Full file streaming
     const stream = createReadStream(filePath);
     const webStream = nodeStreamToWebStream(stream);
 
-    // Debug logging for PDF generation context
     const isFromPdf = _request.headers.get('x-pdf-generation') === 'true';
-    const cacheControl = isFromPdf 
-      ? 'no-cache, no-store, must-revalidate' 
-      : 'public, max-age=31536000, immutable'; // Cache for 1 year (files are immutable)
+    const cacheControl = isFromPdf
+      ? 'no-cache, no-store, must-revalidate'
+      : 'public, max-age=31536000, immutable';
 
-    console.log('📄 File serving (streaming):', {
-      filePath,
-      fileSize,
-      contentType,
-      isFromPdf,
-      cacheControl,
-      supportsRangeRequests: true
-    });
-
-    // Return file with streaming and proper headers
     return new NextResponse(webStream, {
       headers: {
         'Content-Type': contentType,
         'Content-Length': fileSize.toString(),
         'Content-Disposition': `inline; filename="${filename}"`,
-        'Accept-Ranges': 'bytes', // Advertise range support
+        'Accept-Ranges': 'bytes',
         'Cache-Control': cacheControl,
         'Pragma': isFromPdf ? 'no-cache' : 'public',
-        'ETag': `"${fileStats.mtime.getTime()}-${fileSize}"`, // ETag for cache validation
+        'ETag': `"${fileStats.mtime.getTime()}-${fileSize}"`,
       },
     });
-
   } catch (error) {
     console.error('File serving error:', error);
+    if (error instanceof Error) {
+      if (error.message === 'Invalid category') {
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      if (error.message === 'File not found') {
+        return NextResponse.json({ error: error.message }, { status: 404 });
+      }
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -63,3 +63,25 @@ next-env.d.ts
 /logs/*
 
 ./users.txt
+# Production
+.env.production
+.env.staging
+
+# Bundle analyzer
+.next/analyze/
+bundle-analyzer-report.html
+
+# PM2
+.pm2/
+pm2.log
+ecosystem.config.js
+
+# Cache
+.cache/
+*.cache
+
+# Backup files
+*.backup
+*.bak
+*.swp
+*~

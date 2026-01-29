@@ -1,6 +1,7 @@
 import { Metadata } from "next";
-import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
+import { createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
 import RoleDashboard from "@/components/features/dashboard/RoleDashboard";
+import DashboardPageTemplate from "@/components/templates/DashboardPageTemplate";
 
 export const metadata: Metadata = createDashboardMetadata(
   "Dashboard Verifikator",
@@ -8,5 +9,13 @@ export const metadata: Metadata = createDashboardMetadata(
 );
 
 export default function VerifierPage() {
-  return DashboardPageHelpers.verifier(<RoleDashboard role="VERIFIER" />);
+  return (
+    <DashboardPageTemplate
+      allowedRoles={['VERIFIER', 'SUPER_ADMIN']}
+      sidebarTitle="Dashboard Verifikasi"
+      titlePage="Verifier"
+    >
+      <RoleDashboard role="VERIFIER" />
+    </DashboardPageTemplate>
+  );
 }

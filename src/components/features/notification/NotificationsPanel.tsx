@@ -14,10 +14,8 @@ import {
   InboxIcon
 } from '@heroicons/react/24/outline';
 import Button from '@/components/ui/button/Button';
-import SubmissionDetailModal from '@/components/features/submission/modal/VendorSubmissionDetailModal';
-import ApproverSubmissionDetailModal from '@/components/features/submission/modal/ApproverSubmissionDetailModal';
-import ReviewerSubmissionDetailModal from '@/components/features/submission/modal/ReviewerSubmissionDetailModal';
-import UserVerificationModal from '@/components/features/user/modal/UserVerificationModal';
+import { UnifiedSubmissionDetailModal } from '@/components/features/submission';
+import UserVerificationModal from '@/components/features/user/UserVerificationModal';
 import { UserData } from '@/types';
 import { useToast } from '@/hooks/useToast';
 
@@ -629,35 +627,15 @@ export default function NotificationsPanel({ onClose }: NotificationsPanelProps)
         )}
       </div>
 
-      {/* Modal Detail Submission */}
-      {selectedSubmission && selectedSubmissionId && (
-        <>
-          {session?.user?.role === 'APPROVER' && (
-            <ApproverSubmissionDetailModal
-              isOpen={isDetailModalOpen}
-              onClose={handleCloseDetailModal}
-              submissionId={selectedSubmissionId}
-              onApprovalSubmitted={handleSubmissionUpdated}
-            />
-          )}
-
-          {session?.user?.role === 'REVIEWER' && (
-            <ReviewerSubmissionDetailModal
-              isOpen={isDetailModalOpen}
-              onClose={handleCloseDetailModal}
-              submissionId={selectedSubmissionId}
-              onReviewSubmitted={handleSubmissionUpdated}
-            />
-          )}
-
-          {(session?.user?.role === 'SUPER_ADMIN' || session?.user?.role === 'VENDOR') && (
-            <SubmissionDetailModal
-              submission={selectedSubmission}
-              isOpen={isDetailModalOpen}
-              onClose={handleCloseDetailModal}
-            />
-          )}
-        </>
+      {/* Unified Submission Detail Modal */}
+      {selectedSubmission && selectedSubmissionId && session?.user?.role && (
+        <UnifiedSubmissionDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={handleCloseDetailModal}
+          submissionId={selectedSubmissionId}
+          userRole={session.user.role}
+          onSuccess={handleSubmissionUpdated}
+        />
       )}
 
       {/* User Verification Modal for Vendor Details */}

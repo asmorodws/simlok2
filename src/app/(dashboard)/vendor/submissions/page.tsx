@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { DashboardPageHelpers, createDashboardMetadata } from "@/lib/helpers/dashboardPageHelper";
-import VendorSubmissionsContent from '@/components/features/submission/management/VendorSubmissionsContent';
+import VendorSubmissionsContent from '@/components/features/submission/VendorSubmissionsContent';
 
 export const metadata: Metadata = createDashboardMetadata(
   "Daftar Pengajuan - Vendor",

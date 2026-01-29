@@ -2,7 +2,7 @@
 import { Outfit } from "next/font/google";
 import "./globals.css";
 
-import AppProviders from "@/providers/AppProvider"; // provider tunggal
+import AppProviders from "@/components/providers/AppProvider"; // provider tunggal
 import "../../public/favicon.ico"
 
 const outfit = Outfit({ subsets: ["latin"] });

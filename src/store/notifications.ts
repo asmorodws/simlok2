@@ -151,7 +151,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
     // Prevent race condition
     const state = get();
     if (state.markingAsRead.has(id)) {
-      console.log('⚠️ Already marking notification as read:', id);
+      // Already marking notification as read
       return;
     }
 
@@ -162,7 +162,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
     }
 
     if (before.isRead) {
-      console.log('ℹ️ Notification already read:', id);
+      // Notification already read
       return;
     }
 
@@ -173,7 +173,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         markingAsRead: new Set([...state.markingAsRead, id])
       }));
 
-      console.log('📤 Marking notification as read:', id);
+      // Marking notification as read
 
       // Optimistic update
       set((state) => ({
@@ -189,7 +189,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         { method: 'POST' }
       );
 
-      console.log('✅ Successfully marked as read:', id);
+      // Successfully marked as read
 
       // Update unread count from server if provided
       if (result?.data?.unreadCount !== undefined) {
@@ -229,12 +229,12 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
     const unreadBefore = state.items.filter((n) => !n.isRead).length;
     
     if (unreadBefore === 0) {
-      console.log('ℹ️ No unread notifications to mark');
+      // No unread notifications to mark
       return;
     }
 
     try {
-      console.log('📤 Marking all notifications as read...');
+      // Marking all notifications as read
 
       // Optimistic update
       set((state) => ({
@@ -251,7 +251,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
         }
       );
 
-      console.log('✅ Successfully marked all as read');
+      // Successfully marked all as read
 
       // Ensure unread count is 0
       set({ unreadCount: 0 });
