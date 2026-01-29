@@ -1,0 +1,23 @@
+[Unit]
+Description=SIMLOK Next.js Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/simlok2
+ExecStart=/root/simlok2/deployment/start.sh
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/simlok/app.log
+StandardError=append:/var/log/simlok/error.log
+
+# Environment
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
