@@ -1174,26 +1174,75 @@ async function addSupportingDocumentsPage(
         // Create array of page indices to embed
         const pageIndices = Array.from({ length: pageCount }, (_, i) => i);
         
-        // Embed all pages at once
-        const embeddedPages = await k.doc.embedPdf(sourcePdf, pageIndices);
-        
-        // Add each page to our list
-        embeddedPages.forEach((embeddedPage, index) => {
-          allPages.push({
-            docTitle: doc.title,
-            docSubtitle: doc.subtitle || '',
-            docNumber: doc.number || '',
-            docDate: doc.date || '',
-            pageNumber: index + 1,
-            totalPages: pageCount,
-            embeddedPage,
-            isImage: false,
-            documentType: doc.documentType,
-            documentId: documentId
+        try {
+          // Try to embed all pages at once
+          const embeddedPages = await k.doc.embedPdf(sourcePdf, pageIndices);
+          
+          // Add each page to our list
+          embeddedPages.forEach((embeddedPage, index) => {
+            allPages.push({
+              docTitle: doc.title,
+              docSubtitle: doc.subtitle || '',
+              docNumber: doc.number || '',
+              docDate: doc.date || '',
+              pageNumber: index + 1,
+              totalPages: pageCount,
+              embeddedPage,
+              isImage: false,
+              documentType: doc.documentType,
+              documentId: documentId
+            });
           });
-        });
-        
-        console.log(`[AddSupportingDocumentsPage] ✅ Embedded ${embeddedPages.length} pages from ${doc.title}`);
+          
+          console.log(`[AddSupportingDocumentsPage] ✅ Embedded ${embeddedPages.length} pages from ${doc.title}`);
+        } catch (embedError: any) {
+          // If embedPdf fails (e.g., due to mozjpeg compression), convert to images
+          const errorMsg = embedError?.message || String(embedError);
+          console.warn(`[AddSupportingDocumentsPage] ⚠️ embedPdf failed for ${doc.title}: ${errorMsg}`);
+          console.log(`[AddSupportingDocumentsPage] 🔄 Converting PDF pages to images as fallback...`);
+          
+          try {
+            // Convert each page to an image and embed
+            for (let i = 0; i < pageCount; i++) {
+              const page = sourcePdf.getPage(i);
+              const { width, height } = page.getSize();
+              
+              // Create a temporary PDF with just this page
+              const tempPdf = await PDFDocument.create();
+              const [copiedPage] = await tempPdf.copyPages(sourcePdf, [i]);
+              tempPdf.addPage(copiedPage);
+              const tempPdfBytes = await tempPdf.save();
+              
+              // Convert to PNG using Sharp
+              const sharp = (await import('sharp')).default;
+              const pngBuffer = await sharp(tempPdfBytes, { density: 150 })
+                .png({ compressionLevel: 6 })
+                .toBuffer();
+              
+              // Embed as PNG
+              const embeddedImage = await k.doc.embedPng(pngBuffer);
+              
+              allPages.push({
+                docTitle: doc.title,
+                docSubtitle: doc.subtitle || '',
+                docNumber: doc.number || '',
+                docDate: doc.date || '',
+                pageNumber: i + 1,
+                totalPages: pageCount,
+                embeddedPage: null,
+                isImage: true,
+                image: embeddedImage,
+                documentType: doc.documentType,
+                documentId: documentId
+              });
+            }
+            
+            console.log(`[AddSupportingDocumentsPage] ✅ Converted ${pageCount} pages to images for ${doc.title}`);
+          } catch (conversionError: any) {
+            console.error(`[AddSupportingDocumentsPage] ❌ Failed to convert pages to images: ${conversionError?.message}`);
+            console.log(`[AddSupportingDocumentsPage] ⚠️ Skipping ${doc.title} due to conversion failure`);
+          }
+        }
       } else {
         console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
       }
