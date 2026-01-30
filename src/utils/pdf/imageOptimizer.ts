@@ -22,16 +22,16 @@ interface ImageDimensions {
 /**
  * Compress and optimize image for PDF embedding
  * @param imageBuffer Original image buffer
- * @returns Optimized image buffer (always JPEG format if sharp is available)
+ * @returns Optimized image buffer (always PNG format for maximum compatibility)
  * 
- * 🎯 CRITICAL FIX: Always returns JPEG format to prevent compression method errors
- * If optimization fails, falls back to basic JPEG conversion without resizing
+ * 🎯 EMERGENCY FIX: Returns PNG format to completely bypass JPEG compression issues
+ * PNG has no compression method conflicts with pdf-lib
  */
 export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
   // Return original buffer if not on server or sharp not available
   if (typeof window !== 'undefined' || !sharp) {
     console.warn('⚠️ Using original image buffer (client-side or sharp not available)');
-    console.warn('⚠️ WARNING: This may cause "Unknown compression method" errors if buffer is PNG');
+    console.warn('⚠️ WARNING: This may cause compression errors');
     return imageBuffer;
   }
 
@@ -56,14 +56,12 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
         withoutEnlargement: true,
         background: { r: 255, g: 255, b: 255, alpha: 1 } // White background for transparency
       })
-      // Convert to JPEG with compression
-      // 🎯 CRITICAL FIX: Use baseline JPEG without mozjpeg to prevent "Unknown compression method" errors
-      // pdf-lib has issues with mozjpeg and certain compression settings when re-embedding cached buffers
-      .jpeg({ 
-        quality: JPEG_QUALITY,
-        mozjpeg: false, // Disabled: causes compression errors in pdf-lib
-        progressive: false, // Use baseline JPEG for maximum compatibility
-        chromaSubsampling: '4:2:0' // Standard subsampling for smaller size
+      // 🎯 EMERGENCY FIX: Use PNG to completely bypass JPEG compression issues
+      // PNG has no compression method conflicts with pdf-lib
+      .png({ 
+        compressionLevel: 6, // Balanced compression (0-9)
+        adaptiveFiltering: true,
+        palette: false // Use full color, not palette
       })
       // Optimize for web/pdf
       .toBuffer();
@@ -72,23 +70,22 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
     return optimizedBuffer;
 
   } catch (error) {
-    console.warn('⚠️ Image optimization with resize failed, trying basic JPEG conversion:', error);
+    console.warn('⚠️ Image optimization with resize failed, trying basic PNG conversion:', error);
     
-    // 🎯 CRITICAL FALLBACK: Try basic JPEG conversion without resizing
+    // 🎯 CRITICAL FALLBACK: Try basic PNG conversion without resizing
     try {
-      const basicJpeg = await sharp(imageBuffer)
-        .jpeg({ 
-          quality: 85, // Higher quality for fallback
-          mozjpeg: false, // Disable mozjpeg for compatibility
-          progressive: false
+      const basicPng = await sharp(imageBuffer)
+        .png({ 
+          compressionLevel: 6,
+          adaptiveFiltering: true
         })
         .toBuffer();
       
-      console.log(`✅ Fallback JPEG conversion successful: ${imageBuffer.length} → ${basicJpeg.length} bytes`);
-      return basicJpeg;
+      console.log(`✅ Fallback PNG conversion successful: ${imageBuffer.length} → ${basicPng.length} bytes`);
+      return basicPng;
     } catch (fallbackError) {
       console.error('❌ All optimization methods failed, returning original buffer:', fallbackError);
-      console.error('❌ WARNING: Original buffer may cause embedding errors if not JPEG format');
+      console.error('❌ WARNING: Original buffer may cause embedding errors');
       return imageBuffer; // Last resort: return original
     }
   }
