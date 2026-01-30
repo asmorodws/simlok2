@@ -585,6 +585,7 @@ export async function loadWorkerDocument(
     // For PDF, load the PDF file with enhanced error handling
     if (isPdf) {
       console.log(`[LoadWorkerDocument] Processing as PDF: ${documentPath}`);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { readFile } = require('fs/promises');
       
       let finalPath: string;
