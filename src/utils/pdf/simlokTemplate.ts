@@ -1807,54 +1807,68 @@ async function drawWorkerPhotoAndDocument(
       }
     } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
       console.log(`[DrawHSSEDocument] ✅ Processing as PDF for ${worker.worker_name}`);
-      try {
-        // For PDF documents, embed first page using pdf-lib embedPages
-        console.log(`[DrawHSSEDocument] Embedding PDF page...`);
+      
+      // For PDF documents, first convert to image via Ghostscript to avoid mozjpeg compression errors
+      // The embedPages + drawPage approach fails during save() if the PDF contains mozjpeg-compressed images
+      const pdfFilePath = documentResult.filePath;
+      
+      if (pdfFilePath) {
+        console.log(`[DrawHSSEDocument] Converting PDF to image via Ghostscript...`);
+        const conversionResult = await convertPdfToImages(pdfFilePath, doc);
         
-        const sourcePdf = documentResult.pdfPages;
-        
-        // Embed the first page from the source PDF
-        const [embeddedPage] = await doc.embedPages([sourcePdf.getPage(0)]);
-        
-        if (!embeddedPage) {
-          throw new Error('Failed to embed PDF page');
+        if (conversionResult.success && conversionResult.images.length > 0) {
+          console.log(`[DrawHSSEDocument] ✅ Ghostscript converted PDF to ${conversionResult.images.length} image(s)`);
+          
+          // Use the first page image
+          const hsseImage = conversionResult.images[0];
+          const imgDims = hsseImage.scale(1);
+          const imgAspectRatio = imgDims.width / imgDims.height;
+          const frameAspectRatio = (itemWidth - 2) / (imageHeight - 2);
+          
+          let drawWidth = itemWidth - 2;
+          let drawHeight = imageHeight - 2;
+          let drawX = documentX + 1;
+          let drawY = y - imageHeight + 1;
+          
+          if (imgAspectRatio > frameAspectRatio) {
+            drawHeight = drawWidth / imgAspectRatio;
+            drawY = y - (imageHeight + drawHeight) / 2;
+          } else {
+            drawWidth = drawHeight * imgAspectRatio;
+            drawX = documentX + (itemWidth - drawWidth) / 2;
+          }
+          
+          page.drawImage(hsseImage, {
+            x: drawX,
+            y: drawY,
+            width: drawWidth,
+            height: drawHeight,
+          });
+          
+          console.log(`[DrawHSSEDocument] ✅ PDF (as image) drawn at (${drawX}, ${drawY}) with size ${drawWidth}x${drawHeight}`);
+        } else {
+          console.error(`[DrawHSSEDocument] ❌ Ghostscript conversion failed: ${conversionResult.error}`);
+          
+          // Draw simple placeholder text
+          page.drawText("PDF", { 
+            x: documentX + itemWidth/2 - 10, 
+            y: y - imageHeight/2 + 15, 
+            size: 10, 
+            font: boldFont,
+            color: rgb(0.2, 0.4, 0.8) 
+          });
+          page.drawText("Dokumen", { 
+            x: documentX + itemWidth/2 - 18, 
+            y: y - imageHeight/2 + 2, 
+            size: 7, 
+            font: font,
+            color: rgb(0.4, 0.4, 0.4) 
+          });
         }
+      } else {
+        console.warn(`[DrawHSSEDocument] ⚠️ No file path for PDF: ${worker.worker_name}`);
         
-        console.log(`[DrawHSSEDocument] ✅ PDF page embedded successfully`);
-        
-        // Get embedded page dimensions
-        const { width: pdfWidth, height: pdfHeight } = embeddedPage.scale(1);
-        
-        // Calculate target dimensions to fit in the document frame with padding
-        const targetWidth = itemWidth - 2; // Padding 1px each side
-        const targetHeight = imageHeight - 2; // Padding 1px each side
-        
-        // Calculate scale to fit while maintaining aspect ratio
-        const scaleX = targetWidth / pdfWidth;
-        const scaleY = targetHeight / pdfHeight;
-        const scale = Math.min(scaleX, scaleY, 1.0); // Don't upscale
-        
-        const scaledWidth = pdfWidth * scale;
-        const scaledHeight = pdfHeight * scale;
-        
-        // Calculate position to center the page
-        const drawX = documentX + 1 + (targetWidth - scaledWidth) / 2;
-        const drawY = y - imageHeight + 1 + (targetHeight - scaledHeight) / 2;
-        
-        // Draw the embedded page on the current page
-        page.drawPage(embeddedPage, {
-          x: drawX,
-          y: drawY,
-          width: scaledWidth,
-          height: scaledHeight,
-        });
-        
-        console.log(`[DrawHSSEDocument] ✅ PDF page drawn at (${drawX}, ${drawY}) with size ${scaledWidth}x${scaledHeight}`);
-        
-      } catch (error) {
-        console.error(`[DrawHSSEDocument] ❌ Error embedding PDF for ${worker.worker_name}:`, error);
-        
-        // Draw simple placeholder text without emoji
+        // Draw placeholder
         page.drawText("PDF", { 
           x: documentX + itemWidth/2 - 10, 
           y: y - imageHeight/2 + 15, 
@@ -1862,16 +1876,9 @@ async function drawWorkerPhotoAndDocument(
           font: boldFont,
           color: rgb(0.2, 0.4, 0.8) 
         });
-        page.drawText("Dokumen", { 
-          x: documentX + itemWidth/2 - 18, 
-          y: y - imageHeight/2 + 2, 
-          size: 7, 
-          font: font,
-          color: rgb(0.4, 0.4, 0.4) 
-        });
         page.drawText("Tersedia", { 
           x: documentX + itemWidth/2 - 18, 
-          y: y - imageHeight/2 - 8, 
+          y: y - imageHeight/2 + 2, 
           size: 7, 
           font: font,
           color: rgb(0.4, 0.4, 0.4) 
