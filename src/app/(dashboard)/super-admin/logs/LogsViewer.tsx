@@ -141,7 +141,7 @@ export default function LogsViewer() {
 
       eventSource.onmessage = (event) => {
         try {
-          const newLog: LogEntry = JSON.parse(event.data);
+          const newLog = JSON.parse(event.data) as LogEntry;
           
           // Check if log matches current filter
           const matchesLevel = selectedLevel === 'ALL' || newLog.level?.toUpperCase() === selectedLevel;
@@ -180,6 +180,7 @@ export default function LogsViewer() {
         eventSourceRef.current = null;
         setStreamConnected(false);
       }
+      return undefined;
     }
   }, [isLiveStreaming, selectedLevel, searchTerm]);
 
@@ -390,7 +391,7 @@ export default function LogsViewer() {
           {/* Actions */}
           <div className="md:col-span-1 lg:col-span-1 xl:col-span-1 flex items-end">
             <button
-              onClick={fetchLogs}
+              onClick={() => fetchLogs()}
               disabled={loading}
               className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >

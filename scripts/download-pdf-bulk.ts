@@ -1,9 +1,69 @@
 import { PrismaClient, ApprovalStatus, ReviewStatus } from '@prisma/client';
 import { generateSIMLOKPDF } from '../src/utils/pdf/simlokTemplate';
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
 const prisma = new PrismaClient();
+
+// 📝 Logger for cron job
+class CronLogger {
+  private logFile: string;
+  private logDir: string;
+
+  constructor() {
+    this.logDir = join(process.cwd(), 'logs');
+    const date = new Date().toISOString().split('T')[0];
+    this.logFile = join(this.logDir, `cron-pdf-download-${date}.log`);
+    
+    // Ensure log directory exists
+    if (!existsSync(this.logDir)) {
+      mkdirSync(this.logDir, { recursive: true });
+    }
+  }
+
+  private formatMessage(level: string, message: string): string {
+    const timestamp = new Date().toISOString();
+    return `[${timestamp}] [${level}] [PDF-DOWNLOAD] ${message}`;
+  }
+
+  private write(level: string, message: string) {
+    const formatted = this.formatMessage(level, message);
+    console.log(formatted);
+    appendFileSync(this.logFile, formatted + '\n', 'utf-8');
+  }
+
+  info(message: string) {
+    this.write('INFO', message);
+  }
+
+  warn(message: string) {
+    this.write('WARN', message);
+  }
+
+  error(message: string) {
+    this.write('ERROR', message);
+  }
+
+  success(message: string) {
+    this.write('SUCCESS', message);
+  }
+
+  summary(title: string, data: Record<string, any>) {
+    const line = '='.repeat(60);
+    this.write('INFO', line);
+    this.write('INFO', `📊 ${title}`);
+    Object.entries(data).forEach(([key, value]) => {
+      this.write('INFO', `   ${key}: ${value}`);
+    });
+    this.write('INFO', line);
+  }
+
+  getLogFilePath(): string {
+    return this.logFile;
+  }
+}
+
+const cronLogger = new CronLogger();
 
 interface DownloadOptions {
   approvalStatus?: ApprovalStatus;
@@ -70,7 +130,11 @@ async function parseArgs(): Promise<DownloadOptions> {
 
 async function downloadPDFs() {
   try {
+    cronLogger.info('🚀 Starting PDF download job...');
+    
     const options = await parseArgs();
+    cronLogger.info(`Options: ${JSON.stringify(options)}`);
+    
     // Build query filter
     const where: any = {};
 
@@ -128,11 +192,11 @@ async function downloadPDFs() {
     });
 
     if (submissions.length === 0) {
-      console.log('⚠️  No submissions found matching the criteria.');
+      cronLogger.warn('No submissions found matching the criteria.');
       return;
     }
 
-    console.log(`📄 Found ${submissions.length} submission(s)`);
+    cronLogger.info(`Found ${submissions.length} submission(s)`);
 
     // Create output directory
     const outputDir = options.output || './public/downloads/simlok-pdfs';
@@ -148,7 +212,7 @@ async function downloadPDFs() {
       if (!submission || !submission.simlok_number) continue;
       
       try {
-        console.log(`\n[${i + 1}/${submissions.length}] Processing: ${submission.simlok_number}`);
+        cronLogger.info(`[${i + 1}/${submissions.length}] Processing: ${submission.simlok_number}`);
         
         // Determine folder based on approved_at date (YYYY-MM format)
         const approvedDate = new Date(submission.approved_at!);
@@ -165,7 +229,7 @@ async function downloadPDFs() {
         const filepath = join(monthDir, filename);
         
         if (existsSync(filepath)) {
-          console.log(`⏭️  Skipped (already exists): ${filepath}`);
+          cronLogger.info(`Skipped (already exists): ${filepath}`);
           skippedCount++;
           continue;
         }
@@ -176,11 +240,11 @@ async function downloadPDFs() {
         // Save to file
         writeFileSync(filepath, pdfBuffer);
         
-        console.log(`✅ Saved: ${filepath}`);
+        cronLogger.success(`Saved: ${filepath}`);
         successCount++;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`❌ Error processing ${submission?.simlok_number || 'unknown'}:`, errorMessage);
+        cronLogger.error(`Error processing ${submission?.simlok_number || 'unknown'}: ${errorMessage}`);
         failedSubmissions.push({
           simlok_number: submission?.simlok_number || 'unknown',
           error: errorMessage
@@ -189,29 +253,29 @@ async function downloadPDFs() {
       }
     }
 
-    console.log('\n' + '='.repeat(50));
-    console.log('📊 Download Summary:');
-    console.log(`   Total: ${submissions.length}`);
-    console.log(`   ✅ Success: ${successCount}`);
-    console.log(`   ⏭️  Skipped: ${skippedCount}`);
-    console.log(`   ❌ Failed: ${errorCount}`);
-    console.log(`   📁 Output: ${outputDir}`);
+    // Log summary
+    cronLogger.summary('Download Summary', {
+      'Total': submissions.length,
+      '✅ Success': successCount,
+      '⏭️  Skipped': skippedCount,
+      '❌ Failed': errorCount,
+      '📁 Output': outputDir,
+      '📝 Log file': cronLogger.getLogFilePath()
+    });
     
     if (failedSubmissions.length > 0) {
-      console.log('\n❌ Failed Submissions:');
+      cronLogger.error('Failed Submissions:');
       failedSubmissions.forEach((failed, idx) => {
-        console.log(`   ${idx + 1}. ${failed.simlok_number}`);
-        console.log(`      Error: ${failed.error}`);
+        cronLogger.error(`  ${idx + 1}. ${failed.simlok_number} - ${failed.error}`);
       });
     }
-    
-    console.log('='.repeat(50));
 
   } catch (error) {
-    console.error('❌ Fatal error:', error);
+    cronLogger.error(`Fatal error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   } finally {
     await prisma.$disconnect();
+    cronLogger.info('🏁 PDF download job completed.');
   }
 }
 

@@ -338,17 +338,17 @@ export default function NotificationsPage() {
         }
         
         // For VENDOR and others, fetch submission detail for SubmissionDetailModal
-        const response = await fetchJSON<{ submission?: Submission } | Submission>(`/api/submissions/${submissionId}`);
+        const response = await fetchJSON<{ submission?: Submission }>(`/api/submissions/${submissionId}`);
         
-        // Handle both response formats: direct submission or wrapped in { submission }
-        const submission = 'submission' in response ? response.submission : response;
+        // Extract submission from response
+        const submissionData = response.submission
         
-        if (!submission) {
+        if (!submissionData) {
           showError('Error', 'Data submission tidak ditemukan');
           return;
         }
         
-        setSelectedSubmission(submission);
+        setSelectedSubmission(submissionData);
         setIsDetailModalOpen(true);
       } catch (error: unknown) {
         console.error('Error loading submission detail:', error);

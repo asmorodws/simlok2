@@ -24,7 +24,7 @@ function getSharp() {
 
 // 🎯 PERFORMANCE: Reduced from 500px to 400px for smaller files
 const MAX_IMAGE_SIZE = 400; // Maximum dimension in pixels
-const JPEG_QUALITY = 70;   // JPEG compression quality (0-100)
+// Note: JPEG quality was 70 but we now use PNG format for maximum compatibility
 
 interface ImageDimensions {
   width: number;

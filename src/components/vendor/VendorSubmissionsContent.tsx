@@ -390,7 +390,6 @@ export default function VendorSubmissionsContent() {
         <>
           {/* Desktop / tablet: show table; Mobile: hide table and show card view */}
           <div className="hidden sm:block">
-            {console.log('🚀 About to render SubmissionsTable with onEdit:', !!handleEdit, typeof handleEdit)}
             <SubmissionsTable
               submissions={submissions.map((s: Submission) => ({
                 id: s.id,

@@ -68,9 +68,10 @@ class Logger {
     }
   }
 
-  private getLogFileName(level: LogLevel): string {
+  // 🔄 CHANGED: All logs go to single combined file per day
+  private getLogFileName(): string {
     const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    return path.join(this.logDir, `${level.toLowerCase()}-${date}.log`);
+    return path.join(this.logDir, `app-${date}.log`);
   }
 
   private formatLogEntry(entry: LogEntry): string {
@@ -103,17 +104,14 @@ class Logger {
     return parts.join(' ');
   }
 
-  private writeToFile(level: LogLevel, entry: LogEntry) {
+  // 🔄 CHANGED: Single file for all log levels
+  private writeToFile(_level: LogLevel, entry: LogEntry) {
     if (!this.isServer) return;
 
     try {
-      const logFile = this.getLogFileName(level);
+      const logFile = this.getLogFileName();
       const logLine = this.formatLogEntry(entry) + '\n';
       fs.appendFileSync(logFile, logLine, 'utf-8');
-
-      // Also write to all.log for combined logs
-      const allLogFile = this.getLogFileName(LogLevel.INFO).replace('info-', 'all-');
-      fs.appendFileSync(allLogFile, logLine, 'utf-8');
     } catch (error) {
       console.error('Failed to write to log file:', error);
     }
@@ -214,10 +212,8 @@ class Logger {
     if (!this.isServer) return [];
 
     try {
-      const fileName = level 
-        ? `${level.toLowerCase()}-${date}.log`
-        : `all-${date}.log`;
-      
+      // 🔄 CHANGED: All logs in single file, filter by level if needed
+      const fileName = `app-${date}.log`;
       const logFile = path.join(this.logDir, fileName);
       
       if (!fs.existsSync(logFile)) {
@@ -225,7 +221,14 @@ class Logger {
       }
 
       const content = fs.readFileSync(logFile, 'utf-8');
-      return content.split('\n').filter(line => line.trim() !== '');
+      const lines = content.split('\n').filter(line => line.trim() !== '');
+      
+      // Filter by level if specified
+      if (level) {
+        return lines.filter(line => line.includes(`[${level}]`));
+      }
+      
+      return lines;
     } catch (error) {
       console.error('Error reading log file:', error);
       return [];

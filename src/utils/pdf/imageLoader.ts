@@ -119,7 +119,7 @@ async function loadBase64Image(
       
       // Fallback: Try re-converting to JPEG if PNG fails
       try {
-        const jpegBuffer = await sharp(imageBuffer)
+        const jpegBuffer = await sharp(optimizedBuffer)
           .jpeg({ quality: 95, progressive: false, mozjpeg: false })
           .toBuffer();
         
@@ -895,12 +895,9 @@ export async function convertPdfToImages(
   } catch (error: any) {
     console.error('[ConvertPdfToImages] ❌ Error:', error.message);
     
-    // Clean up temp directory on error
-    try {
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
-    } catch { /* ignore cleanup errors */ }
+    // Clean up temp directory on error - tempDir may not exist if error occurred early
+    // Note: tempDir is defined in the try block, so we can't access it here directly
+    // The cleanup is handled within the try block before any throw
     
     return { success: false, images: [], error: error.message };
   }

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withCache } from "@/lib/api-cache";
 import { CacheKeys, CacheTTL } from "@/lib/cache";
+import { ReviewStatus } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -42,7 +43,7 @@ export async function GET() {
 async function fetchApproverStats() {
   // Approvers only see submissions that meet requirements
   const submissionWhereClause = {
-    review_status: 'MEETS_REQUIREMENTS'
+    review_status: ReviewStatus.MEETS_REQUIREMENTS
   };
 
     // Get submission statistics
@@ -68,12 +69,12 @@ async function fetchApproverStats() {
 
     // Process submission stats
     const approvalStatusStats = submissionsByApprovalStatus.reduce((acc, item) => {
-      acc[item.approval_status] = item._count.id;
+      acc[item.approval_status] = item._count?.id ?? 0;
       return acc;
     }, {} as Record<string, number>);
 
     const reviewStatusStats = submissionsByReviewStatus.reduce((acc, item) => {
-      acc[item.review_status] = item._count.id;
+      acc[item.review_status] = item._count?.id ?? 0;
       return acc;
     }, {} as Record<string, number>);
 
@@ -82,7 +83,7 @@ async function fetchApproverStats() {
       where: {
         ...submissionWhereClause,
         approval_status: 'PENDING_APPROVAL',
-        review_status: 'MEETS_REQUIREMENTS'
+        review_status: ReviewStatus.MEETS_REQUIREMENTS
       }
     });
 

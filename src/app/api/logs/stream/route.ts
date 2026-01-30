@@ -32,11 +32,10 @@ export async function GET(request: NextRequest) {
         
         try {
           if (fs.existsSync(logDir)) {
-            const allFiles = fs.readdirSync(logDir);
-            for (const file of allFiles) {
-              if (todayDate && file.includes(todayDate) && file.endsWith('.log')) {
-                files.push(path.join(logDir, file));
-              }
+            // 🔄 CHANGED: Single combined log file per day (app-YYYY-MM-DD.log)
+            const combinedLogFile = path.join(logDir, `app-${todayDate}.log`);
+            if (fs.existsSync(combinedLogFile)) {
+              files.push(combinedLogFile);
             }
           }
         } catch (error) {
