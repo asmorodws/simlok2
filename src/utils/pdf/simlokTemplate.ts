@@ -319,7 +319,9 @@ class PDFKit {
   measure(text: string, opts?: { size?: number; bold?: boolean }) {
     const size = opts?.size ?? this.fs;
     const f = opts?.bold ? this.bold : this.font;
-    return f.widthOfTextAtSize(text, size);
+    // Sanitize text sebelum measure untuk menghindari Unicode encoding error
+    const sanitizedText = sanitizeForPDF(text);
+    return f.widthOfTextAtSize(sanitizedText, size);
   }
 
   text(
@@ -360,7 +362,9 @@ class PDFKit {
     const lines: string[] = [];
     for (const w of words) {
       const test = line ? line + " " + w : w;
-      const width = f.widthOfTextAtSize(test, size);
+      // Double-sanitize untuk memastikan tidak ada karakter Unicode yang lolos
+      const safeTest = sanitizeForPDF(test);
+      const width = f.widthOfTextAtSize(safeTest, size);
       if (width > maxW && line) {
         lines.push(line);
         line = w;
@@ -369,7 +373,8 @@ class PDFKit {
     if (line) lines.push(line);
     for (const ln of lines) {
       await this.pageBreak();
-      this.text(ln, x, this.y, { size, bold: o?.bold ?? false });
+      // Sanitize final line sebelum di-render
+      this.text(sanitizeForPDF(ln), x, this.y, { size, bold: o?.bold ?? false });
       this.y -= this.lineGap;
     }
   }
@@ -1789,7 +1794,7 @@ async function drawWorkerPhotoAndDocument(
   const leftX = photoX; // Start from photo position (left-aligned)
   
   // Line 1: Worker Name (bold, left-aligned)
-  const nameText = worker.worker_name;
+  const nameText = sanitizeForPDF(worker.worker_name);
   const nameFontSize = 10;
   
   page.drawText(nameText, {
@@ -1806,7 +1811,7 @@ async function drawWorkerPhotoAndDocument(
       ? new Date(worker.hsse_pass_valid_thru)
       : worker.hsse_pass_valid_thru;
     
-    const hsseText = `${worker.hsse_pass_number} - ${fmtDateID(validThruDate)}`;
+    const hsseText = sanitizeForPDF(`${worker.hsse_pass_number} - ${fmtDateID(validThruDate)}`);
     const hsseFontSize = 9;
     
     page.drawText(hsseText, {
@@ -1818,7 +1823,7 @@ async function drawWorkerPhotoAndDocument(
     });
   } else if (worker.hsse_pass_number) {
     // Jika hanya ada nomor HSSE tanpa tanggal
-    const hsseText = worker.hsse_pass_number;
+    const hsseText = sanitizeForPDF(worker.hsse_pass_number);
     const hsseFontSize = 9;
     
     page.drawText(hsseText, {
