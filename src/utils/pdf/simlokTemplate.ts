@@ -903,7 +903,7 @@ for (let idx = 0; idx < lines.length; idx++) {
   return k.doc.save();
 }
 
-import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos } from './imageLoader';
+import { loadWorkerPhoto, loadWorkerDocument, preloadWorkerPhotos, convertPdfToImages } from './imageLoader';
 
 /**
  * Add a dedicated signature page (when there are more than 5 documents)
@@ -1169,6 +1169,7 @@ async function addSupportingDocumentsPage(
         // Multi-page PDF - extract all pages
         const sourcePdf = documentResult.pdfPages;
         const pageCount = sourcePdf.getPageCount();
+        const pdfFilePath = documentResult.filePath; // Get file path for fallback conversion
         console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF loaded (${pageCount} pages)`);
         
         // Create array of page indices to embed
@@ -1196,51 +1197,72 @@ async function addSupportingDocumentsPage(
           
           console.log(`[AddSupportingDocumentsPage] ✅ Embedded ${embeddedPages.length} pages from ${doc.title}`);
         } catch (embedError: any) {
-          // If embedPdf fails (e.g., due to mozjpeg compression), convert to images
+          // If embedPdf fails (e.g., due to mozjpeg compression in the PDF)
+          // This typically happens with PDFs that contain images compressed with mozjpeg
           const errorMsg = embedError?.message || String(embedError);
           console.warn(`[AddSupportingDocumentsPage] ⚠️ embedPdf failed for ${doc.title}: ${errorMsg}`);
-          console.log(`[AddSupportingDocumentsPage] 🔄 Converting PDF pages to images as fallback...`);
           
-          try {
-            // Convert each page to an image and embed
-            for (let i = 0; i < pageCount; i++) {
-              const page = sourcePdf.getPage(i);
-              const { width, height } = page.getSize();
+          // Check if this is a compression error (mozjpeg method 32)
+          if (errorMsg.includes('compression method') || errorMsg.includes('flate stream')) {
+            console.log(`[AddSupportingDocumentsPage] ℹ️ Attempting Ghostscript conversion for "${doc.title}"...`);
+            
+            // 🎯 FALLBACK: Use Ghostscript to convert PDF pages to images
+            if (pdfFilePath) {
+              const conversionResult = await convertPdfToImages(pdfFilePath, k.doc);
               
-              // Create a temporary PDF with just this page
-              const tempPdf = await PDFDocument.create();
-              const [copiedPage] = await tempPdf.copyPages(sourcePdf, [i]);
-              tempPdf.addPage(copiedPage);
-              const tempPdfBytes = await tempPdf.save();
-              
-              // Convert to PNG using Sharp
-              const sharp = (await import('sharp')).default;
-              const pngBuffer = await sharp(tempPdfBytes, { density: 150 })
-                .png({ compressionLevel: 6 })
-                .toBuffer();
-              
-              // Embed as PNG
-              const embeddedImage = await k.doc.embedPng(pngBuffer);
-              
+              if (conversionResult.success && conversionResult.images.length > 0) {
+                console.log(`[AddSupportingDocumentsPage] ✅ Ghostscript converted ${conversionResult.images.length} pages`);
+                
+                // Add converted images as pages
+                conversionResult.images.forEach((image, index) => {
+                  allPages.push({
+                    docTitle: doc.title,
+                    docSubtitle: doc.subtitle || '',
+                    docNumber: doc.number || '',
+                    docDate: doc.date || '',
+                    pageNumber: index + 1,
+                    totalPages: conversionResult.images.length,
+                    embeddedPage: null,
+                    isImage: true,
+                    image: image,
+                    documentType: doc.documentType,
+                    documentId: documentId
+                  });
+                });
+              } else {
+                // Ghostscript fallback failed - add placeholder
+                console.error(`[AddSupportingDocumentsPage] ❌ Ghostscript conversion failed: ${conversionResult.error}`);
+                allPages.push({
+                  docTitle: doc.title,
+                  docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan - ${conversionResult.error || 'conversion failed'}`,
+                  docNumber: doc.number || '',
+                  docDate: doc.date || '',
+                  pageNumber: 1,
+                  totalPages: 1,
+                  embeddedPage: null,
+                  isImage: false,
+                  documentType: doc.documentType,
+                  documentId: documentId
+                });
+              }
+            } else {
+              console.error(`[AddSupportingDocumentsPage] ❌ No file path available for Ghostscript fallback`);
               allPages.push({
                 docTitle: doc.title,
-                docSubtitle: doc.subtitle || '',
+                docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan (file path tidak tersedia)`,
                 docNumber: doc.number || '',
                 docDate: doc.date || '',
-                pageNumber: i + 1,
-                totalPages: pageCount,
+                pageNumber: 1,
+                totalPages: 1,
                 embeddedPage: null,
-                isImage: true,
-                image: embeddedImage,
+                isImage: false,
                 documentType: doc.documentType,
                 documentId: documentId
               });
             }
-            
-            console.log(`[AddSupportingDocumentsPage] ✅ Converted ${pageCount} pages to images for ${doc.title}`);
-          } catch (conversionError: any) {
-            console.error(`[AddSupportingDocumentsPage] ❌ Failed to convert pages to images: ${conversionError?.message}`);
-            console.log(`[AddSupportingDocumentsPage] ⚠️ Skipping ${doc.title} due to conversion failure`);
+          } else {
+            // Other embed errors - log and skip
+            console.error(`[AddSupportingDocumentsPage] ❌ Unexpected embedPdf error: ${errorMsg}`);
           }
         }
       } else {
@@ -1423,6 +1445,45 @@ async function addSupportingDocumentsPage(
             width: drawWidth,
             height: drawHeight,
           });
+        } else if (!pageInfo.isImage && !pageInfo.embeddedPage) {
+          // Placeholder for documents that couldn't be embedded (e.g., mozjpeg compression error)
+          // Draw a placeholder box with warning message
+          const placeholderHeight = 100;
+          const placeholderY = contentStartY - placeholderHeight - 50;
+          
+          // Draw border box
+          page.drawRectangle({
+            x: x + 20,
+            y: placeholderY,
+            width: contentWidth - 20,
+            height: placeholderHeight,
+            borderColor: rgb(0.8, 0.6, 0),
+            borderWidth: 1,
+            color: rgb(1, 0.98, 0.9), // Light yellow background
+          });
+          
+          // Draw warning icon placeholder
+          k.text('⚠️', x + 40, placeholderY + 70, { size: 24 });
+          
+          // Draw warning text
+          k.text('Dokumen tidak dapat ditampilkan', x + 80, placeholderY + 70, { 
+            size: 12, 
+            bold: true,
+            color: rgb(0.6, 0.4, 0)
+          });
+          
+          k.text('Format file tidak kompatibel. Silakan upload ulang dokumen dengan format standar.', 
+            x + 40, placeholderY + 45, { 
+            size: 10,
+            color: rgb(0.5, 0.5, 0.5)
+          });
+          
+          if (pageInfo.docSubtitle && pageInfo.docSubtitle.includes('⚠️')) {
+            k.text(pageInfo.docSubtitle.replace('⚠️ ', ''), x + 40, placeholderY + 25, { 
+              size: 9,
+              color: rgb(0.7, 0.3, 0)
+            });
+          }
         }
         
         console.log(`[AddSupportingDocumentsPage] ✅ Rendered page ${currentPageIndex + i + 1}/${allPages.length}`);

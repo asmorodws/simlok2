@@ -529,6 +529,7 @@ export interface DocumentLoadResult {
   image?: PDFImage;
   pdfPages?: PDFDocument;
   error?: string;
+  filePath?: string; // Absolute path to the file (for fallback conversion)
 }
 
 /**
@@ -738,7 +739,7 @@ export async function loadWorkerDocument(
           }
           
           console.log(`[LoadWorkerDocument] ✅ SUCCESS - PDF loaded with ${pageCount} page(s)`);
-          return { type: 'pdf', pdfPages: loadedPdf };
+          return { type: 'pdf', pdfPages: loadedPdf, filePath: finalPath };
           
         } catch (pdfError) {
           console.error('[LoadWorkerDocument] ❌ PDF parsing failed:', pdfError);
@@ -782,4 +783,102 @@ export async function loadWorkerDocument(
  */
 export function clearImageCache(): void {
   imageCache.clear();
+}
+
+/**
+ * Convert PDF file to PNG images using Ghostscript (external binary)
+ * This is used as a fallback when pdf-lib cannot handle the PDF (e.g., mozjpeg compression)
+ * @param pdfPath - Absolute path to the PDF file
+ * @param pdfDoc - The PDFDocument to embed images into
+ * @returns Array of embedded PNG images, one per page
+ */
+export async function convertPdfToImages(
+  pdfPath: string,
+  pdfDoc: PDFDocument
+): Promise<{ success: boolean; images: PDFImage[]; error?: string }> {
+  const { exec } = await import('child_process');
+  const { promisify } = await import('util');
+  const execAsync = promisify(exec);
+  const fs = await import('fs');
+  const path = await import('path');
+  const os = await import('os');
+  
+  const tempDir = path.join(os.tmpdir(), `pdf-convert-${Date.now()}`);
+  
+  try {
+    // Create temp directory
+    fs.mkdirSync(tempDir, { recursive: true });
+    console.log(`[ConvertPdfToImages] Created temp dir: ${tempDir}`);
+    
+    // Use Ghostscript to convert PDF to PNG
+    // -dSAFER = safer mode
+    // -dBATCH = exit after processing
+    // -dNOPAUSE = don't pause between pages
+    // -sDEVICE=png16m = output as PNG (16 million colors)
+    // -r150 = 150 DPI resolution
+    // -sOutputFile = output file pattern (%d = page number)
+    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r150 -sOutputFile="${tempDir}/page-%d.png" "${pdfPath}"`;
+    
+    console.log(`[ConvertPdfToImages] Running Ghostscript: ${gsCommand}`);
+    
+    try {
+      await execAsync(gsCommand, { timeout: 30000 }); // 30 second timeout
+    } catch (gsError: any) {
+      // Check if gs is installed
+      if (gsError.message?.includes('command not found') || gsError.message?.includes('not recognized')) {
+        console.error('[ConvertPdfToImages] ❌ Ghostscript (gs) not installed');
+        return { success: false, images: [], error: 'Ghostscript not installed on server' };
+      }
+      throw gsError;
+    }
+    
+    // Read generated PNG files
+    const files = fs.readdirSync(tempDir)
+      .filter((f: string) => f.startsWith('page-') && f.endsWith('.png'))
+      .sort((a: string, b: string) => {
+        const numA = parseInt(a.replace('page-', '').replace('.png', ''));
+        const numB = parseInt(b.replace('page-', '').replace('.png', ''));
+        return numA - numB;
+      });
+    
+    console.log(`[ConvertPdfToImages] Generated ${files.length} page images`);
+    
+    if (files.length === 0) {
+      return { success: false, images: [], error: 'No pages generated' };
+    }
+    
+    // Embed each PNG into the PDF document
+    const images: PDFImage[] = [];
+    for (const file of files) {
+      const pngPath = path.join(tempDir, file);
+      const pngBuffer = fs.readFileSync(pngPath);
+      
+      // Optimize the image before embedding
+      const optimizedBuffer = await optimizeImage(pngBuffer);
+      const embeddedImage = await pdfDoc.embedPng(optimizedBuffer);
+      images.push(embeddedImage);
+      
+      // Clean up the temp file
+      fs.unlinkSync(pngPath);
+    }
+    
+    // Clean up temp directory
+    fs.rmdirSync(tempDir);
+    
+    console.log(`[ConvertPdfToImages] ✅ Successfully converted ${images.length} pages`);
+    return { success: true, images };
+    
+  } catch (error: any) {
+    console.error('[ConvertPdfToImages] ❌ Error:', error.message);
+    
+    // Clean up temp directory on error
+    try {
+      const fs = await import('fs');
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch { /* ignore cleanup errors */ }
+    
+    return { success: false, images: [], error: error.message };
+  }
 }
