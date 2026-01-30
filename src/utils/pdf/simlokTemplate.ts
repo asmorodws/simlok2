@@ -1166,104 +1166,69 @@ async function addSupportingDocumentsPage(
         console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
         
       } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
-        // Multi-page PDF - extract all pages
+        // Multi-page PDF - ALWAYS use Ghostscript conversion to avoid mozjpeg drawPage errors
+        // The issue is that pdf-lib's embedPdf succeeds, but drawPage fails later when 
+        // trying to decompress mozjpeg-compressed images inside the PDF
         const sourcePdf = documentResult.pdfPages;
         const pageCount = sourcePdf.getPageCount();
-        const pdfFilePath = documentResult.filePath; // Get file path for fallback conversion
+        const pdfFilePath = documentResult.filePath;
         console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF loaded (${pageCount} pages)`);
+        console.log(`[AddSupportingDocumentsPage] 🔄 Converting PDF to images via Ghostscript to avoid compression issues...`);
         
-        // Create array of page indices to embed
-        const pageIndices = Array.from({ length: pageCount }, (_, i) => i);
-        
-        try {
-          // Try to embed all pages at once
-          const embeddedPages = await k.doc.embedPdf(sourcePdf, pageIndices);
+        // 🎯 ALWAYS use Ghostscript to convert PDF pages to images
+        // This avoids the mozjpeg decompression error that occurs during drawPage()
+        if (pdfFilePath) {
+          const conversionResult = await convertPdfToImages(pdfFilePath, k.doc);
           
-          // Add each page to our list
-          embeddedPages.forEach((embeddedPage, index) => {
+          if (conversionResult.success && conversionResult.images.length > 0) {
+            console.log(`[AddSupportingDocumentsPage] ✅ Ghostscript converted ${conversionResult.images.length} pages from ${doc.title}`);
+            
+            // Add converted images as pages
+            conversionResult.images.forEach((image, index) => {
+              allPages.push({
+                docTitle: doc.title,
+                docSubtitle: doc.subtitle || '',
+                docNumber: doc.number || '',
+                docDate: doc.date || '',
+                pageNumber: index + 1,
+                totalPages: conversionResult.images.length,
+                embeddedPage: null,
+                isImage: true,
+                image: image,
+                documentType: doc.documentType,
+                documentId: documentId
+              });
+            });
+          } else {
+            // Ghostscript conversion failed - add placeholder
+            console.error(`[AddSupportingDocumentsPage] ❌ Ghostscript conversion failed for ${doc.title}: ${conversionResult.error}`);
             allPages.push({
               docTitle: doc.title,
-              docSubtitle: doc.subtitle || '',
+              docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan - ${conversionResult.error || 'conversion failed'}`,
               docNumber: doc.number || '',
               docDate: doc.date || '',
-              pageNumber: index + 1,
-              totalPages: pageCount,
-              embeddedPage,
+              pageNumber: 1,
+              totalPages: 1,
+              embeddedPage: null,
               isImage: false,
               documentType: doc.documentType,
               documentId: documentId
             });
-          });
-          
-          console.log(`[AddSupportingDocumentsPage] ✅ Embedded ${embeddedPages.length} pages from ${doc.title}`);
-        } catch (embedError: any) {
-          // If embedPdf fails (e.g., due to mozjpeg compression in the PDF)
-          // This typically happens with PDFs that contain images compressed with mozjpeg
-          const errorMsg = embedError?.message || String(embedError);
-          console.warn(`[AddSupportingDocumentsPage] ⚠️ embedPdf failed for ${doc.title}: ${errorMsg}`);
-          
-          // Check if this is a compression error (mozjpeg method 32)
-          if (errorMsg.includes('compression method') || errorMsg.includes('flate stream')) {
-            console.log(`[AddSupportingDocumentsPage] ℹ️ Attempting Ghostscript conversion for "${doc.title}"...`);
-            
-            // 🎯 FALLBACK: Use Ghostscript to convert PDF pages to images
-            if (pdfFilePath) {
-              const conversionResult = await convertPdfToImages(pdfFilePath, k.doc);
-              
-              if (conversionResult.success && conversionResult.images.length > 0) {
-                console.log(`[AddSupportingDocumentsPage] ✅ Ghostscript converted ${conversionResult.images.length} pages`);
-                
-                // Add converted images as pages
-                conversionResult.images.forEach((image, index) => {
-                  allPages.push({
-                    docTitle: doc.title,
-                    docSubtitle: doc.subtitle || '',
-                    docNumber: doc.number || '',
-                    docDate: doc.date || '',
-                    pageNumber: index + 1,
-                    totalPages: conversionResult.images.length,
-                    embeddedPage: null,
-                    isImage: true,
-                    image: image,
-                    documentType: doc.documentType,
-                    documentId: documentId
-                  });
-                });
-              } else {
-                // Ghostscript fallback failed - add placeholder
-                console.error(`[AddSupportingDocumentsPage] ❌ Ghostscript conversion failed: ${conversionResult.error}`);
-                allPages.push({
-                  docTitle: doc.title,
-                  docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan - ${conversionResult.error || 'conversion failed'}`,
-                  docNumber: doc.number || '',
-                  docDate: doc.date || '',
-                  pageNumber: 1,
-                  totalPages: 1,
-                  embeddedPage: null,
-                  isImage: false,
-                  documentType: doc.documentType,
-                  documentId: documentId
-                });
-              }
-            } else {
-              console.error(`[AddSupportingDocumentsPage] ❌ No file path available for Ghostscript fallback`);
-              allPages.push({
-                docTitle: doc.title,
-                docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan (file path tidak tersedia)`,
-                docNumber: doc.number || '',
-                docDate: doc.date || '',
-                pageNumber: 1,
-                totalPages: 1,
-                embeddedPage: null,
-                isImage: false,
-                documentType: doc.documentType,
-                documentId: documentId
-              });
-            }
-          } else {
-            // Other embed errors - log and skip
-            console.error(`[AddSupportingDocumentsPage] ❌ Unexpected embedPdf error: ${errorMsg}`);
           }
+        } else {
+          console.error(`[AddSupportingDocumentsPage] ❌ No file path available for ${doc.title}`);
+          allPages.push({
+            docTitle: doc.title,
+            docSubtitle: `⚠️ Dokumen tidak dapat ditampilkan (file path tidak tersedia)`,
+            docNumber: doc.number || '',
+            docDate: doc.date || '',
+            pageNumber: 1,
+            totalPages: 1,
+            embeddedPage: null,
+            isImage: false,
+            documentType: doc.documentType,
+            documentId: documentId
+          });
         }
       } else {
         console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
