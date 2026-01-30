@@ -276,7 +276,8 @@ export async function loadWorkerPhoto(
           console.log(`[LoadWorkerPhoto] ✅ Remote image loaded successfully as PNG`);
         } catch (embedError) {
           console.warn(`[LoadWorkerPhoto] ⚠️ PNG embed failed, trying JPEG:`, embedError);
-          try {\n            const jpegBuffer = await sharp(buffer).jpeg({ quality: 95, progressive: false, mozjpeg: false }).toBuffer();
+          try {
+            const jpegBuffer = await sharp(buffer).jpeg({ quality: 95, progressive: false, mozjpeg: false }).toBuffer();
             resultImage = await pdfDoc.embedJpg(jpegBuffer);
             optimizedBuffer = jpegBuffer; // Update cached buffer
             imageCache.set(photoPath, jpegBuffer);
@@ -893,7 +894,12 @@ export async function convertPdfToImages(
   } catch (error: any) {
     console.error('[ConvertPdfToImages] ❌ Error:', error.message);
     
-    // Clean up temp directory on error\n    try {\n      if (fs.existsSync(tempDir)) {\n        fs.rmSync(tempDir, { recursive: true, force: true });\n      }\n    } catch { /* ignore cleanup errors */ }
+    // Clean up temp directory on error
+    try {
+      if (fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
+    } catch { /* ignore cleanup errors */ }
     
     return { success: false, images: [], error: error.message };
   }
