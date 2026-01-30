@@ -814,10 +814,11 @@ export async function convertPdfToImages(
     // -dSAFER = safer mode
     // -dBATCH = exit after processing
     // -dNOPAUSE = don't pause between pages
-    // -sDEVICE=png16m = output as PNG (16 million colors)
-    // -r150 = 150 DPI resolution
+    // -sDEVICE=pnggray = grayscale PNG (faster than png16m)
+    // -r100 = 100 DPI resolution (balanced speed/quality)
+    // -dNumRenderingThreads=2 = use 2 threads for rendering
     // -sOutputFile = output file pattern (%d = page number)
-    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r150 -sOutputFile="${tempDir}/page-%d.png" "${pdfPath}"`;
+    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r100 -dNumRenderingThreads=2 -sOutputFile="${tempDir}/page-%d.png" "${pdfPath}"`;
     
     console.log(`[ConvertPdfToImages] Running Ghostscript: ${gsCommand}`);
     
