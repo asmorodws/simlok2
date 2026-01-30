@@ -6,6 +6,14 @@ if (typeof window !== 'undefined') {
   throw new Error('imageLoader should only be used on server-side');
 }
 
+// 🎯 PERFORMANCE: Pre-load common modules once at startup
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sharp = require('sharp');
+// eslint-disable-next-line @typescript-eslint/no-require-imports  
+const fs = require('fs');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const path = require('path');
+
 // 🎯 PERFORMANCE FIX: Increased batch size and reduced delays
 const MAX_CACHE_SIZE = 50; // Increased from 20
 const MAX_BATCH_SIZE = 10; // Increased from 3 for faster parallel loading
@@ -111,7 +119,6 @@ async function loadBase64Image(
       
       // Fallback: Try re-converting to JPEG if PNG fails
       try {
-        const sharp = (await import('sharp')).default;
         const jpegBuffer = await sharp(imageBuffer)
           .jpeg({ quality: 95, progressive: false, mozjpeg: false })
           .toBuffer();
@@ -141,7 +148,6 @@ async function loadFileImage(
   filePath: string
 ): Promise<{ image: PDFImage; buffer: Buffer } | null> {
   try {
-    const fs = await import('fs');
     if (!fs.existsSync(filePath)) {
       console.warn(`[LoadFileImage] File does not exist: ${filePath}`);
       return null;
@@ -166,7 +172,6 @@ async function loadFileImage(
       
       // Fallback 1: Try re-optimizing with higher quality
       try {
-        const sharp = (await import('sharp')).default;
         const reOptimizedBuffer = await sharp(imageBuffer)
           .jpeg({ quality: 95, progressive: false, mozjpeg: false })
           .toBuffer();
@@ -180,7 +185,6 @@ async function loadFileImage(
         
         // Fallback 2: Convert to PNG
         try {
-          const sharp = (await import('sharp')).default;
           const pngBuffer = await sharp(imageBuffer)
             .png({ compressionLevel: 6 })
             .toBuffer();
@@ -272,9 +276,7 @@ export async function loadWorkerPhoto(
           console.log(`[LoadWorkerPhoto] ✅ Remote image loaded successfully as PNG`);
         } catch (embedError) {
           console.warn(`[LoadWorkerPhoto] ⚠️ PNG embed failed, trying JPEG:`, embedError);
-          try {
-            const sharp = (await import('sharp')).default;
-            const jpegBuffer = await sharp(buffer).jpeg({ quality: 95, progressive: false, mozjpeg: false }).toBuffer();
+          try {\n            const jpegBuffer = await sharp(buffer).jpeg({ quality: 95, progressive: false, mozjpeg: false }).toBuffer();
             resultImage = await pdfDoc.embedJpg(jpegBuffer);
             optimizedBuffer = jpegBuffer; // Update cached buffer
             imageCache.set(photoPath, jpegBuffer);
@@ -291,8 +293,6 @@ export async function loadWorkerPhoto(
     } else {
       console.log(`[LoadWorkerPhoto] Processing local file path`);
       // 🎯 OPTIMIZED: Smart local file path resolution with fallback
-      const path = await import('path');
-      const { existsSync } = await import('fs');
 
       // Determine primary path
       let finalPath: string;
@@ -584,9 +584,7 @@ export async function loadWorkerDocument(
     // For PDF, load the PDF file with enhanced error handling
     if (isPdf) {
       console.log(`[LoadWorkerDocument] Processing as PDF: ${documentPath}`);
-      const path = await import('path');
-      const { readFile } = await import('fs/promises');
-      const { existsSync } = await import('fs');
+      const { readFile } = require('fs/promises');
       
       let finalPath: string;
       let found = false;
@@ -800,12 +798,14 @@ export async function convertPdfToImages(
   pdfPath: string,
   pdfDoc: PDFDocument
 ): Promise<{ success: boolean; images: PDFImage[]; error?: string }> {
-  const { exec } = await import('child_process');
-  const { promisify } = await import('util');
+  // 🎯 PERFORMANCE: Use require for Node.js core modules (already cached by Node)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { exec } = require('child_process');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { promisify } = require('util');
   const execAsync = promisify(exec);
-  const fs = await import('fs');
-  const path = await import('path');
-  const os = await import('os');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const os = require('os');
   
   try {
     // Check cache first
@@ -893,13 +893,7 @@ export async function convertPdfToImages(
   } catch (error: any) {
     console.error('[ConvertPdfToImages] ❌ Error:', error.message);
     
-    // Clean up temp directory on error
-    try {
-      const fs = await import('fs');
-      if (fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
-    } catch { /* ignore cleanup errors */ }
+    // Clean up temp directory on error\n    try {\n      if (fs.existsSync(tempDir)) {\n        fs.rmSync(tempDir, { recursive: true, force: true });\n      }\n    } catch { /* ignore cleanup errors */ }
     
     return { success: false, images: [], error: error.message };
   }

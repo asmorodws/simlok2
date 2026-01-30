@@ -1,17 +1,29 @@
-// Conditional import for server-side only
+// Conditional import for server-side only - CACHED for performance
 let sharp: any = null;
+let sharpInitialized = false;
 
-// Only import sharp on server-side
-if (typeof window === 'undefined') {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    sharp = require('sharp');
-  } catch (error) {
-    console.warn('Sharp not available, using fallback image processing');
+// Only import sharp on server-side (singleton pattern)
+function getSharp() {
+  if (!sharpInitialized && typeof window === 'undefined') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      sharp = require('sharp');
+      // 🎯 PERFORMANCE: Configure sharp defaults for speed
+      if (sharp) {
+        sharp.cache({ memory: 50, files: 20, items: 100 }); // Limit cache to save memory
+        sharp.concurrency(2); // Limit threads to avoid overloading VPS
+      }
+      sharpInitialized = true;
+    } catch (error) {
+      console.warn('Sharp not available, using fallback image processing');
+      sharpInitialized = true;
+    }
   }
+  return sharp;
 }
 
-const MAX_IMAGE_SIZE = 500; // Maximum dimension in pixels
+// 🎯 PERFORMANCE: Reduced from 500px to 400px for smaller files
+const MAX_IMAGE_SIZE = 400; // Maximum dimension in pixels
 const JPEG_QUALITY = 70;   // JPEG compression quality (0-100)
 
 interface ImageDimensions {
@@ -28,8 +40,10 @@ interface ImageDimensions {
  * PNG has no compression method conflicts with pdf-lib
  */
 export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
+  const sharpInstance = getSharp();
+  
   // Return original buffer if not on server or sharp not available
-  if (typeof window !== 'undefined' || !sharp) {
+  if (typeof window !== 'undefined' || !sharpInstance) {
     console.warn('⚠️ Using original image buffer (client-side or sharp not available)');
     console.warn('⚠️ WARNING: This may cause compression errors');
     return imageBuffer;
@@ -37,7 +51,7 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
 
   try {
     // Get image info
-    const metadata = await sharp(imageBuffer).metadata();
+    const metadata = await sharpInstance(imageBuffer).metadata();
     if (!metadata.width || !metadata.height) {
       throw new Error('Could not get image dimensions');
     }
@@ -48,22 +62,21 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
       height: metadata.height
     });
 
-    // Process image
-    const optimizedBuffer = await sharp(imageBuffer)
+    // Process image - using cached sharp instance for performance
+    const optimizedBuffer = await sharpInstance(imageBuffer)
       // Resize while maintaining aspect ratio
       .resize(newDimensions.width, newDimensions.height, {
-        fit: 'contain', // 🎯 FIX: Use 'contain' to preserve aspect ratio properly
+        fit: 'contain',
         withoutEnlargement: true,
-        background: { r: 255, g: 255, b: 255, alpha: 1 } // White background for transparency
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+        fastShrinkOnLoad: true // 🎯 PERFORMANCE: Use fast shrink-on-load
       })
-      // 🎯 EMERGENCY FIX: Use PNG to completely bypass JPEG compression issues
-      // PNG has no compression method conflicts with pdf-lib
+      // 🎯 PERFORMANCE: Optimized PNG settings for speed
       .png({ 
-        compressionLevel: 6, // Balanced compression (0-9)
-        adaptiveFiltering: true,
-        palette: false // Use full color, not palette
+        compressionLevel: 4, // Reduced from 6 for faster processing
+        adaptiveFiltering: false, // Disabled for speed
+        palette: false
       })
-      // Optimize for web/pdf
       .toBuffer();
     
     console.log(`✅ Image optimized: ${imageBuffer.length} → ${optimizedBuffer.length} bytes (${Math.round((1 - optimizedBuffer.length / imageBuffer.length) * 100)}% reduction)`);
@@ -74,10 +87,10 @@ export async function optimizeImage(imageBuffer: Buffer): Promise<Buffer> {
     
     // 🎯 CRITICAL FALLBACK: Try basic PNG conversion without resizing
     try {
-      const basicPng = await sharp(imageBuffer)
+      const basicPng = await sharpInstance(imageBuffer)
         .png({ 
-          compressionLevel: 6,
-          adaptiveFiltering: true
+          compressionLevel: 4, // Reduced for speed
+          adaptiveFiltering: false // Disabled for speed
         })
         .toBuffer();
       
