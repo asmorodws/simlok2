@@ -1179,15 +1179,18 @@ async function addSupportingDocumentsPage(
         try {
           const embeddedPages = await k.doc.embedPdf(sourcePdf, pageIndices);
           
-          // Test drawPage on first page to detect mozjpeg compression errors early
-          // Create a temporary test page to verify the embedded PDF can be rendered
+          // Test drawPage on ALL pages to detect mozjpeg compression errors
+          // For multi-page PDFs, the error may be on any page, not just the first
           if (embeddedPages.length > 0) {
             const testPage = k.doc.addPage([1, 1]); // Tiny test page
             try {
-              testPage.drawPage(embeddedPages[0], { x: 0, y: 0, width: 1, height: 1 });
-              // Remove test page - drawPage succeeded
+              // Test ALL pages, not just the first one
+              for (let i = 0; i < embeddedPages.length; i++) {
+                testPage.drawPage(embeddedPages[i], { x: 0, y: 0, width: 1, height: 1 });
+              }
+              // Remove test page - all drawPage tests succeeded
               k.doc.removePage(k.doc.getPageCount() - 1);
-              console.log(`[AddSupportingDocumentsPage] ✅ embedPdf + drawPage test passed for ${doc.title}`);
+              console.log(`[AddSupportingDocumentsPage] ✅ embedPdf + drawPage test passed for ${doc.title} (${embeddedPages.length} pages)`);
               
               // Add all embedded pages
               embeddedPages.forEach((embeddedPage, index) => {
