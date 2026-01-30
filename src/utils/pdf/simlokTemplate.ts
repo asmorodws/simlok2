@@ -1121,6 +1121,49 @@ async function addSupportingDocumentsPage(
     return;
   }
   
+  // === OPTIMIZATION: Pre-convert all PDFs in parallel ===
+  // Get unique PDF paths to avoid duplicate conversions
+  const uniquePdfPaths = new Set<string>();
+  const pdfDocuments: { doc: any; path: string }[] = [];
+  
+  // First pass: identify PDF documents
+  console.log(`[AddSupportingDocumentsPage] 🔄 Pre-loading documents in parallel...`);
+  const loadStartTime = Date.now();
+  
+  // Load all documents in parallel first
+  const loadResults = await Promise.all(
+    documents.map(async (doc) => {
+      const documentResult = await loadWorkerDocument(k.doc, doc.path);
+      return { doc, documentResult };
+    })
+  );
+  
+  console.log(`[AddSupportingDocumentsPage] ✅ Documents loaded in ${Date.now() - loadStartTime}ms`);
+  
+  // Identify PDF paths for batch conversion
+  for (const { doc, documentResult } of loadResults) {
+    if (documentResult.type === 'pdf' && documentResult.filePath) {
+      if (!uniquePdfPaths.has(documentResult.filePath)) {
+        uniquePdfPaths.add(documentResult.filePath);
+        pdfDocuments.push({ doc, path: documentResult.filePath });
+      }
+    }
+  }
+  
+  // Convert all PDFs in parallel
+  if (pdfDocuments.length > 0) {
+    console.log(`[AddSupportingDocumentsPage] 🔄 Converting ${pdfDocuments.length} unique PDFs via Ghostscript...`);
+    const convertStartTime = Date.now();
+    
+    await Promise.all(
+      pdfDocuments.map(async ({ path }) => {
+        await convertPdfToImages(path, k.doc);
+      })
+    );
+    
+    console.log(`[AddSupportingDocumentsPage] ✅ PDF conversion completed in ${Date.now() - convertStartTime}ms`);
+  }
+  
   // Load all documents and extract pages - WITH DOCUMENT TYPE TRACKING
   interface PageInfo {
     docTitle: string;
@@ -1138,43 +1181,38 @@ async function addSupportingDocumentsPage(
   
   const allPages: PageInfo[] = [];
   
-  for (const doc of documents) {
-    console.log(`[AddSupportingDocumentsPage] Loading document: ${doc.title} (${doc.documentType}) - ${doc.subtitle || 'no subtitle'}`);
-    console.log(`[AddSupportingDocumentsPage] Document path: ${doc.path}`);
+  // Process loaded results (conversions are now cached)
+  for (const { doc, documentResult } of loadResults) {
+    console.log(`[AddSupportingDocumentsPage] Processing: ${doc.title} (${doc.documentType})`);
     
     // Create unique document ID (combination of path and number)
     const documentId = `${doc.path}_${doc.number || Date.now()}`;
     
-    try {
-      const documentResult = await loadWorkerDocument(k.doc, doc.path);
+    // documentResult already loaded in parallel above
+    if (documentResult.type === 'image' && documentResult.image) {
+      // Single image - treat as 1 page
+      allPages.push({
+        docTitle: doc.title,
+        docSubtitle: doc.subtitle || '',
+        docNumber: doc.number || '',
+        docDate: doc.date || '',
+        pageNumber: 1,
+        totalPages: 1,
+        embeddedPage: null,
+        isImage: true,
+        image: documentResult.image,
+        documentType: doc.documentType,
+        documentId: documentId
+      });
+      console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
       
-      if (documentResult.type === 'image' && documentResult.image) {
-        // Single image - treat as 1 page
-        allPages.push({
-          docTitle: doc.title,
-          docSubtitle: doc.subtitle || '',
-          docNumber: doc.number || '',
-          docDate: doc.date || '',
-          pageNumber: 1,
-          totalPages: 1,
-          embeddedPage: null,
-          isImage: true,
-          image: documentResult.image,
-          documentType: doc.documentType,
-          documentId: documentId
-        });
-        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} image loaded (1 page)`);
-        
-      } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
-        // Multi-page PDF - ALWAYS use Ghostscript to avoid mozjpeg compression errors
-        // The drawPage test passes but save() still fails with compression errors
-        // This is because pdf-lib caches resources and only decompresses during save()
-        const sourcePdf = documentResult.pdfPages;
-        const pageCount = sourcePdf.getPageCount();
-        const pdfFilePath = documentResult.filePath;
-        console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF loaded (${pageCount} pages)`);
-        console.log(`[AddSupportingDocumentsPage] 🔄 Converting to images via Ghostscript...`);
-        
+    } else if (documentResult.type === 'pdf' && documentResult.pdfPages) {
+      // Multi-page PDF - use cached Ghostscript conversion
+      const sourcePdf = documentResult.pdfPages;
+      const pageCount = sourcePdf.getPageCount();
+      const pdfFilePath = documentResult.filePath;
+      console.log(`[AddSupportingDocumentsPage] ✅ ${doc.title} PDF (${pageCount} pages) - using cached conversion`);
+      
         if (pdfFilePath) {
           const conversionResult = await convertPdfToImages(pdfFilePath, k.doc);
           
@@ -1226,12 +1264,9 @@ async function addSupportingDocumentsPage(
             documentId: documentId
           });
         }
-      } else {
-        console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error || 'unknown'}`);
+      } else if (documentResult.error) {
+        console.warn(`[AddSupportingDocumentsPage] ⚠️ ${doc.title} failed to load: ${documentResult.error}`);
       }
-    } catch (error) {
-      console.error(`[AddSupportingDocumentsPage] ❌ Error loading ${doc.title}:`, error);
-    }
   }
   
   console.log(`[AddSupportingDocumentsPage] Total pages to render: ${allPages.length}`);
@@ -1760,8 +1795,13 @@ async function drawWorkerPhotoAndDocument(
         if (conversionResult.success && conversionResult.images.length > 0) {
           console.log(`[DrawHSSEDocument] ✅ Ghostscript converted PDF to ${conversionResult.images.length} image(s)`);
           
-          // Use the first page image
-          const hsseImage = conversionResult.images[0];
+          // Use the first page image - safely extract with explicit check
+          const firstImage = conversionResult.images[0];
+          if (firstImage === undefined) {
+            console.error(`[DrawHSSEDocument] ❌ Image at index 0 is undefined`);
+            return;
+          }
+          const hsseImage = firstImage;
           const imgDims = hsseImage.scale(1);
           const imgAspectRatio = imgDims.width / imgDims.height;
           const frameAspectRatio = (itemWidth - 2) / (imageHeight - 2);
