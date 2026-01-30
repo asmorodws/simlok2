@@ -22,14 +22,25 @@ export default function SimlokPdfModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actualFilename, setActualFilename] = useState<string>('');
+  // 🎯 FIX: Track iframe key to force remount when modal reopens
+  const [iframeKey, setIframeKey] = useState(0);
+
+  // 🎯 FIX: Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setLoading(true);
+      setError(null);
+      setIframeKey(prev => prev + 1); // Force iframe remount
+    }
+  }, [isOpen]);
 
   // 🎯 KEY FIX: Generate API URL to point iframe DIRECTLY to endpoint
   // This allows browser's "Save as" to read Content-Disposition header!
   const pdfApiUrl = useMemo(() => {
     if (!submissionId || !isOpen) return null;
-    const timestamp = Date.now();
-    return `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${timestamp}`;
-  }, [submissionId, isOpen]);
+    // Use iframeKey to bust cache when modal reopens
+    return `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${iframeKey}`;
+  }, [submissionId, isOpen, iframeKey]);
 
   // Esc key + body scroll lock
   useEffect(() => {
@@ -295,9 +306,10 @@ export default function SimlokPdfModal({
 
             {/* 🎯 KEY FIX: iframe points DIRECTLY to API endpoint, not blob URL! */}
             {/* This allows browser's "Save as" to read Content-Disposition header */}
+            {/* Use iframeKey to force complete remount when modal reopens */}
             {!error && pdfApiUrl && (
               <iframe
-                key={pdfApiUrl}
+                key={`pdf-iframe-${iframeKey}`}
                 src={pdfApiUrl}
                 className="w-full h-full border-0"
                 title={`SIMLOK - ${submissionName}`}
