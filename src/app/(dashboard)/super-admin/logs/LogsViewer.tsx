@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { RefreshCw, Download, Trash2, X, Search, Filter } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { RefreshCw, Download, Trash2, X, Search, Filter, Play, Pause, Wifi, WifiOff } from 'lucide-react';
 import DateRangePicker from '@/components/form/DateRangePicker';
 
 interface LogEntry {
@@ -22,6 +22,15 @@ interface LogsResponse {
 
 type LogLevel = 'ALL' | 'ERROR' | 'WARN' | 'INFO' | 'DEBUG';
 
+// Auto-refresh intervals
+const REFRESH_INTERVALS = [
+  { label: 'Off', value: 0 },
+  { label: '5s', value: 5000 },
+  { label: '10s', value: 10000 },
+  { label: '30s', value: 30000 },
+  { label: '1m', value: 60000 },
+];
+
 export default function LogsViewer() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -41,10 +50,21 @@ export default function LogsViewer() {
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 50;
 
+  // 🔄 Auto-refresh state
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(0); // 0 = off
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const autoRefreshRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 📡 Live streaming state (SSE)
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [streamConnected, setStreamConnected] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const [newLogsCount, setNewLogsCount] = useState(0);
+
   // Fetch logs
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
 
       const params = new URLSearchParams();
@@ -69,19 +89,99 @@ export default function LogsViewer() {
 
       const data: LogsResponse = await response.json();
       setLogs(data.logs);
-      setCurrentPage(1); // Reset to first page
+      setCurrentPage(1);
+      setLastRefresh(new Date());
+      setNewLogsCount(0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch logs');
       setLogs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [startDate, endDate, selectedLevel, searchTerm]);
 
   // Auto-fetch on mount
   useEffect(() => {
     fetchLogs();
-  }, []); // Only run once on mount
+  }, []);
+
+  // 🔄 Auto-refresh effect
+  useEffect(() => {
+    // Clear existing interval
+    if (autoRefreshRef.current) {
+      clearInterval(autoRefreshRef.current);
+      autoRefreshRef.current = null;
+    }
+
+    // Set new interval if enabled
+    if (autoRefreshInterval > 0) {
+      autoRefreshRef.current = setInterval(() => {
+        fetchLogs(false); // Silent refresh (no loading spinner)
+      }, autoRefreshInterval);
+    }
+
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+      }
+    };
+  }, [autoRefreshInterval, fetchLogs]);
+
+  // 📡 Live streaming (SSE) effect
+  useEffect(() => {
+    if (isLiveStreaming) {
+      // Connect to SSE endpoint
+      const eventSource = new EventSource('/api/logs/stream');
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        console.log('[LogsViewer] SSE connected');
+        setStreamConnected(true);
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const newLog: LogEntry = JSON.parse(event.data);
+          
+          // Check if log matches current filter
+          const matchesLevel = selectedLevel === 'ALL' || newLog.level?.toUpperCase() === selectedLevel;
+          const matchesSearch = !searchTerm || newLog.raw.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          if (matchesLevel && matchesSearch) {
+            setLogs(prev => [newLog, ...prev]); // Add to top
+            setNewLogsCount(prev => prev + 1);
+          }
+        } catch (err) {
+          console.error('[LogsViewer] Failed to parse SSE message:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        console.error('[LogsViewer] SSE connection error');
+        setStreamConnected(false);
+        // Attempt reconnect after 3 seconds
+        setTimeout(() => {
+          if (isLiveStreaming && eventSourceRef.current) {
+            eventSourceRef.current.close();
+            setIsLiveStreaming(false);
+            setTimeout(() => setIsLiveStreaming(true), 100);
+          }
+        }, 3000);
+      };
+
+      return () => {
+        eventSource.close();
+        setStreamConnected(false);
+      };
+    } else {
+      // Close existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+        setStreamConnected(false);
+      }
+    }
+  }, [isLiveStreaming, selectedLevel, searchTerm]);
 
   // Download logs as text file
   const handleDownload = () => {
@@ -146,6 +246,81 @@ export default function LogsViewer() {
 
   return (
     <div className="space-y-4">
+      {/* Real-time Controls */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            {/* Live Streaming Toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsLiveStreaming(!isLiveStreaming)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition ${
+                  isLiveStreaming
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                {isLiveStreaming ? (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Stop Live
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Start Live
+                  </>
+                )}
+              </button>
+              {isLiveStreaming && (
+                <div className="flex items-center gap-1.5 text-sm">
+                  {streamConnected ? (
+                    <>
+                      <Wifi className="w-4 h-4 text-green-500 animate-pulse" />
+                      <span className="text-green-600 dark:text-green-400">Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-4 h-4 text-yellow-500" />
+                      <span className="text-yellow-600 dark:text-yellow-400">Connecting...</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Auto-refresh Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Auto-refresh:</span>
+              <select
+                value={autoRefreshInterval}
+                onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+                disabled={isLiveStreaming}
+                className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50"
+              >
+                {REFRESH_INTERVALS.map(({ label, value }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center gap-4 text-sm">
+            {newLogsCount > 0 && (
+              <span className="px-2 py-1 bg-blue-600 text-white rounded-full text-xs font-medium animate-pulse">
+                +{newLogsCount} new
+              </span>
+            )}
+            {lastRefresh && (
+              <span className="text-gray-500 dark:text-gray-400">
+                Last updated: {lastRefresh.toLocaleTimeString('id-ID')}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Filters Card */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
