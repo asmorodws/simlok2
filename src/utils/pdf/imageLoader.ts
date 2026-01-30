@@ -783,7 +783,11 @@ export async function loadWorkerDocument(
  */
 export function clearImageCache(): void {
   imageCache.clear();
+  pdfConversionCache.clear();
 }
+
+// Cache for Ghostscript PDF conversions (stores PNG buffers, not embedded images)
+const pdfConversionCache = new Map<string, Buffer[]>();
 
 /**
  * Convert PDF file to PNG images using Ghostscript (external binary)
@@ -803,27 +807,40 @@ export async function convertPdfToImages(
   const path = await import('path');
   const os = await import('os');
   
-  const tempDir = path.join(os.tmpdir(), `pdf-convert-${Date.now()}`);
-  
   try {
+    // Check cache first
+    const cachedBuffers = pdfConversionCache.get(pdfPath);
+    if (cachedBuffers && cachedBuffers.length > 0) {
+      console.log(`[ConvertPdfToImages] ✅ Using cached conversion for ${path.basename(pdfPath)} (${cachedBuffers.length} pages)`);
+      
+      // Embed cached buffers into the new PDF document
+      const images: PDFImage[] = [];
+      for (const buffer of cachedBuffers) {
+        const embeddedImage = await pdfDoc.embedPng(buffer);
+        images.push(embeddedImage);
+      }
+      return { success: true, images };
+    }
+    
+    const tempDir = path.join(os.tmpdir(), `pdf-convert-${Date.now()}`);
+  
     // Create temp directory
     fs.mkdirSync(tempDir, { recursive: true });
-    console.log(`[ConvertPdfToImages] Created temp dir: ${tempDir}`);
     
     // Use Ghostscript to convert PDF to PNG
     // -dSAFER = safer mode
-    // -dBATCH = exit after processing
+    // -dBATCH = exit after processing  
     // -dNOPAUSE = don't pause between pages
-    // -sDEVICE=pnggray = grayscale PNG (faster than png16m)
-    // -r100 = 100 DPI resolution (balanced speed/quality)
+    // -sDEVICE=pnggray = grayscale PNG (faster)
+    // -r72 = 72 DPI (lower resolution for speed, still readable)
     // -dNumRenderingThreads=2 = use 2 threads for rendering
     // -sOutputFile = output file pattern (%d = page number)
-    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=png16m -r100 -dNumRenderingThreads=2 -sOutputFile="${tempDir}/page-%d.png" "${pdfPath}"`;
+    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pnggray -r72 -dNumRenderingThreads=2 -sOutputFile="${tempDir}/page-%d.png" "${pdfPath}"`;
     
-    console.log(`[ConvertPdfToImages] Running Ghostscript: ${gsCommand}`);
+    console.log(`[ConvertPdfToImages] Running Ghostscript for ${path.basename(pdfPath)}...`);
     
     try {
-      await execAsync(gsCommand, { timeout: 30000 }); // 30 second timeout
+      await execAsync(gsCommand, { timeout: 60000 }); // 60 second timeout for large PDFs
     } catch (gsError: any) {
       // Check if gs is installed
       if (gsError.message?.includes('command not found') || gsError.message?.includes('not recognized')) {
@@ -842,26 +859,30 @@ export async function convertPdfToImages(
         return numA - numB;
       });
     
-    console.log(`[ConvertPdfToImages] Generated ${files.length} page images`);
-    
     if (files.length === 0) {
+      fs.rmdirSync(tempDir);
       return { success: false, images: [], error: 'No pages generated' };
     }
     
-    // Embed each PNG into the PDF document
+    // Read and cache PNG buffers, then embed into PDF document
+    const pngBuffers: Buffer[] = [];
     const images: PDFImage[] = [];
+    
     for (const file of files) {
       const pngPath = path.join(tempDir, file);
       const pngBuffer = fs.readFileSync(pngPath);
+      pngBuffers.push(pngBuffer);
       
-      // Optimize the image before embedding
-      const optimizedBuffer = await optimizeImage(pngBuffer);
-      const embeddedImage = await pdfDoc.embedPng(optimizedBuffer);
+      // Embed directly without additional optimization (already grayscale 72dpi)
+      const embeddedImage = await pdfDoc.embedPng(pngBuffer);
       images.push(embeddedImage);
       
       // Clean up the temp file
       fs.unlinkSync(pngPath);
     }
+    
+    // Cache the PNG buffers for future use
+    pdfConversionCache.set(pdfPath, pngBuffers);
     
     // Clean up temp directory
     fs.rmdirSync(tempDir);
