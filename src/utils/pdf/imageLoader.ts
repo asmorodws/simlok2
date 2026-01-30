@@ -338,7 +338,7 @@ export async function loadWorkerPhoto(
       }
       
       // Check primary path first
-      if (existsSync(finalPath)) {
+      if (fs.existsSync(finalPath)) {
         found = true;
         console.log(`[LoadWorkerPhoto] ✅ Found at primary path: ${finalPath}`);
       } else {
@@ -388,7 +388,7 @@ export async function loadWorkerPhoto(
         console.log(`[LoadWorkerPhoto] Trying ${uniqueAlternatives.length} alternative paths...`);
         
         for (const altPath of uniqueAlternatives) {
-          if (altPath !== finalPath && existsSync(altPath)) {
+          if (altPath !== finalPath && fs.existsSync(altPath)) {
             console.log(`[LoadWorkerPhoto] ✅ Found at alternative path: ${altPath}`);
             finalPath = altPath;
             found = true;
@@ -632,7 +632,7 @@ export async function loadWorkerDocument(
       console.log(`[LoadWorkerDocument] Resolved primary path: ${finalPath}`);
       
       // 🎯 FIX: Check file existence with smart fallback
-      if (!existsSync(finalPath)) {
+      if (!fs.existsSync(finalPath)) {
         console.log(`[LoadWorkerDocument] ⚠️ Not found at primary path`);
         
         // 🎯 SMART FALLBACK: Try alternative paths for HSSE worker documents
@@ -674,7 +674,7 @@ export async function loadWorkerDocument(
         
         found = false;
         for (const altPath of uniqueAlternatives) {
-          if (altPath !== finalPath && existsSync(altPath)) {
+          if (altPath !== finalPath && fs.existsSync(altPath)) {
             console.log(`[LoadWorkerDocument] ✅ Found at alternative path: ${altPath}`);
             finalPath = altPath;
             found = true;
