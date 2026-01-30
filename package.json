@@ -17,7 +17,8 @@
     "seed:local": "npx prisma migrate reset && tsx prisma/localseed.ts",
     "analyze": "cross-env ANALYZE=true next build",
     "download-pdf": "tsx scripts/download-pdf.ts",
-    "download-pdf-bulk": "tsx scripts/download-pdf-bulk.ts"
+    "download-pdf-bulk": "tsx scripts/download-pdf-bulk.ts",
+    "test:pdf": "tsx scripts/test-pdf-render.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

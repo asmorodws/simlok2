@@ -198,7 +198,30 @@ async function generatePDF(submission: any) {
     }
 
     // Generate PDF using the template with potentially modified data
-    const pdfBytes = await generateSIMLOKPDF(pdfData as SubmissionPDFData);
+    // 🎯 CRITICAL FIX: Auto-retry with cache clearing on compression errors
+    let pdfBytes: Uint8Array;
+    try {
+      pdfBytes = await generateSIMLOKPDF(pdfData as SubmissionPDFData);
+    } catch (pdfError) {
+      // Check if it's a compression error
+      if (pdfError instanceof Error && 
+          (pdfError.message.includes('compression method') || 
+           pdfError.message.includes('flate stream'))) {
+        console.warn('⚠️ Compression error detected, clearing cache and retrying...');
+        clearImageCache();
+        
+        // Retry once with cleared cache
+        try {
+          pdfBytes = await generateSIMLOKPDF(pdfData as SubmissionPDFData);
+          console.log('✅ PDF generated successfully after cache clear');
+        } catch (retryError) {
+          console.error('❌ PDF generation failed even after cache clear:', retryError);
+          throw retryError;
+        }
+      } else {
+        throw pdfError;
+      }
+    }
 
     // Generate filename based on simlok_number only (no vendor name)
     let filename: string;

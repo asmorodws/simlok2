@@ -26,10 +26,14 @@ echo "========================================="
 # Load environment variables if .env.production exists
 if [ -f .env.production ]; then
     echo "Loading environment variables from .env.production"
-    export $(cat .env.production | grep -v '^#' | xargs)
+    set -a  # automatically export all variables
+    source <(grep -v '^#' .env.production | grep -v '^[[:space:]]*$' | sed 's/#.*//')
+    set +a
 elif [ -f .env ]; then
     echo "Loading environment variables from .env"
-    export $(cat .env | grep -v '^#' | xargs)
+    set -a  # automatically export all variables
+    source <(grep -v '^#' .env | grep -v '^[[:space:]]*$' | sed 's/#.*//')
+    set +a
 else
     echo "Warning: No .env file found"
 fi
