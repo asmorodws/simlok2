@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import { XMarkIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 interface SimlokPdfModalProps {
@@ -12,6 +12,13 @@ interface SimlokPdfModalProps {
   nomorSimlok?: string;
 }
 
+// 🎯 OPTIMAL CACHING: Session-level cache for PDF blob URLs
+// This prevents re-fetching the same PDF when modal is reopened
+const pdfBlobCache = new Map<string, { blobUrl: string; filename: string; timestamp: number }>();
+
+// Cache expiry time: 5 minutes (PDF might change if submission is edited)
+const CACHE_EXPIRY_MS = 5 * 60 * 1000;
+
 export default function SimlokPdfModal({
   isOpen,
   onClose,
@@ -21,26 +28,146 @@ export default function SimlokPdfModal({
 }: SimlokPdfModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [actualFilename, setActualFilename] = useState<string>('');
-  // 🎯 FIX: Track iframe key to force remount when modal reopens
-  const [iframeKey, setIframeKey] = useState(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
-  // 🎯 FIX: Reset state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setLoading(true);
-      setError(null);
-      setIframeKey(prev => prev + 1); // Force iframe remount
+  // Generate filename with SIMLOK number
+  const filename = useMemo(() => {
+    if (nomorSimlok) {
+      const cleanNomor = nomorSimlok.replace(/[\[\]/\\]/g, '_');
+      return `SIMLOK_${cleanNomor}.pdf`;
     }
-  }, [isOpen]);
+    return `SIMLOK_${submissionName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+  }, [nomorSimlok, submissionName]);
 
-  // 🎯 KEY FIX: Generate API URL to point iframe DIRECTLY to endpoint
-  // This allows browser's "Save as" to read Content-Disposition header!
-  const pdfApiUrl = useMemo(() => {
-    if (!submissionId || !isOpen) return null;
-    // Use iframeKey to bust cache when modal reopens
-    return `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${iframeKey}`;
-  }, [submissionId, isOpen, iframeKey]);
+  // 🎯 FETCH PDF with caching
+  const fetchPdf = useCallback(async (forceRefresh = false) => {
+    if (!submissionId) return;
+
+    // Check cache first (unless force refresh)
+    const cacheKey = submissionId;
+    const cached = pdfBlobCache.get(cacheKey);
+    
+    if (!forceRefresh && cached && (Date.now() - cached.timestamp < CACHE_EXPIRY_MS)) {
+      console.log('[SimlokPdfModal] ✅ Using cached PDF blob');
+      setPdfBlobUrl(cached.blobUrl);
+      setActualFilename(cached.filename);
+      setLoading(false);
+      return;
+    }
+
+    // Cancel any ongoing fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      console.log('[SimlokPdfModal] 🔄 Fetching PDF...');
+      
+      const apiUrl = `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${Date.now()}`;
+      
+      const res = await fetch(apiUrl, {
+        method: 'GET',
+        credentials: 'include',
+        signal: abortControllerRef.current.signal,
+        headers: {
+          'x-pdf-generation': 'true',
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      // Get filename from headers
+      let serverFilename = filename;
+      const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
+      const contentDisposition = res.headers.get('Content-Disposition');
+      
+      if (pdfFilenameHeader) {
+        serverFilename = pdfFilenameHeader;
+      } else if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          serverFilename = match[1].replace(/['"]/g, '');
+        }
+      }
+
+      const blob = await res.blob();
+      
+      // Revoke old blob URL if exists in cache
+      if (cached?.blobUrl) {
+        URL.revokeObjectURL(cached.blobUrl);
+      }
+
+      const newBlobUrl = URL.createObjectURL(blob);
+      
+      // Update cache
+      pdfBlobCache.set(cacheKey, {
+        blobUrl: newBlobUrl,
+        filename: serverFilename,
+        timestamp: Date.now()
+      });
+
+      if (isMountedRef.current) {
+        setPdfBlobUrl(newBlobUrl);
+        setActualFilename(serverFilename);
+        setLoading(false);
+        console.log('[SimlokPdfModal] ✅ PDF loaded and cached');
+      }
+
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('[SimlokPdfModal] Fetch aborted');
+        return;
+      }
+      
+      console.error('[SimlokPdfModal] ❌ Error fetching PDF:', err);
+      if (isMountedRef.current) {
+        setError(`Gagal memuat PDF: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setLoading(false);
+      }
+    }
+  }, [submissionId, filename]);
+
+  // 🎯 Load PDF when modal opens
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    if (isOpen && submissionId) {
+      // Reset state
+      setError(null);
+      
+      // Check if we have a valid cached blob URL
+      const cached = pdfBlobCache.get(submissionId);
+      if (cached && (Date.now() - cached.timestamp < CACHE_EXPIRY_MS)) {
+        // Use cache immediately - no loading state needed
+        setPdfBlobUrl(cached.blobUrl);
+        setActualFilename(cached.filename);
+        setLoading(false);
+        console.log('[SimlokPdfModal] ✅ Instant load from cache');
+      } else {
+        // Need to fetch
+        setLoading(true);
+        setPdfBlobUrl(null);
+        fetchPdf();
+      }
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      // Abort any ongoing fetch when modal closes
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [isOpen, submissionId, fetchPdf]);
 
   // Esc key + body scroll lock
   useEffect(() => {
@@ -59,141 +186,66 @@ export default function SimlokPdfModal({
     };
   }, [isOpen, onClose]);
 
-  // Fetch filename from server for display (optional)
-  useEffect(() => {
-    if (!isOpen || !submissionId) {
-      setActualFilename('');
-      setError(null);
-      return;
+  // Handle refresh (force re-fetch)
+  const handleRefresh = useCallback(() => {
+    // Clear cache for this submission
+    const cached = pdfBlobCache.get(submissionId);
+    if (cached?.blobUrl) {
+      URL.revokeObjectURL(cached.blobUrl);
     }
-
-    const fetchFilename = async () => {
-      try {
-        const res = await fetch(`/api/submissions/${submissionId}?format=pdf&t=${Date.now()}`, {
-          method: 'HEAD', // HEAD request to only get headers
-          credentials: 'include',
-        });
-
-        if (!res.ok) {
-          console.warn('Failed to fetch PDF headers');
-          return;
-        }
-
-        // Get filename from headers
-        const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
-        const contentDisposition = res.headers.get('Content-Disposition');
-        
-        let serverFilename = '';
-        
-        if (pdfFilenameHeader) {
-          serverFilename = pdfFilenameHeader;
-        } else if (contentDisposition) {
-          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (match && match[1]) {
-            serverFilename = match[1].replace(/['"]/g, '');
-          }
-        }
-
-        if (serverFilename) {
-          setActualFilename(serverFilename);
-          console.log(' PDF filename from server:', serverFilename);
-        }
-      } catch (err) {
-        console.warn('Error fetching PDF filename:', err);
-      }
-    };
-
-    fetchFilename();
-  }, [isOpen, submissionId]);
-
-  // Generate filename with SIMLOK number only (no vendor name)
-  const filename = useMemo(() => {
-    if (nomorSimlok) {
-      // Clean nomor SIMLOK: replace special chars with underscore
-      const cleanNomor = nomorSimlok.replace(/[\[\]/\\]/g, '_');
-      return `SIMLOK_${cleanNomor}.pdf`;
-    }
-    // Fallback to submission ID
-    return `SIMLOK_${submissionName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-  }, [nomorSimlok, submissionName]);
+    pdfBlobCache.delete(submissionId);
+    setPdfBlobUrl(null);
+    fetchPdf(true);
+  }, [submissionId, fetchPdf]);
 
   if (!isOpen) return null;
 
+  // 🎯 Handle download - use cached blob if available
   const handleDownload = async () => {
     try {
       setError(null);
-
-      // Use actualFilename from state if available, otherwise use computed filename
       const targetFilename = actualFilename || filename;
-      console.log('SimlokPdfModal: Starting download with filename:', targetFilename);
-      
-      // Always fetch fresh PDF for download to get proper Content-Disposition header
-      const t = Date.now();
-      const apiUrl = `/api/submissions/${encodeURIComponent(
-        submissionId
-      )}?format=pdf&t=${t}&clearCache=true`;
+      console.log('[SimlokPdfModal] Starting download with filename:', targetFilename);
 
-      const res = await fetch(apiUrl, {
-        method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'x-pdf-generation': 'true',
-        }
-      });
-      
-      if (!res.ok) throw new Error('Gagal mendownload PDF');
+      if (pdfBlobUrl) {
+        // Use cached blob URL directly - instant download!
+        const a = document.createElement('a');
+        a.href = pdfBlobUrl;
+        a.download = targetFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        console.log('[SimlokPdfModal] ✅ Downloaded from cache');
+      } else {
+        // Fetch fresh for download
+        const res = await fetch(
+          `/api/submissions/${encodeURIComponent(submissionId)}?format=pdf&t=${Date.now()}&clearCache=true`,
+          {
+            method: 'GET',
+            credentials: 'include',
+            cache: 'no-store',
+          }
+        );
+        
+        if (!res.ok) throw new Error('Gagal mendownload PDF');
 
-      // Get filename from server response headers (most reliable)
-      let downloadFilename = targetFilename; // fallback
-      
-      const contentDisposition = res.headers.get('Content-Disposition');
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-        if (filenameMatch && filenameMatch[1]) {
-          downloadFilename = filenameMatch[1].replace(/['"]/g, '');
-        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = targetFilename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log('[SimlokPdfModal] ✅ Downloaded fresh');
       }
-      
-      // Also check custom header
-      const pdfFilenameHeader = res.headers.get('X-PDF-Filename');
-      if (pdfFilenameHeader) {
-        downloadFilename = pdfFilenameHeader;
-      }
-
-      console.log('SimlokPdfModal: Download filename from server:', downloadFilename);
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      // Create download link with proper filename
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = downloadFilename; // Use filename from server
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-
-      // Cleanup
-      URL.revokeObjectURL(url);
-      
-      console.log('SimlokPdfModal: Download completed with filename:', downloadFilename);
     } catch (err) {
-      console.error('Download error:', err);
+      console.error('[SimlokPdfModal] Download error:', err);
       setError('Gagal mendownload PDF SIMLOK');
     }
   };
-
-  // Optional: print (bisa gunakan blob URL langsung)
-  // const handlePrint = () => {
-  //   if (!pdfUrl) return;
-  //   const w = window.open(pdfUrl, '_blank');
-  //   if (w) {
-  //     w.addEventListener('load', () => w.print());
-  //   }
-  // };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -232,17 +284,20 @@ export default function SimlokPdfModal({
             </div>
 
             <div className="flex items-center space-x-2">
-              {/* <button
-                onClick={handlePrint}
-                disabled={Boolean(loading || error || !pdfUrl)}
+              {/* Refresh button */}
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
                 className="p-2 text-white/80 hover:text-white hover:bg-white/20 transition-colors rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Print PDF"
+                title="Refresh PDF"
               >
-                <PrinterIcon className="w-5 h-5" />
-              </button> */}
+                <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+
+              {/* Download button */}
               <button
                 onClick={handleDownload}
-                disabled={Boolean(loading || error)}
+                disabled={loading || !!error}
                 className="p-2 text-white/80 hover:text-white hover:bg-white/20 transition-colors rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Download PDF"
               >
@@ -251,6 +306,7 @@ export default function SimlokPdfModal({
 
               <div className="w-px h-6 bg-white/20 mx-2" />
 
+              {/* Close button */}
               <button
                 onClick={onClose}
                 className="p-2 text-white/80 hover:text-white hover:bg-white/20 transition-colors rounded-full"
@@ -276,19 +332,14 @@ export default function SimlokPdfModal({
 
             {/* Error state */}
             {error && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                 <div className="text-center p-8">
-                  <div className="text-red-500 text-6xl mb-4">!</div>
+                  <div className="text-red-500 text-6xl mb-4">⚠️</div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Gagal Memuat PDF</h3>
                   <p className="text-gray-600 mb-4">{error}</p>
                   <div className="space-x-4">
                     <button
-                      onClick={() => {
-                        setError(null);
-                        setLoading(true);
-                        // Force reload
-                        window.location.reload();
-                      }}
+                      onClick={handleRefresh}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     >
                       Coba Lagi
@@ -304,23 +355,12 @@ export default function SimlokPdfModal({
               </div>
             )}
 
-            {/* 🎯 KEY FIX: iframe points DIRECTLY to API endpoint, not blob URL! */}
-            {/* This allows browser's "Save as" to read Content-Disposition header */}
-            {/* Use iframeKey to force complete remount when modal reopens */}
-            {!error && pdfApiUrl && (
+            {/* 🎯 OPTIMAL: iframe uses cached blob URL for instant display */}
+            {!error && pdfBlobUrl && (
               <iframe
-                key={`pdf-iframe-${iframeKey}`}
-                src={pdfApiUrl}
+                src={pdfBlobUrl}
                 className="w-full h-full border-0"
                 title={`SIMLOK - ${submissionName}`}
-                onLoad={() => {
-                  setLoading(false);
-                  setError(null);
-                }}
-                onError={() => {
-                  setLoading(false);
-                  setError('Gagal memuat dokumen PDF SIMLOK');
-                }}
               />
             )}
           </div>
