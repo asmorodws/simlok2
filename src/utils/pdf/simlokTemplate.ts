@@ -164,12 +164,39 @@ function normalizeInline(s?: string | null) {
 /**
  * Sanitize Unicode characters yang tidak bisa di-encode dengan WinAnsi font
  * Mengganti character problematic dengan ASCII equivalent
+ * 🎯 CRITICAL FIX: Handle Cyrillic and other non-Latin characters
  */
 function sanitizeForPDF(text: string): string {
   if (!text) return text;
   
+  // 🎯 CRITICAL: Mapping Cyrillic look-alike characters to Latin equivalents
+  // Cyrillic characters that look like Latin but have different Unicode codes
+  const cyrillicToLatin: Record<string, string> = {
+    // Cyrillic uppercase
+    'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H', 'К': 'K', 'М': 'M',
+    'О': 'O', 'Р': 'P', 'Т': 'T', 'Х': 'X', 'У': 'Y', 'З': '3', 'І': 'I',
+    // Cyrillic lowercase
+    'а': 'a', 'в': 'b', 'с': 'c', 'е': 'e', 'о': 'o', 'р': 'p', 'х': 'x',
+    'у': 'y', 'і': 'i',
+    // Other Cyrillic that have approximate Latin equivalents
+    'Б': 'B', 'Г': 'G', 'Д': 'D', 'Ж': 'J', 'И': 'N', 'Й': 'N', 'Л': 'L',
+    'П': 'P', 'Ф': 'F', 'Ц': 'C', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch',
+    'Ы': 'Y', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+    'б': 'b', 'г': 'g', 'д': 'd', 'ж': 'j', 'и': 'n', 'й': 'n', 'л': 'l',
+    'п': 'p', 'ф': 'f', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+    'ы': 'y', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    // Special Cyrillic
+    'Ё': 'E', 'ё': 'e', 'Ъ': '', 'ъ': '', 'Ь': '', 'ь': '',
+  };
+  
+  // Replace Cyrillic characters first
+  let sanitized = text;
+  for (const [cyrillic, latin] of Object.entries(cyrillicToLatin)) {
+    sanitized = sanitized.replace(new RegExp(cyrillic, 'g'), latin);
+  }
+  
   // Replace common Unicode characters yang tidak support di WinAnsi
-  const sanitized = text
+  sanitized = sanitized
     // Minus sign (U+2212) → hyphen (-)
     .replace(/−/g, '-')
     // En dash (U+2013) → hyphen (-)
@@ -192,6 +219,11 @@ function sanitizeForPDF(text: string): string {
     .replace(/×/g, 'x')
     // Division sign (U+00F7) → forward slash (/)
     .replace(/÷/g, '/');
+  
+  // 🎯 FINAL SAFETY: Remove any remaining non-WinAnsi characters
+  // WinAnsi supports: ASCII (0x20-0x7E) + Latin-1 Supplement (0xA0-0xFF)
+  // Remove anything outside this range
+  sanitized = sanitized.replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
   
   return sanitized;
 }
